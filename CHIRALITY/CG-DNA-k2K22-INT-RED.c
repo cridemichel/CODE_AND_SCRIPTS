@@ -1863,7 +1863,8 @@ struct evStruct {
   double eigvec[3];
   double ev;
   int idx;
-} evstruct[3];
+} evstruct[3], evstrTmp[3];
+
 int cmpfuncev (const void *p1, const void *p2)
 {
   if (((struct evStruct*)p1)->ev < ((struct evStruct*)p2)->ev) 
@@ -1879,7 +1880,7 @@ void align_z_axis(void)
   calc_It();
   //print_matrix(It, 3);
   diagonalize(It, ev);
-#if 0
+#if 1
   /* find max eigenval */
   if (fabs(ev[0]) > fabs(ev[1]))
     { 
@@ -1906,9 +1907,25 @@ void align_z_axis(void)
       evstruct[a].eigvec[b] = eigvec[a][b];
   //print_matrix(eigvec, 3);
   evstruct[a].idx = a;
-  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
 
-  //printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
+  /* we need to preserve chirality, hence we shift eigenvectors in order to preserve their order
+     (e.g xyz -> zxy) */
+  for (a=0; a < 3; a++)
+    {
+      evstrTmp[(a + numev)%3].ev = evstruct[a].ev;
+      for (b=0; b < 3; b++)
+	evstrTmp[(a + numev)%3].eigvec[b] = evstruct[a].eigvec[b];
+    }
+  for (a=0; a < 3; a++)
+    {
+      evstruct[a].ev = evstrTmp[a].ev;
+      for (b=0; b < 3; b++)
+	evstruct[a].eigvec[b] = evstrTmp[a].eigvec[b];
+    }
+
+  //  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
+
+  printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       Rlp[a][b] = evstruct[a].eigvec[b]; /* ogni riga è un autovettore */
