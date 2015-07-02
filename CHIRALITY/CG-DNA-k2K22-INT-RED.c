@@ -1856,6 +1856,18 @@ void calc_It(void)
 	  }
       }
 }
+struct evStruct {
+  double eigvec[3];
+  double ev;
+  int idx;
+} evstruct[3];
+int cmpfuncev (const void *p1, const void *p2)
+{
+  if (((struct evStruct*)p1)->ev < ((struct evStruct*)p2)->ev) 
+    return 1;
+  else
+    return -1;
+}
 void align_z_axis(void)
 {
   double ev[3], St, xp[3], xl[3];
@@ -1863,7 +1875,7 @@ void align_z_axis(void)
 
   calc_It();
   diagonalize(It, ev);
-
+#if 0
   /* find max eigenval */
   if (fabs(ev[0]) > fabs(ev[1]))
     { 
@@ -1880,9 +1892,21 @@ void align_z_axis(void)
       St = ev[2];
       numev=2;
     }
+#endif
+  evstruct[0].ev=ev[0];
+  evstruct[1].ev=ev[1];
+  evstruct[2].ev=ev[2];
+  printf("ev[0]=%f ev[1]=%f ev[2]=%f\n", ev[0], ev[1], ev[2]);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
-      Rlp[a][b] = eigvec[a][b]; /* ogni riga è un autovettore */
+      evstruct[a].eigvec[b] = eigvec[a][b];
+  evstruct[a].idx = a;
+  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
+
+  printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      Rlp[a][b] = evstruct[a].eigvec[b]; /* ogni riga è un autovettore */
 
   for (i=0; i < nat; i++)
     {
@@ -2098,6 +2122,7 @@ int main(int argc, char**argv)
     }
   fclose(fin);
 #ifdef PRINC_AXES
+  printf("Aligning DNAD...\n");
   align_z_axis();
 #endif
   init_distbox();
