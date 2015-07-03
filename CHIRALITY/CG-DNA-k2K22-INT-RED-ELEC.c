@@ -9,6 +9,7 @@
 #define PRINC_AXES
 #define EULER_ROT
 #define QUASIMC
+#define MC_CHARGE
 #define SOBOL_LL /* use long long to have MAXBIT=60! */
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
@@ -751,9 +752,12 @@ double *ximanning_arr, *deltamann_arr; /* Debye screening length */
 double *zeta_a_arr, *zeta_b_arr;
 double Ucoul(double rab, int k1)
 {
+#ifdef MC_CHARGE
+  return esq_eps_prime10/rab;
+#else
   //return esq_eps_prime10/rab;
   return esq_eps_prime10*zeta_a_arr[k1]*zeta_b_arr[k1]/rab;
-
+#endif
 }
 #ifdef NEW_ELEC_MOD
 double UcoulWater(double rab, int k1)
@@ -767,8 +771,11 @@ double Uyuk(double rab, int k1, int k2)
   printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
   printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
 #endif
-  
+#ifdef MC_CHARGE
+  return yuk_corr_fact_arr[k1][k2]*esq_eps10_arr[k1]*exp(-kD_arr[k1][k2]*rab)/rab; 
+#else 
   return yuk_corr_fact_arr[k1][k2]*esq_eps10_arr[k1]*zeta_a_arr[k1]*zeta_b_arr[k1]*exp(-kD_arr[k1][k2]*rab)/rab; 
+#endif
 } 
 #if 0
 double Uyuk_arr(double rab, int k1)
@@ -935,6 +942,9 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
   double yukfact;
+#ifdef MC_CHARGE
+  double xi1, xi2;
+#endif
   costheta12 = cos(theta12);
   sintheta12 = sin(theta12);
   cosphi12 = cos(phi12);
@@ -993,6 +1003,12 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 	      /* if we have two phosphate groups take into account electrostatic interactions */
 	      else if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
 		{
+#ifdef MC_CHARGE
+		  xi1 = drand48();
+		  xi2 = drand48();
+		  if (xi1 > deltamann_arr[k1] || xi2 > deltamann_arr[k2])
+		    continue;
+#endif
 		  for (k1 = 0; k1 < numtemps; k1++)
 		    for (k2 = 0; k2 < numconcs; k2++)
 		      {
