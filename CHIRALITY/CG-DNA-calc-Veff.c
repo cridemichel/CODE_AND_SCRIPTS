@@ -1522,7 +1522,7 @@ int main(int argc, char**argv)
 	  /* 6.0 Angstrom is the closest distance between phosphate charges */
 	  yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
 	  yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
-	  yuk_corr_fact_arr[k1][k2] = 1.0;//exp(kD_arr[k1][k2]*6.0)/(1.0+kD_arr[k1][k2]*6.0);
+	  yuk_corr_fact_arr[k1][k2] = exp(kD_arr[k1][k2]*6.0)/(1.0+kD_arr[k1][k2]*6.0);
 	  printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
 	  printf("yukcutkD_arr: %f yukcutkDsq: %.15G\n", yukcutkD_arr[k1][k2], yukcutkDsq_arr[k1][k2]);
       }
@@ -1756,13 +1756,14 @@ int main(int argc, char**argv)
       gamma12sav = 2.0*M_PI*drand48();
 #endif
 #endif
-      integrandv1(0.0, dist, 0.0, 0.0, 0.0, 0.0);
+      integrandv1(0.0, dist, 0.0, 0.0, 0.0, M_PI/2);
+	
       for (k1=0; k1 < numtemps; k1++)
 	for (k2=0; k2 < numconcs; k2++)
 	  {
 	    sprintf(fnout, "Veff_c%.0f_T%.0f.dat", cdna_arr[k2], 1.0/beta_arr[k1]);
     	    fout = fopen(fnout, "a+");
-	    fprintf(fout, "%.15G %.15G\n", dist, Veff);
+	    fprintf(fout, "%.15G %.15G\n", dist, kB*uel_arr[k1][k2]/6.9477E-21);
 	    fclose(fout);
 	  }
     } 
