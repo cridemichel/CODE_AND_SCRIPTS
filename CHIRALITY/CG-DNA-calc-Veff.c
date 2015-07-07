@@ -9,7 +9,7 @@
 #define PRINC_AXES
 #define EULER_ROT
 #define QUASIMC
-#define MC_CHARGE
+//#define MC_CHARGE
 #define SOBOL_LL /* use long long to have MAXBIT=60! */
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
@@ -22,6 +22,7 @@ extern int numOfProcs; /* number of processeses in a communicator */
 //#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
+double dmin=25, dmax=70, dr=0.1; /* Angstrom */
 static int imaxarg1,imaxarg2;
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
@@ -242,6 +243,7 @@ double calcDistBox(void)
   int k, k1, k2, existsParallelPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
+  return -1;
   for (k=0; k < 3; k++)
     {
       rA[k] = DNADall[0].rcm[k];
@@ -935,8 +937,7 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 void integrandv1(double rcmx, double rcmy, double rcmz, 
-		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
-		    double alpha, struct contribs *contr)
+		    double phi12, double theta12, double gamma12)
 {
   int i, j, k1, k2;
   double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
@@ -961,11 +962,9 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
   u2z = costheta12;  
   place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
-  contr->steric = 0;
   for (k1 = 0; k1 < numtemps; k1++)
     for(k2 = 0; k2 < numconcs; k2++)
       {
-	contr->elec[k1][k2] = 0;
 	uel_arr[k1][k2] = 0;
       }
   yukcutkDsq = maxyukcutkDsq;
@@ -979,26 +978,8 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
 	      if (distsq < sigijsq)
 		{
-		  switch (type)
-		    {
-		    case 0:
-		      contr->steric = XI1[nphi12][ntheta12];
-		      return;
-		      break;
-		    case 1:
-		      contr->steric = rcmx*XI1[nphi12][ntheta12]+
-			rcmy*XI2[nphi12][ntheta12]+
-			rcmz*XI3[nphi12][ntheta12];
-		      return;
-		      break;
-		    case 2:
-		      contr->steric = -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
-			Sqr(rcmy)*XI2[nphi12][ntheta12]+
-			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
-			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
-		      return;
-		      break;
-		    }
+		  printf("Too close!\n");
+		  exit(-1);
 		}
 	      /* if we have two phosphate groups take into account electrostatic interactions */
 	      else if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
@@ -1023,28 +1004,6 @@ void integrandv1(double rcmx, double rcmy, double rcmz,
 	    }
 	}
     }
-  for (k1 = 0; k1 < numtemps; k1++)
-    for (k2 = 0; k2 < numconcs; k2++)
-      {
-      	yukfact = 1.0-exp(-beta_arr[k1]*uel_arr[k1][k2]);
-	switch (type)
-	  {
-	  case 0:
-	    contr->elec[k1][k2] = yukfact*XI1[nphi12][ntheta12];
-	    break;
-	  case 1:
-	    contr->elec[k1][k2] = yukfact*(rcmx*XI1[nphi12][ntheta12]+
-					   rcmy*XI2[nphi12][ntheta12]+
-					   rcmz*XI3[nphi12][ntheta12]);
-	    break;
-	  case 2:
-	    contr->elec[k1][k2] = -yukfact*(Sqr(rcmx)*XI1[nphi12][ntheta12]+
-					    Sqr(rcmy)*XI2[nphi12][ntheta12]+
-					    Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
-				    rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
-	    break;
-	  }
-      }
 }
 
 double phi12sav, theta12sav, gamma12sav;
@@ -1072,7 +1031,7 @@ void ftheta12(double theta12, int ntheta12, struct contribs *contr)
 double rcmxsav, rcmysav, rcmzsav, alphasav;
 void intfunc(double phi12, int nphi12, double theta12, int ntheta12, struct contribs *contr)
 {
-  integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav, contr);
+  //integrandv1(rcmxsav, rcmysav, rcmzsav, phi12, nphi12, theta12, ntheta12, gamma12sav, 0, alphasav, contr);
 }
 #ifdef SOBOL_LL
 static int iminarg1,iminarg2;
@@ -1392,7 +1351,7 @@ int main(int argc, char**argv)
 #ifdef MPI
   MPI_Status status;
 #endif
-  double uel, beta;
+  double uel, beta, Veff, dist=0.0;
   int interact;
   char fn[256];
   int aa, bb;
@@ -1418,24 +1377,20 @@ int main(int argc, char**argv)
   if (argc < 7)
     {
 #ifdef NEW_ELEC_MOD
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar] [rPhosphate] [rNucleob] [delta_rab1 (default=5)] \n");
+      printf("syntax:  CG-DNA-Veff <pdb file> <DNAD length> <dmin> <dmax> <dr> [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar] [rPhosphate] [rNucleob] [delta_rab1 (default=5)] \n");
       exit(1);
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [nphi] [ntheta] [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar] [rPhosphate] [rNucleob]\n");
+      printf("syntax:  CG-DNA-Veff <pdb file> <DNAD length> <dmin> <dmax> <dr> [file with temperatures (in K)] [file with concentrations in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ] [rSugar] [rPhosphate] [rNucleob]\n");
       exit(1);
 #endif
     }
   strcpy(fnin,argv[1]);
   fin=fopen(fnin,"r");
   len=atoi(argv[2]);
-  alpha = atof(argv[3]);
-  tot_trials=atoll(argv[4]);
-  type = atoi(argv[5]);
-  fileoutits = atoll(argv[6]);
-  outits = atoll(argv[7]);
-  nphi = atoi(argv[8]);
-  ntheta = atoi(argv[9]);
-  fp=fopen(argv[10],"r");
+  dmin = atof(argv[3]);
+  dmax=atof(argv[4]);
+  dr = atof(argv[5]);
+  fp=fopen(argv[6],"r");
   cc=0;
   while(!feof(fp))
     {
@@ -1454,7 +1409,7 @@ int main(int argc, char**argv)
   fclose(fp);
   numtemps=cc;
 
-  fp=fopen(argv[11],"r");
+  fp=fopen(argv[7],"r");
   cc=0;
   while(!feof(fp))
     {
@@ -1473,41 +1428,41 @@ int main(int argc, char**argv)
     }
   fclose(fp);
 
-  if (argc <= 12)
+  if (argc <= 8)
     yukcut = 3.0;
   else 
-    yukcut = atof(argv[12]);
+    yukcut = atof(argv[8]);
 
-  if (argc <= 13)
-    epsr_prime = 2.0;
+  if (argc <= 9)
+    epsr_prime = 20;
   else
-    epsr_prime = atof(argv[13]);
+    epsr_prime = atof(argv[9]);
  
-  if (argc <= 14)
+  if (argc <= 10)
     delta_rab0 = 2.0;
   else
-    delta_rab0 = atof(argv[14]);
+    delta_rab0 = atof(argv[10]);
 
-  if (argc <= 15)
+  if (argc <= 11)
     rSugar = 3.5;
   else
-    rSugar = atof(argv[15]);
+    rSugar = atof(argv[11]);
 
-  if (argc <= 16)
+  if (argc <= 12)
     rPhosphate = 3.0;
   else
-    rPhosphate = atof(argv[16]);
+    rPhosphate = atof(argv[12]);
 
-  if (argc <= 17)
+  if (argc <= 13)
     rNucleo = 4.0;
   else
-    rNucleo = atof(argv[17]);
+    rNucleo = atof(argv[13]);
 
 #ifdef NEW_ELEC_MOD
-  if (argc <= 18)
+  if (argc <= 14)
     delta_rab1 = 5.0;
   else
-    delta_rab1 = atof(argv[18]);
+    delta_rab1 = atof(argv[14]);
 #endif
 
   esq_eps_arr = malloc(sizeof(double)*numtemps);
@@ -1736,148 +1691,6 @@ int main(int argc, char**argv)
   nsv = 4;
 #endif
 #endif
-  
-  XI1=malloc(sizeof(double)*(nphi+1));
-  XI2=malloc(sizeof(double)*(nphi+1));
-  XI3=malloc(sizeof(double)*(nphi+1));
-  XI4=malloc(sizeof(double)*(nphi+1));
-  XI5=malloc(sizeof(double)*(nphi+1));
-  XI6=malloc(sizeof(double)*(nphi+1));
-
-
-  for (i=1; i <= ntheta; i++)
-    {
-      XI1[i] = malloc(sizeof(double)*(ntheta+1));
-      XI2[i] = malloc(sizeof(double)*(ntheta+1));
-      XI3[i] = malloc(sizeof(double)*(ntheta+1));
-      XI4[i] = malloc(sizeof(double)*(ntheta+1));
-      XI5[i] = malloc(sizeof(double)*(ntheta+1));
-      XI6[i] = malloc(sizeof(double)*(ntheta+1));
-	
-    }
-  /* read XI1, X2 and X3 */
-  
-  sprintf(fn, "XI1_v%d.dat", type);
-  if ((fxi1=fopen(fn, "r"))==NULL)
-    {
-      printf("You have to supply %s file\n", fn);
-      exit(-1);
-    }
-  if (type >= 1)
-    { 
-      sprintf(fn, "XI2_v%d.dat", type);
-      if ((fxi2=fopen(fn, "r"))==NULL)
-	{
-	  printf("You have to supply %s file\n", fn);
-	  exit(-1);
-	}
-      sprintf(fn, "XI3_v%d.dat", type);
-      if ((fxi3=fopen(fn, "r"))==NULL)
-	{
-	  printf("You have to supply %s file\n", fn);
-	  exit(-1);
-	}
-    }
-  if (type == 2)
-    {
-      sprintf(fn, "XI4_v%d.dat", type);
-      if ((fxi4=fopen(fn, "r"))==NULL)
-	{
-	  printf("You have to supply %s file\n", fn);
-	  exit(-1);
-	} 
-      sprintf(fn, "XI5_v%d.dat", type);
-      if ((fxi5=fopen(fn, "r"))==NULL)
-	{
-	  printf("You have to supply %s file\n", fn);
-	  exit(-1);
-	}
-      sprintf(fn, "XI6_v%d.dat", type);
-      if ((fxi6=fopen(fn, "r"))==NULL)
-	{
-	  printf("You have to supply %s file\n", fn);
-	  exit(-1);
-	}
-
-    }
-  fscanf(fxi1,"%lf %d %d\n", &ccc, &aa, &bb);
-  if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
-    {
-      printf("Wrong numbers of abscissas or wrong alpha!\n");
-      printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-      exit(-1);
-    };
-  if (type >= 1)
-    {
-      fscanf(fxi2,"%lf %d %d\n", &ccc, &aa, &bb);
-      if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
-	{
-	  printf("Wrong numbers of abscissas or wrong alpha!\n");
-	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-	  exit(-1);
-	};
-      fscanf(fxi3,"%lf %d %d\n", &ccc, &aa, &bb);
-      if (aa!=nphi || bb!=ntheta || ccc!= alpha)
-	{
-	  printf("Wrong numbers of abscissas or wrong alpha!\n");
-	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-	  exit(-1);
-	}
-    }
-  if (type == 2)
-    {
-      fscanf(fxi4,"%lf %d %d\n", &ccc, &aa, &bb);
-      if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
-	{
-	  printf("Wrong numbers of abscissas or wrong alpha!\n");
-	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-	  exit(-1);
-	};
-      fscanf(fxi5,"%lf %d %d\n", &ccc, &aa, &bb);
-      if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
-	{
-	  printf("Wrong numbers of abscissas or wrong alpha!\n");
-	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-	  exit(-1);
-	};
-      fscanf(fxi6,"%lf %d %d\n", &ccc, &aa, &bb);
-      if (aa!=nphi || bb!=ntheta || ccc!= alpha)
-	{
-	  printf("Wrong numbers of abscissas or wrong alpha!\n");
-	  printf("nphi=%d ntheta=%d aa=%d bb=%d alpha=%f/%f", nphi, ntheta, aa, bb, alpha, ccc);
-	  exit(-1);
-	};
-
-    }
-  for (i=0; i < nphi; i++)
-    for (j=0; j < ntheta; j++)
-      {
-	fscanf(fxi1, "%lf ", &(XI1[i+1][j+1]));
-	if (type >= 1)
-	  {
-	    fscanf(fxi2, "%lf ", &(XI2[i+1][j+1]));
-	    fscanf(fxi3, "%lf ", &(XI3[i+1][j+1]));
-	  }
-	if (type==2)
-	  {
-	    fscanf(fxi4, "%lf ", &(XI4[i+1][j+1]));
-	    fscanf(fxi5, "%lf ", &(XI5[i+1][j+1]));
-	    fscanf(fxi6, "%lf ", &(XI6[i+1][j+1]));
-	  }
-      }
-  
-  fclose(fxi1);
-  if (type >= 1)
-    {
-      fclose(fxi2);
-      fclose(fxi3);
-    }
-  if (type == 2)
-    {
-      fclose(fxi4);
-      fclose(fxi5);
-      fclose(fxi6);
-    }
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
 #ifdef EULER_ROT
@@ -1893,7 +1706,7 @@ int main(int argc, char**argv)
   for (k1=0; k1 < numtemps; k1++)
     for (k2=0; k2 < numconcs; k2++)
       {
-	sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
+	sprintf(fnout, "Veff_c%.0f_T%.0f.dat", cdna_arr[k2], 1.0/beta_arr[k1]);
 	fout = fopen(fnout, "w+");
 	fclose(fout);
       }
@@ -1904,13 +1717,11 @@ int main(int argc, char**argv)
       contr.elec[k1] = malloc(sizeof(double)*numconcs);
     }
 #endif
-  alloc_contr(&contr);
-  for (k1=0; k1 < numtemps; k1++)
-    for (k2=0; k2 < numconcs; k2++)
-      contr.elec[k1][k2] = 0.0;
-  for (tt=ttini+1; tt < tot_trials; tt++)
+  Veff = 0;
+  for (dist=dmin; dist < dmax; dist=dist+dr)
     {
       /* place second DNAD randomly */
+#if 0
 #ifdef QUASIMC
 #ifdef USEGSL
       gsl_qrng_get (qsob, sv);
@@ -1944,46 +1755,16 @@ int main(int argc, char**argv)
       //gamma2 = 2.0*M_PI*drand48();
       gamma12sav = 2.0*M_PI*drand48();
 #endif
-      rcmxsav = rcmx;
-      rcmysav = rcmy;
-      rcmzsav = rcmz;
-
-      quad3d(intfunc, 0.0, 2.0*M_PI, &contr);
-      vexcl += contr.steric;
+#endif
+      integrandv1(0.0, dist, 0.0, 0.0, 0.0, 0.0);
       for (k1=0; k1 < numtemps; k1++)
-	{
-	  tempfact = Sqr(epsr(1.0/beta_arr[k1])/beta_arr[k1]); 
-	  for (k2=0; k2 < numconcs; k2++)
-	    {
-      	      vexclel_arr[k1][k2] += contr.elec[k1][k2];
-	    }
-	}
-
-      if (tt > 0 && tt % fileoutits == 0)
-	{
-	  for (k1=0; k1 < numtemps; k1++)
-	    for (k2=0; k2 < numconcs; k2++)
-	      {
-		sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
-		fout = fopen(fnout, "a+");
-		if (type==0)
-		  //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt)/1E3,
-			  Lx*Ly*Lz*vexcl/((double)tt)/1E3, Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt)/1E3
-			 );
-		else if (type==1)
-		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))/1E4,
-			  (Lx*Ly*Lz*vexcl/((double)tt))/1E4,(Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))/1E4
-			 ); /* divido per 10^4 per convertire in nm */
-		else
-		  fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))/1E5,
-			  (Lx*Ly*Lz*vexcl/((double)tt))/1E5,(Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))/1E5
-			 ); /* divido per 10^5 per convertire in nm */
-		fclose(fout);
-	      }
-	}
-      if (tt % outits==0)
-	printf("trials: %lld/%lld\n", tt, tot_trials);
+	for (k2=0; k2 < numconcs; k2++)
+	  {
+	    sprintf(fnout, "Veff_c%.0f_T%.0f.dat", cdna_arr[k2], 1.0/beta_arr[k1]);
+    	    fout = fopen(fnout, "a+");
+	    fprintf(fout, "%.15G %.15G\n", dist, Veff);
+	    fclose(fout);
+	  }
     } 
 #if defined(USEGSL) && defined(QUASIMC)
   gsl_qrng_free(qsob);
