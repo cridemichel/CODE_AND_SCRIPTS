@@ -889,11 +889,13 @@ struct cylstr
 {
   double u[3];
   double r[3];
+  int i1;
+  int i2;
 }
 *cylinders;
 int allocated_cyls=100;
 int numcyls=0;
-void add_cylinder(double r[], doulbe u[])
+void add_cylinder(double r[], doulbe u[], int i, int j)
 {
   int k;
   numcyls++; 
@@ -906,6 +908,8 @@ void add_cylinder(double r[], doulbe u[])
     {
       cylinders[numcyls-1].r[k] = r[k];
       cylinders[numcyls-1].u[k] = u[k];  
+      cylinders[numcyls-1].i1 = i;
+      cylinders[numcyls-1].i2 = j;
     }
 }
 int main(int argc, char **argv)
@@ -913,7 +917,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ;
+  int jX, jY, jZ, iX, iY, iZ, iold;
   //int coppie;
   double refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3];
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
@@ -1076,10 +1080,11 @@ int main(int argc, char **argv)
 		    ucyl[k] /= norm;
 		  for (k=0; k < 3; k++)
 		    rcm[k] = (r0[k][j] + r0old[k])*0.5;
-		  add_cylinder(rcm, ucyl);
+		  add_cylinder(rcm, ucyl, iold, i);
 		}
 	      for (k=0; k < 3; k++)
 		r0old[k] = r0[k][i];
+	      iold = i;
 	    }
 	}
       printf("created %d cylinders\n", numcyls);
