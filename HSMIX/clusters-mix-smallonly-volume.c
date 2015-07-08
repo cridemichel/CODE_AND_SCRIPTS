@@ -335,9 +335,9 @@ void build_linked_list(void)
 
   for (n = START; n < END; n++)
     {
-      inCell[0][n] =  (r0[0][n] + L2) * cellsx / L;
-      inCell[1][n] =  (r0[1][n] + L2) * cellsy / L;
-      inCell[2][n] =  (r0[2][n] + L2) * cellsz / L;
+      inCell[0][n] =  (cylinders[n].r[0] + L2) * cellsx / L;
+      inCell[1][n] =  (cylinders[n].r[1] + L2) * cellsy / L;
+      inCell[2][n] =  (cylinders[n].r[2] + L2) * cellsz / L;
       if (inCell[0][n] == cellsx)
 	inCell[0][n]=cellsx-1;
       if (inCell[1][n] == cellsy)
@@ -889,13 +889,15 @@ struct cylstr
 {
   double u[3];
   double r[3];
+  double L;
+  double D;
   int i1;
   int i2;
 }
 *cylinders;
 int allocated_cyls=100;
 int numcyls=0;
-void add_cylinder(double r[], doulbe u[], int i, int j)
+void add_cylinder(double r[], doulbe u[], double L, int i, int j)
 {
   int k;
   numcyls++; 
@@ -910,6 +912,8 @@ void add_cylinder(double r[], doulbe u[], int i, int j)
       cylinders[numcyls-1].u[k] = u[k];  
       cylinders[numcyls-1].i1 = i;
       cylinders[numcyls-1].i2 = j;
+      cylinders[numcyls-1].D = wellWidth;
+      cylinders[numcyls-1].L = L;
     }
 }
 int main(int argc, char **argv)
@@ -1044,20 +1048,7 @@ int main(int argc, char **argv)
 	  free(inCell[1]);
 	  free(inCell[2]);
 	}
-      
-      cellsx = L / RCUT;
-      cellsy = L / RCUT;
-      cellsz = L / RCUT;
-      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
-      inCell[0] = malloc(sizeof(int)*NP);
-      inCell[1] = malloc(sizeof(int)*NP);
-      inCell[2] = malloc(sizeof(int)*NP);
-      for (i = 0; i < NP; i++)
-	{
-	  percola[i] = 0; 
-	}
-
-      readconf(fname[nr1], &time, &refTime, NP, r0);
+     readconf(fname[nr1], &time, &refTime, NP, r0);
       /* =================== >>> CREATE CYLINDERS <<< ===============
 	 se la stessa particella appartiene a n frame allora il cluster di n particelle
 	 corrispondente conta 1 */
@@ -1080,29 +1071,33 @@ int main(int argc, char **argv)
 		    ucyl[k] /= norm;
 		  for (k=0; k < 3; k++)
 		    rcm[k] = (r0[k][j] + r0old[k])*0.5;
-		  add_cylinder(rcm, ucyl, iold, i);
+		  add_cylinder(rcm, ucyl, norm, iold, i);
 		}
 	      for (k=0; k < 3; k++)
 		r0old[k] = r0[k][i];
 	      iold = i;
 	    }
 	}
+
       printf("created %d cylinders\n", numcyls);
+      NP = numcyls;
       ti = time + refTime;
-      /* costruisce la posizione di tutti gli sticky spots */
       for (i = 0; i < NP; i++)
 	{
-	  /* qui va il codice per individuare i cluster */
-	  for (a = 0; a < 3; a++)
-	    {
-	      r0L[a] = r0[a][i];
-#if 0
-	      for (b = 0; b < 3; b++)
-		RL[a][b] = R[a][b][i];
-#endif
-	    }
-	  //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
+	  percola[i] = 0; 
 	}
+      for (i=0; i < NP; i++)
+	{
+
+	}
+      cellsx = L / RCUT;
+      cellsy = L / RCUT;
+      cellsz = L / RCUT;
+      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
+      inCell[0] = malloc(sizeof(int)*NP);
+      inCell[1] = malloc(sizeof(int)*NP);
+      inCell[2] = malloc(sizeof(int)*NP);
+       /* costruisce la posizione di tutti gli sticky spots */
       for (i = 0; i < NP; i++)
 	{
 	  color[i] = -1;	  
