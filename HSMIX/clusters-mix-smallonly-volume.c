@@ -496,6 +496,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif
   int it, k2;
   double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
+  double LiTmp, LjTmp, DiamiTmp, DiamjTmp;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
@@ -644,12 +645,20 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      CiTmp[kk] = Ci[kk];
 	      niTmp[kk] = ni[kk];
 	      njTmp[kk] = nj[kk];
+	      DiamiTmp = Diami;
+	      DiamjTmp = Diamj;
+	      LiTmp = Li;
+	      LjTmp = Lj;
 	      /* exhange the two particles */	
 	      for (k2=0; k2 < 2; k2++)
 		Dj[k2][kk] = Di[k2][kk];
 	      Ci[kk] = Cj[kk];
 	      ni[kk] = nj[kk];
 	      nj[kk] = niTmp[kk];
+	      Diami = Diamj;
+	      Diamj = DiamiTmp;
+	      Li = Lj;
+	      Lj = LiTmp;
 	    }
 	}
       for (j2=0; j2 < 2; j2++)
@@ -692,7 +701,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	  if (normDjUi < Diami*0.5 && fabs(DjCini) > Li*0.5)
 	    continue;
 
-	  if (normDjUi < Diamj*0.5 && fabs(DjCini) <= Li*0.5)
+	  if (normDjUi < Diami*0.5 && fabs(DjCini) <= Li*0.5)
 	    {
 #ifdef DEBUG_HCMC
 	      if (dostorebump)
@@ -701,7 +710,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      return -1;
 	    }
 #if 1
-	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D[j1]);
+	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
 
 #else
 	  for (kk=0; kk < 3; kk++)
