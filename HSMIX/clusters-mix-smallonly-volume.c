@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 #define MAXPTS 10000
 #define MAXFILES 10000
 #define NA 6
@@ -152,7 +153,7 @@ char **fname;
 const int NUMREP = 8;
 int MAXBONDS = 10;
 double wellWidth, wellWidthSq;
-double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+double Lx, Ly, Lz, L, timet, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
@@ -479,7 +480,7 @@ void print_usage(void)
   printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [ --medialog/-ml ] [--bonds/-b] [--maxbonds] [--wellwidth/-ww <value>] <listafile>\n");
   exit(0);
 }
-
+long long int max_MC_trials = 1000000;
 void parse_params(int argc, char** argv)
 {
   int cc=1;
@@ -512,6 +513,13 @@ void parse_params(int argc, char** argv)
 	{
 	  output_bonds = 1;
 	} 
+      else if (!strcmp(argv[cc],"--maxmctrials") || !strcmp(argv[cc],"-mmc" ))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  max_MC_trials = atoll(argv[cc]);
+	}
       else if (!strcmp(argv[cc],"-ww") || !strcmp(argv[cc],"--wellwidth" ))
 	{
 	  cc++;
@@ -1300,7 +1308,7 @@ int main(int argc, char **argv)
 	  free(inCell[1]);
 	  free(inCell[2]);
 	}
-     readconf(fname[nr1], &time, &refTime, NP, r0);
+     readconf(fname[nr1], &timet, &refTime, NP, r0);
       /* =================== >>> CREATE CYLINDERS <<< ===============
 	 se la stessa particella appartiene a n frame allora il cluster di n particelle
 	 corrispondente conta 1 */
@@ -1333,7 +1341,7 @@ int main(int argc, char **argv)
 
       printf("created %d cylinders\n", numcyls);
       NP = numcyls;
-      ti = time + refTime;
+      ti = timet + refTime;
       for (i = 0; i < NP; i++)
 	{
 	  percola[i] = 0; 
