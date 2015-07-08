@@ -11,6 +11,134 @@
 #define Sqr(x) ((x)*(x))
 
 #define npmax 10000001
+static double maxarg1,maxarg2;
+
+#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+        (maxarg1) : (maxarg2))
+void vectProdVec(double *A, double *B, double *C);
+double calc_norm(double *vec);
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+#ifdef MC_BENT_DBLCYL
+  double Rout[3][3];
+  int k1, k2;
+#endif
+  /* first row vector */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+#if 0
+  if (typesArr[0].nspots==3 && type==0)
+    {
+      for (k=0; k < 3 ; k++)
+	u[k] = R[1][k];
+      vectProdVec(R[0], u, up);
+      /* rotate randomly second axis */
+      angle=4.0*acos(0.0)*ranf_vb();
+      xx = cos(angle);
+      yy = sin(angle);
+      for (k=0; k < 3 ; k++)
+	R[1][k] = u[k]*xx + up[k]*yy;
+      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
+    }
+#endif
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+#ifdef MC_BENT_DBLCYL
+  /* add a random rotation around the axis (ox, oy, oz) */
+  add_rotation_around_axis(ox, oy, oz, R, Rout);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      R[k1][k2] = Rout[k1][k2];
+#endif
+#if 0
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    Rt[k1][k2]=R[k2][k1];
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    R[k1][k2]=Rt[k1][k2];
+#endif
+  //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
+}
+
+void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      /* NOTE: k2 starts from 1 because xp[0] = 0.0 see function find_initial_guess() below */
+      for (k2=1; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
+
+
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+
+int check_convergence(double Told[3], double Tnew[3])
+{
+  double test=0.0, temp;
+  int i;
+  for (i=0;i<3;i++) 
+    {
+      temp=(fabs(Tnew[i]-Told[i]))/FMAX(fabs(Tnew[i]),1.0); 
+      //temp=(fabs(x[i]-xold[i]))/fabs(x[i]); 
+      if (temp > test) 
+	test=temp; 
+    }
+  if (test < 1.0E-14)
+    {
+      //printf("convergence reached! test=%.15G\n", test);
+      return 1;
+    }
+  else 
+    return 0;
+}
+double calcDistNegHC(int i, int j, double shift[3], int* retchk);
+struct cylstr 
+{
+  double u[3];
+  double r[3];
+  double L;
+  double D;
+  int i1;
+  int i2;
+} *cylinders;
+int allocated_cyls=100;
+int numcyls=0;
 const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
@@ -192,23 +320,23 @@ double distance(int i, int j)
 {
   int a, b;
   int maxa=0, maxb=0;
-  double imgx, imgy, imgz;
+  double shift[3];
   double Dx, Dy, Dz;
   //double wellWidth;
 
   Dx = cylinders[i].r[0] - cylinders[j].r[0];
   Dy = cylinders[i].r[1] - cylinders[j].r[1];
   Dz = cylinders[i].r[2] - cylinders[j].r[2];
-  imgx = -L*rint(Dx/L);
-  imgy = -L*rint(Dy/L);
-  imgz = -L*rint(Dz/L);
+  shift[0] = L*rint(Dx/L);
+  shift[1] = L*rint(Dy/L);
+  shift[2] = L*rint(Dz/L);
 
 #if 0
   if (check_distance(i, j, Dx+imgx, Dy+imgy, Dz+imgz))
     return 1;
 #endif
   //wellWidth = sigmaBB;
-  if (check_cyl_overlap(i, j))
+  if (check_cyl_overlap(i, j, shift))
     return -1;
 
   return 1;
@@ -556,7 +684,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 
       if (scalProd(VV,ni)==1.0)
 	{
-	  if (normCiCj <= 0.5*(L[0]+L[1]))
+	  if (normCiCj <= 0.5*(Li+Lj))
 	    return -1;
 	  else
 	    return 1;
@@ -776,7 +904,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
 		break;
 	    }
-	  totitsHC += it;
+	  //totitsHC += it;
 #ifdef DEBUG_HCMC
 	  printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
 		 TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
@@ -951,7 +1079,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	}
     }
 #endif
-  numcallsHC += 4.0; 
+  //numcallsHC += 4.0; 
 
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
@@ -981,19 +1109,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
   return 1;
 }
-struct cylstr 
-{
-  double u[3];
-  double r[3];
-  double L;
-  double D;
-  int i1;
-  int i2;
-}
-*cylinders;
-int allocated_cyls=100;
-int numcyls=0;
-void add_cylinder(double r[], doulbe u[], double L, int i, int j)
+void add_cylinder(double r[], double u[], double L, int i, int j)
 {
   int k;
   numcyls++; 
@@ -1015,11 +1131,11 @@ void add_cylinder(double r[], doulbe u[], double L, int i, int j)
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
-  int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int  NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
+  int k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
+  int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, iold;
   //int coppie;
-  double refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc;
+  double norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
@@ -1361,7 +1477,7 @@ int main(int argc, char **argv)
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
 
-      /* stima volumi cluster */
+      /* stima volumi cluster con un MC */
       for (nc = 0; nc < ncls; nc++)
 	{
 
