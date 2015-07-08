@@ -433,6 +433,7 @@ int findmaxColor(int NP, int *color)
 struct cluster_sort_struct { 
   int dim;
   int color;
+  double vol;
 };
 struct cluster_sort_struct *cluster_sort;
 int compare_func (const void *aa, const void *bb)
@@ -1128,14 +1129,49 @@ void add_cylinder(double r[], double u[], double L, int i, int j)
       cylinders[numcyls-1].L = L;
     }
 }
+int point_is_inside(double p[3], int icyl)
+{
+  double norm, sp, distsq, C[2][3], delp[3];
+  int kk, k1, k2;
+  
+  for (kk = 0; kk < 3; kk++)
+    {
+      C[0][kk] = cylinders[icyl].r[kk] + cylinders[icyl].u[kk]*cylinders[icyl].L*0.5;
+      C[1][kk] = cylinders[icyl].r[kk] - cylinders[icyl].u[kk]*cylinders[icyl].L*0.5;
+    }
+  /* punto dentro le sfere */
+  for (k1=0; k1 < 2; k1++)
+    {
+      distsq = Sqr(p[0]-C[k1][0])+Sqr(p[1]-C[k1][1])+Sqr(p[2]-C[k1][2]); 
+      if (distsq < Sqr(cylinders[icyl].D*0.5))
+	return 1;
+    }
+
+  /* punto dentro al cilindro */	
+  for (kk = 0; kk < 3; kk++)
+    delp[kk] = p[kk] - cylinders[icyl].r[kk];
+
+  sp = scalProd(delp, cylinders[icyl].u);
+
+  for (kk = 0; kk < 3; kk++)
+    delp[kk] -= sp*cylinders[icyl].u[kk];
+
+  norm = calc_norm(delp);
+
+  if (norm  < cylinders[icyl].D*0.5 && fabs(sp) < cylinders[icyl].L*0.5)
+    return 1;
+
+  return 0;
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
-  int k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
+  int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, *pinc, numpinc;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, iold;
+  long long int tt;
   //int coppie;
-  double norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc;
+  double norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
@@ -1154,6 +1190,7 @@ int main(int argc, char **argv)
     }	
   nfiles = c2;
   rewind(f2);
+  srand48((int)time(NULL));
   fname = malloc(sizeof(char*)*nfiles);
   for (ii=0; ii < nfiles; ii++)
     {
@@ -1211,6 +1248,7 @@ int main(int argc, char **argv)
   clsdimNV = malloc(sizeof(int)*NP);
   clscolNV = malloc(sizeof(int)*NP);
   clscol   = malloc(sizeof(int)*NP);
+  pinc = malloc(sizeof(int)*NP);
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(double)*NP);
@@ -1480,8 +1518,51 @@ int main(int argc, char **argv)
       /* stima volumi cluster con un MC */
       for (nc = 0; nc < ncls; nc++)
 	{
-
+	  j=0;
+	  for (i=0; i < NP; i++)
+	    {
+	      if (color[i] == cluster_sort[nc].color)
+		{
+		  j++;
+		  pinc[j] = i;
+		}		
+	    }
+	  numpinc = j;
+	  /* calc center of mass */
+	  for (kk=0; kk < 3; kk++)
+	    for (j = 0; j < numpinc; j++)
+	      {
+		rcm[kk] += cylinders[pinc[j]].r[kk]; 
+	      }
+	  for (kk=0; kk < 3; kk++)
+	    rcm[kk] /= ((double)numpinc);
+	  /* move center of mass to origin */
+	  for (kk=0; kk < 3; kk++)
+	    for (j = 0; j < numpinc; j++)
+	      {
+		cylinders[pinc[j]].r[kk] -= rcm[kk]; 
+	      }
+	  /* sovrastima della box size */	
+	  Lmc = 0.0;
+	  for (j = 0; j < numpinc; j++)
+	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
+	  ov = 0.0;
+	  for (tt=0; tt < max_MC_trials; tt++)
+	    {
+	      pp[0] = L*(drand48()-0.5); 
+	      pp[1] = L*(drand48()-0.5); 
+	      pp[2] = L*(drand48()-0.5);
+	     
+	      for (j = 0; j < numpinc; j++)
+		if (point_is_inside(pp,pinc[j]))
+		  {
+		    ov=ov+1.0;
+		  }
+	    }
+	  cluster_sort[nc].vol = L*L*L*ov/((double)tt); 
 	}	
+      /* salvare qui P(V) */
+      /* =============== */
 #if 0
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
