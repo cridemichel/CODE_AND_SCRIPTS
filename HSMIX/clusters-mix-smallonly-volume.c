@@ -1266,7 +1266,11 @@ int main(int argc, char **argv)
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
 
-         
+      /* stima volumi cluster */
+      for (nc = 0; nc < ncls; nc++)
+	{
+
+	}	
 #if 0
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
