@@ -14,25 +14,25 @@
 const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
-int kk, kmax, kj, i3;
+int kk, kmax, kj, i3, block, dummyint;
 double am, xmed;
-
+int *ip;
 /* NOTA: 
  * particles_type == 0 ( DGEBA - sticky ellipsoid), 1 (sticky 2-3), 2 (bimixhs) */
 char **fname; 
 
 const int NUMREP = 8;
-int MAXBONDS = 10, *nb;
+int MAXBONDS = 10;
 double wellWidth;
-double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0m[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
 double deltaAA=-1.0, deltaAB=-1.0, deltaBB=-1.0;
-int *dupcluster, shift[3], *numbonds, **bonds, block, dummyint;
+int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int NPm, NP, NPA=-1, ncNV, ncNV2, START, END;
+int NP, NPA=-1, ncNV, ncNV2, START, END;
 int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, media_log=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
@@ -53,10 +53,10 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
-void readconf(char *fname, double *ti, double *refTime, int NP, double **rm[3])
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
-  int nat=0, i, cpos, a, ip, r[3];
+  int nat=0, i, cpos;
   f = fopen(fname, "r");
   fscanf(f,"%[^\n]\n", line);
   fscanf(f,"%[^\n]\n", line);
@@ -66,19 +66,14 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double **rm[3])
   //cpos = ftell(f);
   //printf("cpos=%d\n", cpos);
   //fscanf(f, "%[^\n]\n",line);
-  for (i=0; i < NPm; i++)
-    nb[i] = 0;
   for (i = 0; i < NP; i++) 
     {
-      fscanf(f, "%lf %lf %lf\n", &(r[0]), &(r[1]), &(r[2]), &ip); 
+      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
       //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
-      r[0] -= Lx*0.5;
-      r[1] -= Ly*0.5;
-      r[2] -= Lz*0.5;
-      for (a = 0; a < 3; a++)
-	r[a][ip[i]][nb[i]] = r[a][i];
-      nb[i]++;
+      r[0][i] -= Lx*0.5;
+      r[1][i] -= Ly*0.5;
+      r[2][i] -= Lz*0.5;
     }
     
   fclose(f);
@@ -474,7 +469,7 @@ int main(int argc, char **argv)
   if (mix_type==-1 || NPA==NP)
     {
     	START=0;
-        END=NPm;
+        END=NP;
     }
    else if (mix_type==0)
     {
@@ -484,26 +479,26 @@ int main(int argc, char **argv)
   else
     {
       START=NPA;
-      END=NPm;
+      END=NP;
     }
-  NPm = NP / block;
-  color = malloc(sizeof(int)*NPm);
-  color2= malloc(sizeof(int)*NPm*NUMREP);
-  clsdim2=malloc(sizeof(int)*NPm*NUMREP);
-  nspots = malloc(sizeof(int)*NPm);
-  clsdim = malloc(sizeof(int)*NPm);
-  clsdimNV = malloc(sizeof(int)*NPm);
-  clscolNV = malloc(sizeof(int)*NPm);
-  clscol   = malloc(sizeof(int)*NPm);
-  cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NPm);
+  color = malloc(sizeof(int)*NP);
+  color2= malloc(sizeof(int)*NP*NUMREP);
+  clsdim2=malloc(sizeof(int)*NP*NUMREP);
+  nspots = malloc(sizeof(int)*NP);
+  clsdim = malloc(sizeof(int)*NP);
+  clsdimNV = malloc(sizeof(int)*NP);
+  clscolNV = malloc(sizeof(int)*NP);
+  clscol   = malloc(sizeof(int)*NP);
+  cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
-  clssizedstAVG = malloc(sizeof(double)*NPm);
-  dupcluster = malloc(sizeof(int)*NPm*NUMREP); 
-  percola = malloc(sizeof(int)*NPm);
+  clssizedstAVG = malloc(sizeof(double)*NP);
+  dupcluster = malloc(sizeof(int)*NP*NUMREP); 
+  percola = malloc(sizeof(int)*NP);
+  ip = malloc(sizeof(int)*NP);
   if (output_bonds)
     {
-      numbonds  = malloc(sizeof(int)*NPm); 
-      bonds = AllocMatI(NPm, MAXBONDS);
+      numbonds  = malloc(sizeof(int)*NP); 
+      bonds = AllocMatI(NP, MAXBONDS);
     }
   if (wellWidth==-1)
     wellWidth=sigmaBB;
@@ -513,15 +508,13 @@ int main(int argc, char **argv)
     /* le AA sono le grandi quindi usiamo quelle per RCUT */
   RCUT = maxsaxBB*1.01;
   printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
-  
-  nb =  malloc(sizeof(int)*block);
   for (a = 0; a < 3; a++)
     {
 #if 0
       for (b = 0; b < NA; b++)
 	rat[b][a] = malloc(sizeof(double)*NP);
 #endif
-      r0m[a] = malloc(sizeof(double*)*block);
+      r0[a] = malloc(sizeof(double)*NP);
       //DR0[a] = malloc(sizeof(double)*NP);
 #if 0
       for (b = 0; b < 3; b++)
@@ -530,15 +523,9 @@ int main(int argc, char **argv)
 	}
 #endif
     }
-  for (a = 0 a < 3; a++)
-    {
-      r0m[a][0] = malloc(sizeof(double)*block);
-      for (b = 1; b < NPm; b++)
-	r0m[a][b] += r0m[a][b-1] + NPm;
-    } 
-  printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d block=%d\n", nfiles, NP, NPA, L, NN, maxl, block);
+  printf("[MIXTURE] files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", nfiles, NP, NPA, L, NN, maxl);
   //printf("sigmaSticky=%.15G\n", sigmaSticky);
-  for (i = 0; i < NPm; i++)
+  for (i = 0; i < NP; i++)
     {
       clssizedstAVG[i] = 0.0;
     }      
@@ -555,19 +542,32 @@ int main(int argc, char **argv)
       cellsx = L / RCUT;
       cellsy = L / RCUT;
       cellsz = L / RCUT;
-      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NPm));
-      inCell[0] = malloc(sizeof(int)*NPm);
-      inCell[1] = malloc(sizeof(int)*NPm);
-      inCell[2] = malloc(sizeof(int)*NPm);
-      for (i = 0; i < NPm; i++)
+      cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
+      inCell[0] = malloc(sizeof(int)*NP);
+      inCell[1] = malloc(sizeof(int)*NP);
+      inCell[2] = malloc(sizeof(int)*NP);
+      for (i = 0; i < NP; i++)
 	{
 	  percola[i] = 0; 
 	}
 
-      readconf(fname[nr1], &time, &refTime, NP, r0, ip0, r0m);
+      readconf(fname[nr1], &time, &refTime, NP, r0);
       ti = time + refTime;
       /* costruisce la posizione di tutti gli sticky spots */
-      for (i = 0; i < NPm; i++)
+      for (i = 0; i < NP; i++)
+	{
+	  /* qui va il codice per individuare i cluster */
+	  for (a = 0; a < 3; a++)
+	    {
+	      r0L[a] = r0[a][i];
+#if 0
+	      for (b = 0; b < 3; b++)
+		RL[a][b] = R[a][b][i];
+#endif
+	    }
+	  //printf("r0L[%d]=%.15G %.15G %.15G\n", i, r0L[0], r0L[1], r0L[2]);
+	}
+      for (i = 0; i < NP; i++)
 	{
 	  color[i] = -1;	  
 	  clssizedst[i] = 0;
@@ -578,7 +578,7 @@ int main(int argc, char **argv)
       build_linked_list();
 
       jbeg = 0; 
-      ifin = NPm;
+      ifin = NP;
       for (i = START; i < END; i++)
 	{
     	  if (color[i] == -1)
@@ -628,7 +628,7 @@ int main(int argc, char **argv)
 			  jX = 0;   
 			  shift[0] = L;
 			}
-		      j = (jZ *cellsy + jY) * cellsx + jX + NPm;
+		      j = (jZ *cellsy + jY) * cellsx + jX + NP;
 		      for (j = cellList[j]; j > -1; j = cellList[j]) 
 			{
 		      	  if (j <= i) 
@@ -646,9 +646,9 @@ int main(int argc, char **argv)
 			      else
 				{
 				  if (color[i] < color[j])
-				    change_all_colors(NPm, color, color[j], color[i]);
+				    change_all_colors(NP, color, color[j], color[i]);
 				  else if (color[i] > color[j])
-				    change_all_colors(NPm, color, color[i], color[j]);
+				    change_all_colors(NP, color, color[i], color[j]);
 				}
 			    }
 			}
@@ -677,7 +677,7 @@ int main(int argc, char **argv)
 		}
 	    }
 #endif
-	  curcolor = findmaxColor(NPm, color)+1;
+	  curcolor = findmaxColor(NP, color)+1;
 	}
       /* considera la particelle singole come cluster da 1 */
       for (i = START; i < END; i++)
@@ -699,7 +699,7 @@ int main(int argc, char **argv)
 	}
       for (nc = 0; nc < ncls; nc++)
 	{
-	  for (a = 0; a < NPm; a++)
+	  for (a = 0; a < NP; a++)
 	    if (color[a] == nc)
 	      {
 		clsdim[color[a]]++;
@@ -729,6 +729,25 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = clscolNV[nc];
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
+
+      /* =================== >>> RENORMALIZE CLUSTERS <<< ===============
+	 se la stessa particella appartiene a n frame allora il cluster di n particelle
+	 corrispondente conta 1 */
+      for (i=0; i < NP/block; i++)
+	{
+	  for (j=NP/block; j < NP; j++)
+	    {
+	      if (ip[j]==i && color[i] == color[ip[j]])
+		{
+		  for (nc = 0; nc < ncls; nc++)
+		    {
+		      if (cluster_sort[nc].color==color[i])
+			cluster_sort[nc].dim--;
+		    }
+       		}
+	    }
+	}
+
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
@@ -739,10 +758,10 @@ int main(int argc, char **argv)
 	  cellsx = 2.0*L / RCUT;
 	  cellsy = 2.0*L / RCUT;
 	  cellsz = 2.0*L / RCUT;
-	  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NPm*NUMREP));
-	  inCell[0] = malloc(sizeof(int)*NPm*NUMREP);
-	  inCell[1] = malloc(sizeof(int)*NPm*NUMREP);
-	  inCell[2] = malloc(sizeof(int)*NPm*NUMREP);
+	  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP*NUMREP));
+	  inCell[0] = malloc(sizeof(int)*NP*NUMREP);
+	  inCell[1] = malloc(sizeof(int)*NP*NUMREP);
+	  inCell[2] = malloc(sizeof(int)*NP*NUMREP);
 
 	  ene=0;
 	  //coppie = 0;
@@ -829,7 +848,7 @@ int main(int argc, char **argv)
 				  jX = 0;   
 				  shift[0] = L;
 				}
-			      j2 = (jZ *cellsy + jY) * cellsx + jX + NPm*NUMREP;
+			      j2 = (jZ *cellsy + jY) * cellsx + jX + NP*NUMREP;
 			      for (j2 = cellList[j2]; j2 > -1; j2 = cellList[j2]) 
 				{
 				  //if (color[j] != cluster_sort[nc].color)
@@ -947,7 +966,7 @@ int main(int argc, char **argv)
 		  break;
 		}
 	    }
-	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NPm));
+	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
 	}
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
@@ -983,6 +1002,7 @@ int main(int argc, char **argv)
       //if (almenouno==0)
 	//fprintf(f, "WARNING: No clusters found!\n");
       fclose(f);
+
       for (nc = 0; nc < ncls; nc++)
 	{
 	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
@@ -1059,7 +1079,7 @@ int main(int argc, char **argv)
     }
   else
     {
-      for (i = 1; i < NPm; i++)
+      for (i = 1; i < NP; i++)
 	{
 	  if (clssizedstAVG[i] != 0.0)
 	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
