@@ -787,8 +787,8 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      *retchk=1;
 	      return -1;
 	    }
-	  if ( (calc_norm(Tjp_para) <= L*0.5 && calc_norm(Tjp_perp) <= D*0.5)||
-	       (calc_norm(Tjm_para) <= L*0.5 && calc_norm(Tjm_perp) <= D*0.5) )
+	  if ( (calc_norm(Tjp_para) <= Li*0.5 && calc_norm(Tjp_perp) <= Diami*0.5)||
+	       (calc_norm(Tjm_para) <= Li*0.5 && calc_norm(Tjm_perp) <= Diami*0.5) )
 	    {
 #ifdef DEBUG_HCMC
 	      if (dostorebump)
@@ -807,6 +807,10 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      Ci[kk] = CiTmp[kk];
 	      ni[kk] = niTmp[kk];
 	      nj[kk] = njTmp[kk];
+	      Diami = DiamiTmp;
+	      Diamj = DiamjTmp;
+	      Li = LiTmp;
+	      Lj = LjTmp;
 	    }
 	}
 
@@ -965,7 +969,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
       Vj[kk] = Cj[kk] + lambdaj*nj[kk];
       ViVj[kk] = Vi[kk] - Vj[kk];
     }
-  if (calc_norm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
+  if (calc_norm(ViVj) < 0.5*(Diami+Diamj) && fabs(lambdai) < 0.5*Li && fabs(lambdaj) < 0.5*Lj)
     {
 #ifdef DEBUG_HCMC
       if (dostorebump)
