@@ -23,7 +23,7 @@ char **fname;
 
 const int NUMREP = 8;
 int MAXBONDS = 10;
-double wellWidth;
+double wellWidth, wellWidthSq;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
@@ -47,6 +47,74 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
+{
+  const int meshpts = 8;
+  double Pj[3], Rj[3][3], AiCi[3];
+  int kk, k1, k2, nn;
+  static int firstcall=1;
+  double th, dth, xp[3], Ui[3], UiPj[3];
+  static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
+      {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
+      {0,-1},{0.707106781186547,-0.707106781186547}};*/
+  double PjCini, PjCi[3], normPjCi, d, mindist=-1.0; 
+  versor_to_R(nj[0],nj[1],nj[2], Rj); 
+#if 1
+  if (firstcall)
+    {
+      mesh = malloc(sizeof(double*)*meshpts);
+      for (nn=0; nn < meshpts; nn++)
+	mesh[nn] = malloc(sizeof(double)*3);
+      firstcall=0;
+      dth = acos(0)*4.0/((double)meshpts);
+
+      th=0.0;
+      for (nn=0; nn < meshpts; nn++)
+	{
+	  mesh[nn][0] = cos(th);
+	  mesh[nn][1] = sin(th);
+	  th += dth;
+	}
+    }
+#endif
+  for (nn=0; nn < meshpts; nn++)
+    {
+      //xp[0] = 0.0;
+      xp[1] = D*0.5*mesh[nn][0];
+      xp[2] = D*0.5*mesh[nn][1];
+      body2labHC(0, xp, Pj, Dj, Rj);    
+      for (kk=0; kk < 3; kk++)
+	PjCi[kk] = Pj[kk] - Ci[kk];
+      //normPjCi = calc_norm(PjCi);
+      PjCini = scalProd(PjCi,ni);
+      for (kk=0; kk < 3; kk++)
+	{
+	  Ui[kk] = Ci[kk] + PjCini*ni[kk];
+	  UiPj[kk] = Ui[kk]-Pj[kk];
+	}
+      if ((d=calc_norm(UiPj)) < mindist || nn==0)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Ai[kk] = Ui[kk];
+    	    }
+	  mindist=d;
+	  //printf("nn=%d mindist=%.15G d=%.15G\n", nn, mindist, d);
+	  //printf("Ui=%f %f %f Pi=%f %f %f\n", Ui[0],Ui[1], Ui[2], Pj[0], Pj[1], Pj[2]);
+	}
+    }
+  //printf("done\n");
+#if 0
+   for (kk=0; kk < 3; kk++)
+     AiCi[kk]  = Ai[kk] - Ci[kk]; 
+  printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,ni)/calc_norm(AiCi));
+  for (kk=0; kk < 3; kk++)
+    AiCi[kk]  = Pj[kk] - Dj[kk]; 
+
+  printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
+#endif 
+}
+
 void vectProdVec(double *A, double *B, double *C)
 {
   C[0] = A[1] * B[2] - A[2] * B[1]; 
@@ -107,6 +175,19 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
 }
 
 #endif
+/* restituisce 1 se si overlappano */
+int check_cyl_overlap(int i, int j, double shift[3])
+{
+  double distsq;
+  int retchk;
+
+  distsq = Sqr(r0[0][i]-r0[0][j]) + Sqr(r0[1][i]-r0[1][j]) + Sqr(r0[2][i]-r0[2][j]);
+  if (distsq < wellWidthSq)
+    return 1;
+  if (calcDistNegHC(i, j, shift, &retchk) < 0.0)
+    return 1;
+  return 0;
+}
 double distance(int i, int j)
 {
   int a, b;
@@ -115,9 +196,9 @@ double distance(int i, int j)
   double Dx, Dy, Dz;
   //double wellWidth;
 
-  Dx = r0[0][i] - r0[0][j];
-  Dy = r0[1][i] - r0[1][j];
-  Dz = r0[2][i] - r0[2][j];
+  Dx = cylinders[i].r[0] - cylinders[j].r[0];
+  Dy = cylinders[i].r[1] - cylinders[j].r[1];
+  Dz = cylinders[i].r[2] - cylinders[j].r[2];
   imgx = -L*rint(Dx/L);
   imgy = -L*rint(Dy/L);
   imgz = -L*rint(Dz/L);
@@ -127,10 +208,9 @@ double distance(int i, int j)
     return 1;
 #endif
   //wellWidth = sigmaBB;
-  if (Sqr(r0[0][i] + imgx - r0[0][j])+Sqr(r0[1][i] + imgy - r0[1][j])
-      +Sqr(r0[2][i] + imgz - r0[2][j]) < Sqr(wellWidth))	  
+  if (check_cyl_overlap(i, j))
     return -1;
-	
+
   return 1;
 }
 #if 0
@@ -415,7 +495,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   double sphov;
 #endif
   int it, k2;
-  double normNSq, ViVj[3], lambdai, lambdaj;
+  double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
@@ -430,34 +510,36 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   double normCiCj;	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
   int kk, j1, j2;
-
   *retchk = 0; 
 
   for (kk=0; kk < 3; kk++)
     {
-      ni[kk] = R[i][0][kk];
-      nj[kk] = R[j][0][kk];
+      ni[kk] = cylinders[i].u[kk];
+      nj[kk] = cylinders[j].u[kk];
     }
-  Ci[0] = rx[i];
-  Ci[1] = ry[i];
-  Ci[2] = rz[i]; 
-  Cj[0] = rx[j] + shift[0];
-  Cj[1] = ry[j] + shift[1];
-  Cj[2] = rz[j] + shift[2]; 
-  L = 2.0*typesArr[typeOfPart[i]].sax[0];
-  D = 2.0*typesArr[typeOfPart[i]].sax[1];
+  Ci[0] = cylinders[i].r[0];
+  Ci[1] = cylinders[i].r[1];
+  Ci[2] = cylinders[i].r[2];
+  Cj[0] = cylinders[j].r[0] + shift[0];
+  Cj[1] = cylinders[j].r[1] + shift[1];
+  Cj[2] = cylinders[j].r[2] + shift[2]; 
+  Li = cylinders[i].L;
+  Diami = cylinders[i].D;
+  Lj = cylinders[j].L;
+  Diamj = cylinders[j].D; 
   for (kk=0; kk < 3; kk++)
     {
       CiCj[kk] = Ci[kk] - Cj[kk];
     }
 
+
   for (kk=0; kk < 3; kk++)
     {
       /* centers of mass of disks */
-      Di[0][kk]=Ci[kk]+0.5*L*ni[kk];
-      Di[1][kk]=Ci[kk]-0.5*L*ni[kk];
-      Dj[0][kk]=Cj[kk]+0.5*L*nj[kk];
-      Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
+      Di[0][kk]=Ci[kk]+0.5*Li*ni[kk];
+      Di[1][kk]=Ci[kk]-0.5*Li*ni[kk];
+      Dj[0][kk]=Cj[kk]+0.5*Lj*nj[kk];
+      Dj[1][kk]=Cj[kk]-0.5*Lj*nj[kk];
     }
 #ifdef MC_HC_SPHERO_OPT
   if ((sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim)) > 0.0)
@@ -473,7 +555,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 
       if (scalProd(VV,ni)==1.0)
 	{
-	  if (normCiCj <= L)
+	  if (normCiCj <= 0.5*(L[0]+L[1]))
 	    return -1;
 	  else
 	    return 1;
@@ -489,7 +571,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 		VV[kk] = Di[j1][kk]-Dj[j2][kk];
 		sp += ni[kk]*VV[kk];
 	      }
-	    if (sp == 0 && calc_norm(VV) < D)
+	    if (sp == 0 && calc_norm(VV) < 0.5*(Diami+Diamj))
 	      {
 		return -1;
 	      }
@@ -522,10 +604,10 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      }
 	    normPiDi = calc_norm(PiDi);
 	    normPjDj = calc_norm(PjDj);
-	    if (normPiDi <= 0.5*D && normPjDj <= 0.5*D)
+	    if (normPiDi <= 0.5*Diami && normPjDj <= 0.5*Diamj)
 	      {
-		Q1 = sqrt(Sqr(D)/4.0-Sqr(normPiDi));
-		Q2 = sqrt(Sqr(D)/4.0-Sqr(normPjDj));
+		Q1 = sqrt(Sqr(Diami)/4.0-Sqr(normPiDi));
+		Q2 = sqrt(Sqr(Diamj)/4.0-Sqr(normPjDj));
 		for (kk=0; kk < 3; kk++)
 		  {
 		    PiPj[kk] = Pi[kk] - Pj[kk];
@@ -551,6 +633,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   /* =================================== >>> Part A <<< ========================= */
   for (j1=0; j1 < 2; j1++)
     {
+
       if (j1==1)
 	{
 	  //break;
@@ -594,22 +677,22 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      printf("DjCini= %.15G\n", DjCini);
 	    }
 #endif 
-	  if (normDjUi > D)
+	  if (normDjUi > 0.5*(Diami+Diamj))
 	    continue;
 
 	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
 	     there is some mess about following conditions:
 	     The second and third condition on right column of page 514 
 	     should read (D=sigma):
-	     |Di-Ui| < D/2  && |(Dj-Ci).ni| > L/2
+	     |Di-Uj| < D/2  && |(Dj-Ci).ni| > L/2
 
 	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
 
 	   */
-	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
+	  if (normDjUi < Diami*0.5 && fabs(DjCini) > Li*0.5)
 	    continue;
 
-	  if (normDjUi < D*0.5 && fabs(DjCini) <= L*0.5)
+	  if (normDjUi < Diamj*0.5 && fabs(DjCini) <= Li*0.5)
 	    {
 #ifdef DEBUG_HCMC
 	      if (dostorebump)
@@ -618,7 +701,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      return -1;
 	    }
 #if 1
-	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
+	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D[j1]);
 
 #else
 	  for (kk=0; kk < 3; kk++)
@@ -923,7 +1006,7 @@ int main(int argc, char **argv)
   int  NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, iold;
   //int coppie;
-  double refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3];
+  double refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
@@ -1015,6 +1098,8 @@ int main(int argc, char **argv)
   maxsaxAA = fabs(sigmaAA);
   maxsaxAB = fabs(sigmaAB);
   maxsaxBB = fabs(wellWidth);
+
+  wellWidthSq = Sqr(wellWidth);
     /* le AA sono le grandi quindi usiamo quelle per RCUT */
   RCUT = maxsaxBB*1.01;
   printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
@@ -1088,7 +1173,9 @@ int main(int argc, char **argv)
 	}
       for (i=0; i < NP; i++)
 	{
-
+	  lenc = cylinders[i].L + cylinders[i].D;
+	  if (i==0 || lenc > RCUT)
+	    RCUT=lenc;
 	}
       cellsx = L / RCUT;
       cellsy = L / RCUT;
