@@ -1371,7 +1371,7 @@ int main(int argc, char **argv)
 	  if (i==0 || lenc > RCUT)
 	    {
 	      RCUT=lenc;
-	      printf("i=%d wellWidth=%f cylinders[i].L=%f D=%f\n", i, wellWidth, cylinders[i].L, cylinders[i].D);
+	      //printf("i=%d wellWidth=%f cylinders[i].L=%f D=%f\n", i, wellWidth, cylinders[i].L, cylinders[i].D);
 	    }
 	}
       printf("RCUT=%f\n", RCUT);
