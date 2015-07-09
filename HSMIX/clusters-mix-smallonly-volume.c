@@ -1176,7 +1176,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3;
   int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, *pinc, numpinc;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ, iold;
+  int jX, jY, jZ, iX, iY, iZ, iold, jold;
   long long int tt;
   //int coppie;
   double norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
@@ -1328,17 +1328,32 @@ int main(int argc, char **argv)
 	      if (j > i)
 		{
 		  for (k=0; k < 3; k++)
-		    ucyl[0] = r0[k][j] - r0old[k];
+		    {
+		      ucyl[k] = r0[k][j] - r0old[k];
+		      if (ucyl[k] > L*0.5)
+			{
+			  //printf("j=%d ucyl[%d]=%f\n", j, k, ucyl[k]);
+			  ucyl[k] -= L;
+			  r0[k][j] -= L;
+			  //printf("ucyl[k]=%f r0-0old=%f\n", ucyl[k], r0[k][j]-r0old[k]);
+			}
+		      if (ucyl[k] < -L*0.5)
+			{
+			  ucyl[k] += L;
+			  r0[k][j] += L;
+			}
+		    }
 		  norm = calc_norm(ucyl);
 		  for (k=0; k < 3; k++)
 		    ucyl[k] /= norm;
 		  for (k=0; k < 3; k++)
 		    rcm[k] = (r0[k][j] + r0old[k])*0.5;
-		  add_cylinder(rcm, ucyl, norm, iold, i);
+		  add_cylinder(rcm, ucyl, norm, jold, j);
+		  //printf("rcm=%f %f %f ucyl=%f %f %f jold=%d j=%d L=%f Lbox=%f\n", rcm[0], rcm[1], rcm[2], ucyl[0], ucyl[1], ucyl[2], jold, j, norm, L);
 		}
 	      for (k=0; k < 3; k++)
-		r0old[k] = r0[k][i];
-	      iold = i;
+		r0old[k] = r0[k][j];
+	      jold = j;
 	    }
 	}
 
