@@ -1125,17 +1125,18 @@ void add_cylinder(double r[], double u[], double L, int i, int j)
   if (numcyls >= allocated_cyls)
     {
       allocated_cyls += 100;
-      cylinders = realloc(cylinders, allocated_cyls);
+      cylinders = realloc(cylinders, sizeof(struct cylstr)*allocated_cyls);
     }
   for (k=0; k < 3; k++)
     {
       cylinders[numcyls-1].r[k] = r[k];
       cylinders[numcyls-1].u[k] = u[k];  
-      cylinders[numcyls-1].i1 = i;
-      cylinders[numcyls-1].i2 = j;
-      cylinders[numcyls-1].D = wellWidth;
-      cylinders[numcyls-1].L = L;
     }
+  cylinders[numcyls-1].i1 = i;
+  cylinders[numcyls-1].i2 = j;
+  cylinders[numcyls-1].D = wellWidth;
+  cylinders[numcyls-1].L = L;
+  //printf("allocated_cyls=%d numcyls-1=%d D=%f\n", allocated_cyls, numcyls-1, cylinders[numcyls-1].D);  
 }
 int point_is_inside(double p[3], int icyl)
 {
@@ -1368,8 +1369,12 @@ int main(int argc, char **argv)
 	{
 	  lenc = cylinders[i].L + cylinders[i].D;
 	  if (i==0 || lenc > RCUT)
-	    RCUT=lenc;
+	    {
+	      RCUT=lenc;
+	      printf("i=%d wellWidth=%f cylinders[i].L=%f D=%f\n", i, wellWidth, cylinders[i].L, cylinders[i].D);
+	    }
 	}
+      printf("RCUT=%f\n", RCUT);
       cellsx = L / RCUT;
       cellsy = L / RCUT;
       cellsz = L / RCUT;
