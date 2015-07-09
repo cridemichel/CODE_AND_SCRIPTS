@@ -13,6 +13,15 @@
 
 #define npmax 10000001
 static double maxarg1,maxarg2;
+struct cylstr 
+{
+  double u[3];
+  double r[3];
+  double L;
+  double D;
+  int i1;
+  int i2;
+} *cylinders;
 
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
@@ -128,16 +137,183 @@ int check_convergence(double Told[3], double Tnew[3])
   else 
     return 0;
 }
-double calcDistNegHC(int i, int j, double shift[3], int* retchk);
-struct cylstr 
+
+double calcDistBox(int i, int j, double shift[3])
 {
-  double u[3];
-  double r[3];
-  double L;
-  double D;
-  int i1;
-  int i2;
-} *cylinders;
+  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
+  double R_A[3][3], R_B[3][3];
+  int k, k1, k2, existsParallelPair = 0;
+  /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
+   * maniera molto efficiente */ 
+  for (k=0; k < 3; k++)
+    {
+      rA[k] = cylinders[i].r[k];
+      rB[k] = cylinders[j].r[k];
+    }
+  versor_to_R(cylinders[i].u[0],cylinders[i].u[1],cylinders[i].u[2], R_A);
+  versor_to_R(cylinders[j].u[0],cylinders[j].u[1],cylinders[j].u[2], R_B);
+  EA[0]=cylinders[i].L+cylinders[i].D;
+  EB[0]=cylinders[j].L+cylinders[j].D;
+  EA[1]=EA[2]=cylinders[i].D;
+  EB[1]=EB[2]=cylinders[j].D;
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  AA[k1][k2] = R_A[k1][k2];
+	  BB[k1][k2] = R_B[k1][k2];
+	}
+    	DD[k1] = rA[k1] - rB[k1];
+    }
+  /* axis C0+s*A0 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[0][k1] =  scalProd(AA[0], BB[k1]);
+      fabscij[0][k1] = fabs(cij[0][k1]);
+      if ( fabscij[0][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[0] = scalProd(AA[0],DD);
+  RR = fabs(AD[0]);
+  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
+  R01 = EA[0] + R1;
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[1][k1] = scalProd(AA[1],BB[k1]);
+      fabscij[1][k1] = fabs(cij[1][k1]);
+      if ( fabscij[1][k1] == 1.0  )
+	existsParallelPair = 1;
+    }
+  AD[1] = scalProd(AA[1],DD);
+  RR = fabs(AD[1]);
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
+  R01 = EA[1] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  for (k1= 0; k1 < 3; k1++)
+    {
+      cij[2][k1] = scalProd(AA[2], BB[k1]);
+      fabscij[2][k1] = fabs(cij[2][k1]);
+      if ( fabscij[2][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[2] = scalProd(AA[2],DD);
+  RR = fabs(AD[2]);
+  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
+  R01 = EA[2] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*B0 */
+  RR = fabs(scalProd(BB[0],DD));
+  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
+  R01 = R0 + EB[0];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*B1 */
+  RR = fabs(scalProd(BB[1],DD));
+  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
+  R01 = R0 + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  
+  /* axis C0+s*B2 */
+  RR = fabs(scalProd(BB[2],DD));
+  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
+  R01 = R0 + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* At least one pair of box axes was parallel, therefore the separation is
+   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
+   * the separation of the boxes. 
+   */
+  if ( existsParallelPair )
+    return -1.0;
+
+  /* axis C0+s*A0xB0 */
+  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
+  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
+  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB1 */
+  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
+  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
+  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB2 */
+  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
+  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
+  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB0 */
+  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
+  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
+  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB1 */
+  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
+  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
+  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB2 */
+  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
+  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
+  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB0 */
+  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
+  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
+  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB1 */
+  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
+  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
+  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB2 */
+  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
+  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
+  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  return -1.0;
+}
+
+
+double calcDistNegHC(int i, int j, double shift[3], int* retchk);
 int allocated_cyls=100;
 int numcyls=0;
 const int nlin=20;
@@ -153,7 +329,7 @@ char **fname;
 const int NUMREP = 8;
 int MAXBONDS = 10;
 double wellWidth, wellWidthSq;
-double Lx, Ly, Lz, L, timet, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
+double *PV, Lx, Ly, Lz, L, timet, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
 double pi, sa[2]={-1.0,-1.0}, sb[2]={-1.0,-1.0}, sc[2]={-1.0,-1.0}, 
        Dr, theta, sigmaSticky=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0;
@@ -337,10 +513,17 @@ double distance(int i, int j)
     return 1;
 #endif
   //wellWidth = sigmaBB;
+#if 1
+  if (calcDistBox(i, j, shift) > 0.0)
+    {
+      //printf("qui\n");
+      return 1.0;
+    }
+#endif
   if (check_cyl_overlap(i, j, shift))
-    return -1;
+    return -1.0;
 
-  return 1;
+  return 1.0;
 }
 #if 0
 int check_distanceR(int i, int j, int imgix, int imgiy, int imgiz,
@@ -1172,15 +1355,16 @@ int point_is_inside(double p[3], int icyl)
 
   return 0;
 }
+
 int main(int argc, char **argv)
 {
-  FILE *f, *f2, *f3;
+  FILE *f, *f2, *f3, *fcls;
   int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, *pinc, numpinc;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, iold, jold;
   long long int tt;
   //int coppie;
-  double norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
+  double delvol, PVtot, norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
@@ -1302,6 +1486,8 @@ int main(int argc, char **argv)
     {
       clssizedstAVG[i] = 0.0;
     }      
+  fcls = fopen("all_clusters.txt", "w+");
+
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       if (cellList)
@@ -1547,7 +1733,6 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = clscolNV[nc];
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
-
       /* stima volumi cluster con un MC */
       for (nc = 0; nc < ncls; nc++)
 	{
@@ -1579,6 +1764,18 @@ int main(int argc, char **argv)
 	  Lmc = 0.0;
 	  for (j = 0; j < numpinc; j++)
 	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
+	  /* print to file cluster for further analysis */
+	  /* scrive numero di cilindri appartenenti al cluster e box size */
+	  fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
+	  for (j = 0; j < numpinc; j++)
+	    {
+	      /* rcm orient L D */
+	      fprintf(fcls, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
+		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
+		      cylinders[pinc[j]].L,  , cylinders[pinc[j]].D);
+	    }
+#ifdef METTER_IN_UN_CODICE_SEPARATO
 	  ov = 0.0;
 	  for (tt=0; tt < max_MC_trials; tt++)
 	    {
@@ -1594,7 +1791,13 @@ int main(int argc, char **argv)
 	    }
 	  cluster_sort[nc].vol = L*L*L*ov/((double)tt); 
 	}	
-      /* salvare qui P(V) */
+      /* accumulare qui la P(V) */
+      for (nc=0; nc < ncls; nc++) 
+	{
+	  ibin = (int) (cluster_sort[nc].vol/delvol);
+	  PV[ibin]++;
+	}
+#endif
       /* =============== */
 #if 0
       /* ============== >>> PERCOLATION <<< ================== */
@@ -1887,6 +2090,20 @@ int main(int argc, char **argv)
 	}
     }
 
+  fclose(fcls);
+#ifdef METTER_IN_UN_CODICE_SEPARATO
+  f = fopen("avg_vol_distr.dat", "w+");
+
+  PVtot = 0.0;
+  for (i=0; i < imax; i++)
+    PVtot += PV[i];
+
+  for (i=0; i < imax; i++)
+    {
+      fprintf(f, "%.15G %.15G\n", i*delvol, PV[i]/PVtot);
+    }
+  fclose(f);
+#endif
   f = fopen("avg_cluster_size_distr.dat", "w+");
   if (media_log)
     {
