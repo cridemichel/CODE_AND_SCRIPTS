@@ -1391,6 +1391,7 @@ int main(int argc, char **argv)
       curcolor = 0;
       ene=0;
       //coppie = 0;
+      END=NP;
       build_linked_list();
 
       jbeg = 0; 
