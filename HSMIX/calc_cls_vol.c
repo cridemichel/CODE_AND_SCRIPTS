@@ -7,6 +7,15 @@ int allocated_cyls=100;
 int numcyls=0, ncyltot, ibin;
 int npts = 1000;
 double D, L, r[3], u[3], delvol;
+#define Sqr(x) ((x)*(x))
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
 struct cylstr 
 {
   double u[3];
@@ -83,11 +92,11 @@ int point_is_inside(double p[3], int icyl)
 
 void main(int argc, char **argv)
 {
-  FILE *cf, f;
-  double L, pp[3], vol, maxvol=0.0, PVtot;
-  int ncyl, nc, i;
+  FILE *cf, *f;
+  double pp[3], vol, maxvol=0.0, PVtot;
+  int ncyl, nc, i, j;
   long long int max_MC_trials=100000;
-  double ov, L, *PV;
+  double ov, *PV;
   long long int tt;
 
   cf = fopen(argv[1], "r");
@@ -97,7 +106,7 @@ void main(int argc, char **argv)
   PV = malloc(sizeof(double)*npts);
   srand((int)time(NULL));
   cylinders = malloc(sizeof(struct cylstr)*allocated_cyls);
-  overvol = 0.0;
+  maxvol = 0.0;
   while(!feof(cf))
     {
       fscanf(f, "%d  %lf\n", &ncyl, &L);
