@@ -1773,31 +1773,9 @@ int main(int argc, char **argv)
 	      fprintf(fcls, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
 		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
 		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
-		      cylinders[pinc[j]].L,  , cylinders[pinc[j]].D);
+		      cylinders[pinc[j]].L, cylinders[pinc[j]].D);
 	    }
-#ifdef METTER_IN_UN_CODICE_SEPARATO
-	  ov = 0.0;
-	  for (tt=0; tt < max_MC_trials; tt++)
-	    {
-	      pp[0] = L*(drand48()-0.5); 
-	      pp[1] = L*(drand48()-0.5); 
-	      pp[2] = L*(drand48()-0.5);
-	     
-	      for (j = 0; j < numpinc; j++)
-		if (point_is_inside(pp,pinc[j]))
-		  {
-		    ov=ov+1.0;
-		  }
-	    }
-	  cluster_sort[nc].vol = L*L*L*ov/((double)tt); 
-	}	
-      /* accumulare qui la P(V) */
-      for (nc=0; nc < ncls; nc++) 
-	{
-	  ibin = (int) (cluster_sort[nc].vol/delvol);
-	  PV[ibin]++;
 	}
-#endif
       /* =============== */
 #if 0
       /* ============== >>> PERCOLATION <<< ================== */
@@ -2091,19 +2069,6 @@ int main(int argc, char **argv)
     }
 
   fclose(fcls);
-#ifdef METTER_IN_UN_CODICE_SEPARATO
-  f = fopen("avg_vol_distr.dat", "w+");
-
-  PVtot = 0.0;
-  for (i=0; i < imax; i++)
-    PVtot += PV[i];
-
-  for (i=0; i < imax; i++)
-    {
-      fprintf(f, "%.15G %.15G\n", i*delvol, PV[i]/PVtot);
-    }
-  fclose(f);
-#endif
   f = fopen("avg_cluster_size_distr.dat", "w+");
   if (media_log)
     {
