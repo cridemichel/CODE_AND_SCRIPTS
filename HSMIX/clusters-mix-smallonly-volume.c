@@ -477,7 +477,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [ --medialog/-ml ] [--bonds/-b] [--maxbonds] [--wellwidth/-ww <value>] <listafile>\n");
+  printf("Usage: clusters [--ptype/-pt] [--noperc/-np] [ --medialog/-ml ] [--bonds/-b] [--maxbonds] [--wellwidth/-ww <value>] [--maxmctrials/-mmc] <listafile>\n");
   exit(0);
 }
 long long int max_MC_trials = 1000000;
@@ -1227,7 +1227,9 @@ int main(int argc, char **argv)
   fscanf(f, "%lf %lf ", &sigmaAA, &sigmaBB);
   sigmaAB=0.5*(sigmaAA+sigmaBB);
   fclose(f);
-
+  //printf("qui\n");
+  //fflush(stdout);
+ 
   cylinders = malloc(sizeof(struct cylstr)*allocated_cyls);
  
   printf("NP=%d NPA=%d sigmaBB=%f\n", NP, NPA, sigmaBB);  

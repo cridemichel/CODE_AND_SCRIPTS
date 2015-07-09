@@ -35,7 +35,7 @@ do
 num=`echo "$aa*$BLOCK+$dd"|bc`
 f=`echo $num | gawk '{printf("story%04d",$1)}'`
 echo "file=" $f
-cat $f | gawk -v np=$NP -v npa=$NPA '{if (NR>319+npa && NR-319 <= np) print ($3, $4, $5); }' >> $P3
+cat $f | gawk -v np=$NP -v npa=$NPA 'BEGIN {REFNR=-1} {if ($0=="H.LIST OF ATOMS") REFNR=NR+1; if (REFNR!=-1 && NR>REFNR+npa && NR-REFNR <= np) print ($3, $4, $5); }' >> $P3
 dd=$[${dd}+1]
 done
 NPTOT=`echo "${BLOCK}*${NP}" | bc`

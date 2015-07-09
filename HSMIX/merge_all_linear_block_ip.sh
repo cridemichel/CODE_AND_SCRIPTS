@@ -3,7 +3,8 @@ P2="part2"
 P3="part3"
 cc=0
 BLOCK="$2"
-FF=`head -n 1 lista`
+LST="$1"
+FF=`head -n 1 $1`
 echo "Primo file=" $FF
 #NP=`cat $FF| awk '{if (NR==2) {print $0}; }'`
 NP=`cat mols.dat | gawk '{if (NR==1) {print $2};}'`
@@ -17,7 +18,7 @@ echo "NP=" $NP " NPA=" $NPA
 #cc=$[${cc}+1]
 #done
 aa=0
-NFILES=`wc -l lista| gawk '{print $1}'`
+NFILES=`wc -l $1| gawk '{print $1}'`
 while [ $cc -lt $NFILES ]
 do
 dd=0
@@ -33,9 +34,9 @@ fi
 while [ $dd -lt $BLOCK ]
 do
 num=`echo "$aa*$BLOCK+$dd"|bc`
-f=`echo $num | gawk '{printf("story%04d",$1)}'`
+f=`echo $num | gawk '{printf("story2-%04d",$1)}'`
 echo "file=" $f
-cat $f | gawk -v np=$NP -v npa=$NPA '{ip=NR-319; if (NR>319+npa && NR-319 <= np) print ($3, $4, $5, ip); }' >> $P3
+cat $f | gawk -v np=$NP -v npa=$NPA 'BEGIN {REFNR=-1} {if ($0=="H.LIST OF ATOMS") REFNR=NR+1; ip=REFNR; if (REFNR!=-1 && NR>REFNR+npa && NR-REFNR <= np) print ($3, $4, $5, ip); }' >> $P3
 dd=$[${dd}+1]
 done
 NPTOT=`echo "${BLOCK}*${NP}" | bc`
