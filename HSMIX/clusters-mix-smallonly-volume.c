@@ -1400,7 +1400,8 @@ int main(int argc, char **argv)
 	{
     	  if (color[i] == -1)
 	    color[i] = curcolor;
-	    
+	 if (i%1000==0)
+	   printf("i=%d\n", i); 
 	  for (iZ = -1; iZ <= +1; iZ++) 
 	    {
 	      jZ = inCell[2][i] + iZ;    
