@@ -1745,37 +1745,38 @@ int main(int argc, char **argv)
 		  pinc[j] = i;
 		}		
 	    }
-	  numpinc = j;
-	  /* calc center of mass */
-	  for (kk=0; kk < 3; kk++)
-	    for (j = 0; j < numpinc; j++)
-	      {
-		rcm[kk] += cylinders[pinc[j]].r[kk]; 
-	      }
-	  for (kk=0; kk < 3; kk++)
-	    rcm[kk] /= ((double)numpinc);
-	  /* move center of mass to origin */
-	  for (kk=0; kk < 3; kk++)
-	    for (j = 0; j < numpinc; j++)
-	      {
-		cylinders[pinc[j]].r[kk] -= rcm[kk]; 
-	      }
-	  /* sovrastima della box size */	
-	  Lmc = 0.0;
-	  for (j = 0; j < numpinc; j++)
-	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
-	  /* print to file cluster for further analysis */
-	  /* scrive numero di cilindri appartenenti al cluster e box size */
-	  fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
-	  for (j = 0; j < numpinc; j++)
-	    {
-	      /* rcm orient L D */
-	      fprintf(fcls, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
-		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
-		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
-		      cylinders[pinc[j]].L, cylinders[pinc[j]].D);
-	    }
 	}
+      numpinc = j;
+      /* calc center of mass */
+      for (kk=0; kk < 3; kk++)
+	for (j = 0; j < numpinc; j++)
+	  {
+	    rcm[kk] += cylinders[pinc[j]].r[kk]; 
+	  }
+      for (kk=0; kk < 3; kk++)
+	rcm[kk] /= ((double)numpinc);
+      /* move center of mass to origin */
+      for (kk=0; kk < 3; kk++)
+	for (j = 0; j < numpinc; j++)
+	  {
+	    cylinders[pinc[j]].r[kk] -= rcm[kk]; 
+	  }
+      /* sovrastima della box size */	
+      Lmc = 0.0;
+      for (j = 0; j < numpinc; j++)
+	Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
+      /* print to file cluster for further analysis */
+      /* scrive numero di cilindri appartenenti al cluster e box size */
+      fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
+      for (j = 0; j < numpinc; j++)
+	{
+	  /* rcm orient L D */
+	  fprintf(fcls, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+		  cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
+		  cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
+		  cylinders[pinc[j]].L, cylinders[pinc[j]].D);
+	}
+
       /* =============== */
 #if 0
       /* ============== >>> PERCOLATION <<< ================== */
