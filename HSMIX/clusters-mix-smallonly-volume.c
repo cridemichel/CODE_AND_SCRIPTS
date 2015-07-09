@@ -265,9 +265,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   //fscanf(f, "%[^\n]\n",line);
   for (i = 0; i < NP; i++) 
     {
-      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
+      fscanf(f, "%lf %lf %lf %d\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
-      //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
+      //printf("%f, %f, %f ip[%d]=%d\n", r[0][i], r[1][i], r[2][i], i, ip[i]);
       r[0][i] -= Lx*0.5;
       r[1][i] -= Ly*0.5;
       r[2][i] -= Lz*0.5;
@@ -1314,14 +1314,15 @@ int main(int argc, char **argv)
       /* =================== >>> CREATE CYLINDERS <<< ===============
 	 se la stessa particella appartiene a n frame allora il cluster di n particelle
 	 corrispondente conta 1 */
-      for (i=0; i < NP/block; i++)
+     printf("read file=%s\n", fname[nr1]);
+     for (i=0; i < NP/block; i++)
 	{
 	  /* considera tutti i frame */
-	  for (j=i; j < NP; j=j+block)
+	  for (j=i; j < NP; j=j+NP/block)
 	    {
 	      if (ip[j] != i)
 		{
-		  printf("boh \n");
+		  printf("i=%d j=%d ip[j]=%d boh \n", i, j, ip[j]);
 		  exit(-1);
 		}
 	      if (j > i)
