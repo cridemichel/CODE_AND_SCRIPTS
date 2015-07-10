@@ -549,7 +549,7 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 		  int imgjx, int imgjy, int imgjz, double Lbig)
 {
   int a, b, maxa=0, maxb=0;
-  double imgx, imgy, imgz;
+  double shift[3];
   double Dx, Dy, Dz, dx, dy, dz;
   
   //wellWidth = sigmaBB;
@@ -557,20 +557,31 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
   dx = L*(imgix-imgjx);
   dy = L*(imgiy-imgjy);
   dz = L*(imgiz-imgjz);
-  Dx = r0[0][i] - r0[0][j] + dx;
-  Dy = r0[1][i] - r0[1][j] + dy;
-  Dz = r0[2][i] - r0[2][j] + dz;
-  imgx = -Lbig*rint(Dx/Lbig);
-  imgy = -Lbig*rint(Dy/Lbig);
-  imgz = -Lbig*rint(Dz/Lbig);
+  Dx = cylinders[i].r[0] - cylinders[j].r[0] + dx;
+  Dy = cylinders[i].r[1] - cylinders[j].r[1] + dy;
+  Dz = cylinders[i].r[2] - cylinders[j].r[2] + dz;
+  shift[0] = Lbig*rint(Dx/Lbig);
+  shift[1] = Lbig*rint(Dy/Lbig);
+  shift[2] = Lbig*rint(Dz/Lbig);
 
 #if 0
   if (check_distance(i, j, Dx + imgx, Dy + imgy, Dz + imgz))
     return 1;
 #endif
+#if 0
   if (Sqr(r0[0][i] + dx + imgx - r0[0][j])+Sqr(r0[1][i] + dy + imgy - r0[1][j])
       + Sqr(r0[2][i] + dz + imgz - r0[2][j]) < Sqr(wellWidth))	  
     return -1;
+#endif
+#if 1
+  if (calcDistBox(i, j, shift) > 0.0)
+    {
+      //printf("qui\n");
+      return 1.0;
+    }
+#endif
+  if (check_cyl_overlap(i, j, shift))
+    return -1.0;
 
   return 1;
 }
@@ -770,9 +781,9 @@ void build_linked_list_perc(int clsdim, double Lbig)
       img = n / clsdim;
       choose_image(img, &dix, &diy, &diz);
       np = dupcluster[n];
-      inCell[0][n] =  (r0[0][np] + dix*L + L2) * cellsx / Lbig;
-      inCell[1][n] =  (r0[1][np] + diy*L + L2) * cellsy / Lbig;
-      inCell[2][n] =  (r0[2][np] + diz*L + L2) * cellsz / Lbig;
+      inCell[0][n] =  (cylinders[n].r[0] + dix*L + L2) * cellsx / Lbig;
+      inCell[1][n] =  (cylinders[n].r[1] + diy*L + L2) * cellsy / Lbig;
+      inCell[2][n] =  (cylinders[n].r[2] + diz*L + L2) * cellsz / Lbig;
       if (inCell[0][n] == cellsx)
 	inCell[0][n]=cellsx-1;
       if (inCell[1][n] == cellsy)
@@ -1535,6 +1546,9 @@ int main(int argc, char **argv)
 		    ucyl[k] /= norm;
 		  for (k=0; k < 3; k++)
 		    rcm[k] = (r0[k][j] + r0old[k])*0.5;
+		  /* all cylinders must stay inside first box! */
+		  for (k=0; k < 3; k++)
+		    rcm[k] -= L*rint(rcm[k]/L);
 		  add_cylinder(rcm, ucyl, norm, jold, j);
 		  //printf("rcm=%f %f %f ucyl=%f %f %f jold=%d j=%d L=%f Lbox=%f\n", rcm[0], rcm[1], rcm[2], ucyl[0], ucyl[1], ucyl[2], jold, j, norm, L);
 		}
@@ -1778,7 +1792,7 @@ int main(int argc, char **argv)
 	}
 
       /* =============== */
-#if 0
+#if 1
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
