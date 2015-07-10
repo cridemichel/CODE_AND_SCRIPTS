@@ -1807,6 +1807,7 @@ int main(int argc, char **argv)
 	      }
 	  /* sovrastima della box size */	
 	  Lmc = 0.0;
+	
 	  for (j = 0; j < numpinc; j++)
 	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
 	  /* print to file cluster for further analysis */
