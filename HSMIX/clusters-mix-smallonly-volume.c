@@ -350,7 +350,7 @@ double deltaAA=-1.0, deltaAB=-1.0, deltaBB=-1.0;
 int *dupcluster, shift[3], *numbonds, **bonds;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-int NP, NPA=-1, ncNV, ncNV2, START, END;
+int NPpart, NP, NPA=-1, ncNV, ncNV2, START, END;
 int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, media_log=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
@@ -1568,7 +1568,7 @@ int main(int argc, char **argv)
       clssizedstAVG[i] = 0.0;
     }      
   fcls = fopen("all_clusters.txt", "w+");
-
+  NPpart = NP;
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
       if (cellList)
@@ -1578,15 +1578,16 @@ int main(int argc, char **argv)
 	  free(inCell[1]);
 	  free(inCell[2]);
 	}
-     readconf(fname[nr1], &timet, &refTime, NP, r0);
+     readconf(fname[nr1], &timet, &refTime, NPpart, r0);
       /* =================== >>> CREATE CYLINDERS <<< ===============
 	 se la stessa particella appartiene a n frame allora il cluster di n particelle
 	 corrispondente conta 1 */
      printf("read file=%s\n", fname[nr1]);
-     for (i=0; i < NP/block; i++)
+     numcyls = 0;
+     for (i=0; i < NPpart/block; i++)
 	{
 	  /* considera tutti i frame */
-	  for (j=i; j < NP; j=j+NP/block)
+	  for (j=i; j < NPpart; j=j+NPpart/block)
 	    {
 	      if (ip[j] != i)
 		{
@@ -2232,7 +2233,7 @@ int main(int argc, char **argv)
 	  xlog[kk]=0.0;
 	  for (kj=l1[kk]; kj <= l2[kk]; kj++)
 	    {
-	      if (kj < NP && clssizedstAVG[kj] !=0)
+	      if (kj < NPpart && clssizedstAVG[kj] !=0)
 		{   
 		  dlog[kk]=dlog[kk]+clssizedstAVG[kj];
 		}		  
@@ -2256,7 +2257,7 @@ int main(int argc, char **argv)
     }
   else
     {
-      for (i = 1; i < NP; i++)
+      for (i = 1; i < NPpart; i++)
 	{
 	  if (clssizedstAVG[i] != 0.0)
 	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
