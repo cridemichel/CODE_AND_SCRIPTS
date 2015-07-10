@@ -99,6 +99,11 @@ void main(int argc, char **argv)
   double ov, *PV;
   long long int tt;
 
+  if (argc==1)
+    {
+      printf("calc_cls_vol <file> <MC trials> [histogram points]\n");
+      exit(-1);
+    }
   cf = fopen(argv[1], "r");
   max_MC_trials = atoll(argv[2]);
   if (argc==4)
@@ -109,12 +114,12 @@ void main(int argc, char **argv)
   maxvol = 0.0;
   while(!feof(cf))
     {
-      fscanf(f, "%d  %lf\n", &ncyl, &L);
+      fscanf(cf, "%d  %lf\n", &ncyl, &L);
       ncyltot += ncyl;
       vol = 0.0;
       for (nc = 0; nc < ncyl; nc++)
 	{
-	  fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf ", &r[0], &r[1], &r[2],
+	  fscanf(cf, "%lf %lf %lf %lf %lf %lf %lf %lf ", &r[0], &r[1], &r[2],
 	    	 &u[0], &u[1], &u[2], &L, &D);
 	  vol += L*(D/2.)*(D/2.)*M_PI;
 	}
@@ -122,14 +127,15 @@ void main(int argc, char **argv)
 	maxvol = vol;
     }
   delvol = maxvol / npts; 
-  rewind(f);
+  rewind(cf);
+  f = fopen("all_clusters_volumes.txt", "w+");
   while (!feof(cf))
     {
       ov = 0.0;
-      fscanf(f, "%d  %lf\n", &ncyl, &L);
+      fscanf(cf, "%d  %lf\n", &ncyl, &L);
       for (nc = 0; nc < ncyl; nc++)
 	{
-	  fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf ", &r[0], &r[1], &r[2],
+	  fscanf(cf, "%lf %lf %lf %lf %lf %lf %lf %lf ", &r[0], &r[1], &r[2],
 		      &u[0], &u[1], &u[2], &L, &D);
 	  add_cylinder(r, u, L, D, nc, nc);
 	}	
@@ -143,19 +149,18 @@ void main(int argc, char **argv)
 	    {
 	      if (point_is_inside(pp, j))
 		{
+		  printf("qui\n");
 		  ov=ov+1.0;
 		}
 	    }
 	}
       vol = L*L*L*ov/((double)tt); 
-    }
-  /* accumulare qui la P(V) */
-  for (nc=0; nc < ncyl; nc++) 
-    {
       ibin = (int) (vol/delvol);
       PV[ibin]++;
+      fprintf(f, "%d %.15G\n", nc, vol);
     }
 
+  fclose(f);
   fclose(cf);
   f = fopen("avg_vol_distr.dat", "w+");
 

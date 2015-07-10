@@ -1372,7 +1372,7 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3, *fcls;
   int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, *pinc, numpinc;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ, iold, jold;
+  int jX, jY, jZ, iX, iY, iZ, iold, jold, totcyl;
   long long int tt;
   //int coppie;
   double delvol, PVtot, norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
@@ -1748,6 +1748,7 @@ int main(int argc, char **argv)
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
       /* stima volumi cluster con un MC */
+      totcyl = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
 	  j=0;
@@ -1759,38 +1760,39 @@ int main(int argc, char **argv)
 		  pinc[j] = i;
 		}		
 	    }
+	  numpinc = j;
+	  totcyl += numpinc;
+	  /* calc center of mass */
+	  for (kk=0; kk < 3; kk++)
+	    for (j = 0; j < numpinc; j++)
+	      {
+		rcm[kk] += cylinders[pinc[j]].r[kk]; 
+	      }
+	  for (kk=0; kk < 3; kk++)
+	    rcm[kk] /= ((double)numpinc);
+	  /* move center of mass to origin */
+	  for (kk=0; kk < 3; kk++)
+	    for (j = 0; j < numpinc; j++)
+	      {
+		cylinders[pinc[j]].r[kk] -= rcm[kk]; 
+	      }
+	  /* sovrastima della box size */	
+	  Lmc = 0.0;
+	  for (j = 0; j < numpinc; j++)
+	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
+	  /* print to file cluster for further analysis */
+	  /* scrive numero di cilindri appartenenti al cluster e box size */
+	  fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
+	  for (j = 0; j < numpinc; j++)
+	    {
+	      /* rcm orient L D */
+	      fprintf(fcls, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
+		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
+		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
+		      cylinders[pinc[j]].L, cylinders[pinc[j]].D);
+	    }
 	}
-      numpinc = j;
-      /* calc center of mass */
-      for (kk=0; kk < 3; kk++)
-	for (j = 0; j < numpinc; j++)
-	  {
-	    rcm[kk] += cylinders[pinc[j]].r[kk]; 
-	  }
-      for (kk=0; kk < 3; kk++)
-	rcm[kk] /= ((double)numpinc);
-      /* move center of mass to origin */
-      for (kk=0; kk < 3; kk++)
-	for (j = 0; j < numpinc; j++)
-	  {
-	    cylinders[pinc[j]].r[kk] -= rcm[kk]; 
-	  }
-      /* sovrastima della box size */	
-      Lmc = 0.0;
-      for (j = 0; j < numpinc; j++)
-	Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
-      /* print to file cluster for further analysis */
-      /* scrive numero di cilindri appartenenti al cluster e box size */
-      fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
-      for (j = 0; j < numpinc; j++)
-	{
-	  /* rcm orient L D */
-	  fprintf(fcls, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n",
-		  cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
-		  cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
-		  cylinders[pinc[j]].L, cylinders[pinc[j]].D);
-	}
-
+      printf("written # %d cylinders in %d clusters\n", totcyl, ncls);
       /* =============== */
 #if 1
       /* ============== >>> PERCOLATION <<< ================== */
