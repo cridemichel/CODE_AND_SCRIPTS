@@ -123,6 +123,7 @@ void main(int argc, char **argv)
 	    	 &u[0], &u[1], &u[2], &L, &D);
 	  vol += L*(D/2.)*(D/2.)*M_PI;
 	}
+      //printf("ncyl=%d maxvol=%f vol=%f\n", ncyl, maxvol, vol);
       if (vol > maxvol)
 	maxvol = vol;
     }
@@ -155,7 +156,6 @@ void main(int argc, char **argv)
 		}
 	    }
 	}
-      printf("maxvol=%f delvol=%.15G\n", maxvol, delvol);
       vol = Lbox*Lbox*Lbox*ov/((double)tt); 
       ibin = (int) (vol/delvol);
       PV[ibin]++;
