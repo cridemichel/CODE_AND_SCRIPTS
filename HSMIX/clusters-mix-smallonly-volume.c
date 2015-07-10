@@ -13,6 +13,7 @@
 
 #define npmax 10000001
 static double maxarg1,maxarg2;
+int *pinc, numpinc;
 struct cylstr 
 {
   double u[3];
@@ -328,6 +329,8 @@ char **fname;
 
 const int NUMREP = 8;
 int MAXBONDS = 10;
+/* array con il numero di bond massimo allocabili per particella */
+int *max_numbonds_arr;
 double wellWidth, wellWidthSq;
 double *PV, Lx, Ly, Lz, L, timet, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
@@ -806,6 +809,11 @@ void add_bond(int i, int j)
 {
   bonds[i][numbonds[i]] = j;
   numbonds[i]++;
+  if (numbonds[i] >= max_numbonds_arr[i])
+    {
+      max_numbonds_arr[i] += 100;
+      bonds[i] = realloc(bonds[i], sizeof(int)*max_numbonds_arr[i]);
+    }
 }
 /* Allocate memory for a matrix of integers */
 int** AllocMatI(int size1, int size2)
@@ -1366,11 +1374,28 @@ int point_is_inside(double p[3], int icyl)
 
   return 0;
 }
+void reassemble_cluster(void)
+{
+  int i, i0, j, a, k, n;
+  double dist;
 
+  for (n=0; n < numpinc; n++)
+    {
+      for (a=0; a < numbonds[pinc[n]]; a++)
+	{
+	  j = bonds[pinc[n]][a];
+	  for (k=0; k < 3; k++) 
+	    {
+	      dist = cylinders[j].r[k] - cylinders[pinc[n]].r[k];
+	      cylinders[j].r[k] -= L*rint(dist/L);
+	    }
+	}
+    } 
+}
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3, *fcls;
-  int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, *pinc, numpinc;
+  int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, iold, jold, totcyl;
   long long int tt;
@@ -1461,6 +1486,9 @@ int main(int argc, char **argv)
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
   ip = malloc(sizeof(int)*NP);
+  max_numbonds_arr = malloc(sizeof(int)*NP);
+  for(i=0; i < NP; i++)
+    max_numbonds_arr[i] = MAXBONDS;
   if (output_bonds)
     {
       numbonds  = malloc(sizeof(int)*NP); 
@@ -1653,11 +1681,8 @@ int main(int argc, char **argv)
 	    		    continue;
 			  if (bond_found(i, j))  
 			    {
-			      if (output_bonds)
-				{
-				  add_bond(i, j);
-				  add_bond(j, i);
-				}
+			      add_bond(i, j);
+		    	      add_bond(j, i);
 			      ene=ene+1.0;
 			      if (color[j] == -1)
 				color[j] = color[i];
@@ -1751,6 +1776,7 @@ int main(int argc, char **argv)
       totcyl = 0;
       for (nc = 0; nc < ncls; nc++)
 	{
+	  /* trova tutti i cilindri che appartengono al cluster nc */	
 	  j=0;
 	  for (i=0; i < NP; i++)
 	    {
@@ -1762,6 +1788,8 @@ int main(int argc, char **argv)
 	    }
 	  numpinc = j;
 	  totcyl += numpinc;
+	  /* riassembla il cluster in modo senza tener conto delle PBC */
+	  reassemble_cluster();
 	  /* calc center of mass */
 	  for (kk=0; kk < 3; kk++)
 	    for (j = 0; j < numpinc; j++)
