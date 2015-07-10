@@ -6,7 +6,7 @@
 int allocated_cyls=100;
 int numcyls=0, ncyltot, ibin;
 int npts = 1000;
-double D, L, r[3], u[3], delvol;
+double D, L, Lbox, r[3], u[3], delvol;
 #define Sqr(x) ((x)*(x))
 double scalProd(double *A, double *B)
 {
@@ -114,7 +114,7 @@ void main(int argc, char **argv)
   maxvol = 0.0;
   while(!feof(cf))
     {
-      fscanf(cf, "%d  %lf\n", &ncyl, &L);
+      fscanf(cf, "%d  %lf\n", &ncyl, &Lbox);
       ncyltot += ncyl;
       vol = 0.0;
       for (nc = 0; nc < ncyl; nc++)
@@ -132,29 +132,31 @@ void main(int argc, char **argv)
   while (!feof(cf))
     {
       ov = 0.0;
-      fscanf(cf, "%d  %lf\n", &ncyl, &L);
+      fscanf(cf, "%d  %lf\n", &ncyl, &Lbox);
       for (nc = 0; nc < ncyl; nc++)
 	{
 	  fscanf(cf, "%lf %lf %lf %lf %lf %lf %lf %lf ", &r[0], &r[1], &r[2],
 		      &u[0], &u[1], &u[2], &L, &D);
+	  //printf("r=%f %f %f u=%f %f %f L=%f D=%f\n", r[0], r[1], r[2], u[0], u[1], u[2], L, D);
 	  add_cylinder(r, u, L, D, nc, nc);
 	}	
       for (tt=0; tt < max_MC_trials; tt++)
 	{
-	  pp[0] = L*(drand48()-0.5); 
-	  pp[1] = L*(drand48()-0.5); 
-	  pp[2] = L*(drand48()-0.5);
+	  pp[0] = Lbox*(drand48()-0.5); 
+	  pp[1] = Lbox*(drand48()-0.5); 
+	  pp[2] = Lbox*(drand48()-0.5);
 
 	  for (j = 0; j < ncyl; j++)
 	    {
 	      if (point_is_inside(pp, j))
 		{
-		  printf("qui\n");
+		  //printf("qui\n");
 		  ov=ov+1.0;
 		}
 	    }
 	}
-      vol = L*L*L*ov/((double)tt); 
+      printf("maxvol=%f delvol=%.15G\n", maxvol, delvol);
+      vol = Lbox*Lbox*Lbox*ov/((double)tt); 
       ibin = (int) (vol/delvol);
       PV[ibin]++;
       fprintf(f, "%d %.15G\n", nc, vol);
