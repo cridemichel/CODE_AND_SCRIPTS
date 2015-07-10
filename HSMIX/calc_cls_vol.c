@@ -94,24 +94,28 @@ void main(int argc, char **argv)
 {
   FILE *cf, *f;
   double pp[3], vol, maxvol=0.0, PVtot;
-  int ncyl, nc, i, j;
+  int ncyl, nc, i, j, ncls, nclstot;
   long long int max_MC_trials=100000;
   double ov, *PV;
   long long int tt;
-
+  long long int outits=100; 
   if (argc==1)
     {
-      printf("calc_cls_vol <file> <MC trials> [histogram points]\n");
+      printf("calc_cls_vol <file> <MC trials> [histogram points] [outits]\n");
       exit(-1);
     }
   cf = fopen(argv[1], "r");
   max_MC_trials = atoll(argv[2]);
-  if (argc==4)
+  if (argc>=4)
     npts = atoi(argv[3]);
+  if (argc>=5)
+    outits = atoll(argv[4]);
+
   PV = malloc(sizeof(double)*npts);
   srand((int)time(NULL));
   cylinders = malloc(sizeof(struct cylstr)*allocated_cyls);
   maxvol = 0.0;
+  ncls = 0;
   while(!feof(cf))
     {
       fscanf(cf, "%d  %lf %lf %lf\n", &ncyl, &Lbox[0], &Lbox[1], &Lbox[2]);
@@ -126,10 +130,13 @@ void main(int argc, char **argv)
       //printf("ncyl=%d maxvol=%f vol=%f\n", ncyl, maxvol, vol);
       if (vol > maxvol)
 	maxvol = vol;
+      ncls++;
     }
+  nclstot = ncls;
   delvol = maxvol / npts; 
   rewind(cf);
   f = fopen("all_clusters_volumes.txt", "w+");
+  ncls = 0;
   while (!feof(cf))
     {
       ov = 0.0;
@@ -160,7 +167,10 @@ void main(int argc, char **argv)
       vol = Lbox[0]*Lbox[1]*Lbox[2]*ov/((double)tt); 
       ibin = (int) (vol/delvol);
       PV[ibin]++;
-      fprintf(f, "%d %.15G\n", nc, vol);
+      fprintf(f, "%d %.15G\n", ncls, vol);
+      if (ncls % outits == 0)
+	printf("done %d/%d\n", ncls, nclstot); 
+      ncls++;
     }
 
   fclose(f);
