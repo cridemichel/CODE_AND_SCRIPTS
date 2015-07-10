@@ -1490,11 +1490,9 @@ int main(int argc, char **argv)
   max_numbonds_arr = malloc(sizeof(int)*NP);
   for(i=0; i < NP; i++)
     max_numbonds_arr[i] = MAXBONDS;
-  if (output_bonds)
-    {
-      numbonds  = malloc(sizeof(int)*NP); 
-      bonds = AllocMatI(NP, MAXBONDS);
-    }
+  numbonds  = malloc(sizeof(int)*NP); 
+  bonds = AllocMatI(NP, MAXBONDS);
+    
   if (wellWidth==-1)
     wellWidth=sigmaBB;
   maxsaxAA = fabs(sigmaAA);
@@ -1807,7 +1805,6 @@ int main(int argc, char **argv)
 	      }
 	  /* sovrastima della box size */	
 	  Lmc = 0.0;
-	
 	  for (j = 0; j < numpinc; j++)
 	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
 	  /* print to file cluster for further analysis */
@@ -1815,7 +1812,7 @@ int main(int argc, char **argv)
 #ifdef DEBUG
 	  sprintf(fn, "cls-%d.mgl", nc);
 	  fd = fopen(fn, "w+"); 
-	  fprintf(fd, ".Vol:", Lmc*Lmc*Lmc);
+	  fprintf(fd, ".Vol: %f\n", Lmc*Lmc*Lmc);
 #endif
 	  fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
 	  for (j = 0; j < numpinc; j++)
