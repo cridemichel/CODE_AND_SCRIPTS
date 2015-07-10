@@ -498,23 +498,25 @@ int check_cyl_overlap(int i, int j, double shift[3])
 {
   double distsq;
   int retchk, ic, jc, k, k1, k2;
-  double rs[2][3];
+  double rsi[2][3], rsj[2][3];
   /* controlla tutte e 4 le interazioni fra le sfere */
+#if 1
   for (k=0; k < 3; k++)
     {
-      rs[0][k] = cylinders[i].r[k] + cylinders[i].u[k]*cylinders[i].L*0.5;
-      rs[0][k] = cylinders[i].r[k] - cylinders[i].u[k]*cylinders[i].L*0.5;
-      rs[1][k] = cylinders[j].r[k] + shift[k] + cylinders[j].u[k]*cylinders[j].L*0.5;
-      rs[1][k] = cylinders[j].r[k] + shift[k] - cylinders[j].u[k]*cylinders[j].L*0.5;
+      rsi[0][k] = cylinders[i].r[k] + cylinders[i].u[k]*cylinders[i].L*0.5;
+      rsi[1][k] = cylinders[i].r[k] - cylinders[i].u[k]*cylinders[i].L*0.5;
+      rsj[0][k] = cylinders[j].r[k] + shift[k] + cylinders[j].u[k]*cylinders[j].L*0.5;
+      rsj[1][k] = cylinders[j].r[k] + shift[k] - cylinders[j].u[k]*cylinders[j].L*0.5;
     }
   for (k1=0; k1 < 2; k1++)
     for (k2=0; k2 < 2; k2++)
       {
-	distsq = Sqr(rs[k1][0]-rs[k2][0]) + Sqr(rs[k1][1]-rs[k2][1]) + Sqr(rs[k1][2]-rs[k2][2]);
+	distsq = Sqr(rsi[k1][0]-rsj[k2][0]) + Sqr(rsi[k1][1]-rsj[k2][1]) + Sqr(rsi[k1][2]-rsj[k2][2]);
 	if (distsq < wellWidthSq)
 	  return 1;
       }
-  if (calcDistNegHC(i, j, shift, &retchk) < 0.0)
+#endif 
+ if (calcDistNegHC(i, j, shift, &retchk) < 0.0)
     return 1;
   return 0;
 }
@@ -833,10 +835,13 @@ void add_bond(int i, int j)
   numbonds[i]++;
   if (numbonds[i] >= max_numbonds_arr[i])
     {
+      printf("qui i=%d max_numbonds_arr=%d\n", i, max_numbonds_arr[i]);
+      fflush(stdout);
       max_numbonds_arr[i] += 100;
       bonds[i] = realloc(bonds[i], sizeof(int)*max_numbonds_arr[i]);
     }
 }
+#if 0
 /* Allocate memory for a matrix of integers */
 int** AllocMatI(int size1, int size2)
 {
@@ -848,6 +853,19 @@ int** AllocMatI(int size1, int size2)
     v[k] = v[k-1] + size2;
   return v;
 }
+#endif
+/* Allocate memory for a matrix of integers */
+int** AllocMatI(int size1, int size2)
+{
+  int** v;
+  int k;
+  v = (int**) malloc(size1 * sizeof(int*));
+  //v[0] = (int*) malloc(size1 * size2 * sizeof(int));
+  for (k = 0; k < size1; k++)
+    v[k] = (int*) malloc(size2*sizeof(int));
+  return v;
+}
+
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 1000000;
