@@ -1394,12 +1394,13 @@ void reassemble_cluster(void)
 }
 int main(int argc, char **argv)
 {
-  FILE *f, *f2, *f3, *fcls;
+  FILE *f, *f2, *f3, *fcls, *fd;
   int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, iold, jold, totcyl;
   long long int tt;
   //int coppie;
+  char fn[256];
   double delvol, PVtot, norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
@@ -1810,6 +1811,11 @@ int main(int argc, char **argv)
 	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
 	  /* print to file cluster for further analysis */
 	  /* scrive numero di cilindri appartenenti al cluster e box size */
+#ifdef DEBUG
+	  sprintf(fn, "cls-%d.mgl", nc);
+	  fd = fopen(fn, "w+"); 
+	  fprintf(fd, ".Vol:", Lmc*Lmc*Lmc);
+#endif
 	  fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
 	  for (j = 0; j < numpinc; j++)
 	    {
@@ -1818,7 +1824,18 @@ int main(int argc, char **argv)
 		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
 		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
 		      cylinders[pinc[j]].L, cylinders[pinc[j]].D);
+#ifdef DEBUG
+	      /* rcm orient L D */
+	      fprintf(fd, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G C[blu]\n",
+		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
+		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
+		      cylinders[pinc[j]].D*0.5, cylinders[pinc[j]].L);
+
+#endif
 	    }
+#ifdef DEBUG
+	  fclose(fd);
+#endif
 	}
       printf("written # %d cylinders in %d clusters\n", totcyl, ncls);
       /* =============== */
