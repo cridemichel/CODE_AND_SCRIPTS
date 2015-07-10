@@ -6,7 +6,7 @@
 int allocated_cyls=100;
 int numcyls=0, ncyltot, ibin;
 int npts = 1000;
-double D, L, Lbox, r[3], u[3], delvol;
+double D, L, Lbox[3], r[3], u[3], delvol;
 #define Sqr(x) ((x)*(x))
 double scalProd(double *A, double *B)
 {
@@ -114,7 +114,7 @@ void main(int argc, char **argv)
   maxvol = 0.0;
   while(!feof(cf))
     {
-      fscanf(cf, "%d  %lf\n", &ncyl, &Lbox);
+      fscanf(cf, "%d  %lf %lf %lf\n", &ncyl, &Lbox[0], &Lbox[1], &Lbox[2]);
       ncyltot += ncyl;
       vol = 0.0;
       for (nc = 0; nc < ncyl; nc++)
@@ -133,7 +133,8 @@ void main(int argc, char **argv)
   while (!feof(cf))
     {
       ov = 0.0;
-      fscanf(cf, "%d  %lf\n", &ncyl, &Lbox);
+      fscanf(cf, "%d %lf %lf %lf\n", &ncyl, &Lbox[0], &Lbox[1], &Lbox[2]);
+      numcyls=0;
       for (nc = 0; nc < ncyl; nc++)
 	{
 	  fscanf(cf, "%lf %lf %lf %lf %lf %lf %lf %lf ", &r[0], &r[1], &r[2],
@@ -143,9 +144,9 @@ void main(int argc, char **argv)
 	}	
       for (tt=0; tt < max_MC_trials; tt++)
 	{
-	  pp[0] = Lbox*(drand48()-0.5); 
-	  pp[1] = Lbox*(drand48()-0.5); 
-	  pp[2] = Lbox*(drand48()-0.5);
+	  pp[0] = Lbox[0]*(drand48()-0.5); 
+	  pp[1] = Lbox[1]*(drand48()-0.5); 
+	  pp[2] = Lbox[2]*(drand48()-0.5);
 
 	  for (j = 0; j < ncyl; j++)
 	    {
@@ -156,7 +157,7 @@ void main(int argc, char **argv)
 		}
 	    }
 	}
-      vol = Lbox*Lbox*Lbox*ov/((double)tt); 
+      vol = Lbox[0]*Lbox[1]*Lbox[2]*ov/((double)tt); 
       ibin = (int) (vol/delvol);
       PV[ibin]++;
       fprintf(f, "%d %.15G\n", nc, vol);

@@ -10,6 +10,16 @@
 #define MD_STSPOTS_B 2
 #define MD_PBONDS 10
 #define Sqr(x) ((x)*(x))
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
 
 #define npmax 10000001
 static double maxarg1,maxarg2;
@@ -150,7 +160,7 @@ double calcDistBox(int i, int j, double shift[3])
   for (k=0; k < 3; k++)
     {
       rA[k] = cylinders[i].r[k];
-      rB[k] = cylinders[j].r[k];
+      rB[k] = cylinders[j].r[k]+shift[k];
     }
   versor_to_R(cylinders[i].u[0],cylinders[i].u[1],cylinders[i].u[2], R_A);
   versor_to_R(cylinders[j].u[0],cylinders[j].u[1],cylinders[j].u[2], R_B);
@@ -487,11 +497,23 @@ int check_distance(int i, int j, double Dx, double Dy, double Dz)
 int check_cyl_overlap(int i, int j, double shift[3])
 {
   double distsq;
-  int retchk;
-
-  distsq = Sqr(r0[0][i]-r0[0][j]) + Sqr(r0[1][i]-r0[1][j]) + Sqr(r0[2][i]-r0[2][j]);
-  if (distsq < wellWidthSq)
-    return 1;
+  int retchk, ic, jc, k, k1, k2;
+  double rs[2][3];
+  /* controlla tutte e 4 le interazioni fra le sfere */
+  for (k=0; k < 3; k++)
+    {
+      rs[0][k] = cylinders[i].r[k] + cylinders[i].u[k]*cylinders[i].L*0.5;
+      rs[0][k] = cylinders[i].r[k] - cylinders[i].u[k]*cylinders[i].L*0.5;
+      rs[1][k] = cylinders[j].r[k] + shift[k] + cylinders[j].u[k]*cylinders[j].L*0.5;
+      rs[1][k] = cylinders[j].r[k] + shift[k] - cylinders[j].u[k]*cylinders[j].L*0.5;
+    }
+  for (k1=0; k1 < 2; k1++)
+    for (k2=0; k2 < 2; k2++)
+      {
+	distsq = Sqr(rs[k1][0]-rs[k2][0]) + Sqr(rs[k1][1]-rs[k2][1]) + Sqr(rs[k1][2]-rs[k2][2]);
+	if (distsq < wellWidthSq)
+	  return 1;
+      }
   if (calcDistNegHC(i, j, shift, &retchk) < 0.0)
     return 1;
   return 0;
@@ -1374,7 +1396,7 @@ int point_is_inside(double p[3], int icyl)
 
   return 0;
 }
-void reassemble_cluster(void)
+void reassemble_cluster(int nc)
 {
   int i, i0, j, a, k, n;
   double dist;
@@ -1384,12 +1406,13 @@ void reassemble_cluster(void)
       for (a=0; a < numbonds[pinc[n]]; a++)
 	{
 	  j = bonds[pinc[n]][a];
+	  //printf("nc=%d numbonds=%d j=%d\n", nc, numbonds[pinc[n]], j);
 	  for (k=0; k < 3; k++) 
 	    {
 	      dist = cylinders[j].r[k] - cylinders[pinc[n]].r[k];
 	      cylinders[j].r[k] -= L*rint(dist/L);
 	    }
-	}
+  	}
     } 
 }
 int main(int argc, char **argv)
@@ -1401,7 +1424,7 @@ int main(int argc, char **argv)
   long long int tt;
   //int coppie;
   char fn[256];
-  double delvol, PVtot, norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc, pp[3], ov;
+  double d1, d2, rmax, rs1[3], rs2[3], delvol, PVtot, norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc[3], pp[3], ov;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
@@ -1492,7 +1515,9 @@ int main(int argc, char **argv)
     max_numbonds_arr[i] = MAXBONDS;
   numbonds  = malloc(sizeof(int)*NP); 
   bonds = AllocMatI(NP, MAXBONDS);
-    
+  
+  for (i=0; i < NP; i++)
+    numbonds[i] = 0;
   if (wellWidth==-1)
     wellWidth=sigmaBB;
   maxsaxAA = fabs(sigmaAA);
@@ -1781,15 +1806,29 @@ int main(int argc, char **argv)
 	    {
 	      if (color[i] == cluster_sort[nc].color)
 		{
-		  j++;
 		  pinc[j] = i;
+#if 0
+		  if (nc==8)
+		    {
+		      printf("i=%d\n", i);
+		      printf("rc=%f %f %f L=%f\n", cylinders[i].r[0], cylinders[i].r[1], cylinders[i].r[2], cylinders[i].L);
+		    }
+#endif
+		  j++;
 		}		
 	    }
 	  numpinc = j;
+	  if (numpinc!=cluster_sort[nc].dim)
+	    {
+	      printf("boh la size del cluster non torna\n");
+	      exit(-1);
+	    }
 	  totcyl += numpinc;
-	  /* riassembla il cluster in modo senza tener conto delle PBC */
-	  reassemble_cluster();
+	  /* riassembla il cluster senza tener conto delle PBC */
+	  reassemble_cluster(nc);
 	  /* calc center of mass */
+	  for (kk=0; kk < 3; kk++)
+	    rcm[kk] = 0.0;
 	  for (kk=0; kk < 3; kk++)
 	    for (j = 0; j < numpinc; j++)
 	      {
@@ -1804,17 +1843,39 @@ int main(int argc, char **argv)
 		cylinders[pinc[j]].r[kk] -= rcm[kk]; 
 	      }
 	  /* sovrastima della box size */	
-	  Lmc = 0.0;
+	  for (k=0; k < 3; k++)
+	    Lmc[k] = 0.0;
 	  for (j = 0; j < numpinc; j++)
-	    Lmc += cylinders[pinc[j]].L+cylinders[pinc[j]].D;
+	    {
+	      for (k=0; k < 3; k++)
+		{
+		  d1 = fabs(cylinders[pinc[j]].r[k] + cylinders[pinc[j]].u[k]*cylinders[pinc[j]].L*0.5) + cylinders[pinc[j]].D*0.5;
+		  d2 = fabs(cylinders[pinc[j]].r[k] - cylinders[pinc[j]].u[k]*cylinders[pinc[j]].L*0.5) + cylinders[pinc[j]].D*0.5;;
+		  if (d1 > Lmc[k])
+		    Lmc[k] = d1;
+		  if (d2 > Lmc[k]) 
+		    Lmc[k] = d2;
+		}
+	    }
 	  /* print to file cluster for further analysis */
 	  /* scrive numero di cilindri appartenenti al cluster e box size */
+	 
+	  for (k=0; k < 3; k++)
+	    {
+	      Lmc[k] *= 2.0;
+	    }
+	  
+#if 0
+	  Lmc[0] = max3(Lmc[0], Lmc[1], Lmc[2]);
+	  Lmc[1] = Lmc[0];
+	  Lmc[2] = Lmc[0];
+#endif
 #ifdef DEBUG
 	  sprintf(fn, "cls-%d.mgl", nc);
 	  fd = fopen(fn, "w+"); 
-	  fprintf(fd, ".Vol: %f\n", Lmc*Lmc*Lmc);
+	  fprintf(fd, ".Vol: %f\n", Lmc[0]*Lmc[1]*Lmc[2]);
 #endif
-	  fprintf(fcls, "%d %f\n",  cluster_sort[nc].dim, Lmc);
+	  fprintf(fcls, "%d %f %f %f\n",  cluster_sort[nc].dim, Lmc[0], Lmc[1], Lmc[2]);
 	  for (j = 0; j < numpinc; j++)
 	    {
 	      /* rcm orient L D */
@@ -1824,11 +1885,17 @@ int main(int argc, char **argv)
 		      cylinders[pinc[j]].L, cylinders[pinc[j]].D);
 #ifdef DEBUG
 	      /* rcm orient L D */
-	      fprintf(fd, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G C[blu]\n",
+	      fprintf(fd, "%.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G C[red]\n",
 		      cylinders[pinc[j]].r[0], cylinders[pinc[j]].r[1],cylinders[pinc[j]].r[2],
 		      cylinders[pinc[j]].u[0], cylinders[pinc[j]].u[1],cylinders[pinc[j]].u[2],
 		      cylinders[pinc[j]].D*0.5, cylinders[pinc[j]].L);
-
+	      for (k=0; k < 3; k++)
+		{
+	  	  rs1[k] = cylinders[pinc[j]].r[k] + cylinders[pinc[j]].u[k]*cylinders[pinc[j]].L*0.5;
+		  rs2[k] = cylinders[pinc[j]].r[k] - cylinders[pinc[j]].u[k]*cylinders[pinc[j]].L*0.5;
+		}
+	      fprintf(fd, "%f %f %f @ %f C[red]\n", rs1[0], rs1[1], rs1[2], cylinders[pinc[j]].D*0.5);
+	      fprintf(fd, "%f %f %f @ %f C[red]\n", rs2[0], rs2[1], rs2[2], cylinders[pinc[j]].D*0.5);
 #endif
 	    }
 #ifdef DEBUG
