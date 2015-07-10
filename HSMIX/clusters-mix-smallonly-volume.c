@@ -835,8 +835,8 @@ void add_bond(int i, int j)
   numbonds[i]++;
   if (numbonds[i] >= max_numbonds_arr[i])
     {
-      printf("qui i=%d max_numbonds_arr=%d\n", i, max_numbonds_arr[i]);
-      fflush(stdout);
+      //printf("qui i=%d max_numbonds_arr=%d\n", i, max_numbonds_arr[i]);
+      //fflush(stdout);
       max_numbonds_arr[i] += 100;
       bonds[i] = realloc(bonds[i], sizeof(int)*max_numbonds_arr[i]);
     }
