@@ -6,7 +6,7 @@
 int allocated_cyls=100;
 int numcyls=0, ncyltot, ibin;
 int npts = 1000;
-double D, L, Lbox[3], r[3], u[3], delvol;
+double D, L, Lbox[3], r[3], u[3], delvol, *clsvols, volmax=0.0, volmin=0.0;
 #define Sqr(x) ((x)*(x))
 double scalProd(double *A, double *B)
 {
@@ -132,8 +132,9 @@ void main(int argc, char **argv)
 	maxvol = vol;
       ncls++;
     }
+  clsvols=malloc(sizeof(double)*ncls);
   nclstot = ncls;
-  delvol = maxvol / npts; 
+  //delvol = maxvol / npts; 
   rewind(cf);
   f = fopen("all_clusters_volumes.txt", "w+");
   ncls = 0;
@@ -164,15 +165,24 @@ void main(int argc, char **argv)
 		}
 	    }
 	}
-      vol = Lbox[0]*Lbox[1]*Lbox[2]*ov/((double)tt); 
-      ibin = (int) (vol/delvol);
-      PV[ibin]++;
-      fprintf(f, "%d %.15G\n", ncls, vol);
+      clsvols[ncls] = Lbox[0]*Lbox[1]*Lbox[2]*ov/((double)tt); 
+      if (clsvols[ncls] > volmax)
+	volmax = clsvols[ncls];
+      if (ncls==0 || clsvols[ncls] < volmin)
+	volmin = clsvols[ncls];
+
+      fprintf(f, "%d %.15G\n", ncls, clsvols[ncls]);
       if (ncls % outits == 0)
 	printf("done %d/%d\n", ncls, nclstot); 
       ncls++;
     }
 
+  delvol = (volmax-volmin)/npts;
+  for (ncls=0; ncls < nclstot; ncls++)
+    {
+      ibin = (int) ((clsvols[ncls]-volmin)/delvol);
+      PV[ibin]++;
+    }
   fclose(f);
   fclose(cf);
   f = fopen("avg_vol_distr.dat", "w+");
@@ -183,7 +193,7 @@ void main(int argc, char **argv)
 
   for (i=0; i < npts; i++)
     {
-      fprintf(f, "%.15G %.15G\n", i*delvol, PV[i]/PVtot);
+      fprintf(f, "%.15G %.15G\n", i*delvol+volmin, PV[i]/PVtot);
     }
   fclose(f);
 
