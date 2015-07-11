@@ -111,7 +111,7 @@ void main(int argc, char **argv)
   if (argc>=5)
     outits = atoll(argv[4]);
 
-  PV = malloc(sizeof(double)*npts);
+  PV = malloc(sizeof(double)*(npts+1));
   srand((int)time(NULL));
   cylinders = malloc(sizeof(struct cylstr)*allocated_cyls);
   maxvol = 0.0;
@@ -181,7 +181,8 @@ void main(int argc, char **argv)
   for (ncls=0; ncls < nclstot; ncls++)
     {
       ibin = (int) ((clsvols[ncls]-volmin)/delvol);
-      PV[ibin]++;
+      printf("vol:%f volmin=%f volmax=%f ibin=%d\n", clsvols[ncls], volmin, volmax, ibin);
+      PV[ibin] += 1.0;
     }
   fclose(f);
   fclose(cf);
