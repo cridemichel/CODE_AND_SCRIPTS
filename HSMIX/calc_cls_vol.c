@@ -112,6 +112,8 @@ void main(int argc, char **argv)
     outits = atoll(argv[4]);
 
   PV = malloc(sizeof(double)*(npts+1));
+  for (i=0; i < npts; i++)
+    PV[i] = 0.0;
   srand((int)time(NULL));
   cylinders = malloc(sizeof(struct cylstr)*allocated_cyls);
   maxvol = 0.0;
@@ -134,7 +136,7 @@ void main(int argc, char **argv)
     }
   clsvols=malloc(sizeof(double)*ncls);
   nclstot = ncls;
-  //delvol = maxvol / npts; 
+  delvol = maxvol / npts; 
   rewind(cf);
   f = fopen("all_clusters_volumes.txt", "w+");
   ncls = 0;
@@ -177,10 +179,12 @@ void main(int argc, char **argv)
       ncls++;
     }
 
-  delvol = (volmax-volmin)/npts;
+  delvol = volmax/npts;
+  volmin=0.0;
   for (ncls=0; ncls < nclstot; ncls++)
     {
-      ibin = (int) ((clsvols[ncls]-volmin)/delvol);
+      //ibin = (int) ((clsvols[ncls]-volmin)/delvol);
+      ibin = (int) (clsvols[ncls]/delvol);
       printf("vol:%f volmin=%f volmax=%f ibin=%d\n", clsvols[ncls], volmin, volmax, ibin);
       PV[ibin] += 1.0;
     }
@@ -194,7 +198,7 @@ void main(int argc, char **argv)
 
   for (i=0; i < npts; i++)
     {
-      fprintf(f, "%.15G %.15G\n", i*delvol+volmin, PV[i]/PVtot);
+      fprintf(f, "%.15G %.15G %.15G\n", i*delvol+volmin, PV[i]/PVtot, PV[i]);
     }
   fclose(f);
 
