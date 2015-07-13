@@ -925,6 +925,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   if ((sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim)) > 0.0)
     return 1;
 #endif
+#if 1
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
     {
@@ -1008,6 +1009,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	    //return 1;
 	  }
     }
+#endif
   /* case A.2 overlap of rim and disk */
 
   /* =================================== >>> Part A <<< ========================= */
