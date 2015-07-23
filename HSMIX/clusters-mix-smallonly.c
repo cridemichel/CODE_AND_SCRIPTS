@@ -15,6 +15,7 @@ const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
 int kk, kmax, kj, i3;
+int *ip;
 double am, xmed;
 
 /* NOTA: 
@@ -68,7 +69,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   //fscanf(f, "%[^\n]\n",line);
   for (i = 0; i < NP; i++) 
     {
-      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i])); 
+      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
       //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
       r[0][i] -= Lx*0.5;
@@ -494,6 +495,7 @@ int main(int argc, char **argv)
   clssizedstAVG = malloc(sizeof(double)*NP);
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
+  ip = malloc(sizeof(int)*NP);
   if (output_bonds)
     {
       numbonds  = malloc(sizeof(int)*NP); 
