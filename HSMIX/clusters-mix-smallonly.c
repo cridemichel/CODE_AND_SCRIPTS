@@ -69,7 +69,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   //fscanf(f, "%[^\n]\n",line);
   for (i = 0; i < NP; i++) 
     {
-      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
+      fscanf(f, "%lf %lf %lf %d\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
       //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
       r[0][i] -= Lx*0.5;
