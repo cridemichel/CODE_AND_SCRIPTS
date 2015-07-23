@@ -71,6 +71,13 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
       fscanf(f, "%lf %lf %lf %d\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
       //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
+#if 0
+      if (fabs(r[2][i]) > Lz)
+	{
+	  printf("fn=%s i=%d r[2][]=%f Lz=%f\n", fname, i, r[2][i], Lz);
+	  exit(-1);
+	}
+#endif
       r[0][i] -= Lx*0.5;
       r[1][i] -= Ly*0.5;
       r[2][i] -= Lz*0.5;
@@ -189,8 +196,9 @@ int bond_found(int i, int j)
   /* se sono la stessa particella in frame diversi allora 
      le consideriamo legate */
   if (ip[j] == ip[i])
-    return 1;
-
+    {
+      return 1;
+    }
   if (distance(i, j) < 0.0)
     return 1;
   else
@@ -423,9 +431,9 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3;
   int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ;
+  int jX, jY, jZ, iX, iY, iZ, jold;
   //int coppie;
-  double refTime=0.0, ti, ene=0.0;
+  double refTime=0.0, ti, ene=0.0, dist, dx, dy, dz;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
@@ -517,6 +525,7 @@ int main(int argc, char **argv)
   maxsaxBB = fabs(wellWidth);
     /* le AA sono le grandi quindi usiamo quelle per RCUT */
   RCUT = maxsaxBB*1.01;
+
   printf("maxsaxBB=%f RCUT=%f\n", maxsaxBB, RCUT);	
   for (a = 0; a < 3; a++)
     {
@@ -562,6 +571,31 @@ int main(int argc, char **argv)
 	}
 
       readconf(fname[nr1], &time, &refTime, NP, r0);
+      for (i=0; i < NP/block; i++)
+	{
+	  for (j=i+NP/block; j < NP; j=j+NP/block)
+	    {
+	      jold = j - NP/block;
+	      dx = r0[0][j]-r0[0][jold];
+	      dy = r0[1][j]-r0[1][jold];
+	      dz = r0[2][j]-r0[2][jold];
+	      dx = dx - L*rint(dx/L);
+	      dy = dy - L*rint(dy/L);
+	      dz = dz - L*rint(dz/L);
+	      dist = sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz));
+	      //printf("j=%d jold=%d dist=%f\n", j, jold, dist);
+	      if (dist > RCUT)
+		{
+		  RCUT = dist*1.01;
+		  cellsx = L /RCUT;
+		  cellsy = L /RCUT;
+		  cellsz = L /RCUT;
+		  free(cellList);
+		  cellList = malloc(sizeof(int)*(cellsx*cellsy*cellsz+NP));
+		} 	
+	    }
+	}
+      printf("RCUT=%f NP/block=%d block=%d NP=%d\n", RCUT, NP/block, block, NP);
       ti = time + refTime;
       /* costruisce la posizione di tutti gli sticky spots */
       for (i = 0; i < NP; i++)
@@ -740,7 +774,7 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = clscolNV[nc];
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
-
+#if 0
       /* =================== >>> RENORMALIZE CLUSTERS <<< ===============
 	 se la stessa particella appartiene a n frame allora il cluster di n particelle
 	 corrispondente conta 1 */
@@ -748,7 +782,7 @@ int main(int argc, char **argv)
 	{
 	  for (j=NP/block; j < NP; j++)
 	    {
-	      if (ip[j]==i && color[i] == color[ip[j]])
+	      if (ip[j]==i)
 		{
 		  for (nc = 0; nc < ncls; nc++)
 		    {
@@ -758,7 +792,7 @@ int main(int argc, char **argv)
        		}
 	    }
 	}
-
+#endif
       /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
