@@ -2039,7 +2039,7 @@ int main(int argc, char **argv)
 				  //djx = djy = djz = 0;
 				  imgi2 = i2 / na;
 				  imgj2 = j2 / na;
-				  				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
+				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
 				  choose_image(imgi2, &dix, &diy, &diz);
 				  choose_image(imgj2, &djx, &djy, &djz);
 				  

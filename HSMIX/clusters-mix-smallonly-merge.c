@@ -68,7 +68,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   //fscanf(f, "%[^\n]\n",line);
   for (i = 0; i < NP; i++) 
     {
-      fscanf(f, "%lf %lf %lf\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
+      fscanf(f, "%lf %lf %lf %d\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
       //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
       r[0][i] -= Lx*0.5;
@@ -186,6 +186,11 @@ double distanceR(int i, int j, int imgix, int imgiy, int imgiz,
 
 int bond_found(int i, int j)
 {
+  /* se sono la stessa particella in frame diversi allora 
+     le consideriamo legate */
+  if (ip[j] == ip[i])
+    return 1;
+
   if (distance(i, j) < 0.0)
     return 1;
   else
@@ -333,11 +338,13 @@ void build_linked_list(void)
   for (j = 0; j < cellsx*cellsy*cellsz + NP; j++)
     cellList[j] = -1;
 
+  printf("L=%f cells=%d %d %d NP=%d s=%d e=%d\n", L, cellsx, cellsy, cellsz, NP, START, END);
   for (n = START; n < END; n++)
     {
       inCell[0][n] =  (r0[0][n] + L2) * cellsx / L;
       inCell[1][n] =  (r0[1][n] + L2) * cellsy / L;
       inCell[2][n] =  (r0[2][n] + L2) * cellsz / L;
+      //printf("incell[%d]=%d %d %d\n", n, inCell[0][n], inCell[1][n], inCell[2][n]);
       if (inCell[0][n] == cellsx)
 	inCell[0][n]=cellsx-1;
       if (inCell[1][n] == cellsy)
@@ -352,8 +359,11 @@ void build_linked_list(void)
 	inCell[2][n]=0;
       j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP;
+     
+      //printf("boh j=%d\n",  j);
       cellList[n] = cellList[j];
       cellList[j] = n;
+      //printf("boh AFTER j=%d\n",  j);
     }
 }
 void build_linked_list_perc(int clsdim, double Lbig)
@@ -575,8 +585,9 @@ int main(int argc, char **argv)
       curcolor = 0;
       ene=0;
       //coppie = 0;
-      build_linked_list();
 
+      build_linked_list();
+   
       jbeg = 0; 
       ifin = NP;
       for (i = START; i < END; i++)
