@@ -195,10 +195,12 @@ int bond_found(int i, int j)
 {
   /* se sono la stessa particella in frame diversi allora 
      le consideriamo legate */
+#if 0
   if (ip[j] == ip[i])
     {
       return 1;
     }
+#endif
   if (distance(i, j) < 0.0)
     return 1;
   else
@@ -571,6 +573,7 @@ int main(int argc, char **argv)
 	}
 
       readconf(fname[nr1], &time, &refTime, NP, r0);
+#if 0
       for (i=0; i < NP/block; i++)
 	{
 	  for (j=i+NP/block; j < NP; j=j+NP/block)
@@ -595,6 +598,16 @@ int main(int argc, char **argv)
 		} 	
 	    }
 	}
+#else
+      for (i=0; i < NP/block; i++)
+	{
+	  color[i] = i;
+	  for (j=i+NP/block; j < NP; j=j+NP/block)
+	    {
+	      color[j] = color[i];
+	    }
+	}	
+#endif
       printf("RCUT=%f NP/block=%d block=%d NP=%d\n", RCUT, NP/block, block, NP);
       ti = time + refTime;
       /* costruisce la posizione di tutti gli sticky spots */
@@ -613,7 +626,7 @@ int main(int argc, char **argv)
 	}
       for (i = 0; i < NP; i++)
 	{
-	  color[i] = -1;	  
+	  //color[i] = -1;	  
 	  clssizedst[i] = 0;
 	}
       curcolor = 0;
@@ -774,7 +787,7 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = clscolNV[nc];
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
-#if 0
+#if 1
       /* =================== >>> RENORMALIZE CLUSTERS <<< ===============
 	 se la stessa particella appartiene a n frame allora il cluster di n particelle
 	 corrispondente conta 1 */
