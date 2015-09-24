@@ -1630,10 +1630,12 @@ extern double calcpotene(void);
 #ifdef EDHE_AUTOCAT
 double eval_bhin_correction(void)
 {
-  double ener, enermax, p, k0, k1, mac;
-  enermax = MD_STSPOTS_A*Oparams.parnumA;
+  double ener, enermax, p, k0, k1, mac; //,enermaxold;
+  //enermaxold = MD_STSPOTS_A*Oparams.parnumA;
+  enermax = MD_STSPOTS_A*typeNP[0];
   ener = calcpotene();
   p = -ener/enermax;
+  //printf("spots=%d ener: %f enermaxold: %f enermax: %f\n", MD_STSPOTS_A, ener, enermaxold, enermax);
   k0 = OprogStatus.k0;
   k1 = OprogStatus.k1;/* k1 is not used for now */
   mac = OprogStatus.mac;
