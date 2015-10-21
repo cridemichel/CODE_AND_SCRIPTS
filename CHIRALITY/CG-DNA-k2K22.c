@@ -1818,8 +1818,14 @@ int main(int argc, char**argv)
 		vexcl += 1.0;
 	      else if (type==1)
 		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
+	      else if (type ==2) /* K22 */
 		vexcl += -segno*u1x*u2x*rcmy*rcmy;
+	      else if (type == 3) /* K11 */
+	      	vexcl += -segno*u1y*u2y*rcmy*rcmy;
+	      else /* K33 */
+	      	vexcl += -segno*u1z*u2z*rcmy*rcmy;
+#else
+#endif
 	    }
 #ifdef ELEC
 	  else if (interact)
