@@ -19,7 +19,7 @@ int MPIpid;
 extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 #endif 
-//#define ALBERTA
+#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
 double dmin=25, dmax=70, dr=0.1; /* Angstrom */
@@ -737,10 +737,11 @@ void init_distbox(void)
     }
   //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
 }
+double mannfact=1.0;
 #ifdef NEW_ELEC_MOD
 double delta_rab1 = 5.0;
 #endif
-double delta_rab0=2.0, epsr_prime=1.8, yuk_corr_fact;
+double delta_rab0=2.0, epsr_prime=5.0, yuk_corr_fact;/* epsr_prime=1.8*/
 double *esq_eps_arr, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
 double *esq_eps10_arr, esq_eps_prime10;
 const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
@@ -1434,7 +1435,7 @@ int main(int argc, char**argv)
     yukcut = atof(argv[8]);
 
   if (argc <= 9)
-    epsr_prime = 20;
+    epsr_prime = 2.0;
   else
     epsr_prime = atof(argv[9]);
  
@@ -1484,7 +1485,7 @@ int main(int argc, char**argv)
   for (k1=0; k1 < numtemps; k1++)
     {
       ximanning_arr[k1] = esq_eps_arr[k1]*beta_arr[k1]/bmann;
-      deltamann_arr[k1] = 1.0/ximanning_arr[k1];
+      deltamann_arr[k1] = mannfact/ximanning_arr[k1];
       zeta_a_arr[k1] = deltamann_arr[k1];
       zeta_b_arr[k1] = deltamann_arr[k1];
     }
@@ -1756,7 +1757,7 @@ int main(int argc, char**argv)
       gamma12sav = 2.0*M_PI*drand48();
 #endif
 #endif
-      integrandv1(0.0, dist, 0.0, 0.0, 0.0, M_PI/2);
+      integrandv1(0.0, dist, 0.0, 0.0, 0.0, 0.0);//M_PI/2);
 	
       for (k1=0; k1 < numtemps; k1++)
 	for (k2=0; k2 < numconcs; k2++)

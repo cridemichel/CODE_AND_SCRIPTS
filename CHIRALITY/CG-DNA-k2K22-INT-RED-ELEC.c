@@ -1679,6 +1679,16 @@ int main(int argc, char**argv)
   printf("Aligning DNAD...\n");
   align_z_axis();
 #endif
+#if 0
+  for (i=0; i < nat; i++)
+    {
+      if (DNAchain[i].atype == 1)
+	{
+	  DNAchain[i].x *= 1.1;
+	  DNAchain[i].y *= 1.1;
+	}
+    }
+#endif
   init_distbox();
   Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];

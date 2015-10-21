@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 //#define USEGSL
+//#define ALBERTA
+#define PRINC_AXES
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
@@ -82,7 +84,6 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 #endif 
 //#define ELEC
-//#define ALBERTA
 //#define NO_INTERP
 #ifdef ELEC
 double kD, yukcut, yukcutkD, yukcutkDsq;
@@ -104,6 +105,7 @@ int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
 double gamma1, gamma2, L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
+int type;
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -899,6 +901,184 @@ int compare_func(const void *aa, const void *bb)
     return 0;
 }
 #endif
+#ifdef PRINC_AXES
+double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
+int eigenvectors=1;
+double It[3][3];
+extern void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+                double* w, double* work, int* lwork, int* info);
+void diagonalize(double M[3][3], double ev[3])
+{
+  double a[9], work[45];
+  char jobz, uplo;
+  int info, i, j, lda, lwork;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
+      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
+    }	
+  lda = 3;
+  if (eigenvectors)
+    jobz='V';
+  else
+    jobz='N';
+  uplo='U';
+  lwork = 45;
+  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
+  if (!eigenvectors)
+    return;
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
+    }	
+}
+
+double pz[3];
+double Rlp[3][3];
+#if 0
+void build_ref_system(void)
+{
+  int k;
+  double sp, norm;
+  /* build the nematic reference system */
+  Rlp[2][1] = pz[0];
+  Rlp[2][1] = pz[1];
+  Rlp[2][2] = pz[2];
+  //printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
+  Rlp[0][0] = 1.0;
+  Rlp[0][1] = 1.0;
+  Rlp[0][2] = 1.0;
+  if (Rlp[0][0] == Rlp[2][0] && Rlp[0][1]==Rlp[2][1] && Rlp[0][2]==Rlp[2][2])
+    {
+      Rlp[0][0] = 1.0;
+      Rlp[0][1] = -1.0;
+      Rlp[0][2] = 1.0;
+    }
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=Rlp[0][k]*Rlp[2][k];
+  for (k=0; k < 3 ; k++)
+    Rlp[0][k] -= sp*Rlp[2][k];
+  norm = calc_norm(Rlp[0]);
+  for (k=0; k < 3 ; k++)
+    Rlp[0][k] = Rlp[0][k]/norm;
+  vectProdVec(Rlp[2], Rlp[0], Rlp[1]);
+}
+#endif
+void calc_It(void)
+{
+  int i, j, k;
+  double distSq, ri[3], rj[3];
+  double Icom[3][3];
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      It[j][k] = 0.0;
+  /* moment of inertia of centers of mass */
+  for (j=0; j < 3; j++)
+    for (k=0; k < 3; k++)
+      {
+	It[j][k] = 0.0;
+	for (i=0; i < nat; i++)
+	  {
+	    ri[0] = DNAchain[i].x; /* notare che il centro di massa è stato già riportato nell'origine ossia Rcm=(0,0,0) */
+	    ri[1] = DNAchain[i].y;
+	    ri[2] = DNAchain[i].z;
+	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
+	    It[j][k] += ((j==k)?distSq:0.0) - ri[j]*ri[k];
+	  }
+      }
+}
+struct evStruct {
+  double eigvec[3];
+  double ev;
+  int idx;
+} evstruct[3], evstrTmp[3];
+
+int cmpfuncev (const void *p1, const void *p2)
+{
+  if (((struct evStruct*)p1)->ev < ((struct evStruct*)p2)->ev) 
+    return 1;
+  else
+    return -1;
+}
+void align_z_axis(void)
+{
+  double ev[3], St, xp[3], xl[3];
+  int numev, a, b, i, k1, k2;
+
+  calc_It();
+  //print_matrix(It, 3);
+  diagonalize(It, ev);
+#if 1
+  /* find max eigenval */
+  if (fabs(ev[0]) > fabs(ev[1]))
+    { 
+      St = ev[0];
+      numev=0;
+    }
+  else
+    {
+      St = ev[1];
+      numev=1;
+    }  
+  if (fabs(ev[2]) > St)
+    {
+      St = ev[2];
+      numev=2;
+    }
+#endif
+  evstruct[0].ev=ev[0];
+  evstruct[1].ev=ev[1];
+  evstruct[2].ev=ev[2];
+  printf("ev[0]=%f ev[1]=%f ev[2]=%f\n", ev[0], ev[1], ev[2]);
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      evstruct[a].eigvec[b] = eigvec[a][b];
+  //print_matrix(eigvec, 3);
+  evstruct[a].idx = a;
+
+  /* we need to preserve chirality, hence we shift eigenvectors in order to preserve their order
+     (e.g xyz -> zxy) */
+  for (a=0; a < 3; a++)
+    {
+      evstrTmp[(a + numev)%3].ev = evstruct[a].ev;
+      for (b=0; b < 3; b++)
+	evstrTmp[(a + numev)%3].eigvec[b] = evstruct[a].eigvec[b];
+    }
+  for (a=0; a < 3; a++)
+    {
+      evstruct[a].ev = evstrTmp[a].ev;
+      for (b=0; b < 3; b++)
+	evstruct[a].eigvec[b] = evstrTmp[a].eigvec[b];
+    }
+
+  //  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
+
+  printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      Rlp[a][b] = evstruct[a].eigvec[b]; /* ogni riga è un autovettore */
+
+  for (i=0; i < nat; i++)
+    {
+      xl[0] = DNAchain[i].x;
+      xl[1] = DNAchain[i].y;
+      xl[2] = DNAchain[i].z;
+      for (k1=0; k1 < 3; k1++)
+	{
+	  xp[k1] = 0;
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      xp[k1] += Rlp[k1][k2]*xl[k2];
+	    } 
+	}
+      DNAchain[i].x = xp[0];
+      DNAchain[i].y = xp[1];
+      DNAchain[i].z = xp[2];
+    }
+}
+#endif
+
 int main(int argc, char**argv)
 {
 #ifdef QUASIMC
@@ -920,7 +1100,7 @@ int main(int argc, char**argv)
   double sigab, rab0, rab0sq, uelcontrib, tempfact;
   int k1, k2, kk;
 #endif
-  int ncontrib, cc, k, i, j, overlap, type, contrib, cont=0, nfrarg;
+  int ncontrib, cc, k, i, j, overlap, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
@@ -1304,6 +1484,10 @@ int main(int argc, char**argv)
       DNAchain[i].z -= rcmz;
     }
   fclose(fin);
+#ifdef PRINC_AXES
+  printf("Aligning DNAD...\n");
+  align_z_axis();
+#endif
   init_distbox();
   L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
