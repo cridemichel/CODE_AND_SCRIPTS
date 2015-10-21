@@ -1824,8 +1824,6 @@ int main(int argc, char**argv)
 	      	vexcl += -segno*u1y*u2y*rcmy*rcmy;
 	      else /* K33 */
 	      	vexcl += -segno*u1z*u2z*rcmy*rcmy;
-#else
-#endif
 	    }
 #ifdef ELEC
 	  else if (interact)
