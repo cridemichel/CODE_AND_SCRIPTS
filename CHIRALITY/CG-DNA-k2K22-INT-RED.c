@@ -1472,6 +1472,10 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
 			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
 		      break;
+		    case 3:
+		      return 
+
+			;
 		    }
 		}
 	    }

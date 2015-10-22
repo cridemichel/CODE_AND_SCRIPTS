@@ -6,10 +6,12 @@
 #include <time.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
+#if 0
 #define USEGSL
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
+#endif 
 //#define ELEC
 //#define ALBERTA
 //#define NO_INTERP
@@ -438,6 +440,154 @@ double integrandXI6_v2(double phi1, double theta1, double gamma1)
   return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
     2.0*(cosgamma1*cosphi1*sintheta1*sinphi1 - costheta1*singamma1*sintheta1*Sqr(sinphi1));
 }
+double integrandXI1_v2_K11(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (Sqr(cosgamma1)*Sqr(costheta1)*Sqr(singamma1)+Sqr(singamma1)*Sqr(sinphi1)-
+    2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1);
+}
+double integrandXI2_v2_K11(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (Sqr(costheta1)*Sqr(cosphi1)*Sqr(singamma1)+2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1+Sqr(cosgamma1)*Sqr(sinphi1) );
+}
+double integrandXI3_v2_K11(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (Sqr(cosphi1)*Sqr(sintheta1));
+}
+double integrandXI4_v2_K11(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    2.0*(-cosgamma1*Sqr(costheta1)*Sqr(cosphi1)*singamma1-Sqr(cosgamma1)*costheta1*cosphi1*sinphi1+costheta1*cosphi1*Sqr(singamma1)*sinphi1+cosgamma1*singamma1*Sqr(sinphi1));
+}
+double integrandXI5_v2_K11(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    2.0*(cosgamma1*costheta1*Sqr(cosphi1)*sintheta1+cosphi1*singamma1*sintheta1*sinphi1);
+}
+double integrandXI6_v2_K11(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    2.0*(-costheta1*Sqr(cosphi1)*singamma1*sintheta1-cosgamma1*cosphi1*sintheta1*sinphi1);
+}
+
+double integrandXI1_v2_K33(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    Sqr(cosgamma1)*Sqr(sintheta1);
+}
+double integrandXI2_v2_K33(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    Sqr(singamma1)*Sqr(sintheta1);
+}
+double integrandXI3_v2_K33(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    Sqr(costheta1);
+}
+
+double integrandXI4_v2_K33(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (-2.0)*cosgamma1*singamma1*Sqr(sintheta1);
+}
+double integrandXI5_v2_K33(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    (-2.0)*cosgamma1*costheta1*sintheta1;
+}
+double integrandXI6_v2_K33(double phi1, double theta1, double gamma1)
+{
+  double cosphi1, sinphi1, cosgamma1, singamma1, costheta1, sintheta1;
+  cosphi1=cos(phi1);
+  sinphi1=sin(phi1);
+  cosgamma1=cos(gamma1);
+  singamma1=sin(gamma1);
+  costheta1=cos(theta1);
+  sintheta1=sin(theta1);
+  return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
+    2.0*costheta1*singamma1*sintheta1;
+}
+
 double phi1sav, theta1sav;
 double (*nrfunc)(double,double,double);
 double ftheta1(double theta1);
@@ -499,7 +649,9 @@ int main(int argc, char**argv)
       sprintf(fxi2n, "XI2_v%d.dat", type);
       sprintf(fxi3n, "XI3_v%d.dat", type);
       break;
-    case 2:
+    case 2: /* K22 */
+    case 3: /* K11 */
+    case 4: /* K33 */
       sprintf(fxi1n, "XI1_v%d.dat", type);
       sprintf(fxi2n, "XI2_v%d.dat", type);
       sprintf(fxi3n, "XI3_v%d.dat", type);
@@ -507,7 +659,7 @@ int main(int argc, char**argv)
       sprintf(fxi5n, "XI5_v%d.dat", type);
       sprintf(fxi6n, "XI6_v%d.dat", type);
       break;
-    }
+     }
   switch (type)
     {
     case 0:
@@ -519,6 +671,8 @@ int main(int argc, char**argv)
       fxi3 = fopen(fxi3n, "w+");
       break;
     case 2:
+    case 3:
+    case 4:
       fxi1 = fopen(fxi1n, "w+");
       fxi2 = fopen(fxi2n, "w+");
       fxi3 = fopen(fxi3n, "w+");
@@ -526,6 +680,7 @@ int main(int argc, char**argv)
       fxi5 = fopen(fxi5n, "w+");
       fxi6 = fopen(fxi6n, "w+");
       break;
+
     }
 
   printf("Gauss quadrature for %d %d points\n", nphi12, ntheta12);
@@ -571,6 +726,8 @@ int main(int argc, char**argv)
       fprintf(fxi3,"%.15G %d %d\n", alpha, nphi12, ntheta12);
       break;
     case 2:
+    case 3:
+    case 4:
       fprintf(fxi1,"%.15G %d %d\n", alpha, nphi12, ntheta12);
       fprintf(fxi2,"%.15G %d %d\n", alpha, nphi12, ntheta12);
       fprintf(fxi3,"%.15G %d %d\n", alpha, nphi12, ntheta12);
@@ -592,6 +749,8 @@ int main(int argc, char**argv)
       totfact=fonsfact*dfonsfact/2.0/M_PI;
       break;
     case 2:
+    case 3:
+    case 4:
       totfact=dfonsfact*dfonsfact/2.0/M_PI;
       break;
     }
@@ -632,6 +791,21 @@ int main(int argc, char**argv)
 	      /* XI3 */
 	      xi6=totfact*quad3d(integrandXI6_v2, 0., 2.0*M_PI);
 	      break;
+	    case 3: /* K11 */
+	      xi1 = totfact*quad3d(integrandXI1_v2_K11, 0., 2.0*M_PI);
+	      xi2 = totfact*quad3d(integrandXI2_v2_K11, 0., 2.0*M_PI);
+	      xi3 = totfact*quad3d(integrandXI3_v2_K11, 0., 2.0*M_PI);
+	      xi4 = totfact*quad3d(integrandXI4_v2_K11, 0., 2.0*M_PI);
+	      xi5 = totfact*quad3d(integrandXI5_v2_K11, 0., 2.0*M_PI);
+	      xi6 = totfact*quad3d(integrandXI6_v2_K11, 0., 2.0*M_PI);
+	    case 4: /* K33 */
+	      xi1 = totfact*quad3d(integrandXI1_v2_K33, 0., 2.0*M_PI);
+	      xi2 = totfact*quad3d(integrandXI2_v2_K33, 0., 2.0*M_PI);
+	      xi3 = totfact*quad3d(integrandXI3_v2_K33, 0., 2.0*M_PI);
+	      xi4 = totfact*quad3d(integrandXI4_v2_K33, 0., 2.0*M_PI);
+	      xi5 = totfact*quad3d(integrandXI5_v2_K33, 0., 2.0*M_PI);
+	      xi6 = totfact*quad3d(integrandXI6_v2_K33, 0., 2.0*M_PI);
+	      break;
 	    }
 #if 0
 	  fprintf(fxi1, "(%.15G %.15G %.15G) ", phi12, theta12, xi1);
@@ -649,6 +823,8 @@ int main(int argc, char**argv)
 	      fprintf(fxi3, "%.15G ", xi3);
 	      break;
 	    case 2:
+	    case 3:
+	    case 4:
 	      fprintf(fxi1, "%.15G ", xi1);
 	      fprintf(fxi2, "%.15G ", xi2);
 	      fprintf(fxi3, "%.15G ", xi3);
@@ -671,6 +847,8 @@ int main(int argc, char**argv)
 	      fprintf(fxi3, "\n");
 	      break;
 	    case 2:
+	    case 3:
+	    case 4:
 	      fprintf(fxi1, "\n");
 	      fprintf(fxi2, "\n");
 	      fprintf(fxi3, "\n");
@@ -692,6 +870,8 @@ int main(int argc, char**argv)
       fclose(fxi3);
       break;
     case 2:
+    case 3:
+    case 4:
       fclose(fxi1);
       fclose(fxi2);
       fclose(fxi3);
