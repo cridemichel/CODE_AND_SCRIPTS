@@ -1820,10 +1820,16 @@ int main(int argc, char**argv)
 		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else if (type ==2) /* K22 */
 		vexcl += -segno*u1x*u2x*rcmy*rcmy;
+	      /* NOTA:per ottenere le seguenti espressioni per K11 e K22 basta considerare l'eq. (10)
+	       del Phys. Rev. A di Straley del 1976, notando che il versore y nel nostro caso diventa il versore
+	       x e che i termini misti (rcmx*rcmy, rcmx*rcmz e rcmy*rcmz) fanno zero per simmetria.
+	       Tale equazione di Straley si ottiene considerando che grad(n.n) = 0 dove n è il versore parallelo al direttore
+	       nematico e che si puo' sempre scegliere n parallelo all'asse z nel centro di massa della prima particella (R1)
+	       e si puo' sempre fare una rotazione intorno all'asse z per annullare i contributi proporzionali a u1y e u2y */
 	      else if (type == 3) /* K11 */
-	      	vexcl += -segno*u1y*u2y*rcmy*rcmy;
+	      	vexcl += -segno*u1x*u2x*rcmx*rcmx;
 	      else /* K33 */
-	      	vexcl += -segno*u1z*u2z*rcmy*rcmy;
+	      	vexcl += -segno*u1x*u2x*rcmz*rcmz;
 	    }
 #ifdef ELEC
 	  else if (interact)
