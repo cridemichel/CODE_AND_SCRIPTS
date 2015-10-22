@@ -66,7 +66,7 @@ double *vector(int n1, int n2)
 {
   return (double*)malloc(sizeof(double)*(n2+1));
 }
-double free_vector(double* p, int n1, int n2)
+void free_vector(double* p, int n1, int n2)
 {
   free(p);
 }
