@@ -631,7 +631,7 @@ int main(int argc, char**argv)
 
   if (argc < 5)
     {
-      printf("syntax:  calcXIfirINTRED <alpha> <type:0=v0, 1=v1, 2=v2> <nphi> <ntheta>\n");
+      printf("syntax:  calcXIfirINTRED <alpha> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <nphi> <ntheta>\n");
       exit(1);
     }
   alpha = atof(argv[1]);

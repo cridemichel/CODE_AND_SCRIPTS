@@ -1466,16 +1466,14 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 			rcmy*XI2[nphi12][ntheta12]+
 			rcmz*XI3[nphi12][ntheta12];
 		      break;
-		    case 2:
+		    case 2: /* K22 */
+		    case 3: /* K11 */
+		    case 4: /* K33 */
 		      return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
 			Sqr(rcmy)*XI2[nphi12][ntheta12]+
 			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
 			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
 		      break;
-		    case 3:
-		      return 
-
-			;
 		    }
 		}
 	    }
@@ -1992,16 +1990,16 @@ int main(int argc, char**argv)
     {
 #ifdef GAUSS
 #ifdef QFGAUSS
-  printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
+  printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
 #else
 #ifdef MCGAMMA
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [rSugar] [nphi] [ntheta]\n");
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [ngamma]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [ngamma]\n");
 #endif
 #endif
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [romb-tol]\n");
+      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
 #endif
       exit(1);
     }
@@ -2313,7 +2311,7 @@ int main(int argc, char**argv)
 	  exit(-1);
 	}
     }
-  if (type == 2)
+  if (type >= 2)
     {
       sprintf(fn, "XI4_v%d.dat", type);
       if ((fxi4=fopen(fn, "r"))==NULL)
@@ -2359,7 +2357,7 @@ int main(int argc, char**argv)
 	  exit(-1);
 	};
     }
-  if (type == 2)
+  if (type >= 2)
     {
       fscanf(fxi4,"%lf %d %d\n", &ccc, &aa, &bb);
       if (aa!=nphi || bb!=ntheta|| ccc!= alpha)
@@ -2393,7 +2391,7 @@ int main(int argc, char**argv)
 	    fscanf(fxi2, "%lf ", &(XI2[i+1][j+1]));
 	    fscanf(fxi3, "%lf ", &(XI3[i+1][j+1]));
 	  }
-	if (type==2)
+	if (type>=2)
 	  {
 	    fscanf(fxi4, "%lf ", &(XI4[i+1][j+1]));
 	    fscanf(fxi5, "%lf ", &(XI5[i+1][j+1]));
@@ -2407,7 +2405,7 @@ int main(int argc, char**argv)
       fclose(fxi2);
       fclose(fxi3);
     }
-  if (type == 2)
+  if (type >= 2)
     {
       fclose(fxi4);
       fclose(fxi5);
