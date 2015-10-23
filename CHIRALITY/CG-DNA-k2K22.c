@@ -1798,7 +1798,7 @@ int main(int argc, char**argv)
 		  else
 		    segno = -1.0;
 		}
-	      if (type==2)
+	      if (type>=2)
 		{
 #ifdef SYMMETRY
 		  if (contrib==0||contrib==3)
@@ -1818,7 +1818,7 @@ int main(int argc, char**argv)
 		vexcl += 1.0;
 	      else if (type==1)
 		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else if (type ==2) /* K22 */
+	      else if (type==2) /* K22 */
 		vexcl += -segno*u1x*u2x*rcmy*rcmy;
 	      /* NOTA:per ottenere le seguenti espressioni per K11 e K22 basta considerare l'eq. (10)
 	       del Phys. Rev. A di Straley del 1976, notando che il versore y nel nostro caso diventa il versore
@@ -1842,7 +1842,7 @@ int main(int argc, char**argv)
 		  else
 		    segno = -1.0;
 		}
-	      if (type==2)
+	      if (type>=2)
 		{
 #ifdef SYMMETRY
 		  if (contrib==0||contrib==3)
@@ -1869,8 +1869,12 @@ int main(int argc, char**argv)
 			    vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			  else if (type==1)
 			    vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-		  	  else 
+		  	  else if (type==2)
 		  	    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+			  else if (type==3)
+		  	    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmx*rcmx*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+			  else if (type==4)
+			    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmz*rcmz*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			}
 		    }
 		}
@@ -1881,8 +1885,12 @@ int main(int argc, char**argv)
 		    vexclel += (1.0-exp(-beta*uel));
 		  else if (type==1)
 		    vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-		  else 
+		  else  if (type==2)
 		    vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
+		  else if (type==3)
+		    vexclel += -segno*u1x*u2x*rcmx*rcmx*(1.0-exp(-beta*uel));
+		  else
+		    vexclel += -segno*u1x*u2x*rcmz*rcmz*(1.0-exp(-beta*uel));
 		}		
 #else
 	      /* otherwise calculate the integrand */
@@ -1890,8 +1898,12 @@ int main(int argc, char**argv)
 		vexclel += (1.0-exp(-beta*uel));
 	      else if (type==1)
 		vexclel += segno*u2x*rcmy*(1.0-exp(-beta*uel)); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-	      else 
+	      else if (type==2)
 		vexclel += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta*uel));
+	      else if (type==3)
+		vexclel += -segno*u1x*u2x*rcmx*rcmx*(1.0-exp(-beta*uel));
+	      else
+		vexclel += -segno*u1x*u2x*rcmz*rcmz*(1.0-exp(-beta*uel));
 #endif
 	    }
 #endif
