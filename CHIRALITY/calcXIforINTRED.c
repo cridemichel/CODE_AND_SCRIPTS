@@ -450,8 +450,8 @@ double integrandXI1_v2_K11(double phi1, double theta1, double gamma1)
   costheta1=cos(theta1);
   sintheta1=sin(theta1);
   return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
-    (Sqr(cosgamma1)*Sqr(costheta1)*Sqr(cosphi1)+Sqr(singamma1)*Sqr(sinphi1)-
-    2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1);
+    (Sqr(cosgamma1)*Sqr(costheta1)*Sqr(cosphi1)
+     -2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1+Sqr(singamma1)*Sqr(sinphi1));
 }
 double integrandXI2_v2_K11(double phi1, double theta1, double gamma1)
 {
@@ -463,7 +463,7 @@ double integrandXI2_v2_K11(double phi1, double theta1, double gamma1)
   costheta1=cos(theta1);
   sintheta1=sin(theta1);
   return  commonfunc_v2(cosphi1, sinphi1, costheta1, sintheta1, cosgamma1, singamma1)*
-    (Sqr(costheta1)*Sqr(cosphi1)*Sqr(singamma1)-2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1+Sqr(cosgamma1)*Sqr(sinphi1) );
+    (Sqr(costheta1)*Sqr(cosphi1)*Sqr(singamma1)+2.0*cosgamma1*costheta1*cosphi1*singamma1*sinphi1+Sqr(cosgamma1)*Sqr(sinphi1) );
 }
 double integrandXI3_v2_K11(double phi1, double theta1, double gamma1)
 {
