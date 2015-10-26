@@ -1222,7 +1222,7 @@ int get_max_nbonds(void)
   return maxpbonds+maxijbonds;
 }
 
-#define npmax 10001
+#define npmax 10000001
 const int nlin=20;
 int l1[npmax], l2[npmax];
 double dlog[npmax], xlog[npmax];
