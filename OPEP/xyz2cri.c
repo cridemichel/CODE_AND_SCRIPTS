@@ -128,7 +128,7 @@ struct evStruct {
   double eigvec[3];
   double ev;
   int idx;
-} evstruct[3];
+} evstruct[3], evstrTmp[3];
 int cmpfuncev (const void *p1, const void *p2)
 {
   if (((struct evStruct*)p1)->ev > ((struct evStruct*)p2)->ev) 
@@ -139,8 +139,8 @@ int cmpfuncev (const void *p1, const void *p2)
 int main(int argc, char **argv)
 {
   FILE *fin, *fout;
-  int i, ifirst, jj, j, nframe, nhdr, a, b;
-  double distx, disty, distz;
+  int i, ifirst, jj, j, nframe, nhdr, a, b, numev;
+  double distx, disty, distz, St;
   double norm, vp[3], pp[3], dx, dy, dz, CM[3], Itens[3][3], ev[3], maxpx, maxpy, maxpz;
   double shift[3];
   strcpy(fname,argv[1]);
@@ -207,6 +207,24 @@ int main(int argc, char **argv)
 	  CM[2] = comz;
   	  calcItens(Itens, CM, i*natprot, i*natprot+natprot);
 	  diagonalize(Itens, ev);
+#if 1
+	  /* find max eigenval */
+	  if (fabs(ev[0]) > fabs(ev[1]))
+	    { 
+	      St = ev[0];
+	      numev=0;
+	    }
+	  else
+	    {
+	      St = ev[1];
+	      numev=1;
+	    }  
+	  if (fabs(ev[2]) > St)
+	    {
+	      St = ev[2];
+	      numev=2;
+	    }
+#endif
 	  evstruct[0].ev=ev[0];
 	  evstruct[1].ev=ev[1];
 	  evstruct[2].ev=ev[2];
@@ -214,7 +232,21 @@ int main(int argc, char **argv)
 	    for (b=0; b < 3; b++)
 	      evstruct[a].eigvec[b] = eigvec[a][b];
 	  evstruct[a].idx = a;
-	  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
+	  /* we need to preserve chirality, hence we shift eigenvectors in order to preserve their order
+	     (e.g xyz -> zxy) */
+	  for (a=0; a < 3; a++)
+	    {
+	      evstrTmp[(a + numev)%3].ev = evstruct[a].ev;
+	      for (b=0; b < 3; b++)
+		evstrTmp[(a + numev)%3].eigvec[b] = evstruct[a].eigvec[b];
+	    }
+	  for (a=0; a < 3; a++)
+	    {
+	      evstruct[a].ev = evstrTmp[a].ev;
+	      for (b=0; b < 3; b++)
+		evstruct[a].eigvec[b] = evstrTmp[a].eigvec[b];
+	    }
+	  //qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
 	  for (j=0; j < natprot; j++)
 	    {
 	      pp[0] = p[i*natprot+j].x-CM[0];

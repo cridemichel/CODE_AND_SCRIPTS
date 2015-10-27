@@ -4,6 +4,7 @@
 #include<string.h>
 #define Sqr(x) ((x)*(x))
 double *r[3], *R[3][3], L[3], *sax[3], *msax[3], Lx, Ly, Lz;
+int *frozen;
 const int numprot = 64;
 int mcsim=0;
 void tRDiagRpw(int i, double M[3][3], double D[3], double Ri[3][3])
@@ -435,9 +436,10 @@ void main(int argc, char **argv)
 {
   FILE *f;
   double delsf, nf=0.0, shift[3], sf, avsax[3], saxl[3];
-  int i, j, a, b, done;
+  int i, j, a, b, done=0, overlap=0;
   strcpy(inputfile, argv[1]);
 
+  frozen = malloc(sizeof(int)*numprot);
   for (a=0; a < 3; a++)
     {
       sax[a] = malloc(sizeof(double)*numprot);
@@ -463,38 +465,85 @@ void main(int argc, char **argv)
 	printf("BOX: %f %f %f\n", L[0], L[1], L[2]);
       delsf=0.05;
       for (i=0; i < numprot; i++)
+	frozen[i] = 0;
+      for (sf=delsf; sf < 100. && done==0; sf+=delsf)
 	{
-	  done=0;
-	  // printf("i=%d sax= %f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
-	  for (sf=0.5; sf < 100 && done==0; sf+=delsf)
+	  done = 1;
+	  for (i=0; i < numprot; i++)
 	    {
-	      saxl[0] = sax[0][i]*sf;
-	      saxl[1] = sax[1][i]*sf;
-	      saxl[2] = sax[2][i]*sf;
-	      if (saxl[0] > msax[0][i] && saxl[1] > msax[1][i] && saxl[2] > msax[2][i])
+	      if (!frozen[i])
+		done=0;
+	    }
+
+	  for (i=0; i < numprot; i++)
+	    {
+	      if (!frozen[i])
 		{
-		  done=1;
-		  for (a=0; a < 3; a++)
-		    avsax[a] += msax[a][i];
-		  break;
+		  sax[0][i] = msax[0][i]*sf;
+		  sax[1][i] = msax[1][i]*sf;
+		  sax[2][i] = msax[2][i]*sf;
 		}
-	      for (j=0; j < numprot; j++)
+	      for (i=0; i < numprot; i++)
 		{
-		  shift[0] = L[0]*rint((r[0][i]-r[0][j])/L[0]);
-		  shift[1] = L[1]*rint((r[1][i]-r[1][j])/L[1]);
-		  shift[2] = L[2]*rint((r[2][i]-r[2][j])/L[2]);
-		  if (check_overlap_pw(i, j, shift) < 0.0)
+#if 0
+		  done=0;
+		  saxl[0] = msax[0][i]*sf;
+		  saxl[1] = msax[1][i]*sf;
+		  saxl[2] = msax[2][i]*sf;
+		  printf("i=%d saxl= %f %f %f\n", i, saxl[0], saxl[1], saxl[2]);
+		  if (saxl[0] > msax[0][i] && saxl[1] > msax[1][i] && saxl[2] > msax[2][i])
 		    {
-		      /* overlap found */
-		      saxl[0] = sax[0][i]*(sf-delsf);
-		      saxl[1] = sax[1][i]*(sf-delsf);
-		      saxl[2] = sax[2][i]*(sf-delsf);
+		      done=1;
+		      for (a=0; a < 3; a++)
+			avsax[a] += msax[a][i];
+		      break;
+		    }
+#endif
+		  overlap = 0;
+		  for (j=0; j < numprot; j++)
+		    {
+		      shift[0] = L[0]*rint((r[0][i]-r[0][j])/L[0]);
+		      shift[1] = L[1]*rint((r[1][i]-r[1][j])/L[1]);
+		      shift[2] = L[2]*rint((r[2][i]-r[2][j])/L[2]);
+		      if (check_overlap_pw(i, j, shift) < 0.0)
+			{
+			  overlap = 1;
+			  for (a=0; a < 3; a++)
+			    { 
+			      if (frozen[i]==0)
+				{
+				  sax[a][i]=(sf-delsf)*msax[a][i];
+				  frozen[i] = 1;
+				}
+			      if (frozen[j]==0)
+				{
+				  sax[a][i]=(sf-delsf)*msax[a][i];
+				  frozen[i] = 1;
+				}
+			    }
+			  break;
+			}
+		    }
+#if 0
+		  if (overlap==1)
+		    {
+		      /* overlap not found */
+		      saxl[0] = msax[0][i]*(sf-delsf);
+		      saxl[1] = msax[1][i]*(sf-delsf);
+		      saxl[2] = msax[2][i]*(sf-delsf);
 		      for (a=0; a < 3; a++)
 			avsax[a] += saxl[a];
 		      done=1;
 		    }
+#endif
 		}
 	    }
+	}
+      /* calc average semi-axes */
+      for (i=0; i < numprot; i++)
+	{
+	  for (a=0; a < 3; a++)
+	    avsax[a] += sax[a][i];
 	}
     }
   printf("Average Semi-axes: %f %f %f\n", avsax[0]/((double)nf)/((double)numprot),
