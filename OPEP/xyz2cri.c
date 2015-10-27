@@ -225,6 +225,7 @@ int main(int argc, char **argv)
 	      numev=2;
 	    }
 #endif
+	  //printf("i=%d numev=%d ev=%f %f %f\n", i, numev, ev[0], ev[1], ev[2]);
 	  evstruct[0].ev=ev[0];
 	  evstruct[1].ev=ev[1];
 	  evstruct[2].ev=ev[2];
@@ -232,13 +233,14 @@ int main(int argc, char **argv)
 	    for (b=0; b < 3; b++)
 	      evstruct[a].eigvec[b] = eigvec[a][b];
 	  evstruct[a].idx = a;
+#if 0
 	  /* we need to preserve chirality, hence we shift eigenvectors in order to preserve their order
 	     (e.g xyz -> zxy) */
 	  for (a=0; a < 3; a++)
 	    {
-	      evstrTmp[(a + numev)%3].ev = evstruct[a].ev;
+	      evstrTmp[(a + (3-numev))%3].ev = evstruct[a].ev;
 	      for (b=0; b < 3; b++)
-		evstrTmp[(a + numev)%3].eigvec[b] = evstruct[a].eigvec[b];
+		evstrTmp[(a + (3-numev))%3].eigvec[b] = evstruct[a].eigvec[b];
 	    }
 	  for (a=0; a < 3; a++)
 	    {
@@ -246,6 +248,7 @@ int main(int argc, char **argv)
 	      for (b=0; b < 3; b++)
 		evstruct[a].eigvec[b] = evstrTmp[a].eigvec[b];
 	    }
+#endif
 	  //qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
 	  for (j=0; j < natprot; j++)
 	    {
@@ -268,7 +271,7 @@ int main(int argc, char **argv)
 		  evstruct[0].eigvec[0], evstruct[0].eigvec[1], evstruct[0].eigvec[2], 
 		  evstruct[1].eigvec[0], evstruct[1].eigvec[1], evstruct[1].eigvec[2], 
 		  evstruct[2].eigvec[0], evstruct[2].eigvec[1], evstruct[2].eigvec[2], 
-		  sqrt(evstruct[0].ev/((double)natprot)), sqrt(evstruct[1].ev/((double)natprot)), sqrt(evstruct[2].ev/((double)natprot)),
+		  evstruct[0].ev, evstruct[1].ev, evstruct[2].ev,
 		  maxpx, maxpy, maxpz);
 	}
       for (i=0; i < numprot; i++) 

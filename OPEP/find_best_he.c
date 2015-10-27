@@ -3,7 +3,7 @@
 #include<stdio.h>
 #include<string.h>
 #define Sqr(x) ((x)*(x))
-double *r[3], *R[3][3], L[3], *sax[3], *msax[3], Lx, Ly, Lz;
+double *r[3], *R[3][3], L[3], *sax[3], *msax[3], Lx, Ly, Lz, *sax0[3];
 int *frozen;
 const int numprot = 64;
 int mcsim=0;
@@ -444,6 +444,7 @@ void main(int argc, char **argv)
     {
       sax[a] = malloc(sizeof(double)*numprot);
       msax[a] = malloc(sizeof(double)*numprot);
+      sax0[a] = malloc(sizeof(double)*numprot);
       r[a] = malloc(sizeof(double)*numprot);
       for (b=0; b < 3; b++)
 	{
@@ -465,7 +466,11 @@ void main(int argc, char **argv)
 	printf("BOX: %f %f %f\n", L[0], L[1], L[2]);
       delsf=0.05;
       for (i=0; i < numprot; i++)
-	frozen[i] = 0;
+	{
+	  frozen[i] = 0;
+	  printf("i=%d ev=%f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
+	}
+      exit(-1);
       for (sf=delsf; sf < 100. && done==0; sf+=delsf)
 	{
 	  done = 1;
