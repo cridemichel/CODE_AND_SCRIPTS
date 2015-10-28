@@ -442,7 +442,7 @@ void main(int argc, char **argv)
   int i, j, a, b, done=0, overlap=0, idx;
   strcpy(inputfile, argv[1]);
 
-  if (argc>=2)
+  if (argc>=3)
     numbins = atoi(argv[2]);
   else
     numbins = 100;
@@ -461,7 +461,7 @@ void main(int argc, char **argv)
 	}
     }
   f = fopen(inputfile,"r");
-  for  (a=0; a <3; a++)
+  for  (a=0; a < 3; a++)
     {
       avsax[a] = 0.0;
     }
@@ -500,10 +500,11 @@ void main(int argc, char **argv)
 	{
 	  for (a=0; a < 3; a++)
 	    {
-	      idx = (sax[a][i]-minsax[a])/delsax[a];
+	      idx = (msax[a][i]-minsax[a])/delsax[a];
+	      //printf("sax=%f minsax=%f delsax=%f idx[%d]=%d\n", sax[a][i], minsax[a], delsax[a], i, idx);
 	      if (idx >= 0 && idx < numbins)
 		saxhisto[a][idx] += 1.0;
-	      idx = (msax[a][i]-minmoi[a])/delmoi[a];
+	      idx = (sax[a][i]-minmoi[a])/delmoi[a];
 	      if (idx >= 0 && idx < numbins)
 		moihisto[a][idx] += 1.0;
 	    }
@@ -536,9 +537,9 @@ void main(int argc, char **argv)
 	fprintf(f, "%f %f\n", minmoi[a]+delmoi[a]*i, moihisto[a][i]);
       fclose(f);
       sprintf(fn, "histosax-%d.dat", a);
+      f = fopen(fn, "w+");
       for (i=0; i < numbins; i++)
 	fprintf(f, "%f %f\n", minsax[a]+delsax[a]*i, saxhisto[a][i]);
-      f = fopen(fn, "w+");
       fclose(f);
     }
 }
