@@ -4,7 +4,7 @@
 #include<string.h>
 #define Sqr(x) ((x)*(x))
 double *r[3], *R[3][3], L[3], *sax[3], *msax[3], Lx, Ly, Lz, *sax0[3], maxmoi[3], minmoi[3],
-       maxsax[3], minsax[3], delsax[3], delmoi[3], summoi, sumsax;
+       maxsax[3], minsax[3], delsax[3], delmoi[3], summoi[3], sumsax[3];
 int *frozen;
 char fn[1024];
 const int numprot = 64;
@@ -442,7 +442,7 @@ void main(int argc, char **argv)
   int i, j, a, b, done=0, overlap=0, idx;
   strcpy(inputfile, argv[1]);
 
-  if (arfc>=2)
+  if (argc>=2)
     numbins = atoi(argv[2]);
   else
     numbins = 100;
@@ -453,7 +453,7 @@ void main(int argc, char **argv)
       msax[a] = malloc(sizeof(double)*numprot);
       sax0[a] = malloc(sizeof(double)*numprot);
       moihisto[a] = malloc(sizeof(double)*numbins);
-      aaxhisto[a] = malloc(sizeof(double)*numbins);
+      saxhisto[a] = malloc(sizeof(double)*numbins);
       r[a] = malloc(sizeof(double)*numprot);
       for (b=0; b < 3; b++)
 	{
@@ -469,7 +469,7 @@ void main(int argc, char **argv)
   saxAnna[1] = 16.25;
   saxAnna[2] = 13.5;
   
-  for (i=0; i < maxbins; i++)
+  for (i=0; i < numbins; i++)
     {
       for (a=0; a < 3; a++)
 	{
@@ -502,35 +502,42 @@ void main(int argc, char **argv)
 	    {
 	      idx = (sax[a][i]-minsax[a])/delsax[a];
 	      if (idx >= 0 && idx < numbins)
-		histosax[idx] += 1.0;
+		saxhisto[a][idx] += 1.0;
 	      idx = (msax[a][i]-minmoi[a])/delmoi[a];
 	      if (idx >= 0 && idx < numbins)
-		histomoi[idx] += 1.0;
+		moihisto[a][idx] += 1.0;
 	    }
 	}
     }
-  summoi = sumsax = 0.0;
+  for (a=0; a < 3; a++)
+    summoi[a] = sumsax[a] = 0.0;
   for (i=0; i < numbins; i++)
     {
-      summoi += histomoi[i];
-      sumsax += histosax[i];
+      for (a=0; a < 3; a++)
+	{
+	  summoi[a] += moihisto[a][i];
+	  sumsax[a] += saxhisto[a][i];
+	}
     }
   for (i=0; i < numbins; i++)
     {
-      histomoi[i] /= summoi;
-      histosax[i] /= sumsax;
+      for (a=0; a < 3; a++)
+	{
+  	  moihisto[a][i] /= summoi[a];
+      	  saxhisto[a][i] /= sumsax[a];
+	}
     }   
   fclose(f);
   for (a=0; a < 3; a++)
     {
-      fn=sprintf(fn, "histomoi-%d.dat", a);
+      sprintf(fn, "histomoi-%d.dat", a);
       f = fopen(fn, "w+");
       for (i=0; i < numbins; i++)
-	fprintf(f, "%f %f\n", minmoi[a][i]+delmoi[a]*i, histomoi[i]);
+	fprintf(f, "%f %f\n", minmoi[a]+delmoi[a]*i, moihisto[a][i]);
       fclose(f);
-      fn=sprintf(fn, "histosax-%d.dat", a);
+      sprintf(fn, "histosax-%d.dat", a);
       for (i=0; i < numbins; i++)
-	fprintf(f, "%f %f\n", minsax[a][i]+delsax[a]*i, histosax[i]);
+	fprintf(f, "%f %f\n", minsax[a]+delsax[a]*i, saxhisto[a][i]);
       f = fopen(fn, "w+");
       fclose(f);
     }
