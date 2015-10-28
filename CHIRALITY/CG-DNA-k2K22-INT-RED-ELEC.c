@@ -1310,8 +1310,8 @@ void align_z_axis(void)
   //print_matrix(It, 3);
   diagonalize(It, ev);
 #if 1
-  /* find max eigenval */
-  if (fabs(ev[0]) > fabs(ev[1]))
+  /* find min eigenval */
+  if (fabs(ev[0]) < fabs(ev[1]))
     { 
       St = ev[0];
       numev=0;
@@ -1321,7 +1321,7 @@ void align_z_axis(void)
       St = ev[1];
       numev=1;
     }  
-  if (fabs(ev[2]) > St)
+  if (fabs(ev[2]) < St)
     {
       St = ev[2];
       numev=2;
@@ -1341,9 +1341,9 @@ void align_z_axis(void)
      (e.g xyz -> zxy) */
   for (a=0; a < 3; a++)
     {
-      evstrTmp[(a + numev)%3].ev = evstruct[a].ev;
+      evstrTmp[(a + (2-numev))%3].ev = evstruct[a].ev;
       for (b=0; b < 3; b++)
-	evstrTmp[(a + numev)%3].eigvec[b] = evstruct[a].eigvec[b];
+	evstrTmp[(a + (2-numev))%3].eigvec[b] = evstruct[a].eigvec[b];
     }
   for (a=0; a < 3; a++)
     {

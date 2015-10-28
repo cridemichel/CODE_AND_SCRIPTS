@@ -1010,8 +1010,8 @@ void align_z_axis(void)
   //print_matrix(It, 3);
   diagonalize(It, ev);
 #if 1
-  /* find max eigenval */
-  if (fabs(ev[0]) > fabs(ev[1]))
+  /* find min eigenval */
+  if (fabs(ev[0]) < fabs(ev[1]))
     { 
       St = ev[0];
       numev=0;
@@ -1021,7 +1021,7 @@ void align_z_axis(void)
       St = ev[1];
       numev=1;
     }  
-  if (fabs(ev[2]) > St)
+  if (fabs(ev[2]) < St)
     {
       St = ev[2];
       numev=2;
@@ -1030,7 +1030,7 @@ void align_z_axis(void)
   evstruct[0].ev=ev[0];
   evstruct[1].ev=ev[1];
   evstruct[2].ev=ev[2];
-  printf("ev[0]=%f ev[1]=%f ev[2]=%f\n", ev[0], ev[1], ev[2]);
+  printf("numev=%d ev[0]=%f ev[1]=%f ev[2]=%f\n", numev, ev[0], ev[1], ev[2]);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       evstruct[a].eigvec[b] = eigvec[a][b];
@@ -1041,9 +1041,9 @@ void align_z_axis(void)
      (e.g xyz -> zxy) */
   for (a=0; a < 3; a++)
     {
-      evstrTmp[(a + numev)%3].ev = evstruct[a].ev;
+      evstrTmp[(a + (2-numev))%3].ev = evstruct[a].ev;
       for (b=0; b < 3; b++)
-	evstrTmp[(a + numev)%3].eigvec[b] = evstruct[a].eigvec[b];
+	evstrTmp[(a + (2-numev))%3].eigvec[b] = evstruct[a].eigvec[b];
     }
   for (a=0; a < 3; a++)
     {
