@@ -402,7 +402,7 @@ void readconf(char *fname, double *r[3], double *R[3][3], int *NP, int *NPA)
 	    	      &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &sax[0][i], &sax[1][i], &sax[2][i],
 		      &msax[0][i], &msax[1][i], &msax[2][i]);
 
-	      //printf("r[%d]=%f %f %f sax=%f %f %f\n", i, r[0][i], r[1][i], r[2][i], sax[0][i], sax[1][i], sax[2][i]);
+	      //printf("r[%d]=%f %f %f sax=%f %f %f\n", i, r[0][i], r[1][i], r[2][i], msax[0][i], msax[1][i], msax[2][i]);
 	    }
 	  if (mcsim==1)
 	    {
@@ -435,7 +435,7 @@ char fname[1024], inputfile[1024];
 void main(int argc, char **argv)
 {
   FILE *f;
-  double delsf, nf=0.0, shift[3], sf, avsax[3], saxl[3];
+  double delsf, nf=0.0, shift[3], sf, avsax[3], saxl[3], sfini, saxAnna[3];
   int i, j, a, b, done=0, overlap=0;
   strcpy(inputfile, argv[1]);
 
@@ -456,6 +456,9 @@ void main(int argc, char **argv)
     {
       avsax[a] = 0.0;
     }
+  saxAnna[0] = 27.5;
+  saxAnna[1] = 16.25;
+  saxAnna[2] = 13.5;
   while (!feof(f)) 
     {
       fscanf(f, "%[^\n]\n", fname);
@@ -465,13 +468,35 @@ void main(int argc, char **argv)
       if (nf==1)
 	printf("BOX: %f %f %f\n", L[0], L[1], L[2]);
       delsf=0.05;
-      for (i=0; i < numprot; i++)
+     for (i=0; i < numprot; i++)
 	{
 	  frozen[i] = 0;
-	  printf("i=%d ev=%f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
+	  //printf("i=%d ev=%f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
+	  if (argc < 3 || (argc==3 && atoi(argv[2])==0))
+	    {
+	      sax0[0][i] = saxAnna[0];
+	      sax0[1][i] = saxAnna[1];
+	      sax0[2][i] = saxAnna[2];
+	    }
+	  else
+	    {
+	      //printf("qui\n");
+	      sax0[0][i] = msax[0][i];
+	      sax0[1][i] = msax[1][i];
+	      sax0[2][i] = msax[2][i];
+	      //printf("i=%d sax=%f %f %f\n", i, sax0[0][i], sax0[1][i], sax0[2][i]);
+	    }
 	}
-      exit(-1);
-      for (sf=delsf; sf < 100. && done==0; sf+=delsf)
+      //exit(-1);
+      sfini = 2.0*delsf;
+      for (i=0; i < numprot; i++)
+	{
+	  sax[0][i] = sax0[0][i]*sfini;
+      	  sax[1][i] = sax0[1][i]*sfini;
+	  sax[2][i] = sax0[2][i]*sfini;
+	  //printf("sf=%f i=%d sax=%f %f %f\n", sf, i, sax[0][i], sax[1][i], sax[2][i]);
+	}	
+      for (sf=sfini; sf < 100. && done==0; sf+=delsf)
 	{
 	  done = 1;
 	  for (i=0; i < numprot; i++)
@@ -479,69 +504,76 @@ void main(int argc, char **argv)
 	      if (!frozen[i])
 		done=0;
 	    }
-
+	 //printf("sf=%f done=%d\n", sf, done);
 	  for (i=0; i < numprot; i++)
 	    {
 	      if (!frozen[i])
 		{
-		  sax[0][i] = msax[0][i]*sf;
-		  sax[1][i] = msax[1][i]*sf;
-		  sax[2][i] = msax[2][i]*sf;
+		  sax[0][i] = sax0[0][i]*sf;
+		  sax[1][i] = sax0[1][i]*sf;
+		  sax[2][i] = sax0[2][i]*sf;
+		  //printf("sf=%f i=%d sax=%f %f %f\n", sf, i, sax[0][i], sax[1][i], sax[2][i]);
 		}
-	      for (i=0; i < numprot; i++)
+	      if ((sax[0][i] > 2.0*saxAnna[0]) && (sax[1][i] > 2.0*saxAnna[1]) && (sax[2][i] > 2.0*saxAnna[2]))
 		{
-#if 0
-		  done=0;
-		  saxl[0] = msax[0][i]*sf;
-		  saxl[1] = msax[1][i]*sf;
-		  saxl[2] = msax[2][i]*sf;
-		  printf("i=%d saxl= %f %f %f\n", i, saxl[0], saxl[1], saxl[2]);
-		  if (saxl[0] > msax[0][i] && saxl[1] > msax[1][i] && saxl[2] > msax[2][i])
-		    {
-		      done=1;
-		      for (a=0; a < 3; a++)
-			avsax[a] += msax[a][i];
-		      break;
-		    }
-#endif
-		  overlap = 0;
-		  for (j=0; j < numprot; j++)
-		    {
-		      shift[0] = L[0]*rint((r[0][i]-r[0][j])/L[0]);
-		      shift[1] = L[1]*rint((r[1][i]-r[1][j])/L[1]);
-		      shift[2] = L[2]*rint((r[2][i]-r[2][j])/L[2]);
-		      if (check_overlap_pw(i, j, shift) < 0.0)
-			{
-			  overlap = 1;
-			  for (a=0; a < 3; a++)
-			    { 
-			      if (frozen[i]==0)
-				{
-				  sax[a][i]=(sf-delsf)*msax[a][i];
-				  frozen[i] = 1;
-				}
-			      if (frozen[j]==0)
-				{
-				  sax[a][i]=(sf-delsf)*msax[a][i];
-				  frozen[i] = 1;
-				}
-			    }
-			  break;
-			}
-		    }
-#if 0
-		  if (overlap==1)
-		    {
-		      /* overlap not found */
-		      saxl[0] = msax[0][i]*(sf-delsf);
-		      saxl[1] = msax[1][i]*(sf-delsf);
-		      saxl[2] = msax[2][i]*(sf-delsf);
-		      for (a=0; a < 3; a++)
-			avsax[a] += saxl[a];
-		      done=1;
-		    }
-#endif
+		  //printf("i=%d msax=%f %f %f\n", i, msax[0][i], msax[1][i], msax[2][i]);	
+		  //printf("sax=%f %f %f\n", sax[0][i], sax[1][i], sax[2][i]);
+		  frozen[i]=1;
 		}
+#if 0
+	      done=0;
+	      saxl[0] = msax[0][i]*sf;
+	      saxl[1] = msax[1][i]*sf;
+	      saxl[2] = msax[2][i]*sf;
+	      printf("i=%d saxl= %f %f %f\n", i, saxl[0], saxl[1], saxl[2]);
+	      if (saxl[0] > msax[0][i] && saxl[1] > msax[1][i] && saxl[2] > msax[2][i])
+		{
+		  done=1;
+		  for (a=0; a < 3; a++)
+		    avsax[a] += msax[a][i];
+		  break;
+		}
+#endif
+	      overlap = 0;
+	      for (j=i+1; j < numprot; j++)
+		{
+		  shift[0] = L[0]*rint((r[0][i]-r[0][j])/L[0]);
+		  shift[1] = L[1]*rint((r[1][i]-r[1][j])/L[1]);
+		  shift[2] = L[2]*rint((r[2][i]-r[2][j])/L[2]);
+		  if (check_overlap_pw(i, j, shift) < 0.0)
+		    {
+		      overlap = 1;
+		      //printf("overlap %d-%d sax=%f %f %f  %f %f %f\n", i, j, sax[0][i], sax[1][i], sax[2][i],
+		      //sax[0][i], sax[1][j], sax[2][j]);
+		      for (a=0; a < 3; a++)
+	    		sax[a][i]=(sf-delsf)*msax[a][i];
+		      //printf(">>>sax[%d]=%f %f %f\n", i, sax[0][i], sax[1][i], sax[2][i]);
+		      //printf(">>>sax[%d]=%f %f %f\n", j, sax[0][j], sax[1][j], sax[2][j]);
+    		      frozen[i] = 1;
+		      break;
+#if 0
+		      if (frozen[j]==0)
+			{
+			  for (a=0; a < 3; a++)
+			    sax[a][j]=(sf-delsf)*msax[a][j];
+			  frozen[j] = 1;
+			}
+#endif
+		      //break;
+		    }
+		}
+#if 0
+	      if (overlap==1)
+		{
+		  /* overlap not found */
+		  saxl[0] = msax[0][i]*(sf-delsf);
+		  saxl[1] = msax[1][i]*(sf-delsf);
+		  saxl[2] = msax[2][i]*(sf-delsf);
+		  for (a=0; a < 3; a++)
+		    avsax[a] += saxl[a];
+		  done=1;
+		}
+#endif
 	    }
 	}
       /* calc average semi-axes */
