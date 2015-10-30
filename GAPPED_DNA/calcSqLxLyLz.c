@@ -253,8 +253,6 @@ int main(int argc, char** argv)
 	{
 	  if (physunit || qminpu != -1.0 || qmaxpu != -1.0)
 	    {
-	      qmin = -1; 
-	      qmax = -1;
 	      for (qmod = 0; qmod < KMODMAX; qmod++)
 		{
 
@@ -273,13 +271,15 @@ int main(int argc, char** argv)
 		      qmin = qmod;
 		    }
 		 
-		  if (qmax==-1 && qmin != -1 && (qmaxpu < 0 || qavg[qmod] >= qmaxpu))
+		  if (qmax==-1 && qmin != -1 && (qmaxpu > 0 && qavg[qmod] >= qmaxpu))
 		    {
 		      printf("qui qmax=%d\n", qmod);
 		      qmax = qmod-1;
 		    }
 		  //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
 		}
+	      if (qmax==-1)
+		qmax = qmod-1;
 #if 0
 	      if (qminpu != -1.0 && qminpu == qmaxpu)
 		{
@@ -375,9 +375,13 @@ int main(int argc, char** argv)
       Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
-	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
+	{
+	  fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
+	}
       else
-	fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
+	{
+	  fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
+	}
     }
   fclose(of);
   if (NA < N) 
