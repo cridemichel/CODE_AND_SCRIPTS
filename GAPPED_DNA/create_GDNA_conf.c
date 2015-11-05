@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
   del=0.5;
   /* permanent spots diameter */
-  permdiam=3.333; 
+  permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   Len=32.0;
   if (argc == 1)
    {
@@ -101,12 +101,12 @@ int main(int argc, char **argv)
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
   fprintf(f, "%d\n", parnum);
-  fprintf(f,"16 1 1\n");
+  fprintf(f,"8 1 1\n"); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"2 0\n");
-  fprintf(f,"%f 0 0 %f\n", permdiam*0.5+16.0, permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
-  fprintf(f,"%f 0 0 %f\n", -16.15, 0.5);
+  fprintf(f,"%f 0 0 %f\n", permdiam*0.5+8.0, permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
+  fprintf(f,"%f 0 0 %f\n", -8.15, 0.5);
   fprintf(f,"0 0 0 0 1 0 0 1\n");
   fprintf(f,"0 1 0 1 1 0 0 100000\n");
   fprintf(f, "@@@\n");

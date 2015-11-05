@@ -514,7 +514,7 @@ void main(int argc, char **argv)
 		  sax[2][i] = sax0[2][i]*sf;
 		  //printf("sf=%f i=%d sax=%f %f %f\n", sf, i, sax[0][i], sax[1][i], sax[2][i]);
 		}
-	      if ((sax[0][i] > 2.0*saxAnna[0]) && (sax[1][i] > 2.0*saxAnna[1]) && (sax[2][i] > 2.0*saxAnna[2]))
+	      if ((sax[0][i] > 3.0*saxAnna[0]) && (sax[1][i] > 3.0*saxAnna[1]) && (sax[2][i] > 3.0*saxAnna[2]))
 		{
 		  //printf("i=%d msax=%f %f %f\n", i, msax[0][i], msax[1][i], msax[2][i]);	
 		  //printf("sax=%f %f %f\n", sax[0][i], sax[1][i], sax[2][i]);

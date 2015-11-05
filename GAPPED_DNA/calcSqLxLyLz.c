@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
-  double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
+  double qval, ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
   int qmod, first = 1, NP1, NP2;
 #if 0
   if (argc == 1)
@@ -132,6 +132,10 @@ int main(int argc, char** argv)
       printf("ERROR: qmin must be less than qmax\n");
       exit(-1);
     }
+  if (qminpu < 0)
+    qminpu = 0.0;
+  if (qmaxpu < 0)
+    qmaxpu = twopi/pow(L[0],L[1],L[2],1.0/3.0)*qmax;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -255,25 +259,27 @@ int main(int argc, char** argv)
 	    {
 	      for (qmod = 0; qmod < KMODMAX; qmod++)
 		{
-
-		  qavg[qmod] = 0;
 		  for (mp = 0; mp < ntripl[qmod]; mp++) 
 		    {
+		      qval = sqrt(Sqr(((double)mesh[qmod][mp][0])*scalFact[0])+
+		 		  Sqr(((double)mesh[qmod][mp][1])*scalFact[1])+
+					 Sqr(((double)mesh[qmod][mp][2])*scalFact[2]));
+		      qidx = ; 
 		      qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0])*scalFact[0])+
 					 Sqr(((double)mesh[qmod][mp][1])*scalFact[1])+
 					 Sqr(((double)mesh[qmod][mp][2])*scalFact[2]));
 		    }
 		  qavg[qmod] *= 1.0/((double)ntripl[qmod]);
-		  printf("qavg[%d]: %f\n", qmod, qavg[qmod]);
+		  //printf("qavg[%d]: %f\n", qmod, qavg[qmod]);
 		  if (qmin==-1 && (qminpu < 0 || qavg[qmod] >= qminpu))
 		    {
-		      printf("qui qmin=%d\n", qmod);
+		      //printf("qui qmin=%d\n", qmod);
 		      qmin = qmod;
 		    }
 		 
 		  if (qmax==-1 && qmin != -1 && (qmaxpu > 0 && qavg[qmod] >= qmaxpu))
 		    {
-		      printf("qui qmax=%d\n", qmod);
+		      //printf("qui qmax=%d\n", qmod);
 		      qmax = qmod-1;
 		    }
 		  //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
