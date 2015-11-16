@@ -405,7 +405,7 @@ void build_linked_list_perc(int clsdim, double Lbig)
 	inCell[1][n]=0;
       if (inCell[2][n] == -1)
 	inCell[2][n]=0;
-   j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
 	inCell[0][n] + NP*NUMREP;
       cellList[n] = cellList[j];
       cellList[j] = n;
@@ -919,7 +919,7 @@ int main(int argc, char **argv)
 				  //djx = djy = djz = 0;
 				  imgi2 = i2 / na;
 				  imgj2 = j2 / na;
-				  				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
+				  //printf("i2=%d j2=%d imgi2=%d imgj2=%d i=%d j=%d\n", i2, j2, imgi2, imgj2, i, j);
 				  choose_image(imgi2, &dix, &diy, &diz);
 				  choose_image(imgj2, &djx, &djy, &djz);
 				  
