@@ -374,7 +374,7 @@ void clone_bonds(void)
 }
 extern int *colorP, *color_dupP;
 extern int cellsxP, cellsyP, cellszP;
-extern int *inCellP[3]={NULL, NULL, NULL}, cellsxP, cellsyP, cellsyP, *cellListP=NULL;
+extern int *inCellP[3], cellsxP, cellsyP, cellsyP, *cellListP;
 void build_linked_list_perc(void)
 {
   int kk, img, j, n, np, dix, diy, diz;
