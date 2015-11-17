@@ -775,7 +775,6 @@ double calc_phi(void)
 #elif defined(MC_HC) && defined(MC_HELIX)
 	  N += 7.02;
 #else
-
 	  N += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
 #endif
 #else
