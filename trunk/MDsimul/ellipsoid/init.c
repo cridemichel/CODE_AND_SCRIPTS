@@ -6643,9 +6643,11 @@ void usrInitAft(void)
 #endif
     }
 
-
 #if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined(MC_NPT_XYZ) 
-  if (OprogStatus.ensembleMC == 3 
+  if (OprogStatus.clsmovprob > 0.0)
+    printf("Using cluster moves!\n");
+
+  if (OprogStatus.ensembleMC == 3 || OprogStatus.clsmovprob > 0 
 #ifdef MC_NPT_XYZ 
       || OprogStatus.ensembleMC==4 
 #endif
