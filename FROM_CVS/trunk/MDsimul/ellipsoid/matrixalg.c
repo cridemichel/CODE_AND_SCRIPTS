@@ -3879,7 +3879,7 @@ extern void funcs2beZeroed(int n, double x[], double fvec[], int i, int j, doubl
 extern void upd2tGuess(int i, int j, double shift[3], double tGuess);
 //#define MD_GLOBALNR
 #ifdef MD_NEW_NR_CHECKS
-inline double test_func_values(double *fvec, int n)
+double test_func_values(double *fvec, int n)
 {
   int i;
   double test=0.0;
@@ -3888,7 +3888,7 @@ inline double test_func_values(double *fvec, int n)
       test=fabs(fvec[i]);
   return test;
 }
-inline double test_xvalues(double *xold, double *x, int n)
+double test_xvalues(double *xold, double *x, int n)
 {
   double test=0.0;
   int i;

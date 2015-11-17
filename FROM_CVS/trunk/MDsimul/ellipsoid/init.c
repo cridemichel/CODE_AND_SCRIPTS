@@ -251,9 +251,13 @@ extern double spXYZ_B[MD_STSPOTS_B][3];
 #endif
 struct nebrTabStruct *nebrTab;
 
-#ifdef MC_CLUSTER_NPT
+#if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined (MC_NPT_XYZ)
 int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
 double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+#ifdef MC_NEW_PERC
+int *colorP, *color_dupP, *inCellP[3], *cellListP;
+int cellsxP, cellsyP, cellszP;
+#endif
 #endif
 
 /* ================================= */
@@ -3087,7 +3091,7 @@ void set_angmom_to_zero(int i)
 extern void find_bonds_one(int i);
 extern void find_bonds_one_NLL(int i);
 #ifdef EDHE_FLEX
-#if defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)
+#if (defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)) || defined(MC_NPT_XYZ)
 extern int clsNPT;
 #endif
 #ifdef MC_FREEZE_BONDS
@@ -3110,7 +3114,7 @@ void find_bonds_flex_all(void)
 	  return;
 	}
 #endif
-#if defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)
+#if (defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)) || defined(MC_NPT_XYZ)
       if (clsNPT==2)
 	return;
 #endif
@@ -3124,7 +3128,7 @@ void find_bonds_flex_NNL(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       find_bonds_one_NLL(i);
-#if defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)
+#if (defined(MC_OPT_CLSNPT) && defined(MC_CLUSTER_NPT)) || defined(MC_NPT_XYZ)
       if (clsNPT==2)
 	return;
 #endif
@@ -4804,6 +4808,16 @@ extern int allocnpGC;
 #endif
 #ifdef MC_SIMUL
 extern double calc_maxstep_MC(int i);
+#ifdef MC_NEW_PERC
+#ifdef MD_LL_BONDS
+long long int **bondsP;
+int *numbondsP;
+#else
+int *numbondsP, **bondsP;
+#endif
+int *refind_bondsP;
+#endif
+
 #ifdef MC_STOREBONDS
 #ifdef MD_LL_BONDS
 extern long long int **bondsMC;
@@ -4868,6 +4882,7 @@ void get_restr_matrix(void)
 #ifdef MC_HYDROPHOBIC_INT
 double **eneij;
 #endif
+
 void usrInitAft(void)
 {
   long long int maxp;
@@ -5610,6 +5625,10 @@ void usrInitAft(void)
 #endif
 #ifdef MC_SIMUL
       f = fopenMPI(absMisHD("volume.dat"), "w+");
+      fclose(f);
+#endif
+#ifdef MC_GAPDNA
+      f = fopenMPI(absMisHD("dimers_info.dat"), "w+");
       fclose(f);
 #endif
 #ifdef MD_PROTEIN_DESIGN
@@ -6610,17 +6629,42 @@ void usrInitAft(void)
     case 2:
       printf("Grand-canonical ensemble\n");
       break;
-#ifdef MC_CLUSTER_NPT
+#ifdef MC_NPT_XYZ
+    case 3:
+      printf("NPT-xyz ensemble\n");
+      break;
+    case 4: 
+      printf("cluster-NPT-xyz ensemble\n");
+      break;
+#elif defined(MC_CLUSTER_NPT)
     case 3: 
       printf("cluster-NPT ensemble\n");
       break;
 #endif
     }
-#ifdef MC_CLUSTER_NPT
-  if (OprogStatus.ensembleMC == 3)
+
+
+#if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined(MC_NPT_XYZ) 
+  if (OprogStatus.ensembleMC == 3 
+#ifdef MC_NPT_XYZ 
+      || OprogStatus.ensembleMC==4 
+#endif
+     )
     {
       color  = malloc(sizeof(int)*Oparams.parnum);
       color_dup = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MC_NEW_PERC
+      colorP  = malloc(sizeof(int)*Oparams.parnum*8);
+      color_dupP = malloc(sizeof(int)*Oparams.parnum*8);
+      cellsxP = 2.0*L[0]/Oparams.rcut;
+      cellsyP = 2.0*L[1]/Oparams.rcut;
+      cellszP = 2.0*L[2]/Oparams.rcut;
+  
+      cellListP = malloc(sizeof(int)*(cellsxP*cellsyP*cellszP+Oparams.parnum*8));
+      inCellP[0] = malloc(sizeof(int)*Oparams.parnum*8);
+      inCellP[1]= malloc(sizeof(int)*Oparams.parnum*8);
+      inCellP[2] = malloc(sizeof(int)*Oparams.parnum*8);
+#endif
       clsarr    = malloc(sizeof(int)*Oparams.parnum);
       firstofcls = malloc(sizeof(int)*Oparams.parnum);
       clsdim = malloc(sizeof(int)*Oparams.parnum);
@@ -6635,7 +6679,16 @@ void usrInitAft(void)
       Dzcls =  malloc(sizeof(double)*Oparams.parnum);
       for (k=0; k < 3; k++)
 	clsCoM[k] = malloc(sizeof(double)*Oparams.parnum);
-    }
+#ifdef MC_NEW_PERC
+#ifdef MD_LL_BONDS
+	  bondsP = AllocMatLLI(Oparams.parnum*8, OprogStatus.maxbonds);
+#else
+	  bondsP = AllocMatI(Oparams.parnum*8, OprogStatus.maxbonds);
+#endif 
+	  numbondsP = (int *) malloc(Oparams.parnum*8*sizeof(int));
+	}
+      refind_bondsP = malloc(sizeof(int)*Oparams.parnum*8);
+#endif
 #endif
  
 #ifdef MD_LXYZ

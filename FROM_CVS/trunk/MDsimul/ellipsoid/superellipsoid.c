@@ -2932,7 +2932,7 @@ double f2(double y)
 {
   return (*nrfunc)(xsav,y);
 }
-inline double funcSQ_pf(int t, double x, double y)
+double funcSQ_pf(int t, double x, double y)
 {
   double n1, n2, n3;
   n1 = typesArr[t].n[0];
@@ -2941,7 +2941,7 @@ inline double funcSQ_pf(int t, double x, double y)
   return 8.0*pow(1.0-pow(fabs(x), n1)-pow(fabs(y), n2),1.0/n3);
 }
 
-inline double funcSQ(int t, double x, double y)
+double funcSQ(int t, double x, double y)
 {
   double a, b, c, n1, n2, n3;
   if (growthSQ >= 0.0)

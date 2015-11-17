@@ -10,6 +10,7 @@
 /* flags per varie ottimizzazioni del codice Monte Carlo */
 //#define MC_RESTR_MATRIX
 //#define MD_DGEBA_NMAX
+#define MC_NEW_PERC
 #define MC_OPT_CLSNPT
 #undef MC_STORELL
 #define MC_STOREBONDS
