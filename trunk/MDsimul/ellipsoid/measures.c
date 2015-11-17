@@ -306,8 +306,91 @@ void calcrhoz(double *rhoz, int nbins)
     }
 }
 #endif
+#ifdef MC_GAPDNA
+double calc_dimers(void)
+{
+  int i, kk, par1, par2, numdimers=0, permbond;
+  long long int jj, jj2, aa, bb;
+  for (i=0; i < Oparams.parnum; i=i+2)
+    {
+      par1 = -1;
+      par2 = -1;
+      permbond=0;
+      /* find reversible bond of first particle */
+      for (kk=0; kk < numbonds[i]; kk++)
+	{
+	  jj = bonds[i][kk] / (NANA);
+	  jj2 = bonds[i][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (aa > 1)
+	    {
+	      par1=jj;
+	      break;
+	    }
+	}
+      /* find reversible bond for second particle */
+      for (kk=0; kk < numbonds[i+1]; kk++)
+	{
+	  jj = bonds[i+1][kk] / (NANA);
+	  jj2 = bonds[i+1][kk] % (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (aa > 1)
+	    {
+	      par2=jj;
+	      break;
+	    }
+	}
+      /* check if par1 and par2 are permanently bonded */
+      if (par1 != -1)
+	{
+	  for (kk=0; kk < numbonds[par1]; kk++)
+	    {
+	      jj = bonds[par1][kk] / (NANA);
+	      jj2 = bonds[par1][kk] % (NANA);
+	      aa = jj2 / NA;
+	      bb = jj2 % NA;
+	      if (aa == 1 && jj == par2)
+		{
+		  permbond=1;
+		  break;
+	     	}
+	    }
+	}
+
+      if (par1 != -1 && par2 != -1 && permbond==1)
+	numdimers++;
+    }
+  return numdimers/2;
+}
+extern double scalProd(double *A, double *B);
+
+double calc_average_relative_orient(void)
+{
+  int kk, i;
+  double avorient=0, ni[3], nj[3];
+  for (i = 0; i < Oparams.parnum; i+=2)
+    {
+      for (kk=0; kk < 3; kk++)
+	{
+	  ni[kk] = R[i][0][kk];
+    	  nj[kk] = R[i+1][0][kk];
+	}
+      avorient += scalProd(ni, nj);
+      //printf("scalprod=%f\n", scalProd(ni, nj);
+    }
+  /* avorient = 1 => all parallel (i.e. folded), -1 => all antiparallel (i.e. linear arrangement) */ 
+  avorient /= ((double)Oparams.parnum/2.0);
+  return avorient;
+}
+#endif
 void calcV(void)
 {
+#ifdef MC_GAPDNA
+  int numdimers;
+  double avorient;
+#endif
 #ifdef MC_SUS
   double sustot;
 #endif
@@ -318,6 +401,10 @@ void calcV(void)
   double ti;
   int bulk, mono, bi, k, i;
 #endif
+#ifdef MC_GAPDNA
+  int j;
+  long long int ii, jj;
+#endif
 #ifdef MD_PATCHY_HE
 #ifdef MD_FOUR_BEADS
   radius_of_gyration();
@@ -326,7 +413,11 @@ void calcV(void)
 #ifdef MC_SIMUL
   mf = fopenMPI(absMisHD("volume.dat"),"a");
 #ifdef MD_LXYZ
+#ifdef MC_NPT_XYZ
+  fprintf(mf, "%d %.15G %.15G %.15G %.15G\n", Oparams.curStep, L[0], L[1], L[2], calc_phi());
+#else
   fprintf(mf, "%d %.15G %.15G\n", Oparams.curStep, calc_phi(), L[0]*L[1]*L[2]);
+#endif
 #else
   fprintf(mf, "%d %.15G %.15G\n", Oparams.curStep, calc_phi(), L*L*L);
 #endif
@@ -423,6 +514,14 @@ void calcV(void)
   fprintf(mf, "%G %.15G\n", Oparams.time, ordp);
 #endif
   fclose(mf); 
+#endif
+#ifdef MC_GAPDNA
+  /* save the number of dimers in the system */
+  mf = fopenMPI(absMisHD("dimers_info.dat"),"a");
+  numdimers = calc_dimers();
+  avorient = calc_average_relative_orient();
+  fprintf(mf, "%d %d %.15G\n",  Oparams.curStep, numdimers, avorient);
+  fclose(mf);
 #endif
 }
 void calc_energy(char *msg);

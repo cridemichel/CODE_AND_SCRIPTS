@@ -724,7 +724,7 @@ void bumpSPHS(int i, int j, double *W, int bt)
 }	
 #endif
 #ifdef EDHE_FLEX
-#ifdef MC_CLUSTER_NPT
+#if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined(MC_NPT_XYZ)
 extern int clsNPT;
 #endif
 #ifdef MC_FREEZE_BONDS
@@ -735,6 +735,9 @@ int rejectMove, checkMoveKF=0;
 #endif
 #ifdef MC_HCSOFT
 extern double check_overlap(int i, int j, double shift[3], int *errchk);
+#endif
+#ifdef MC_GAPDNA
+extern int cls_move_bonds;
 #endif
 void find_bonds_one(int i)
 {
@@ -904,15 +907,17 @@ void find_bonds_one(int i)
 		      continue;
 		    }
 #endif
-#if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
+#if ((defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE)) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
 		  /* se una delle due particelle ha due bond è inutile controllare i bond
 		     perché non potranno esserci bond tra i e j */
+//#ifndef MC_GAPDNA
 		  if (clsNPT==1)
 		    {
 		      /* nel caso di un cambio di volume nel clusterNPT i legami si possono solo formare e non rompere */
 		      if (numbonds[i]==2 || numbonds[j]==2)
 			continue;
 		    }
+//#endif
 #endif
 		  if (OprogStatus.assumeOneBond==1)
 		    {
@@ -963,6 +968,15 @@ void find_bonds_one(int i)
 			printf("qui dist=%f i=%d j=%d mapbondsaFlex=%d %d rejectMove=%d\n", dists[nn], i, j, mapbondsaFlex[nn], mapbondsbFlex[nn], rejectMove);
 #endif
 #endif
+#if 0
+#ifdef MC_GAPDNA
+		      if (clsNPT==1 && dists[nn] < 0.0 && mapbondsaFlex[nn] > 1 && mapbondsbFlex[nn] > 1)
+			{
+			  //printf("mapbondsaFlex=%d mapbondsaFlex=%d i=%d j=%d\n", mapbondsaFlex[nn], mapbondsaFlex[nn], i, j);
+			  cls_move_bonds++;
+			}
+#endif
+#endif
 		      if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			{
 #ifdef MC_KERN_FRENKEL
@@ -986,7 +1000,7 @@ void find_bonds_one(int i)
 			    }
 
 #endif
-#if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
+#if ((defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE)) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
 			  /* se trova un solo bond termina */
 			  if (clsNPT==1)
 			    {
@@ -1356,7 +1370,7 @@ void find_bonds_one_NLL(int i)
       shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
 #endif
-#if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
+#if (defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
       /* se una delle due particelle ha due bond è inutile controllare i bond
 	 perché non potranno esserci bond tra i e j */
       if (clsNPT==1)
@@ -1376,7 +1390,7 @@ void find_bonds_one_NLL(int i)
 	    {
 	      //printf("[find_bonds_one] found bond between ghost particles! i=%d j=%d typei=%d typej=%d\n",
 	      //	 i, j, typeOfPart[i], typeOfPart[j]);
-#if defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)
+#if (defined(MC_CLUSTER_NPT) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
 	      /* se trova un solo bond termina */
 	      if (clsNPT==1)
 		{
@@ -2663,7 +2677,7 @@ int is_in_ranges(int A, int B, int nr, rangeStruct* r)
 #ifdef EDHE_FLEX
 extern int get_linked_list_type(int typena, int nc);
 #endif
-inline int get_inter_pair(int t1, int t2)
+int get_inter_pair(int t1, int t2)
 {
   return t1*Oparams.ntypes+t2;
 }
@@ -2881,7 +2895,7 @@ long long int** ReallocMatLLI(long long int **v, int size1, int size2, int size2
   return vaux;
 }
 
-inline void check_bonds_size(int i)
+void check_bonds_size(int i)
 {
   double dbls;
   int olds;
