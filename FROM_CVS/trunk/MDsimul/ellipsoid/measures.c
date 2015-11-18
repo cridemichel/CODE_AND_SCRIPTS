@@ -307,8 +307,9 @@ void calcrhoz(double *rhoz, int nbins)
 }
 #endif
 #ifdef MC_GAPDNA
-double calc_dimers(void)
+double calc_dimers_db(void)
 {
+  /* calc doubly bonded dimers */
   int i, kk, par1, par2, numdimers=0, permbond;
   long long int jj, jj2, aa, bb;
   for (i=0; i < Oparams.parnum; i=i+2)
@@ -365,7 +366,22 @@ double calc_dimers(void)
   return numdimers/2;
 }
 extern double scalProd(double *A, double *B);
-
+#if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined (MC_NPT_XYZ)
+extern int numOfClusters, *clsdim;
+#endif
+extern void build_clusters(int *Ncls, int *percolating, int check_perc);
+void calc_monodimtri(int cs[], int nmax)
+{
+  int nc, ncls, percolating, kk;
+  for (kk=0; kk < nmax; kk++)
+    cs[kk]=0;
+  build_clusters(&ncls, &percolating, 1);
+  for (nc = 0; nc < ncls; nc++)
+    {
+      if (clsdim[nc]!=0 && clsdim[nc]/2 < nmax)
+	(cs[(clsdim[nc]/2)-1])++;
+    }
+}
 double calc_average_relative_orient(void)
 {
   int kk, i;
@@ -385,11 +401,14 @@ double calc_average_relative_orient(void)
   return avorient;
 }
 #endif
+#define MAX_CLS_SIZE 10
 void calcV(void)
 {
 #ifdef MC_GAPDNA
   int numdimers;
   double avorient;
+  int cs[MAX_CLS_SIZE];
+  int kk;
 #endif
 #ifdef MC_SUS
   double sustot;
@@ -518,9 +537,22 @@ void calcV(void)
 #ifdef MC_GAPDNA
   /* save the number of dimers in the system */
   mf = fopenMPI(absMisHD("dimers_info.dat"),"a");
-  numdimers = calc_dimers();
+  numdimers = calc_dimers_db();
   avorient = calc_average_relative_orient();
-  fprintf(mf, "%d %d %.15G\n",  Oparams.curStep, numdimers, avorient);
+  if (OprogStatus.ensembleMC==4 || OprogStatus.clsmovprob > 0)
+    {
+      calc_monodimtri(cs, MAX_CLS_SIZE);
+	/* cs[0] è il numero di monomeri
+	   cs[1] è il numero di dimeri
+	   cs[2] è il numero di trimeri e così via...*/
+
+      fprintf(mf, "%d %d %.15G ",  Oparams.curStep, numdimers, avorient);
+      for (kk=0; kk < MAX_CLS_SIZE; kk++)
+	fprintf(mf, "%d ", cs[kk]);
+      fprintf(mf, "\n");
+    }
+  else
+    fprintf(mf, "%d %d %.15G\n",  Oparams.curStep, numdimers, avorient);
   fclose(mf);
 #endif
 }
