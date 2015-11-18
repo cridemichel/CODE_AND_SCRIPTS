@@ -252,7 +252,7 @@ extern double spXYZ_B[MD_STSPOTS_B][3];
 struct nebrTabStruct *nebrTab;
 
 #if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined (MC_NPT_XYZ)
-int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
+int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls, numOfClusters;  
 double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #ifdef MC_NEW_PERC
 int *colorP, *color_dupP, *inCellP[3], *cellListP;
@@ -6504,7 +6504,7 @@ void usrInitAft(void)
   if (OprogStatus.susnmin >= 0 && OprogStatus.susnmax > 0 && 
       (Oparams.parnum > OprogStatus.susnmax || Oparams.parnum < OprogStatus.susnmin))
     {
-      printf("[ERROR SUS] Inconsitent initial configurations\n");
+      printf("[ERROR SUS] Inconsistent initial configurations\n");
       printf("parnum: %d nmin: %d nmax: %d\n", Oparams.parnum, OprogStatus.susnmin, OprogStatus.susnmax);
       exit(-1);	
     }

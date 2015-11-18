@@ -27,7 +27,7 @@ int *numbondsMC, **bondsMC;
 #endif
 #endif
 #if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined(MC_NPT_XYZ)
-extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls;  
+extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls, numOfClusters;  
 extern double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #ifdef MC_NEW_PERC
 #ifdef MD_LL_BONDS
@@ -4038,6 +4038,8 @@ void move_box_cluster_xyz(int *ierr)
   //printf("Lfact=%.15G vmax=%f vn=%f vo=%f\n", Lfact, OprogStatus.vmax, vn, vo); 
   // Lfact=1;
   build_clusters(&ncls, &percolating, 1);
+  numOfClusters = ncls;
+
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
 #if 1
