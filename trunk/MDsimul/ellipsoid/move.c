@@ -2349,6 +2349,7 @@ void bumpHS(int i, int j, double *W)
   double  DTxy, DTyz, DTzx, taus, DTxx, DTyy, DTzz;
 #endif
 
+  //printf("BUMP !!! i=%d j=%d\n", i, j);
   typei = typeOfPart[i];
   typej = typeOfPart[j];
   numcoll++;
@@ -7546,6 +7547,7 @@ int locate_contact_HS(int i, int j, double shift[3], double t1, double t2, doubl
     {
       printf("sig=%.15G\n", sqrt(sigSq));
       printf("i=%d j=%d distanza minore di 0 d=%.15G!\n", i, j, sqrt(Sqr(dr[0]) + Sqr(dr[1]) + Sqr(dr[2])));
+      printf("time: %.15G\n", Oparams.time);
       exit(-1);
     }
 #endif
@@ -7662,11 +7664,14 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   if (Oparams.ghostsim && areGhost(i, j))
     return 0;
 #endif
+  //printf("QUI\n locate_contact\n");
   if (are_spheres(i, j))
     {
+      //printf("yes spheres!\n");
       return locate_contact_HS(i, j, shift, t1, t2, vecg);
     }
 #endif
+  //printf("QUI NO PERO'\n");
   epsd = OprogStatus.epsd;
   epsdFast = OprogStatus.epsdFast;
   epsdFastR= OprogStatus.epsdFastR;
