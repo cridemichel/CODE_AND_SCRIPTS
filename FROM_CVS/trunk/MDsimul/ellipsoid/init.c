@@ -6647,49 +6647,43 @@ void usrInitAft(void)
   if (OprogStatus.clsmovprob > 0.0)
     printf("Using cluster moves!\n");
 
-  if (OprogStatus.ensembleMC == 3 || OprogStatus.clsmovprob > 0 
-#ifdef MC_NPT_XYZ 
-      || OprogStatus.ensembleMC==4 
-#endif
-     )
-    {
-      color  = malloc(sizeof(int)*Oparams.parnum);
-      color_dup = malloc(sizeof(int)*Oparams.parnum);
+  color  = malloc(sizeof(int)*Oparams.parnum);
+  color_dup = malloc(sizeof(int)*Oparams.parnum);
 #ifdef MC_NEW_PERC
-      colorP  = malloc(sizeof(int)*Oparams.parnum*8);
-      color_dupP = malloc(sizeof(int)*Oparams.parnum*8);
-      cellsxP = 2.0*L[0]/Oparams.rcut;
-      cellsyP = 2.0*L[1]/Oparams.rcut;
-      cellszP = 2.0*L[2]/Oparams.rcut;
-  
-      cellListP = malloc(sizeof(int)*(cellsxP*cellsyP*cellszP+Oparams.parnum*8));
-      inCellP[0] = malloc(sizeof(int)*Oparams.parnum*8);
-      inCellP[1]= malloc(sizeof(int)*Oparams.parnum*8);
-      inCellP[2] = malloc(sizeof(int)*Oparams.parnum*8);
+  colorP  = malloc(sizeof(int)*Oparams.parnum*8);
+  color_dupP = malloc(sizeof(int)*Oparams.parnum*8);
+  cellsxP = 2.0*L[0]/Oparams.rcut;
+  cellsyP = 2.0*L[1]/Oparams.rcut;
+  cellszP = 2.0*L[2]/Oparams.rcut;
+
+  cellListP = malloc(sizeof(int)*(cellsxP*cellsyP*cellszP+Oparams.parnum*8));
+  inCellP[0] = malloc(sizeof(int)*Oparams.parnum*8);
+  inCellP[1]= malloc(sizeof(int)*Oparams.parnum*8);
+  inCellP[2] = malloc(sizeof(int)*Oparams.parnum*8);
 #endif
-      clsarr    = malloc(sizeof(int)*Oparams.parnum);
-      firstofcls = malloc(sizeof(int)*Oparams.parnum);
-      clsdim = malloc(sizeof(int)*Oparams.parnum);
-      nbcls  = malloc(sizeof(int)*Oparams.parnum);
+  clsarr    = malloc(sizeof(int)*Oparams.parnum);
+  firstofcls = malloc(sizeof(int)*Oparams.parnum);
+  clsdim = malloc(sizeof(int)*Oparams.parnum);
+  nbcls  = malloc(sizeof(int)*Oparams.parnum);
 #if !defined(MC_STORE_ALL_COORDS)
-      Dxpar =  malloc(sizeof(double)*Oparams.parnum);
-      Dypar=  malloc(sizeof(double)*Oparams.parnum);
-      Dzpar =  malloc(sizeof(double)*Oparams.parnum);
+  Dxpar =  malloc(sizeof(double)*Oparams.parnum);
+  Dypar=  malloc(sizeof(double)*Oparams.parnum);
+  Dzpar =  malloc(sizeof(double)*Oparams.parnum);
 #endif
-      Dxcls =  malloc(sizeof(double)*Oparams.parnum);
-      Dycls =  malloc(sizeof(double)*Oparams.parnum);
-      Dzcls =  malloc(sizeof(double)*Oparams.parnum);
-      for (k=0; k < 3; k++)
-	clsCoM[k] = malloc(sizeof(double)*Oparams.parnum);
+  Dxcls =  malloc(sizeof(double)*Oparams.parnum);
+  Dycls =  malloc(sizeof(double)*Oparams.parnum);
+  Dzcls =  malloc(sizeof(double)*Oparams.parnum);
+  for (k=0; k < 3; k++)
+    clsCoM[k] = malloc(sizeof(double)*Oparams.parnum);
 #ifdef MC_NEW_PERC
 #ifdef MD_LL_BONDS
-	  bondsP = AllocMatLLI(Oparams.parnum*8, OprogStatus.maxbonds);
+  bondsP = AllocMatLLI(Oparams.parnum*8, OprogStatus.maxbonds);
 #else
-	  bondsP = AllocMatI(Oparams.parnum*8, OprogStatus.maxbonds);
+  bondsP = AllocMatI(Oparams.parnum*8, OprogStatus.maxbonds);
 #endif 
-	  numbondsP = (int *) malloc(Oparams.parnum*8*sizeof(int));
-	}
-      refind_bondsP = malloc(sizeof(int)*Oparams.parnum*8);
+  numbondsP = (int *) malloc(Oparams.parnum*8*sizeof(int));
+  
+  refind_bondsP = malloc(sizeof(int)*Oparams.parnum*8);
 #endif
 #endif
  

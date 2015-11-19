@@ -539,20 +539,15 @@ void calcV(void)
   mf = fopenMPI(absMisHD("dimers_info.dat"),"a");
   numdimers = calc_dimers_db();
   avorient = calc_average_relative_orient();
-  if (OprogStatus.ensembleMC==4 || OprogStatus.clsmovprob > 0)
-    {
-      calc_monodimtri(cs, MAX_CLS_SIZE);
-	/* cs[0] è il numero di monomeri
-	   cs[1] è il numero di dimeri
-	   cs[2] è il numero di trimeri e così via...*/
+  calc_monodimtri(cs, MAX_CLS_SIZE);
+  /* cs[0] è il numero di monomeri
+     cs[1] è il numero di dimeri
+     cs[2] è il numero di trimeri e così via...*/
 
-      fprintf(mf, "%d %d %.15G ",  Oparams.curStep, numdimers, avorient);
-      for (kk=0; kk < MAX_CLS_SIZE; kk++)
-	fprintf(mf, "%d ", cs[kk]);
-      fprintf(mf, "\n");
-    }
-  else
-    fprintf(mf, "%d %d %.15G\n",  Oparams.curStep, numdimers, avorient);
+  fprintf(mf, "%d %d %.15G ",  Oparams.curStep, numdimers, avorient);
+  for (kk=0; kk < MAX_CLS_SIZE; kk++)
+    fprintf(mf, "%d ", cs[kk]);
+  fprintf(mf, "\n");
   fclose(mf);
 #endif
 }
