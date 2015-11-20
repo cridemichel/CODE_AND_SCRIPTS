@@ -3075,6 +3075,28 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
     }
   
 }
+#ifdef MC_BOND_POS
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern double **bpos[3], **bposold[3];
+void BuildAtomPosBP(int i, double *rO, double **R, double **rat)
+#else
+void BuildAtomPosBP(int i, double *rO, double **R, double rat[NA][3])
+#endif
+{
+  int a, kk;
+
+  for (kk = 0; kk < 3; kk++)
+    {
+      /* il primo atomo deve essere il centro di massa */
+      rat[0][kk] = rO[kk];
+      for (a=1; a < typesArr[typeOfPart[i]].nspots+1; a++)
+    	{
+	  rat[a][kk] = bpos[kk][i][a-1];
+	}
+    }
+}
+#endif
+
 #ifdef MD_SPOT_GLOBAL_ALLOC
 void BuildAtomPos(int i, double *rO, double **R, double **rat)
 #else
@@ -3093,6 +3115,7 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   spots = typesArr[typei].spots;
   NSP = typesArr[typei].nspots+1;
   BSP = 0;
+
 #if 1 //defined(MD_SUPERELLIPSOID)
   /* NOTA 16/04/2010: se BuildAtomPos viene chiamata durante la ricerca del tempo di uscita degli spot
      allora considera anche gli MD_SPNNL_NUMSP spot extra utilizzati per le SPNNL (sticky spots NNL) */
@@ -3422,6 +3445,9 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #ifdef MD_ASYM_ITENS
   double phi, psi;
 #endif
+#ifdef MC_BOND_POS
+  int k1, k2;
+#endif
 #ifdef EDHE_FLEX
   /* se si tratta di due particelle a simmetria sferica ottimizza il calcolo */
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
@@ -3444,14 +3470,18 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 #endif
   MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
   /* ...and now orientations */
+
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
 #else
   //UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
   UpdateOrient(i, ti, RtA, Omega);
 #endif
-  /* calcola le posizioni nel laboratorio degli atomi della molecola */
+#ifdef MC_BOND_POS
+  BuildAtomPosBP(i, rA, RtA, ratA);
+#else  /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
+#endif
   na = (i < Oparams.parnumA)?0:1;
 #ifdef MC_SIMUL
   ti = 0;
@@ -3488,14 +3518,26 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
 	}
     }
 #endif
+
 #ifdef MD_ASYM_ITENS
   symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
 #else
   //UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
   UpdateOrient(j, ti, RtB, Omega);
 #endif
-  na = (j < Oparams.parnumA)?0:1;
+#ifdef MC_BOND_POS
+  BuildAtomPosBP(i, rB, RtB, ratB);
+#else  
   BuildAtomPos(j, rB, RtB, ratB);
+#endif
+  na = (j < Oparams.parnumA)?0:1;
+#ifdef MC_BOND_POS
+  for (kk=0; kk < typesArr[typeOfPart[j]].nspots+1; kk++)
+    {
+      for (k1=0; k1 < 3; k1++)
+	ratB[kk][k1] += shift[k1];
+    }
+#endif
   /* calcola sigmaSq[][]!!! */
   distmin = 0;
 #ifdef EDHE_FLEX
