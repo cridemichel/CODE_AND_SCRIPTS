@@ -4882,6 +4882,16 @@ void get_restr_matrix(void)
 #ifdef MC_HYDROPHOBIC_INT
 double **eneij;
 #endif
+#ifdef MC_BOND_POS
+double **bpos[3], **bposold[3];
+extern double rA[3], rB[3];
+extern double **ratA, **ratB;
+#endif
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
 
 void usrInitAft(void)
 {
@@ -4891,6 +4901,9 @@ void usrInitAft(void)
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
+#ifdef MC_BOND_POS
+  int totspots;
+#endif
 #if defined(MD_CALC_VBONDING) && !defined(MC_SIMUL)
   OprogStatus.targetPhi=1.0;
 #endif
@@ -5370,7 +5383,25 @@ void usrInitAft(void)
       ratAll[k] = ratAll[k-1] + 3;
 #endif
     }
-  for (k = 0; k < 6; k++)
+#ifdef MC_BOND_POS
+  bpos[0] = malloc(sizeof(double*)*Oparams.parnum);
+  bpos[1] = malloc(sizeof(double*)*Oparams.parnum);
+  bpos[2] = malloc(sizeof(double*)*Oparams.parnum); 
+  bposold[0] = malloc(sizeof(double*)*Oparams.parnum);
+  bposold[1] = malloc(sizeof(double*)*Oparams.parnum);
+  bposold[2] = malloc(sizeof(double*)*Oparams.parnum); 
+  totspots=0;
+  for (i=0; i < Oparams.parnum; i++)
+    totspots += typesArr[typeOfPart[i]].nspots;
+  bpos[0][0] = malloc(sizeof(double)*totspots);
+  bposold[0][0] = malloc(sizeof(double)*totspots);
+  for (i=1; i < Oparams.parnum; i++)
+    {
+      bpos[0][i] = bpos[0][i-1] + typesArr[typeOfPart[i-1]].nspots;
+      bposold[0][i] = bposold[0][i-1] + typesArr[typeOfPart[i-1]].nspots;
+    }
+#endif
+   for (k = 0; k < 6; k++)
     {
       tocheckP[k] = malloc(sizeof(int)*maxsp);
       dorefineP[k] = malloc(sizeof(int)*maxsp);
@@ -5449,6 +5480,7 @@ void usrInitAft(void)
   mapBhinFlex    = (double*)malloc(sizeof(double)*maxnbonds);
   mapBhoutFlex   = (double*)malloc(sizeof(double)*maxnbonds);
   mapSigmaFlex   = (double*)malloc(sizeof(double)*maxnbonds);
+
   if (OprogStatus.optbm)
     {
       printf("[INFO] Optimizing assign_bond_mapping(i,j) function\n");
@@ -5471,7 +5503,6 @@ void usrInitAft(void)
 	  mapSigmaFlexS[nl] = malloc(sizeof(double)*maxnbonds);
 	}
     }
-
   dists    = (double*)malloc(maxnbonds*sizeof(double));
   distsOld = (double*)malloc(maxnbonds*sizeof(double));
   distsOld2= (double*)malloc(maxnbonds*sizeof(double));
@@ -6470,6 +6501,22 @@ void usrInitAft(void)
   printf("[INFO] Grazing Try-Harder code ENABLED!\n");
 #else
   printf("[INFO] Grazing Try-Harder code DISABLED!\n");
+#endif
+#ifdef MC_BOND_POS
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      rA[0] = rx[i];
+      rA[1] = ry[i];
+      rA[2] = rz[i];
+      BuildAtomPos(i, rA, R[i], ratA);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	    {
+	      bpos[k1][i][k2] = ratA[k2+1][k1];
+	    }
+	}
+    }
 #endif
 
   StartRun();
