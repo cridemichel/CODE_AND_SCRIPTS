@@ -1,5 +1,10 @@
 #include<mdsimul.h>
 #undef DEBUG_HCMC
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
 #if defined(MC_HC)
 const double saxfactMC[3]={0.999,0.7071,0.7071};
 #elif defined(MC_SWELL)
@@ -75,6 +80,9 @@ extern int *equilibrated;
 extern double **XbXa, **Xa, **Xb, **RA, **RB, ***R, **Rt, **RtA, **RtB;
 #ifdef MC_CLUSTER_MOVE
 extern double ***RoldAll;
+#endif
+#ifdef MC_BOND_POS
+double **bpos[3], **bposold[3];
 #endif
 #ifdef MD_CALENDAR_HYBRID
 extern int *linearLists;
@@ -1553,6 +1561,13 @@ void store_coord(int ip)
   for (k1=0; k1<3; k1++)
     for (k2=0; k2<3; k2++)
       Rold[k1][k2]=R[ip][k1][k2]; 
+#ifdef MC_BOND_POS
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots; k2++)
+      {
+	bposold[k1][ip][k2] = bpos[k1][ip][k2];
+      } 
+#endif
 }
 void restore_coord(int ip)
 {
@@ -1563,6 +1578,13 @@ void restore_coord(int ip)
   for (k1=0; k1<3; k1++)
     for (k2=0; k2<3; k2++)
       R[ip][k1][k2]=Rold[k1][k2]; 
+#ifdef MC_BOND_POS
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots; k2++)
+      {
+	bpos[k1][ip][k2] = bposold[k1][ip][k2];
+      } 
+#endif
 }
 void rebuild_nnl_MC(void)
 {
@@ -1582,12 +1604,23 @@ long long int totclsrejMC=0, totclsmovesMC=0, rotclsmoveMC=0, traclsmoveMC=0, ro
 void tra_move(int ip)
 {
   double dx, dy, dz;
+#ifdef MC_BOND_POS
+  int k1;
+#endif
   dx = OprogStatus.deltaMC*(ranf()-0.5);
   dy = OprogStatus.deltaMC*(ranf()-0.5);
   dz = OprogStatus.deltaMC*(ranf()-0.5);
   rx[ip]+= dx;
   ry[ip]+= dy;
   rz[ip]+= dz;
+#ifdef MC_BOND_POS
+  for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
+    {
+	bpos[0][ip][k1] += dx;
+	bpos[1][ip][k1] += dy;
+	bpos[2][ip][k1] += dz;
+    }
+#endif
   if (OprogStatus.useNNL)
     {
       displMC = sqrt(Sqr(dx)+Sqr(dy)+Sqr(dz))*1.001;
@@ -1702,6 +1735,17 @@ void rot_move(int ip, int flip)
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
      R[ip][k1][k2] = Ro[k1][k2]; 
+#ifdef MC_BOND_POS
+  rA[0] = rx[ip];
+  rA[1] = ry[ip];
+  rA[2] = rz[ip];
+  BuildAtomPos(ip, rA, R[ip], ratA);
+  for (k1 = 0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	bpos[k2][ip][k1] = ratA[k1][k2];
+    }
+#endif
   rotmoveMC++;
 }
 
@@ -2218,6 +2262,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
       drSq += Sqr(rA[kk]-rB[kk]-shift[kk]);
     } 
 
+  //printf("daSq=%f\n", sqrt(daSq));
   if (drSq > daSq)
     return 1.0;
 #endif 
@@ -2754,7 +2799,10 @@ void pbccls(int ip)
 void pbc(int ip)
 {
   double L2[3], Ll[3];
-  
+#ifdef MC_BOND_POS
+  int k1;
+  double Dx, Dy, Dz;
+#endif  
 #ifdef MD_LXYZ
   L2[0] = L[0]*0.5;
   L2[1] = L[1]*0.5;
@@ -2766,9 +2814,24 @@ void pbc(int ip)
   L2[0] = L2[1] = L2[2] = L*0.5;
   Ll[0] = Ll[1] = Ll[2] = L;
 #endif
+#ifdef MC_BOND_POS
+  Dx = L[0]*rint(rx[ip]/L[0]);
+  Dy = L[1]*rint(ry[ip]/L[1]);
+  Dz = L[2]*rint(rz[ip]/L[2]);
+  rx[ip] -= Dx;
+  ry[ip] -= Dy;
+  rz[ip] -= Dz;
+  for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
+    {
+      bpos[0][ip][k1] -= Dx;
+      bpos[1][ip][k1] -= Dy;
+      bpos[2][ip][k1] -= Dz;
+    }
+#else
   rx[ip] -= L[0]*rint(rx[ip]/L[0]); 
   ry[ip] -= L[1]*rint(ry[ip]/L[1]);
   rz[ip] -= L[2]*rint(rz[ip]/L[2]);
+#endif
 }
 #else
 void pbc(int ip)
@@ -5503,11 +5566,6 @@ double find_bonds_covadd(int i, int j)
   
 }
 double find_bonds_fake(int i, int j, int *nbf);
-#ifdef MD_SPOT_GLOBAL_ALLOC
-extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
-#else
-extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
-#endif
 int is_bonded_mc(int ip, int numb);
 int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
 {
