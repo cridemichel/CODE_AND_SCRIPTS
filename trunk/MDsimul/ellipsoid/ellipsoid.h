@@ -999,6 +999,9 @@ double a[2];
   double b[2];
   double c[2];
   double rcut;
+#ifdef MC_BOND_POS
+  double rcutBP;
+#endif
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
 				   (linked list) */   
@@ -1451,6 +1454,9 @@ struct pascii opar_ascii[]=
   {"ghostsim",          &OP(ghostsim),                   1,               1, "%d"},
 #endif
   {"rcut",              &OP(rcut),                        1,   1, "%.10G"},
+#ifdef MC_BOND_POS
+  {"rcutBP",              &OP(rcutBP),                        1,   1, "%.10G"},
+#endif
   {"equilibrat",        &OP(equilibrat),                  1,   1,   "%d"},
   {"Dt",                &OP(Dt),                          1,   1, "%.15G"},
 #ifndef EDHE_FLEX
@@ -1857,6 +1863,9 @@ struct singlePar OsinglePar[] = {
 #endif
   {"eventMult",  &OprogStatus.eventMult,    INT},
   {"rcut",       &Oparams.rcut,             CT},
+#ifdef MC_BOND_POS
+  {"rcutBP",       &Oparams.rcutBP,         CT},
+#endif
   {"equilibrat", &Oparams.equilibrat,       INT},
   {"eqlevel",    &OprogStatus.eqlevel,       CT},
   {"temperat",   &Oparams.T,                CT},
