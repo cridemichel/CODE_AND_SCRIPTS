@@ -111,6 +111,9 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
   T1xx, T1yy, T1zz, T1xy, T1yz, T1zx, Wxx, Wyy, Wzz,
   Wxy, Wyz, Wzx, Pxx, Pyy, Pzz, Pxy, Pyz, Pzx, Mtot, Mred[2][2], invmA, invmB; 
 extern int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
+#ifdef MC_BOND_POS
+int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
 int *inCell_NNL[3], *cellList_NNL;
 double *rxNNL, *ryNNL, *rzNNL;
@@ -2035,11 +2038,23 @@ extern void PredictEvent(int, int);
 extern void InitEventList(void);
 void find_conciding_spots(void);
 void find_bonds(void);
+#ifdef MD_SPOT_GLOBAL_ALLOC
+extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
+#else
+extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
+#endif
+#ifdef MC_BOND_POS
+double **bpos[3], **bposold[3];
+extern double rA[3], rB[3];
+extern double **ratA, **ratB;
+#endif
 
 void StartRun(void)
 {
   int j, k, n;
-  
+#ifdef MC_BOND_POS
+  int k1, k2, i;
+#endif  
 #ifdef EDHE_FLEX
 #if !defined(MD_STANDALONE) || defined(MC_SIMUL) 
   find_conciding_spots();
@@ -2167,6 +2182,26 @@ void StartRun(void)
      ma prima di costruire il calendario (altrimenti
      mancherebbero tutti gli eventi relativi alle collisioni
      tra gli spot! */
+#ifdef MC_BOND_POS
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      rA[0] = rx[i];
+      rA[1] = ry[i];
+      rA[2] = rz[i];
+      BuildAtomPos(i, rA, R[i], ratA);
+      //printf("i=%d rat= %f %f %f %f %f %f\n", i, ratA[1][0], ratA[1][1],ratA[1][2],ratA[2][0],ratA[2][1],ratA[2][2]);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  //printf("i=%d spots=%d\n", i, typesArr[typeOfPart[i]].nspots);
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	    {
+	      bpos[k1][i][k2] = ratA[k2+1][k1];
+	      //printf("bpos[%d][%d][%d]=%f rA[%d]=%f\n", k1, i, k2, bpos[k1][i][k2], k1, rA[k1]);
+	    }
+	}
+    }
+#endif
+
   if (Oparams.maxbondsSaved==-1)
     {
       //printf("nbonds[1841]=%d\n",numbonds[1841]);
@@ -2174,6 +2209,10 @@ void StartRun(void)
       if (Oparams.ninters != 0)
 	find_bonds();
    }
+
+///////////
+  //exit(-1);
+///////////
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
     Oparams.maxbondsSaved = OprogStatus.maxbonds;
 #elif defined(MD_PATCHY_HE)
@@ -4882,16 +4921,6 @@ void get_restr_matrix(void)
 #ifdef MC_HYDROPHOBIC_INT
 double **eneij;
 #endif
-#ifdef MC_BOND_POS
-double **bpos[3], **bposold[3];
-extern double rA[3], rB[3];
-extern double **ratA, **ratB;
-#endif
-#ifdef MD_SPOT_GLOBAL_ALLOC
-extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
-#else
-extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
-#endif
 
 void usrInitAft(void)
 {
@@ -5394,11 +5423,18 @@ void usrInitAft(void)
   for (i=0; i < Oparams.parnum; i++)
     totspots += typesArr[typeOfPart[i]].nspots;
   bpos[0][0] = malloc(sizeof(double)*totspots);
+  bpos[1][0] = malloc(sizeof(double)*totspots);
+  bpos[2][0] = malloc(sizeof(double)*totspots);
   bposold[0][0] = malloc(sizeof(double)*totspots);
+  bposold[1][0] = malloc(sizeof(double)*totspots);
+  bposold[2][0] = malloc(sizeof(double)*totspots);
   for (i=1; i < Oparams.parnum; i++)
     {
-      bpos[0][i] = bpos[0][i-1] + typesArr[typeOfPart[i-1]].nspots;
-      bposold[0][i] = bposold[0][i-1] + typesArr[typeOfPart[i-1]].nspots;
+      for (kk=0; kk < 3; kk++)
+	{
+	  bpos[kk][i] = bpos[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
+	  bposold[kk][i] = bposold[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
+	}
     }
 #endif
    for (k = 0; k < 6; k++)
@@ -6412,6 +6448,23 @@ void usrInitAft(void)
       inCell[0] = malloc(sizeof(int)*Oparams.parnum);
       inCell[1] = malloc(sizeof(int)*Oparams.parnum);
       inCell[2] = malloc(sizeof(int)*Oparams.parnum);
+#ifdef MC_BOND_POS
+#ifdef MD_LXYZ
+      cellsxBP = L[0] / Oparams.rcutBP;
+      cellsyBP = L[1] / Oparams.rcutBP;
+      cellszBP = L[2] / Oparams.rcutBP;
+#else
+      cellsxBP = L / Oparams.rcutBP;
+      cellsyBP = L / Oparams.rcutBP;
+      cellszBP = L / Oparams.rcutBP;
+#endif
+      printf("Oparams.rcutBP: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBP,
+	     cellsxBP, cellsyBP, cellszBP);
+      cellListBP = malloc(sizeof(int)*(cellsxBP*cellsyBP*cellszBP+totspots));
+      inCellBP[0] = malloc(sizeof(int)*Oparams.parnum);
+      inCellBP[1]= malloc(sizeof(int)*Oparams.parnum);
+      inCellBP[2] = malloc(sizeof(int)*Oparams.parnum);
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
       if (OprogStatus.optnnl)
 	{
@@ -6502,23 +6555,6 @@ void usrInitAft(void)
 #else
   printf("[INFO] Grazing Try-Harder code DISABLED!\n");
 #endif
-#ifdef MC_BOND_POS
-  for (i=0; i < Oparams.parnum; i++)
-    {
-      rA[0] = rx[i];
-      rA[1] = ry[i];
-      rA[2] = rz[i];
-      BuildAtomPos(i, rA, R[i], ratA);
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	    {
-	      bpos[k1][i][k2] = ratA[k2+1][k1];
-	    }
-	}
-    }
-#endif
-
   StartRun();
 #ifdef MD_SPHERICAL_WALL
   printf("[SPHERICAL WALL] checking bonds\n");

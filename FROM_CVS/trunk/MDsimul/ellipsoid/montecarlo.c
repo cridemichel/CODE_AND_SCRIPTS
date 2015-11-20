@@ -1743,7 +1743,7 @@ void rot_move(int ip, int flip)
   for (k1 = 0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
-	bpos[k2][ip][k1] = ratA[k1][k2];
+	bpos[k2][ip][k1] = ratA[k1+1][k2];
     }
 #endif
   rotmoveMC++;

@@ -3076,8 +3076,8 @@ void BuildAtomPosAt(int i, int ata, double *rO, double **R, double rat[3])
   
 }
 #ifdef MC_BOND_POS
-#ifdef MD_SPOT_GLOBAL_ALLOC
 extern double **bpos[3], **bposold[3];
+#ifdef MD_SPOT_GLOBAL_ALLOC
 void BuildAtomPosBP(int i, double *rO, double **R, double **rat)
 #else
 void BuildAtomPosBP(int i, double *rO, double **R, double rat[NA][3])
@@ -3526,7 +3526,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   UpdateOrient(j, ti, RtB, Omega);
 #endif
 #ifdef MC_BOND_POS
-  BuildAtomPosBP(i, rB, RtB, ratB);
+  BuildAtomPosBP(j, rB, RtB, ratB);
 #else  
   BuildAtomPos(j, rB, RtB, ratB);
 #endif
@@ -3535,7 +3535,11 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   for (kk=0; kk < typesArr[typeOfPart[j]].nspots+1; kk++)
     {
       for (k1=0; k1 < 3; k1++)
-	ratB[kk][k1] += shift[k1];
+	{
+	  ratB[kk][k1] += shift[k1];
+	}
+      //printf("ratA[%d]=%f %f %f\n", kk, ratA[kk][0], ratA[kk][1], ratA[kk][2]);
+      //printf("ratB[%d]=%f %f %f\n", kk, ratB[kk][0], ratB[kk][1], ratB[kk][2]);
     }
 #endif
   /* calcola sigmaSq[][]!!! */
