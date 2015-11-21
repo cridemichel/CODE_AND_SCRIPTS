@@ -197,10 +197,11 @@ int main(int argc, char **argv)
 	  ryCM[idx] = (ny+0.5001)*dry;
 	  rzCM[idx] = (nz+0.5001)*drz;
        	}
-  L[0] = (nxmax)*dry;
-  L[1] = (nymax)*drx;
+  L[0] = (nxmax)*drx;
+  L[1] = (nymax)*dry;
   L[2] = (nzmax)*drz;
 
+  printf("step #1 L=%f %f %f\n", L[0], L[1], L[2]);
   /* expand system according to tetramer size bs[3] */
   factor[0] = 1.0001*(bs[0]/bs[2]);
   factor[1] = 1.0001*(bs[1]/bs[2]);
@@ -213,6 +214,7 @@ int main(int argc, char **argv)
     } 
   for (a=0; a < 3; a++)
     L[a] *= factor[a];
+  printf("step #2 [factor] L=%f %f %f\n", L[0], L[1], L[2]);
   vol = acos(0.0)*2.0*(Diam/2)*(Diam/2)*Len;
   phi=parnum*vol/(L[0]*L[1]*L[2]);
   xtrafact = pow(phi/targetphi, 1.0/3.0);

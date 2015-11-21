@@ -1,7 +1,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<math.h>
-#define HARD_SPHERES
+//#define HARD_SPHERES
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM;
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 #ifdef HARD_SPHERES
   fprintf(f, "0 0\n");
 #else
-  fprintf(f,"2 0\n");
+  fprintf(f,"3 0\n");
   fprintf(f,"%f 0 0 %f\n", Diam/2.0, pD);/* 0: along x axis (permanent) 0.05 means lp=20 */
   fprintf(f,"%f %f 0 %f\n", -cos(pi/6.0), -sin(pi/6.0), pD);
   fprintf(f,"%f %f 0 %f\n", cos(pi/6.0), -sin(pi/6.0), pD);
