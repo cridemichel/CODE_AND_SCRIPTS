@@ -2719,7 +2719,9 @@ int overlapMC(int ip, int *err)
     return overlapMC_LL(ip, err);
 }
 #ifdef MC_BOND_POS
-void remove_from_current_cellBP(int i)
+extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
+extern int totspots;
+void remove_from_current_cell_BP(int i)
 {
   int n;
   n = (inCellBP[2][i] * cellsyBP + inCellBP[1][i])*cellsxBP + inCellBP[0][i]
@@ -2731,7 +2733,7 @@ void remove_from_current_cellBP(int i)
   cellListBP[n] = cellListBP[i];
 }
 
-void insert_in_new_cell(int i)
+void insert_in_new_cell_BP(int i)
 {
   int n;
   n = (inCellBP[2][i] * cellsyBP + inCellBP[1][i])*cellsxBP + 
@@ -2765,12 +2767,15 @@ void insert_in_new_cell(int i)
 }
 #ifdef MC_BOND_POS
 extern int totspots;
+extern struct n2sp_struct *n2sp_map;
+extern int **sp2n_map;
+extern int totspots;
 #endif
 void update_LL(int n)
 {
   int cox, coy, coz, cx, cy, cz;
 #ifdef MC_BOND_POS
-  int k1;
+  int k1, ns, kk;
   double bp[3];
 #endif
   cox=inCell[0][n];
@@ -2797,27 +2802,27 @@ void update_LL(int n)
       inCell[2][n] = cz;
       insert_in_new_cell(n);
     }
-  for (k1 = 0; k1 < typesArr[typeOfPart[i]].nspots; k1++)
+  for (k1 = 0; k1 < typesArr[typeOfPart[n]].nspots; k1++)
     {
-      n = sp2n[i][k1]
+      ns = sp2n_map[n][k1];
 #ifdef MC_BOND_POS
-      cox=inCellBP[0][n];
-      coy=inCellBP[1][n];
-      coz=inCellBP[2][n];
+      cox=inCellBP[0][ns];
+      coy=inCellBP[1][ns];
+      coz=inCellBP[2][ns];
       /* consider spot in the first box */
       for (kk=0; kk < 3; kk++)
-	bp[kk] = bpos[kk][i][k1] - L[kk]*rint(bpos[kk][i][k1]/L[kk]);
+	bp[kk] = bpos[kk][n][k1] - L[kk]*rint(bpos[kk][n][k1]/L[kk]);
 
       cx =  (bp[0] + 0.5*L[0]) * cellsxBP / L[0];
       cy =  (bp[1] + 0.5*L[1]) * cellsyBP / L[1];
       cz =  (bp[2] + 0.5*L[2]) * cellszBP / L[2];
       if (cx!=cox || cy!=coy || cz!=coz)
 	{
-	  remove_from_current_cell_BP(n);
-	  inCellBP[0][n] = cx;
-	  inCellBP[1][n] = cy;
-	  inCellBP[2][n] = cz;
-	  insert_in_new_cell_BP(n);
+	  remove_from_current_cell_BP(ns);
+	  inCellBP[0][ns] = cx;
+	  inCellBP[1][ns] = cy;
+	  inCellBP[2][ns] = cz;
+	  insert_in_new_cell_BP(ns);
 	}
     }
 #endif

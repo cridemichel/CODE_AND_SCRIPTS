@@ -22,6 +22,12 @@ long long int** AllocMatLLI(int size1, int size2)
     v[k] = v[k-1] + size2;
   return v;
 }
+#ifdef MC_BOND_POS
+struct n2sp_struct *n2sp_map;
+int **sp2n_map;
+int totspots;
+#endif
+
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs, int saveAll);
@@ -2048,6 +2054,7 @@ extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
 #ifdef MC_BOND_POS
+void build_linked_list_bp(void);
 double **bpos[3], **bposold[3];
 extern double rA[3], rB[3];
 extern double **ratA, **ratB;
@@ -4953,26 +4960,16 @@ void build_linked_list_bp(void)
   for (n = 0; n < totspots; n++)
     {
       i = n2sp_map[n].i;
-      ns = n2sp_map[n].ns
-      inCellBP[0][n] =  (bpos[i][ns] + L2[0]) * cellsxBP / L[0];
-      inCellBP[1][n] =  (bpos[i][ns] + L2[1]) * cellsyBP / L[1];
-      inCellBP[2][n] =  (bpos[i][ns] + L2[2]) * cellszBP / L[2];
+      ns = n2sp_map[n].ns;
+      inCellBP[0][n] =  (bpos[0][i][ns] + L2[0]) * cellsxBP / L[0];
+      inCellBP[1][n] =  (bpos[1][i][ns] + L2[1]) * cellsyBP / L[1];
+      inCellBP[2][n] =  (bpos[2][i][ns] + L2[2]) * cellszBP / L[2];
       j = (inCellBP[2][n]*cellsyBP + inCellBP[1][n])*cellsxBP + 
 	inCellBP[0][n] + totspots;
       cellListBP[n] = cellListBP[j];
       cellListBP[j] = n;
     }
 }
-#endif
-#ifdef MC_BOND_POS
-struct n2sp_struct 
-{
-  int i;
-  int ns;
-}
-struct n2sp_struct *n2sp_map;
-int **sp2n_map;
-int totspots;
 #endif
 void usrInitAft(void)
 {

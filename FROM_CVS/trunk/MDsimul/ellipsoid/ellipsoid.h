@@ -114,6 +114,15 @@ typedef struct {
    si puo' anche pensare di mettere n corpi rigidi 
    di forma super-ellissoidale 
  */
+
+#ifdef MC_BOND_POS
+struct n2sp_struct 
+{
+  int i;
+  int ns;
+};
+#endif
+
 typedef struct {
   double x[3];
   double sax[3];
