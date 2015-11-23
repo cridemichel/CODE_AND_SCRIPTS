@@ -2210,9 +2210,9 @@ void StartRun(void)
     {
       for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
 	{
-	  sp2n_map[n].i=i;
-	  sp2n_map[n].ns=k2;
-	  n2sp_map[i][k2] = n;
+	  n2sp_map[n].i=i;
+	  n2sp_map[n].ns=k2;
+	  sp2n_map[i][k2] = n;
 	  n++;
 	}	
     } 
@@ -4952,8 +4952,8 @@ void build_linked_list_bp(void)
   //printf("cells=%d %d %d Lbig=%.15G L=%.15G\n", cellsx, cellsy, cellsz, Lbig, L);
   for (n = 0; n < totspots; n++)
     {
-      i = sp2n_map[n].i;
-      ns = sp2n_map[n].ns
+      i = n2sp_map[n].i;
+      ns = n2sp_map[n].ns
       inCellBP[0][n] =  (bpos[i][ns] + L2[0]) * cellsxBP / L[0];
       inCellBP[1][n] =  (bpos[i][ns] + L2[1]) * cellsyBP / L[1];
       inCellBP[2][n] =  (bpos[i][ns] + L2[2]) * cellszBP / L[2];
@@ -4965,13 +4965,14 @@ void build_linked_list_bp(void)
 }
 #endif
 #ifdef MC_BOND_POS
-struct bp2n_struct 
+struct n2sp_struct 
 {
   int i;
   int ns;
 }
-struct sp2n_struct *sp2n_map;
-int **n2sp_map;
+struct n2sp_struct *n2sp_map;
+int **sp2n_map;
+int totspots;
 #endif
 void usrInitAft(void)
 {
@@ -4982,7 +4983,6 @@ void usrInitAft(void)
      here all initialization that depends upon such parameters, and call 
      all your function for initialization, like maps() in this case */
 #ifdef MC_BOND_POS
-  int totspots;
   double maxsig;
 #endif
 #if defined(MD_CALC_VBONDING) && !defined(MC_SIMUL)
@@ -5508,12 +5508,12 @@ void usrInitAft(void)
   inCellBP[0] = malloc(sizeof(int)*totspots);
   inCellBP[1] = malloc(sizeof(int)*totspots);
   inCellBP[2] = malloc(sizeof(int)*totspots);
-  sp2n_map = malloc(sizeof(struct sp2n_struct)*totspots);
-  n2bp_map = malloc(sizeof(int*)*Oparams.parnum);
-  n2bp_map[0] = malloc(sizeof(int)*totspots);
+  n2sp_map = malloc(sizeof(struct n2sp_struct)*totspots);
+  sp2n_map = malloc(sizeof(int*)*Oparams.parnum);
+  sp2n_map[0] = malloc(sizeof(int)*totspots);
   for (i=1; i < Oparams.parnum; i++)
     {
-      n2sp[i] = n2sp[i-1] + typesArr[typeOfPart[i-1]].nspots;
+      sp2n_map[i] = sp2n_map[i-1] + typesArr[typeOfPart[i-1]].nspots;
     }
 
 #endif
