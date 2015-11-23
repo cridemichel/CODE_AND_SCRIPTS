@@ -262,6 +262,10 @@ int *colorP, *color_dupP, *inCellP[3], *cellListP;
 int cellsxP, cellsyP, cellszP;
 #endif
 #endif
+#ifdef MC_BOND_POS
+int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
+int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
+#endif
 
 /* ================================= */
 
@@ -2054,6 +2058,7 @@ void StartRun(void)
   int j, k, n;
 #ifdef MC_BOND_POS
   int k1, k2, i;
+  int totspots;
 #endif  
 #ifdef EDHE_FLEX
 #if !defined(MD_STANDALONE) || defined(MC_SIMUL) 
@@ -2200,6 +2205,18 @@ void StartRun(void)
 	    }
 	}
     }
+  n=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	{
+	  sp2n_map[n].i=i;
+	  sp2n_map[n].ns=k2;
+	  n2sp_map[i][k2] = n;
+	  n++;
+	}	
+    } 
+  build_linked_list_bp();
 #endif
 
   if (Oparams.maxbondsSaved==-1)
@@ -4921,7 +4938,41 @@ void get_restr_matrix(void)
 #ifdef MC_HYDROPHOBIC_INT
 double **eneij;
 #endif
-
+#ifdef MC_BOND_POS
+void build_linked_list_bp(void)
+{
+  int kk, img, j, n, np, dix, diy, diz, i, ns;
+  
+  totspots=0;
+  for (i=0; i < Oparams.parnum; i++)
+    totspots += typesArr[typeOfPart[i]].nspots;
+ 
+  for (j = 0; j < cellsxBP*cellsyBP*cellszBP + totspots; j++)
+    cellListBP[j] = -1;
+  //printf("cells=%d %d %d Lbig=%.15G L=%.15G\n", cellsx, cellsy, cellsz, Lbig, L);
+  for (n = 0; n < totspots; n++)
+    {
+      i = sp2n_map[n].i;
+      ns = sp2n_map[n].ns
+      inCellBP[0][n] =  (bpos[i][ns] + L2[0]) * cellsxBP / L[0];
+      inCellBP[1][n] =  (bpos[i][ns] + L2[1]) * cellsyBP / L[1];
+      inCellBP[2][n] =  (bpos[i][ns] + L2[2]) * cellszBP / L[2];
+      j = (inCellBP[2][n]*cellsyBP + inCellBP[1][n])*cellsxBP + 
+	inCellBP[0][n] + totspots;
+      cellListBP[n] = cellListBP[j];
+      cellListBP[j] = n;
+    }
+}
+#endif
+#ifdef MC_BOND_POS
+struct bp2n_struct 
+{
+  int i;
+  int ns;
+}
+struct sp2n_struct *sp2n_map;
+int **n2sp_map;
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -4932,6 +4983,7 @@ void usrInitAft(void)
      all your function for initialization, like maps() in this case */
 #ifdef MC_BOND_POS
   int totspots;
+  double maxsig;
 #endif
 #if defined(MD_CALC_VBONDING) && !defined(MC_SIMUL)
   OprogStatus.targetPhi=1.0;
@@ -5436,6 +5488,43 @@ void usrInitAft(void)
 	  bposold[kk][i] = bposold[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
 	}
     }
+  if (Oparams.rcutBP==-1)
+    {
+      maxsig = 0.0;
+      for (k1=0; k1 < Oparams.ntypes; k1++)
+	{
+	  for (k2=0; k2 < typesArr[k1].nspots; k2++)
+	    {
+	      if (typesArr[k2].spots[k2].sigma > maxsig)
+		maxsig = typesArr[k2].spots[k2].sigma;
+	    }
+	}
+      Oparams.rcutBP = maxsig*1.0001;
+    }
+  cellsxBP = L[0]/Oparams.rcutBP;
+  cellsyBP = L[1]/Oparams.rcutBP;
+  cellszBP = L[2]/Oparams.rcutBP;
+  cellListBP = malloc(sizeof(int)*(cellsxBP*cellsyBP*cellszBP+totspots));
+  inCellBP[0] = malloc(sizeof(int)*totspots);
+  inCellBP[1] = malloc(sizeof(int)*totspots);
+  inCellBP[2] = malloc(sizeof(int)*totspots);
+  sp2n_map = malloc(sizeof(struct sp2n_struct)*totspots);
+  n2bp_map = malloc(sizeof(int*)*Oparams.parnum);
+  n2bp_map[0] = malloc(sizeof(int)*totspots);
+  for (i=1; i < Oparams.parnum; i++)
+    {
+      n2sp[i] = n2sp[i-1] + typesArr[typeOfPart[i-1]].nspots;
+    }
+
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  totBSs=0;
+  for (i=0; i < Oparams.parnum; i++)
+    totBSs += typesArr[typeOfPart[i]].totspots-typesArr[typeOfPart[i]].nspots;
+  cellListBS = malloc(sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totBSs));
+  inCellBS[0] = malloc(sizeof(int)*totBSs);
+  inCellBS[1]= malloc(sizeof(int)*totBSs);
+  inCellBS[2] = malloc(sizeof(int)*totBSs);
 #endif
    for (k = 0; k < 6; k++)
     {
@@ -6460,10 +6549,6 @@ void usrInitAft(void)
 #endif
       printf("Oparams.rcutBP: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBP,
 	     cellsxBP, cellsyBP, cellszBP);
-      cellListBP = malloc(sizeof(int)*(cellsxBP*cellsyBP*cellszBP+totspots));
-      inCellBP[0] = malloc(sizeof(int)*Oparams.parnum);
-      inCellBP[1]= malloc(sizeof(int)*Oparams.parnum);
-      inCellBP[2] = malloc(sizeof(int)*Oparams.parnum);
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
       if (OprogStatus.optnnl)
