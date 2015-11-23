@@ -10764,10 +10764,16 @@ void velsBrown(double T)
   angvelMB();
 #endif
 }
-
+#ifdef MC_BOND_POS
+extern void build_linked_list_bp(void);
+#endif
 void rebuildLinkedList(void)
 {
   int j, n;
+
+#ifdef MC_BOND_POS
+  build_linked_list_bp();
+#endif
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList[j] = -1;
   /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */

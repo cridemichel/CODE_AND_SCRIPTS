@@ -3174,7 +3174,11 @@ void find_bonds_flex_all(void)
   for (i=0; i < Oparams.parnum; i++)
     {
       //printf("pos=%.15G %.15G %.15G\n", rx[i], ry[i], rz[i]);
+#ifdef MC_BOND_POS
+      find_bonds_one_BP(i);
+#else
       find_bonds_one(i);
+#endif
 #ifdef MC_FREEZE_BONDS
       if (fakeFB==1 && refFB==1)
 	{
