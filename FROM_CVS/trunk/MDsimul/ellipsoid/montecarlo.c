@@ -2718,6 +2718,30 @@ int overlapMC(int ip, int *err)
   else
     return overlapMC_LL(ip, err);
 }
+#ifdef MC_BOND_POS
+void remove_from_current_cellBP(int i)
+{
+  int n;
+  n = (inCellBP[2][i] * cellsyBP + inCellBP[1][i])*cellsxBP + inCellBP[0][i]
+    + totspots;
+  
+  while (cellListBP[n] != i) 
+    n = cellListBP[n];
+  /* Eliminazione di evIdA dalla lista della cella n-esima */
+  cellListBP[n] = cellListBP[i];
+}
+
+void insert_in_new_cell(int i)
+{
+  int n;
+  n = (inCellBP[2][i] * cellsyBP + inCellBP[1][i])*cellsxBP + 
+    inCellBP[0][i] + totspots;
+  /* Inserimento di evIdA nella nuova cella (head) */
+  cellListBP[i] = cellListBP[n];
+  cellListBP[n] = i;
+}
+
+#endif
 void remove_from_current_cell(int i)
 {
   int n;
@@ -2739,10 +2763,16 @@ void insert_in_new_cell(int i)
   cellList[i] = cellList[n];
   cellList[n] = i;
 }
+#ifdef MC_BOND_POS
+extern int totspots;
+#endif
 void update_LL(int n)
 {
   int cox, coy, coz, cx, cy, cz;
-
+#ifdef MC_BOND_POS
+  int k1;
+  double bp[3];
+#endif
   cox=inCell[0][n];
   coy=inCell[1][n];
   coz=inCell[2][n];
@@ -2767,6 +2797,30 @@ void update_LL(int n)
       inCell[2][n] = cz;
       insert_in_new_cell(n);
     }
+  for (k1 = 0; k1 < typesArr[typeOfPart[i]].nspots; k1++)
+    {
+      n = sp2n[i][k1]
+#ifdef MC_BOND_POS
+      cox=inCellBP[0][n];
+      coy=inCellBP[1][n];
+      coz=inCellBP[2][n];
+      /* consider spot in the first box */
+      for (kk=0; kk < 3; kk++)
+	bp[kk] = bpos[kk][i][k1] - L[kk]*rint(bpos[kk][i][k1]/L[kk]);
+
+      cx =  (bp[0] + 0.5*L[0]) * cellsxBP / L[0];
+      cy =  (bp[1] + 0.5*L[1]) * cellsyBP / L[1];
+      cz =  (bp[2] + 0.5*L[2]) * cellszBP / L[2];
+      if (cx!=cox || cy!=coy || cz!=coz)
+	{
+	  remove_from_current_cell_BP(n);
+	  inCellBP[0][n] = cx;
+	  inCellBP[1][n] = cy;
+	  inCellBP[2][n] = cz;
+	  insert_in_new_cell_BP(n);
+	}
+    }
+#endif
 }
 #if defined(MC_CLUSTER_NPT) || defined(MC_NPT_XYZ)
 void pbccls(int ip)
@@ -8816,6 +8870,7 @@ int mcmotion(void)
   movetype=random_move(ip);
   pbc(ip);
   update_LL(ip);
+ 
   //rebuildLinkedList();
   //printf("i=%d\n", i);
   totmovesMC++;
