@@ -861,11 +861,13 @@ void find_bonds_one_BP(int i)
 			  if (bonded)
 			    continue;
 			}
-		      check_shift(i, j, shift);
+		      //check_shift(i, j, shift);
 		      na = ns1+1;
 		      nb = ns2+1;
-		      assign_bond_mapping(i,j);
-		      dist = calcDistNegSP_BP(i, j, shift);
+		      //assign_bond_mapping(i,j);
+		      for (kk=0; kk < 3; kk++)
+			shift[kk] = L[kk]*rint((bpos[kk][i][ns1]-bpos[kk][j][ns2])/L[kk]); 
+		      dist = calcDistNegSP_BP(i, j, shif, na, nb);
 		      //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
 			  //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
 #ifdef MC_KERN_FRENKEL
@@ -936,8 +938,8 @@ void find_bonds_one_BP(int i)
 			      //if (mapbondsaFlex[nn]==3 && mapbondsbFlex[nn])
 			      //printf("%d %d\n", i, j);
 			      //printf("add bonds i=%d j=%d\n", i, j);
-			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
-			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+			      add_bond(i, j, na, nb);
+			      add_bond(j, i, nb, na);
 			    }
 		    }
 		}
@@ -3624,6 +3626,403 @@ double calc_overlap_volume(int i, int j, double shift[3], double delL, double de
 #endif
 #ifdef MC_HYDROPHOBIC_INT
 extern double **eneij;
+#endif
+#ifdef MC_BOND_POS
+double calcDistNegSP_BP(int i, int j, double shift[3], int na, int nb)
+ 
+{
+#if defined(MC_SWHC) || defined(MC_SWELL) || defined(MC_HCSOFT)
+  int retchk;
+#endif
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+  double drA[3], drB[3], drAB[3], costhKF, distCoMSq;
+  double normdrA, normdrB, normdrAB;
+  double bhin, bhout, bheight, distKF, distKFSQ;;
+  int nmax;
+#endif
+  double distmin, distSq, ti;
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratA[NA][3], ratB[NA][3]; 
+#endif
+  double dist;
+  int firstdist = 1, nn, kk, nbonds;
+#ifdef MD_SEARCH_DIST
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double distsSq[NA];
+#endif
+#endif
+#ifndef MD_ASYM_ITENS
+  double Omega[3][3];
+#endif
+  int na;
+#ifdef MD_ASYM_ITENS
+  double phi, psi;
+#endif
+#ifdef MC_BOND_POS
+  int k1, k2;
+#endif
+#ifdef EDHE_FLEX
+  /* se si tratta di due particelle a simmetria sferica ottimizza il calcolo */
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
+    return calcDistNegSPsph(t, t1, i, j, shift, amin, bmin, dists, bondpair);
+#endif
+  MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
+#ifdef MC_SIMUL
+  ti = 0;
+#else  
+  ti = t + (t1 - atomTime[i]);
+#endif
+#ifdef MC_SIMUL
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+#else
+  rA[0] = rx[i] + vx[i]*ti;
+  rA[1] = ry[i] + vy[i]*ti;
+  rA[2] = rz[i] + vz[i]*ti;
+#endif
+  MD_DEBUG(printf("rA (%f,%f,%f)\n", rA[0], rA[1], rA[2]));
+  /* ...and now orientations */
+
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(i, ti, RtA, REtA, cosEulAng[0], sinEulAng[0], &phi, &psi);
+#else
+  //UpdateOrient(i, ti, RtA, Omega, (bondpair==-1)?-1:mapbondsa[bondpair]);
+  UpdateOrient(i, ti, RtA, Omega);
+#endif
+#ifdef MC_BOND_POS
+  BuildAtomPosBP(i, rA, RtA, ratA);
+#else  /* calcola le posizioni nel laboratorio degli atomi della molecola */
+  BuildAtomPos(i, rA, RtA, ratA);
+#endif
+  na = (i < Oparams.parnumA)?0:1;
+#ifdef MC_SIMUL
+  ti = 0;
+#else
+  ti = t + (t1 - atomTime[j]);
+#endif
+#ifdef MC_SIMUL
+  rB[0] = rx[j] + shift[0];
+  rB[1] = ry[j] + shift[1];
+  rB[2] = rz[j] + shift[2];
+#else
+  rB[0] = rx[j] + vx[j]*ti + shift[0];
+  rB[1] = ry[j] + vy[j]*ti + shift[1];
+  rB[2] = rz[j] + vz[j]*ti + shift[2];
+#endif
+
+#if defined(MC_SIMUL) && !defined(MC_KERN_FRENKEL) && !defined(MC_SWHC) && !defined(MC_SWELL)
+  if (are_spheres(i,j))
+    {
+      if (Sqr(rA[0]-rB[0])+Sqr(rA[1]-rB[1])+Sqr(rA[2]-rB[2]) > Sqr(0.5*(maxax[i]+maxax[j])))
+	{
+#ifdef EDHE_FLEX
+	  nbonds = nbondsFlex;
+#else
+	  nbonds = MD_PBONDS;
+#endif
+	  for (nn = 0; nn < nbonds; nn++)
+	    {
+	      dists[nn] = 1.0;
+	      //*amin = mapbondsa[nn];
+	      //*bmin = mapbondsb[nn];
+	    }
+	  return 1.0;
+	}
+    }
+#endif
+
+#ifdef MD_ASYM_ITENS
+  symtop_evolve_orient(j, ti, RtB, REtB, cosEulAng[1], sinEulAng[1], &phi, &psi);
+#else
+  //UpdateOrient(j, ti, RtB, Omega, (bondpair==-1)?-1:mapbondsb[bondpair]);
+  UpdateOrient(j, ti, RtB, Omega);
+#endif
+#ifdef MC_BOND_POS
+  BuildAtomPosBP(j, rB, RtB, ratB);
+#else  
+  BuildAtomPos(j, rB, RtB, ratB);
+#endif
+  na = (j < Oparams.parnumA)?0:1;
+#ifdef MC_BOND_POS
+  for (kk=0; kk < typesArr[typeOfPart[j]].nspots+1; kk++)
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  ratB[kk][k1] += shift[k1];
+	}
+      //printf("ratA[%d]=%f %f %f\n", kk, ratA[kk][0], ratA[kk][1], ratA[kk][2]);
+      //printf("ratB[%d]=%f %f %f\n", kk, ratB[kk][0], ratB[kk][1], ratB[kk][2]);
+    }
+#endif
+  /* calcola sigmaSq[][]!!! */
+  distmin = 0;
+#ifdef EDHE_FLEX
+  nbonds = nbondsFlex;
+#else
+  nbonds = MD_PBONDS;
+#endif
+  for (nn = 0; nn < nbonds; nn++)
+    {
+      if (bondpair != -1 && bondpair != nn)
+	{
+	  //printf("qui in calcDistNeg\n");
+	  continue;
+	}
+      distSq = 0;
+#ifdef EDHE_FLEX
+#ifdef MD_SEARCH_DIST
+      if (search_dist(i, j, nn, distsSq))
+	{
+	  distSq = distsSq[nn];
+	  //printf("1)distSq:%.15G\n", distSq);
+	}
+      else
+	{
+	  for (kk=0; kk < 3; kk++)
+	    distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+	  distsSq[nn] = distSq;
+	}
+#else
+      for (kk=0; kk < 3; kk++)
+    	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+#ifdef MC_SIMUL
+// *** KERN-FRENKEL MODEL FOR PATCH #3 (the other two ones are used for covalent bonds) ***
+#ifdef MC_KERN_FRENKEL
+      if (
+#ifdef MC_BIFUNC_SPHERES
+	  /* le prime due patch sono KF */
+	  mapbondsa[nn]<=3 && mapbondsb[nn]<=3
+#elif defined(MC_AMYLOID_FIBRILS)
+	  /* gli spot >=2 sono tutti kern frenkel, mentre i primi due sono permanenti e sferici */
+	  mapbondsa[nn]>=3 && mapbondsb[nn]>=3
+#else	  
+	  mapbondsa[nn]==3 && mapbondsb[nn]==3
+#endif
+	  )
+	{
+	  distCoMSq=0.0;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      distCoMSq += Sqr(ratA[0][kk]-ratB[0][kk]);
+	      drA[kk] = ratA[mapbondsa[nn]][kk] - ratA[0][kk];
+	      drB[kk] = ratB[mapbondsb[nn]][kk] - ratB[0][kk];
+	      drAB[kk] = ratB[0][kk] - ratA[0][kk];
+	    }
+#ifdef MC_AMYLOID_FIBRILS
+	  /* uso bhin e bhout come costheta e distKF per il modello di kern frenkel */
+	  get_inter_bheights(i, j, mapbondsa[nn], mapbondsb[nn], &bheight, &bhin, &bhout, &nmax);
+#if 0
+	  costhKF = bhin;
+	  distKFSQ = Sqr(bhout);
+#endif
+	  costhKF = OprogStatus.costhKF;
+	  distKFSQ = Sqr(OprogStatus.distKF);
+#else
+	  costhKF = OprogStatus.costhKF;
+	  distKFSQ = Sqr(OprogStatus.distKF);
+#endif
+	  //if (distCoMSq < Sqr(OprogStatus.distKF))
+	    //printf("dist= %f\n", sqrt(distCoMSq));
+	  normdrA = calc_norm(drA);
+   	  normdrB = calc_norm(drB);
+	  normdrAB= calc_norm(drAB);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      drA[kk] /= normdrA;
+	      drB[kk] /= normdrB;
+	      drAB[kk] /= normdrAB;
+	    } 
+	  //printf("distance: %.15G costheta=%.15G", sqrt(distCoMSq), scalProd(drA,drAB));
+	  if (distCoMSq < distKFSQ &&
+	      scalProd(drA,drAB) > costhKF && -scalProd(drB, drAB) > costhKF)
+	    {
+	      dists[nn] = dist = -1.0;
+	    }
+	  else
+	    {
+	      //printf("qui drA.drAB)=%f -drB.drAB=%f\n", scalProd(drA, drAB), -scalProd(drB, drAB));
+	      dists[nn] = dist = 1.0; 
+	    }
+	}
+      else 
+	 dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#elif defined(MC_SWHC) || defined(MC_SWELL)
+      /* first patch is the "cylindrical" one */
+      if ( 
+#if defined(SW_SOFTHE)
+	  (mapbondsa[nn] == 1 && mapbondsb[nn] == 1) ||
+	  (mapbondsa[nn] == 2 && mapbondsb[nn] == 2) 
+#else
+	  mapbondsa[nn] == 1 && mapbondsb[nn] == 1
+#endif
+	  )
+	{
+#if 0
+	  printf("sax=%f %f %f mapsigmaFlex=%f qui mapbondsa=%d mapbondsb=%d dist=%f\n", 
+typesArr[typeOfPart[i]].sax[0], typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],  
+		 mapSigmaFlex[nn], mapbondsa[nn], mapbondsb[nn], dists[nn]);
+#endif
+#ifdef MC_SWELL
+	  if (OprogStatus.constDelta==1)
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+		  typesArr[typeOfPart[i]].sax[0] += OprogStatus.deltasw[0]; /* L*Delta */
+		  typesArr[typeOfPart[i]].sax[1] += OprogStatus.deltasw[1]; /* D*Delta */
+		  typesArr[typeOfPart[i]].sax[2] += OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+		}
+	    }
+	  else
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+	    	  typesArr[typeOfPart[i]].sax[0] *= OprogStatus.deltasw[0]; /* L*Delta */
+		  typesArr[typeOfPart[i]].sax[1] *= OprogStatus.deltasw[1]; /* D*Delta */
+		  typesArr[typeOfPart[i]].sax[2] *= OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] *= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] *= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] *= mapSigmaFlex[nn];
+		}
+	    }
+#else
+	  if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+	    {
+	      typesArr[typeOfPart[i]].sax[0] += OprogStatus.deltasw[0]; /* L+Delta */
+	      typesArr[typeOfPart[i]].sax[1] += OprogStatus.deltasw[1]; /* D+Delta */
+	      typesArr[typeOfPart[i]].sax[2] += OprogStatus.deltasw[1];
+	    }
+	  else
+	    {
+	      typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+	      typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	      typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+	    }
+#endif
+	  if (check_overlap_ij(i, j, shift, &retchk) < 0.0)
+	    {
+	      //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
+	      dists[nn] = dist = -1.0; 
+#ifdef MC_HYDROPHOBIC_INT
+#if 1
+	      eneij[i][j]=
+		calc_overlap_volume(i,j, shift, mapSigmaFlex[nn], mapSigmaFlex[nn]); 
+#if 0
+	      if (eneij[i][j] > 0.08)
+		{
+		  store_bump(i,j);
+		}
+#endif		
+	     //printf("eneij=%.15G\n", eneij[i][j]);
+#endif
+#endif
+   	    }
+   	  else
+	    dists[nn] = dist = 1.0;
+	  //printf("qui mapbondsa=%d mapbondsb=%d dist=%f\n", mapbondsa[nn], mapbondsb[nn], dists[nn]);
+#ifdef MC_SWELL
+	  if (OprogStatus.constDelta==1)
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+		  typesArr[typeOfPart[i]].sax[0] -= OprogStatus.deltasw[0]; /* L*Delta */
+		  typesArr[typeOfPart[i]].sax[1] -= OprogStatus.deltasw[1]; /* D*Delta */
+		  typesArr[typeOfPart[i]].sax[2] -= OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
+		}
+	    }
+	  else
+	    {
+	      if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+		{
+		  typesArr[typeOfPart[i]].sax[0] /= OprogStatus.deltasw[0];
+		  typesArr[typeOfPart[i]].sax[1] /= OprogStatus.deltasw[1];
+		  typesArr[typeOfPart[i]].sax[2] /= OprogStatus.deltasw[1];
+		}
+	      else
+		{
+		  typesArr[typeOfPart[i]].sax[0] /= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[1] /= mapSigmaFlex[nn];
+		  typesArr[typeOfPart[i]].sax[2] /= mapSigmaFlex[nn];
+		}
+	    }
+#else
+	  if (OprogStatus.deltasw[0] !=-1 && OprogStatus.deltasw[1]!=-1)
+	    {
+	      typesArr[typeOfPart[i]].sax[0] -= OprogStatus.deltasw[0];
+	      typesArr[typeOfPart[i]].sax[1] -= OprogStatus.deltasw[1];
+	      typesArr[typeOfPart[i]].sax[2] -= OprogStatus.deltasw[1];
+	     }
+	  else
+	    {
+    	      typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+    	      typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+    	      typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
+	    }
+#endif
+	}
+      else
+	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#elif defined(MC_HCSOFT)
+      /* 2-2 is the soft overlap interaction (0 and 1 are the sticky spots) */
+      if (mapbondsaFlex[nn] == 3 && mapbondsbFlex[nn] == 3)
+	{
+	  //typesArr[typeOfPart[i]].sax[0] += mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[1] += mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[2] += mapSigmaFlex[nn];
+  	  if (check_overlap(i, j, shift, &retchk) < 0.0)
+	    dists[nn] = dist = -1.0;
+	  else 
+	    dists[nn] = dist =  1.0;
+	  //typesArr[typeOfPart[i]].sax[0] -= mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[1] -= mapSigmaFlex[nn];
+	  typesArr[typeOfPart[i]].sax[2] -= mapSigmaFlex[nn];
+	}
+      else
+	dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#elif defined(MC_GAPDNA)
+      dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#else
+      dists[nn] = dist = distSq - Sqr(mapSigmaFlex[nn]);
+#endif
+
+#else
+      dists[nn] = dist = sqrt(distSq) - mapSigmaFlex[nn];
+#endif
+      MD_DEBUG38(printf("dists[%d]:%.15G mapSigmaFlex[]:%f\n", nn, dists[nn], mapSigmaFlex[nn]));
+      MD_DEBUG38(printf("i=%d mapbondsa[%d]:%d j=%d mapbondsb[%d]:%d\n", i, nn, mapbondsa[nn], j, nn, mapbondsb[nn])); 
+#endif
+#else
+      for (kk=0; kk < 3; kk++)
+	distSq += Sqr(ratA[mapbondsa[nn]][kk]-ratB[mapbondsb[nn]][kk]);
+      dists[nn] = dist = sqrt(distSq) - Oparams.sigmaSticky;
+#endif     
+      if (firstdist || fabs(dist) < fabs(distmin))
+	{
+	  MD_DEBUG38(printf("firstdist=%d dist=%.15G distmin=%.15G\n", firstdist, dist, distmin));
+	  firstdist = 0;
+	  distmin = dist;
+	  *amin = mapbondsa[nn];
+	  *bmin = mapbondsb[nn];
+	}
+    }
+
+  return distmin;
+}
 #endif
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, 
 		   double *dists, int bondpair)
