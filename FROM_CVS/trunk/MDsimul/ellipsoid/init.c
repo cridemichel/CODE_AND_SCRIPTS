@@ -1794,6 +1794,9 @@ void usrInitBef(void)
     OprogStatus.dist5 = 0;
     OprogStatus.dist8stps = 0;
     OprogStatus.dist5NL = 0;
+#ifdef MC_BOND_POS
+    Oparams.rcutBP = -1;
+#endif
     OprogStatus.paralNNL = 1;
     /* If 1 the program calculate of the corrisponding variable a mean from
        the begin of the run and not the instanteaneous value */
@@ -2723,7 +2726,7 @@ void calc_encpp(void)
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
 #endif
-
+#ifndef MC_BOND_POS
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
 	{
 	  //norm = calc_norm(typesArr[pt].spots[sp].x);
@@ -2749,7 +2752,8 @@ void calc_encpp(void)
 		typesArr[pt].ppsax[kk] = v[kk];
 	    }
 	  //printf("pt=%d ppsax=%f %f %f\n", pt, typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]);
-	}   
+	}
+#endif   
     }
 }
 #endif
@@ -5492,8 +5496,8 @@ void usrInitAft(void)
 	{
 	  for (k2=0; k2 < typesArr[k1].nspots; k2++)
 	    {
-	      if (typesArr[k2].spots[k2].sigma > maxsig)
-		maxsig = typesArr[k2].spots[k2].sigma;
+	      if (typesArr[k1].spots[k2].sigma > maxsig)
+		maxsig = typesArr[k1].spots[k2].sigma;
 	    }
 	}
       Oparams.rcutBP = maxsig*1.0001;
