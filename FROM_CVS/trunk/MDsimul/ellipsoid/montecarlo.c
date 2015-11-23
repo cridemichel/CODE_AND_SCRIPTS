@@ -2939,6 +2939,9 @@ extern void find_bonds_flex_all(void);
 extern double calcpotene(void);
 extern void rebuildLinkedList(void);
 int cxini=-1, cyini=-1, czini=-1;
+#ifdef MC_BOND_POS
+int cxiniBP=-1, cyiniBP=-1, cziniBP=-1;
+#endif
 void update_numcells(void)
 {
 #ifdef MD_LXYZ
@@ -2954,6 +2957,21 @@ void update_numcells(void)
     {
       cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     } 
+#ifdef MC_BOND_POS
+#ifdef MD_LXYZ
+  cellsxBP = L[0] / Oparams.rcutBP;
+  cellsyBP = L[1] / Oparams.rcutBP;
+  cellszBP = L[2] / Oparams.rcutBP;
+#else
+  cellsx = L / Oparams.rcut;
+  cellsy = L / Oparams.rcut;
+  cellsz = L / Oparams.rcut;
+#endif
+  if (cellsxBP > cxini || cellsyBP > cyini || cellszBP > czini)
+    {
+      cellListBP = realloc(cellListBP, sizeof(int)*(cellsxBP*cellsyBP*cellszBP+totspots));
+    } 
+#endif
 }
 void find_bonds_flex_NNL(void);
 #ifdef MC_GRANDCAN
@@ -4176,6 +4194,14 @@ void move_box_cluster_xyz(int *ierr)
   memcpy(vx, rx, sizeof(double)*Oparams.parnum);
   memcpy(vy, ry, sizeof(double)*Oparams.parnum);
   memcpy(vz, rz, sizeof(double)*Oparams.parnum);
+#ifdef MC_BOND_POS
+  for (i=0; i < Oparams.parnum; i++)
+    for (k1=0; k1 < 3; k1++)
+      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	{
+	  bposold[k1][i][k2] = bpos[k1][i][k2];
+	} 
+#endif
 #endif
   for (nc=0; nc < ncls; nc++)
     {
@@ -4215,6 +4241,14 @@ void move_box_cluster_xyz(int *ierr)
 	  rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
 	  ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
 	  rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+#ifdef MC_BOND_POS
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	    {
+	      bpos[0][i][k2] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+	      bpos[1][i][k2] -= L[1]*rint((ry[i]-lastry)/L[1]);
+	      bpos[2][i][k2] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+	    }
+#endif
 #else
 	  Dxpar[i] = L[0]*rint((rx[i]-lastrx)/L[0]);
 	  Dypar[i] = L[1]*rint((ry[i]-lastry)/L[1]);
@@ -4222,6 +4256,14 @@ void move_box_cluster_xyz(int *ierr)
     	  rx[i] -= Dxpar[i];
 	  ry[i] -= Dypar[i];
 	  rz[i] -= Dzpar[i];
+#ifdef MC_BOND_POS
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	    {
+	      bpos[0][i][k2] -= Dxpar[i];
+	      bpos[1][i][k2] -= Dypar[i];
+	      bpos[2][i][k2] -= Dzpar[i]; 
+	    }
+#endif
 #endif
 	  clsCoM[0][nc] += rx[i];
 	  clsCoM[1][nc] += ry[i];
@@ -4303,6 +4345,14 @@ void move_box_cluster_xyz(int *ierr)
       rx[i] += Dxcls[color[i]];
       ry[i] += Dycls[color[i]];
       rz[i] += Dzcls[color[i]];
+#ifdef MC_BOND_POS
+      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	{
+	  bpos[0][i][k2] += Dxcls[color[i]];
+	  bpos[1][i][k2] += Dycls[color[i]];
+	  bpos[2][i][k2] += Dzcls[color[i]]; 
+	}
+#endif
 #ifdef MC_STORE_ALL_COORDS
       pbc(i);
 #else
@@ -4315,7 +4365,6 @@ void move_box_cluster_xyz(int *ierr)
 #endif
   update_numcells();
   rebuildLinkedList();
- 
   for (i=0; i < Oparams.parnum; i++)
     {
       clsNPT=1;
@@ -4339,18 +4388,39 @@ void move_box_cluster_xyz(int *ierr)
 	      rx[ii] -= Dxcls[color[ii]];
 	      ry[ii] -= Dycls[color[ii]];
 	      rz[ii] -= Dzcls[color[ii]];
-	      
+#ifdef MC_BOND_POS
+	      for (k2=0; k2 < typesArr[typeOfPart[ii]].nspots; k2++)
+		{
+		  bpos[0][ii][k2] -= Dxcls[color[ii]];
+		  bpos[1][ii][k2] -= Dycls[color[ii]];
+		  bpos[2][ii][k2] -= Dzcls[color[ii]]; 
+		}
+#endif  
 	      rx[ii] += Dxpar[ii];
 	      ry[ii] += Dypar[ii];
 	      rz[ii] += Dzpar[ii]; 
-	
+#ifdef MC_BOND_POS
+	      for (k2=0; k2 < typesArr[typeOfPart[ii]].nspots; k2++)
+		{
+		  bpos[0][ii][k2] += Dxpar[color[ii]];
+		  bpos[1][ii][k2] += Dypar[color[ii]];
+		  bpos[2][ii][k2] += Dzpar[color[ii]]; 
+		}
+#endif
 	      pbc(ii);
 	    }
 #else
 	  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
 	  memcpy(ry, vy, sizeof(double)*Oparams.parnum);
 	  memcpy(rz, vz, sizeof(double)*Oparams.parnum);
-
+#ifdef MC_BOND_POS
+    	  for (i=0; i < Oparams.parnum; i++)
+    	    for (k1=0; k1 < 3; k1++)
+    	      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+    		{
+    		  bpos[k1][i][k2] = bposold[k1][i][k2];
+    		} 
+#endif
 #endif
 
 	  volrejMC++;
@@ -4443,12 +4513,29 @@ void move_box_cluster_xyz(int *ierr)
 	  rx[i] += Dxpar[i];
 	  ry[i] += Dypar[i];
 	  rz[i] += Dzpar[i]; 
+#ifdef MC_BOND_POS
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	    {
+    	      bpos[0][i][k2] += Dxpar[i]-Dxcls[color[i]];
+	      bpos[1][i][k2] += Dypar[i]-Dycls[color[i]];
+	      bpos[2][i][k2] += Dzpar[i]-Dzcls[color[i]]; 
+	    }
+#endif 
+#endif
 	  pbc(i);
 	}
 #else
       memcpy(rx, vx, sizeof(double)*Oparams.parnum);
       memcpy(ry, vy, sizeof(double)*Oparams.parnum);
       memcpy(rz, vz, sizeof(double)*Oparams.parnum);
+#ifdef MC_BOND_POS
+      for (i=0; i < Oparams.parnum; i++)
+	for (k1=0; k1 < 3; k1++)
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	    {
+	      bpos[k1][i][k2] = bposold[k1][i][k2];
+	    } 
+#endif
 #endif
       volrejMC++;
 #ifdef MC_STORELL
@@ -9735,6 +9822,14 @@ void move(void)
       cyini=cellsy;
       czini=cellsz;
     }
+#ifdef MC_BOND_POS
+  if (cxiniBP==-1)
+    {
+      cxiniBP=cellsxBP;
+      cyiniBP=cellsyBP;
+      cziniBP=cellszBP;
+    }
+#endif
   if (OprogStatus.nvbbias > 0)
     deln=OprogStatus.nvbbias;
   else
