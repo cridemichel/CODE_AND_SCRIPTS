@@ -739,6 +739,213 @@ extern double check_overlap(int i, int j, double shift[3], int *errchk);
 #ifdef MC_GAPDNA
 extern int cls_move_bonds;
 #endif
+#ifdef MC_BOND_POS
+extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
+void find_bonds_one_BP(int i)
+{
+  int ns1, ns2;
+#ifdef MC_HCSOFT
+  int err;
+#endif
+  int nn,  amin, bmin, j, nbonds, bonded, is, nnn, na, nb;
+  double shift[3], dist;
+  int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+
+  for (ns1 = 0; ns1 < typesArr[typeOfPart[i]].nspots; ns1++)
+    {
+      for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
+
+      is = sp2n_map[i][ns1];
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCellBP[2][is] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      //printf("BOHHHH\n");
+	      jZ = cellszBP - 1;    
+#ifdef MD_LXYZ
+	      shift[2] = - L[2];
+#else
+	      shift[2] = - L;
+#endif
+	    } 
+	  else if (jZ == cellszBP) 
+	    {
+	      jZ = 0;    
+#ifdef MD_LXYZ
+	      shift[2] = L[2];
+#else
+	      shift[2] = L;
+#endif
+	    }
+	  for (iY = cellRangeBP[2]; iY <= cellRangeBP[3]; iY ++) 
+	    {
+	      jY = inCellBP[1][is] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsyBP - 1;    
+#ifdef MD_LXYZ
+		  shift[1] = -L[1];
+#else
+		  shift[1] = -L;
+#endif
+		} 
+	      else if (jY == cellsyBP) 
+		{
+		  jY = 0;    
+#ifdef MD_LXYZ
+		  shift[1] = L[1];
+#else
+		  shift[1] = L;
+#endif
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCellBP[0][is] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsxBP - 1;    
+#ifdef MD_LXYZ
+		      shift[0] = - L[0];
+#else
+		      shift[0] = - L;
+#endif
+		    } 
+		  else if (jX == cellsxBP) 
+		    {
+		      jX = 0;   
+#ifdef MD_LXYZ
+		      shift[0] = L[0];
+#else
+		      shift[0] = L;
+#endif
+		    }
+		  nnn = (jZ *cellsyBP + jY) * cellsxBP + jX + totspots;
+		  for (nnn = cellListBP[nnn]; nnn > -1; nnn = cellListBP[nnn]) 
+		    {
+		      j = n2sp_map[nnn].i;
+		      ns2 = n2sp_map[nnn].ns;
+		      if (i == j)
+			continue;
+#if ((defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE)) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
+		      /* se una delle due particelle ha due bond è inutile controllare i bond
+			 perché non potranno esserci bond tra i e j */
+		      //#ifndef MC_GAPDNA
+		      if (clsNPT==1)
+			{
+			  /* nel caso di un cambio di volume nel clusterNPT i legami si possono solo formare e non rompere */
+			  if (numbonds[i]==2 || numbonds[j]==2)
+			    continue;
+			}
+		      //#endif
+#endif
+		      if (OprogStatus.assumeOneBond==1)
+			{
+			  bonded=0;
+			  for (nn=0; nn < numbonds[i]; nn++)
+			    {
+			      /* assuming one bond if i and j are already bonded
+				 we do not have to check further... */
+			      if (bonds[i][nn]/(NANA)==j)
+				{
+				  //printf("qui\n");
+				  bonded=1;
+				  break;
+				}
+			    }
+			  if (bonded)
+			    continue;
+			}
+		      check_shift(i, j, shift);
+		      na = ns1+1;
+		      nb = ns2+1;
+		      assign_bond_mapping(i,j);
+		      dist = calcDistNegSP_BP(i, j, shift);
+		      //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
+			  //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
+#ifdef MC_KERN_FRENKEL
+			  if (checkMoveKF==1 && dist > 0.0 && bound(i, j, na, nb)
+			      && na < 3 && nb < 3)
+			    {
+			      rejectMove = 1;
+			      continue;
+			    }
+#elif defined(MC_GAPDNA)
+#if 0
+			  if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+			    printf("qui mapbondsaFlex=%d %d\n", mapbondsaFlex[nn], mapbondsbFlex[nn]);
+#endif
+			  if (checkMoveKF==1 && dist > 0.0 && bound(i, j, na, nb)
+			      && na == 1 && nb == 1)
+			    {
+			      rejectMove = 1;
+			      continue;
+			    }
+
+#if 0
+			  if (checkMoveKF && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
+			    printf("qui dist=%f i=%d j=%d mapbondsaFlex=%d %d rejectMove=%d\n", dists[nn], i, j, mapbondsaFlex[nn], mapbondsbFlex[nn], rejectMove);
+#endif
+#endif
+#if 0
+#ifdef MC_GAPDNA
+			  if (clsNPT==1 && dists[nn] < 0.0 && mapbondsaFlex[nn] > 1 && mapbondsbFlex[nn] > 1)
+			    {
+			      //printf("mapbondsaFlex=%d mapbondsaFlex=%d i=%d j=%d\n", mapbondsaFlex[nn], mapbondsaFlex[nn], i, j);
+			      cls_move_bonds++;
+			    }
+#endif
+#endif
+			  if (dist < 0.0 && !bound(i, j, na, nb))
+			    {
+#ifdef MC_KERN_FRENKEL
+			      //printf("polylen=%d ncls=%d\n", OprogStatus.polylen, i/OprogStatus.polylen);
+			      if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
+				  na < 3 && nb < 3)
+				{
+				  //rejectMove = 1;
+				  continue;
+				}
+#elif defined(MC_GAPDNA)
+#if 0
+			      printf("i=%d j=%d numbonds[i]=%d numbonds[j]=%d\n", i, j, numbonds[i], numbonds[j]);
+			      printf("polylen=%d i/OprogStatus.polylen=%d j/OprogStatus.polylen=%d mapbondsaFlexa[nn]=%d\n", OprogStatus.polylen, i/OprogStatus.polylen, j/OprogStatus.polylen, mapbondsaFlex[nn]);
+#endif
+			      if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
+				  na == 1 && nb == 1)
+				{
+				  //rejectMove = 1;
+				  continue;
+				}
+
+#endif
+#if ((defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE)) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
+			      /* se trova un solo bond termina */
+			      if (clsNPT==1)
+				{
+				  clsNPT=2;
+				  return;
+				}
+#endif
+			      //printf("mapbondsaFlex=%d mapbondsbFlex=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn]);
+			      //if (mapbondsaFlex[nn]==3 && mapbondsbFlex[nn])
+			      //printf("%d %d\n", i, j);
+			      //printf("add bonds i=%d j=%d\n", i, j);
+			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
+			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+			    }
+		    }
+		}
+	    }
+	}
+    }
+}
+#endif
 void find_bonds_one(int i)
 {
 #ifdef MC_HCSOFT
@@ -756,7 +963,10 @@ void find_bonds_one(int i)
   int jj, jj2, aa, bb;
 #endif
 #endif
-
+#ifdef MC_BOND_POS
+  find_bonds_one_BP(i);
+  return;
+#endif
 #ifdef MD_MULTIPLE_LL
   if (OprogStatus.multipleLL)
     {
