@@ -2829,6 +2829,12 @@ int overlapMC_LL(int ip, int *err)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
+#ifdef MC_BOUNDING_SPHERES
+		      if (!checkBS[n])
+			continue;
+		      else
+			checkBS[n] = 0;
+#endif
 #if defined(EDHE_FLEX) && 0
 		      if (!may_interact_all(na, n))
 			continue;
