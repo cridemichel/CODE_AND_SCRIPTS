@@ -2802,10 +2802,10 @@ void update_LL(int n)
       inCell[2][n] = cz;
       insert_in_new_cell(n);
     }
+#ifdef MC_BOND_POS
   for (k1 = 0; k1 < typesArr[typeOfPart[n]].nspots; k1++)
     {
       ns = sp2n_map[n][k1];
-#ifdef MC_BOND_POS
       cox=inCellBP[0][ns];
       coy=inCellBP[1][ns];
       coz=inCellBP[2][ns];
@@ -4138,13 +4138,60 @@ int check_bonds_mc(char *txt)
 #endif
 #ifdef MC_NPT_XYZ
 #define MC_CLSNPT_LOG
+void store_all_coords(void)
+{
+  int i, k1, k2;
+  memcpy(vx, rx, sizeof(double)*Oparams.parnum);
+  memcpy(vy, ry, sizeof(double)*Oparams.parnum);
+  memcpy(vz, rz, sizeof(double)*Oparams.parnum);
+#ifdef MC_BOND_POS
+  for (i=0; i < Oparams.parnum; i++)
+    for (k1=0; k1 < 3; k1++)
+      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	{
+	  bposold[k1][i][k2] = bpos[k1][i][k2];
+	} 
+#endif
+}
+void restore_all_coords(void)
+{
+  int k1, k2, i;
+  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
+  memcpy(ry, vy, sizeof(double)*Oparams.parnum);
+  memcpy(rz, vz, sizeof(double)*Oparams.parnum);
+#ifdef MC_BOND_POS
+  for (i=0; i < Oparams.parnum; i++)
+    for (k1=0; k1 < 3; k1++)
+      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	{
+	  bpos[k1][i][k2] = bposold[k1][i][k2];
+	} 
+#endif
+}
+
+
+#ifdef MC_BOND_POS
+void update_spot_pos(int i, double dx, double dy, double dz)
+{
+  int k2;
+  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+    {
+      bpos[0][i][k2] += dx;
+      bpos[1][i][k2] -= dy;
+      bpos[2][i][k2] -= dz;
+    }
+}
+#endif
 void move_box_cluster_xyz(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
   double nn, distance, lnvn;
   double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
   int dir;
-  double *rr[3];
+  double *rr[3], del[3];
+#ifdef MC_BOND_POS
+  int k1, k2;
+#endif
 #ifdef MC_STORE_ALL_COORDS
 #ifdef MD_LXYZ
   double Lold[3];
@@ -4163,7 +4210,7 @@ void move_box_cluster_xyz(int *ierr)
   rr[2] = rz;
   dir = 3*ranf();
   eno = calcpotene();
-      
+
 #ifdef MC_CLSNPT_LOG
   lnvn = log(vo) + (ranf()-0.5)*OprogStatus.vmax;
   vn = exp(lnvn);
@@ -4191,17 +4238,7 @@ void move_box_cluster_xyz(int *ierr)
 #endif
 #ifdef MC_STORE_ALL_COORDS
   /* I use velocity arrays to store coordinates, in MC simulations they are unused! */
-  memcpy(vx, rx, sizeof(double)*Oparams.parnum);
-  memcpy(vy, ry, sizeof(double)*Oparams.parnum);
-  memcpy(vz, rz, sizeof(double)*Oparams.parnum);
-#ifdef MC_BOND_POS
-  for (i=0; i < Oparams.parnum; i++)
-    for (k1=0; k1 < 3; k1++)
-      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	{
-	  bposold[k1][i][k2] = bpos[k1][i][k2];
-	} 
-#endif
+  store_all_coords();
 #endif
   for (nc=0; nc < ncls; nc++)
     {
@@ -4211,7 +4248,7 @@ void move_box_cluster_xyz(int *ierr)
 	 hence we have to initialize i0 */
       i0 =  clsarr[firstofcls[nc]];
       for (np=0; np < clsdim[nc]; np++)
-    	{
+	{
 	  i =  clsarr[firstofcls[nc]+np];
 	  if ( numbonds[i]==1) 
 	    {
@@ -4238,31 +4275,24 @@ void move_box_cluster_xyz(int *ierr)
 	  lastry = ry[iold];
 	  lastrz = rz[iold];
 #ifdef MC_STORE_ALL_COORDS
-	  rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
-	  ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
-	  rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+	  del[0] = L[0]*rint((rx[i]-lastrx)/L[0]);
+	  del[1] = L[1]*rint((ry[i]-lastry)/L[1]); 
+	  del[2] = L[2]*rint((rz[i]-lastrz)/L[2]);
+	  rx[i] -= del[0];
+	  ry[i] -= del[1];
+	  rz[i] -= del[2];
 #ifdef MC_BOND_POS
-	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	    {
-	      bpos[0][i][k2] -= L[0]*rint((rx[i]-lastrx)/L[0]);
-	      bpos[1][i][k2] -= L[1]*rint((ry[i]-lastry)/L[1]);
-	      bpos[2][i][k2] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
-	    }
+	  update_spot_pos(i, -del[0], -del[1], -del[2]);
 #endif
 #else
 	  Dxpar[i] = L[0]*rint((rx[i]-lastrx)/L[0]);
 	  Dypar[i] = L[1]*rint((ry[i]-lastry)/L[1]);
 	  Dzpar[i] = L[2]*rint((rz[i]-lastrz)/L[2]); 
-    	  rx[i] -= Dxpar[i];
+	  rx[i] -= Dxpar[i];
 	  ry[i] -= Dypar[i];
 	  rz[i] -= Dzpar[i];
 #ifdef MC_BOND_POS
-	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	    {
-	      bpos[0][i][k2] -= Dxpar[i];
-	      bpos[1][i][k2] -= Dypar[i];
-	      bpos[2][i][k2] -= Dzpar[i]; 
-	    }
+	  update_spot_pos(i, -Dxpar[i], -Dypar[i], -Dzpar[i]);
 #endif
 #endif
 	  clsCoM[0][nc] += rx[i];
@@ -4346,12 +4376,7 @@ void move_box_cluster_xyz(int *ierr)
       ry[i] += Dycls[color[i]];
       rz[i] += Dzcls[color[i]];
 #ifdef MC_BOND_POS
-      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	{
-	  bpos[0][i][k2] += Dxcls[color[i]];
-	  bpos[1][i][k2] += Dycls[color[i]];
-	  bpos[2][i][k2] += Dzcls[color[i]]; 
-	}
+      update_spot_pos(i, Dxcls[color[i]],Dycls[color[i]],Dzcls[color[i]]); 
 #endif
 #ifdef MC_STORE_ALL_COORDS
       pbc(i);
@@ -4389,38 +4414,19 @@ void move_box_cluster_xyz(int *ierr)
 	      ry[ii] -= Dycls[color[ii]];
 	      rz[ii] -= Dzcls[color[ii]];
 #ifdef MC_BOND_POS
-	      for (k2=0; k2 < typesArr[typeOfPart[ii]].nspots; k2++)
-		{
-		  bpos[0][ii][k2] -= Dxcls[color[ii]];
-		  bpos[1][ii][k2] -= Dycls[color[ii]];
-		  bpos[2][ii][k2] -= Dzcls[color[ii]]; 
-		}
+	      update_spot_pos(i, -Dxcls[color[i]])
 #endif  
 	      rx[ii] += Dxpar[ii];
 	      ry[ii] += Dypar[ii];
 	      rz[ii] += Dzpar[ii]; 
 #ifdef MC_BOND_POS
-	      for (k2=0; k2 < typesArr[typeOfPart[ii]].nspots; k2++)
-		{
-		  bpos[0][ii][k2] += Dxpar[color[ii]];
-		  bpos[1][ii][k2] += Dypar[color[ii]];
-		  bpos[2][ii][k2] += Dzpar[color[ii]]; 
-		}
+	      update_spot_pos(i, Dxpar[color[ii]]-Dxcls[color[ii]], Dypar[color[ii]]-Dycls[color[ii]],
+			      Dzpar[color[ii]]-Dzcls[color[ii]]);
 #endif
 	      pbc(ii);
 	    }
 #else
-	  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
-	  memcpy(ry, vy, sizeof(double)*Oparams.parnum);
-	  memcpy(rz, vz, sizeof(double)*Oparams.parnum);
-#ifdef MC_BOND_POS
-    	  for (i=0; i < Oparams.parnum; i++)
-    	    for (k1=0; k1 < 3; k1++)
-    	      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-    		{
-    		  bpos[k1][i][k2] = bposold[k1][i][k2];
-    		} 
-#endif
+	  restore_all_coords();
 #endif
 
 	  volrejMC++;
@@ -4507,21 +4513,21 @@ void move_box_cluster_xyz(int *ierr)
 #if !defined(MC_STORE_ALL_COORDS)
       for (i=0; i < Oparams.parnum; i++)
 	{
-      	  rx[i] -= Dxcls[color[i]];
+	  rx[i] -= Dxcls[color[i]];
 	  ry[i] -= Dycls[color[i]];
 	  rz[i] -= Dzcls[color[i]];
 	  rx[i] += Dxpar[i];
 	  ry[i] += Dypar[i];
 	  rz[i] += Dzpar[i]; 
 #ifdef MC_BOND_POS
+	//update_spot_pos(i,  Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]]  );
 	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
 	    {
-    	      bpos[0][i][k2] += Dxpar[i]-Dxcls[color[i]];
+	      bpos[0][i][k2] += Dxpar[i]-Dxcls[color[i]];
 	      bpos[1][i][k2] += Dypar[i]-Dycls[color[i]];
 	      bpos[2][i][k2] += Dzpar[i]-Dzcls[color[i]]; 
 	    }
 #endif 
-#endif
 	  pbc(i);
 	}
 #else

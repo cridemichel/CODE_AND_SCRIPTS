@@ -2062,6 +2062,7 @@ double **bpos[3], **bposold[3];
 extern double rA[3], rB[3];
 extern double **ratA, **ratB;
 #endif
+extern void find_bonds_flex_all(void);
 
 void StartRun(void)
 {
@@ -2233,9 +2234,16 @@ void StartRun(void)
     {
       //printf("nbonds[1841]=%d\n",numbonds[1841]);
       printf("[INFO] finding spots\n");
+#ifdef MC_BOND_POS
+      if (Oparams.ninters != 0)
+	{
+	  find_bonds_flex_all();
+	}
+#else
       if (Oparams.ninters != 0)
 	find_bonds();
-   }
+#endif
+    }
 
 ///////////
   //exit(-1);
@@ -4956,7 +4964,7 @@ double **eneij;
 #ifdef MC_BOND_POS
 void build_linked_list_bp(void)
 {
-  int kk, img, j, n, np, dix, diy, diz, i, ns;
+  int kk, img, j, n, np, dix, diy, diz, i, ns, bp[3];
   
   totspots=0;
   for (i=0; i < Oparams.parnum; i++)
@@ -4969,9 +4977,13 @@ void build_linked_list_bp(void)
     {
       i = n2sp_map[n].i;
       ns = n2sp_map[n].ns;
-      inCellBP[0][n] =  (bpos[0][i][ns] + L2[0]) * cellsxBP / L[0];
-      inCellBP[1][n] =  (bpos[1][i][ns] + L2[1]) * cellsyBP / L[1];
-      inCellBP[2][n] =  (bpos[2][i][ns] + L2[2]) * cellszBP / L[2];
+        /* consider spot in the first box */
+      for (kk=0; kk < 3; kk++)
+	bp[kk] = bpos[kk][i][ns] - L[kk]*rint(bpos[kk][i][ns]/L[kk]);
+
+      inCellBP[0][n] = (bp[0] + L2[0]) * cellsxBP / L[0];
+      inCellBP[1][n] = (bp[1] + L2[1]) * cellsyBP / L[1];
+      inCellBP[2][n] = (bp[2] + L2[2]) * cellszBP / L[2];
       j = (inCellBP[2][n]*cellsyBP + inCellBP[1][n])*cellsxBP + 
 	inCellBP[0][n] + totspots;
       cellListBP[n] = cellListBP[j];
