@@ -787,7 +787,7 @@ void find_bonds_one_BP(int i)
 	      shift[2] = L;
 #endif
 	    }
-	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY++) 
 	    {
 	      jY = inCellBP[1][is] + iY;    
 	      shift[1] = 0.0;
@@ -809,7 +809,7 @@ void find_bonds_one_BP(int i)
 		  shift[1] = L;
 #endif
 		}
-	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX++) 
 		{
 		  jX = inCellBP[0][is] + iX;    
 		  shift[0] = 0.0;
@@ -3705,6 +3705,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   UpdateOrient(i, ti, RtA, Omega);
 #endif
 #ifdef MC_BOND_POS
+  //BuildAtomPos(i, rA, RtA, ratA);
   BuildAtomPosBP(i, rA, RtA, ratA);
 #else  /* calcola le posizioni nel laboratorio degli atomi della molecola */
   BuildAtomPos(i, rA, RtA, ratA);
@@ -3753,6 +3754,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   UpdateOrient(j, ti, RtB, Omega);
 #endif
 #ifdef MC_BOND_POS
+  //BuildAtomPos(j, rB, RtB, ratB);
   BuildAtomPosBP(j, rB, RtB, ratB);
 #else  
   BuildAtomPos(j, rB, RtB, ratB);
