@@ -5,6 +5,15 @@ void update_spot_pos(int i, double dx, double dy, double dz);
 void update_spot_pos_dir(int i, int dir, double fact);
 #endif
 
+#ifdef MC_BOND_POS
+extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
+extern int totspots;
+#ifdef MC_BOUNDING_SPHERES
+extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
+extern int totspotsBS;
+extern int *checkBS;
+#endif
+
 #ifdef MD_SPOT_GLOBAL_ALLOC
 extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
 #else
@@ -2615,7 +2624,120 @@ int overlapMC_NNL(int na, int *err)
 #if defined(MC_CLUSTER_MOVE)|| defined(MC_CLUSTER_NPT)|| defined(MC_NPT_XYZ)
 int clsNPT=0;
 #endif
+#ifdef MC_BOUNDING_SPHERES
+void find_part_with_BS(int i)
+{
+  int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na, ns, ns2, j;
+  int cellRangeT[6];
+  double shift[3], sigmabs, distSq;
 
+  nb=-1;
+
+  for (ns = typesArr[typeOfPart[i]].nspots; ns < typesArr[typeOfPart[i]].nspotsBS + typesArr[typeOfPart[i]].nspots; ns++)
+    {
+      na = sp2n_map[i][ns];
+      for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
+
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+	{
+	  jZ = inCellBS[2][na] + iZ;    
+	  shift[2] = 0.;
+	  /* apply periodico boundary condition along z if gravitational
+	   * fiels is not present */
+	  if (jZ == -1) 
+	    {
+	      jZ = cellszBS - 1;    
+#ifdef MD_LXYZ
+	      shift[2] = - L[2];
+#else
+	      shift[2] = - L;
+#endif
+	    } 
+	  else if (jZ == cellszBS) 
+	    {
+	      jZ = 0;    
+#ifdef MD_LXYZ
+	      shift[2] = L[2];
+#else
+	      shift[2] = L;
+#endif
+	    }
+
+	  for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+	    {
+	      jY = inCellBS[1][na] + iY;    
+	      shift[1] = 0.0;
+	      if (jY == -1) 
+		{
+		  jY = cellsyBS - 1;    
+#ifdef MD_LXYZ
+		  shift[1] = -L[1];
+#else
+		  shift[1] = -L;
+#endif
+		} 
+	      else if (jY == cellsyBS) 
+		{
+		  jY = 0;    
+#ifdef MD_LXYZ
+		  shift[1] = L[1];
+#else
+		  shift[1] = L;
+#endif
+		}
+	      for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+		{
+		  jX = inCellBS[0][na] + iX;    
+		  shift[0] = 0.0;
+		  if (jX == -1) 
+		    {
+		      jX = cellsxBS - 1;    
+#ifdef MD_LXYZ
+		      shift[0] = - L[0];
+#else
+		      shift[0] = - L;
+#endif
+		    } 
+		  else if (jX == cellsxBS) 
+		    {
+		      jX = 0;   
+#ifdef MD_LXYZ
+		      shift[0] = L[0];
+#else
+		      shift[0] = L;
+#endif
+		    }
+		  n = (jZ *cellsy + jY) * cellsxBS + jX + totspotsBS;
+
+		  for (n = cellListBS[n]; n > -1; n = cellListBS[n]) 
+		    {
+		      if (n != na && n != nb && (nb >= -1 || n < na)) 
+			{
+			  //assign_bond_mapping(i,j);
+			  j = n2sp_map[n].i;
+			  ns2 = n2sp_map[n].ns;
+			  for (kk=0; kk < 3; kk++)
+			    shift[kk] = L[kk]*rint((bpos[kk][i][ns]-bpos[kk][j][ns2])/L[kk]); 
+
+			  for (kk=0; kk < 3; kk++)
+			    {
+			      rspA[kk] = bpos[kk][i][ns];
+			      rspB[kk] = bpos[kk][j][ns2] + shift[kk];
+			    }
+			  distSq = Sqr(rspA[0]-rspB[0])+Sqr(rspA[1]-rspB[1])+Sqr(rspA[2]-rspB[2]);
+			  sigmabs = 0.5*(typesArr[typeOfPart[i]].bsdiam + typesArr[typeOfPart[j]].bsdiam);
+			  if (distSq < Sqr(sigmabs))
+			    {
+			      checkBS[j] = 1; 
+			    }
+			}
+		    } 
+		}
+	    }
+	}
+    }
+}
+#endif
 int overlapMC_LL(int ip, int *err)
 {
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
@@ -2628,7 +2750,9 @@ int overlapMC_LL(int ip, int *err)
       cellRange[2*kk]   = - 1;
       cellRange[2*kk+1] =   1;
     }
-
+#ifdef MC_BOUNDING_SPHERES
+  find_part_with_BS(i);
+#endif
   for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
 
   for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -2743,13 +2867,6 @@ int overlapMC(int ip, int *err)
   else
     return overlapMC_LL(ip, err);
 }
-#ifdef MC_BOND_POS
-extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
-extern int totspots;
-#ifdef MC_BOUNDING_SPHERES
-extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
-extern int totspotsBS;
-#endif
 #ifdef MC_BOUNDING_SPHERES
 void remove_from_current_cell_BS(int i)
 {
@@ -2819,10 +2936,8 @@ void insert_in_new_cell(int i)
   cellList[n] = i;
 }
 #ifdef MC_BOND_POS
-extern int totspots;
 extern struct n2sp_struct *n2sp_map;
 extern int **sp2n_map;
-extern int totspots;
 #endif
 void update_LL(int n)
 {
