@@ -29,6 +29,7 @@ int totspots;
 #endif
 #ifdef MC_BOUNDING_SPHERES
 int totspotsBS;
+int *checkBS;
 #endif
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
@@ -5648,6 +5649,11 @@ void usrInitAft(void)
     }
   Oparams.rcutBS = maxsig*1.0001;
 
+  checkBS = malloc(sizeof(int)*Oparams.parnum);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      checkBS[i] = 0;
+    }
   cellsxBS = L[0]/Oparams.rcutBS;
   cellsyBS = L[1]/Oparams.rcutBS;
   cellszBS = L[2]/Oparams.rcutBS;
