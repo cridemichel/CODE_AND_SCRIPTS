@@ -2248,8 +2248,8 @@ void StartRun(void)
 	  sp2n_map[i][k2] = n;
 	  n++;
 	}	
-#endif
     } 
+#endif
   build_linked_list_bp();
 #ifdef MC_BOUNDING_SPHERES
   build_linked_list_bs();
