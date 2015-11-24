@@ -45,7 +45,9 @@ extern int *refind_bondsP;
 #endif
 
 #endif
-
+#ifdef MC_BOND_POS
+void update_spot_pos(int i, double dx, double dy, double dz);
+#endif
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
@@ -2852,6 +2854,9 @@ void pbccls(int ip)
   rx[ip] -= Dx; 
   ry[ip] -= Dy;
   rz[ip] -= Dz;
+#ifdef MC_BOND_POS
+  update_spot_pos(ip, -Dx, -Dy, -Dz);
+#endif
 }
 #endif
 #if 1 
@@ -4177,8 +4182,8 @@ void update_spot_pos(int i, double dx, double dy, double dz)
   for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
     {
       bpos[0][i][k2] += dx;
-      bpos[1][i][k2] -= dy;
-      bpos[2][i][k2] -= dz;
+      bpos[1][i][k2] += dy;
+      bpos[2][i][k2] += dz;
     }
 }
 #endif
@@ -4413,9 +4418,6 @@ void move_box_cluster_xyz(int *ierr)
 	      rx[ii] -= Dxcls[color[ii]];
 	      ry[ii] -= Dycls[color[ii]];
 	      rz[ii] -= Dzcls[color[ii]];
-#ifdef MC_BOND_POS
-	      update_spot_pos(i, -Dxcls[color[i]])
-#endif  
 	      rx[ii] += Dxpar[ii];
 	      ry[ii] += Dypar[ii];
 	      rz[ii] += Dzpar[ii]; 
@@ -4520,28 +4522,12 @@ void move_box_cluster_xyz(int *ierr)
 	  ry[i] += Dypar[i];
 	  rz[i] += Dzpar[i]; 
 #ifdef MC_BOND_POS
-	//update_spot_pos(i,  Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]]  );
-	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	    {
-	      bpos[0][i][k2] += Dxpar[i]-Dxcls[color[i]];
-	      bpos[1][i][k2] += Dypar[i]-Dycls[color[i]];
-	      bpos[2][i][k2] += Dzpar[i]-Dzcls[color[i]]; 
-	    }
+  	  update_spot_pos(i,  Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]]  );
 #endif 
 	  pbc(i);
 	}
 #else
-      memcpy(rx, vx, sizeof(double)*Oparams.parnum);
-      memcpy(ry, vy, sizeof(double)*Oparams.parnum);
-      memcpy(rz, vz, sizeof(double)*Oparams.parnum);
-#ifdef MC_BOND_POS
-      for (i=0; i < Oparams.parnum; i++)
-	for (k1=0; k1 < 3; k1++)
-	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	    {
-	      bpos[k1][i][k2] = bposold[k1][i][k2];
-	    } 
-#endif
+      restore_all_coords();
 #endif
       volrejMC++;
 #ifdef MC_STORELL
