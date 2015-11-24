@@ -2716,6 +2716,8 @@ void find_part_with_BS(int i)
 			  //assign_bond_mapping(i,j);
 			  j = n2sp_map[n].i;
 			  ns2 = n2sp_map[n].ns;
+			  if (j==i)
+			    continue;
 			  for (kk=0; kk < 3; kk++)
 			    shift[kk] = L[kk]*rint((bpos[kk][i][ns]-bpos[kk][j][ns2])/L[kk]); 
 
