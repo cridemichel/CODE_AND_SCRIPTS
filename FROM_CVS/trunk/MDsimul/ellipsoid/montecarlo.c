@@ -1,5 +1,6 @@
 #include<mdsimul.h>
 #undef DEBUG_HCMC
+
 #ifdef MC_BOND_POS
 void update_spot_pos(int i, double dx, double dy, double dz);
 void update_spot_pos_dir(int i, int dir, double fact);
@@ -12,6 +13,7 @@ extern int totspots;
 extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 extern int totspotsBS;
 extern int *checkBS;
+#endif
 #endif
 #ifdef MC_BOND_POS
 extern struct n2sp_struct *n2sp_map;
@@ -2638,7 +2640,6 @@ void find_part_with_BS(int i)
   nb=-1;
   for (j=0; j < Oparams.parnum; j++)
     checkBS[j] = 0;
-
   for (ns = typesArr[typeOfPart[i]].nspots; ns < typesArr[typeOfPart[i]].nspotsBS + typesArr[typeOfPart[i]].nspots; ns++)
     {
       na = sp2n_map[i][ns] - totspots;
@@ -2936,6 +2937,7 @@ void insert_in_new_cell_BS(int i)
 
 
 #endif
+#ifdef MC_BOND_POS
 void remove_from_current_cell_BP(int i)
 {
   int n;
