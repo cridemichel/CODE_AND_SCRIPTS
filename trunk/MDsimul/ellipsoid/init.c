@@ -27,7 +27,9 @@ struct n2sp_struct *n2sp_map;
 int **sp2n_map;
 int totspots;
 #endif
-
+#ifdef MC_BOUNDING_SPHERES
+int totspotsBS;
+#endif
 /* ==============>>> SHARED COUNTERS (DON'T TOUCH THESE)<<< ================ */
 void writeAsciiPars(FILE* fs, struct pascii strutt[]);
 void writeAllCor(FILE* fs, int saveAll);
@@ -119,6 +121,9 @@ extern COORD_TYPE W, K, T1xx, T1yy, T1zz,
 extern int **tree, *inCell[3], *cellList, cellsx, cellsy, cellsz, cellRange[2*NDIM];
 #ifdef MC_BOND_POS
 int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
+#endif
+#ifdef MC_BOUNDING_SPHERES
+int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
 int *inCell_NNL[3], *cellList_NNL;
@@ -267,10 +272,6 @@ double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 int *colorP, *color_dupP, *inCellP[3], *cellListP;
 int cellsxP, cellsyP, cellszP;
 #endif
-#endif
-#ifdef MC_BOND_POS
-int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
-int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 #endif
 
 /* ================================= */
@@ -2068,6 +2069,7 @@ void StartRun(void)
 {
   int j, k, n;
 #ifdef MC_BOND_POS
+  int extraspots;
   int k1, k2, i;
   int totspots;
 #endif  
@@ -2199,6 +2201,11 @@ void StartRun(void)
      mancherebbero tutti gli eventi relativi alle collisioni
      tra gli spot! */
 #ifdef MC_BOND_POS
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[i]].nspotsBS;
+#else
+  extraspots = 0;
+#endif
   for (i=0; i < Oparams.parnum; i++)
     {
       rA[0] = rx[i];
@@ -2209,7 +2216,7 @@ void StartRun(void)
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  //printf("i=%d spots=%d\n", i, typesArr[typeOfPart[i]].nspots);
-	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+	  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
 	    {
 	      bpos[k1][i][k2] = ratA[k2+1][k1];
 	      //printf("bpos[%d][%d][%d]=%f rA[%d]=%f\n", k1, i, k2, bpos[k1][i][k2], k1, rA[k1]);
@@ -2219,7 +2226,7 @@ void StartRun(void)
   n=0;
   for (i=0; i < Oparams.parnum; i++)
     {
-      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
 	{
 	  n2sp_map[n].i=i;
 	  n2sp_map[n].ns=k2;
@@ -2228,6 +2235,9 @@ void StartRun(void)
 	}	
     } 
   build_linked_list_bp();
+#ifdef MC_BOUNDING_SPHERES
+  build_linked_list_bs();
+#endif
 #endif
 
   if (Oparams.maxbondsSaved==-1)
@@ -3357,8 +3367,13 @@ void find_conciding_spots(void)
     {
       /* 10/06/2010: qui comunque inizializzao anche gli spot utilizzati per le NNL
       ossia quelli che vanno da typesArr[nt].nspots a typesArr[nt].nspots + MD_SPNNL_NUMSP */
+#ifdef MC_BOUNDING_SPHERES
+      for (ns1=0; ns1 < typesArr[nt].nspots + typesArr[nt].nspotsBS; ns1++)
+	typesArr[nt].spots[ns1].same=ns1;
+#else
       for (ns1=0; ns1 < typesArr[nt].nspots + MD_SPNNL_NUMSP; ns1++)
 	typesArr[nt].spots[ns1].same=ns1;
+#endif
       for (ns1=0; ns1 < typesArr[nt].nspots; ns1++)
 	{
 	  /* se spots[ns1].same=ns1 vuol dire che tale spots non coincide con nessun altro */
@@ -4961,6 +4976,33 @@ void get_restr_matrix(void)
 #ifdef MC_HYDROPHOBIC_INT
 double **eneij;
 #endif
+#ifdef MC_BOUNDING_SPHERES
+void build_linked_list_bs(void)
+{
+  int kk, img, j, n, np, dix, diy, diz, i, ns, bp[3];
+  
+  for (j = 0; j < cellsxBS*cellsyBS*cellszBS + totspotsBS; j++)
+    cellListBS[j] = -1;
+  //printf("cells=%d %d %d Lbig=%.15G L=%.15G\n", cellsx, cellsy, cellsz, Lbig, L);
+  for (n = 0; n < totspotsBS; n++)
+    {
+      i = n2sp_map[n+totspots].i;
+      ns = n2sp_map[n+totspots].ns;
+        /* consider spot in the first box */
+      for (kk=0; kk < 3; kk++)
+	bp[kk] = bpos[kk][i][ns] - L[kk]*rint(bpos[kk][i][ns]/L[kk]);
+
+      inCellBS[0][n] = (bp[0] + L2[0]) * cellsxBS / L[0];
+      inCellBS[1][n] = (bp[1] + L2[1]) * cellsyBS / L[1];
+      inCellBS[2][n] = (bp[2] + L2[2]) * cellszBS / L[2];
+      j = (inCellBS[2][n]*cellsyBS + inCellBS[1][n])*cellsxBS + 
+	inCellBS[0][n] + totspotsBS;
+      cellListBS[n] = cellListBS[j];
+      cellListBS[j] = n;
+    }
+}
+
+#endif
 #ifdef MC_BOND_POS
 void build_linked_list_bp(void)
 {
@@ -4994,6 +5036,10 @@ void build_linked_list_bp(void)
 void usrInitAft(void)
 {
   long long int maxp;
+#ifdef MC_BOUNDING_SPHERES
+  int maxdir, nBSsp;
+  double x0[3];
+#endif
   int numll, k1old, k2old, nl, numbm;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
@@ -5001,6 +5047,7 @@ void usrInitAft(void)
      all your function for initialization, like maps() in this case */
 #ifdef MC_BOND_POS
   double maxsig;
+  int ns;
 #endif
 #if defined(MD_CALC_VBONDING) && !defined(MC_SIMUL)
   OprogStatus.targetPhi=1.0;
@@ -5481,6 +5528,33 @@ void usrInitAft(void)
       ratAll[k] = ratAll[k-1] + 3;
 #endif
     }
+#ifdef MC_BOUNDING_SPHERES
+  for (nt = 0; nt < Oparams.ntypes; nt++)
+    {
+      /* assume che le particelle siano uniassiali e dispongo le bounding spheres lungo
+       * l'asse più lungo */
+      if (typesArr[nt].sax[0] > typesArr[nt].sax[1])
+	maxdir = 0;
+      else 
+	maxdir = 1;
+      if (typesArr[nt].sax[maxdir] < typesArr[nt].sax[2])
+	maxdir = 2;
+
+      typesArr[nt].bsdiam = 2.0/typesArr[nt].sax[(maxdir+1)%3];
+      typesArr[nt].nspotsBS = rint(typesArr[nt].sax[maxdir]*2.0/typesArr[nt].bsdiam);    
+     
+      x0[(maxdir+1)%3] = 0.0;
+      x0[(maxdir+2)%3] = 0.0;
+      x0[maxdir] = -typesArr[nt].sax[maxdir]+typesArr[nt].bsdiam*0.5;
+      for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    typesArr[nt].spots[ns+typesArr[nt].nspots].sigma.x[kk] = 0.0;
+	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma.x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
+	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0)*1.0001;
+	}
+    }
+#endif
 #ifdef MC_BOND_POS
   bpos[0] = malloc(sizeof(double*)*Oparams.parnum);
   bpos[1] = malloc(sizeof(double*)*Oparams.parnum);
@@ -5489,20 +5563,39 @@ void usrInitAft(void)
   bposold[1] = malloc(sizeof(double*)*Oparams.parnum);
   bposold[2] = malloc(sizeof(double*)*Oparams.parnum); 
   totspots=0;
+#ifdef MC_BOUNDING_SPHERES
+  totspotsBS = 0;
+#endif
   for (i=0; i < Oparams.parnum; i++)
-    totspots += typesArr[typeOfPart[i]].nspots;
+    {  
+      totspots += typesArr[typeOfPart[i]].nspots;
+#ifdef MC_BOUNDING_SPHERES
+      totspotsBS += typesArr[typeOfPart[i]].nspotsBS;
+#endif
+    }
+#ifdef MC_BOUNDING_SPHERES
+  totspots += totspotsBS;
+#endif
   bpos[0][0] = malloc(sizeof(double)*totspots);
   bpos[1][0] = malloc(sizeof(double)*totspots);
   bpos[2][0] = malloc(sizeof(double)*totspots);
   bposold[0][0] = malloc(sizeof(double)*totspots);
   bposold[1][0] = malloc(sizeof(double)*totspots);
   bposold[2][0] = malloc(sizeof(double)*totspots);
-  for (i=1; i < Oparams.parnum; i++)
+#ifdef MC_BOUNDING_SPHERES
+  totspots -= totspotsBS;
+#endif
+ for (i=1; i < Oparams.parnum; i++)
     {
       for (kk=0; kk < 3; kk++)
 	{
+#ifdef MC_BOUNDING_SPHERES
+	  bpos[kk][i] = bpos[kk][i-1] + typesArr[typeOfPart[i-1]].nspots + typesArr[typeOfPart[i-1]].nspotsBS;
+	  bposold[kk][i] = bposold[kk][i-1] + typesArr[typeOfPart[i-1]].nspots + typesArr[typeOfPart[i-1]].nspotsBS;
+#else
 	  bpos[kk][i] = bpos[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
 	  bposold[kk][i] = bposold[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
+#endif
 	}
     }
   if (Oparams.rcutBP==-1)
@@ -5525,23 +5618,48 @@ void usrInitAft(void)
   inCellBP[0] = malloc(sizeof(int)*totspots);
   inCellBP[1] = malloc(sizeof(int)*totspots);
   inCellBP[2] = malloc(sizeof(int)*totspots);
+#ifdef MC_BOUNDING_SPHERES
+  totspots += totspotsBS;
+#endif
   n2sp_map = malloc(sizeof(struct n2sp_struct)*totspots);
   sp2n_map = malloc(sizeof(int*)*Oparams.parnum);
   sp2n_map[0] = malloc(sizeof(int)*totspots);
+#ifdef MC_BOUNDING_SPHERES
+  totspots -= totspotsBS;
+#endif  
   for (i=1; i < Oparams.parnum; i++)
     {
+#ifdef MC_BOUNDING_SPHERES
+      sp2n_map[i] = sp2n_map[i-1] + typesArr[typeOfPart[i-1]].nspots + typesArr[typeOfPart[i-1]].nspotsBS;
+#else  
       sp2n_map[i] = sp2n_map[i-1] + typesArr[typeOfPart[i-1]].nspots;
+#endif
     }
-
 #endif
 #ifdef MC_BOUNDING_SPHERES
-  totBSs=0;
-  for (i=0; i < Oparams.parnum; i++)
-    totBSs += typesArr[typeOfPart[i]].totspots-typesArr[typeOfPart[i]].nspots;
-  cellListBS = malloc(sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totBSs));
-  inCellBS[0] = malloc(sizeof(int)*totBSs);
-  inCellBS[1]= malloc(sizeof(int)*totBSs);
-  inCellBS[2] = malloc(sizeof(int)*totBSs);
+  maxsig = 0.0;
+  for (k1=0; k1 < Oparams.ntypes; k1++)
+    {
+      for (k2=0; k2 < typesArr[k1].nspotsBS; k2++)
+	{
+	  if (typesArr[k1].spots[k2+typesArr[k1].nspots].sigma > maxsig)
+	    maxsig = typesArr[k1].spots[k2+typsArr[k1].nspots].sigma;
+	}
+    }
+  Oparams.rcutBS = maxsig*1.0001;
+
+  cellsxBS = L[0]/Oparams.rcutBS;
+  cellsyBS = L[1]/Oparams.rcutBS;
+  cellszBS = L[2]/Oparams.rcutBS;
+  cellListBS = malloc(sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totspotsBS));
+  inCellBS[0] = malloc(sizeof(int)*totspotsBS);
+  inCellBS[1] = malloc(sizeof(int)*totspotsBS);
+  inCellBS[2] = malloc(sizeof(int)*totspotsBS);
+
+  cellListBS = malloc(sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totspotsBS));
+  inCellBS[0] = malloc(sizeof(int)*totspotsBS);
+  inCellBS[1]= malloc(sizeof(int)*totspotsBS);
+  inCellBS[2] = malloc(sizeof(int)*totspotsBS);
 #endif
    for (k = 0; k < 6; k++)
     {
