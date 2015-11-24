@@ -1559,6 +1559,9 @@ void set_semiaxes_vb_mc(int ii, double fx, double fy, double fz)
 void store_coord(int ip)
 {
   int k1, k2;
+#ifdef MC_BOND_POS
+  int extraspots = 0;
+#endif
   rxold=rx[ip];
   ryold=ry[ip];
   rzold=rz[ip];
@@ -1566,8 +1569,11 @@ void store_coord(int ip)
     for (k2=0; k2<3; k2++)
       Rold[k1][k2]=R[ip][k1][k2]; 
 #ifdef MC_BOND_POS
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+#endif
   for (k1=0; k1 < 3; k1++)
-    for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots; k2++)
+    for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots + extraspots; k2++)
       {
 	bposold[k1][ip][k2] = bpos[k1][ip][k2];
       } 
@@ -1575,6 +1581,9 @@ void store_coord(int ip)
 }
 void restore_coord(int ip)
 {
+#ifdef MC_BOND_POS
+  int extraspots = 0;
+#endif
   int k1, k2;
   rx[ip]=rxold;
   ry[ip]=ryold;
@@ -1583,8 +1592,11 @@ void restore_coord(int ip)
     for (k2=0; k2<3; k2++)
       R[ip][k1][k2]=Rold[k1][k2]; 
 #ifdef MC_BOND_POS
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+#endif
   for (k1=0; k1 < 3; k1++)
-    for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots; k2++)
+    for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots + extraspots; k2++)
       {
 	bpos[k1][ip][k2] = bposold[k1][ip][k2];
       } 
@@ -1609,7 +1621,7 @@ void tra_move(int ip)
 {
   double dx, dy, dz;
 #ifdef MC_BOND_POS
-  int k1;
+  int k1, extraspots=0;
 #endif
   dx = OprogStatus.deltaMC*(ranf()-0.5);
   dy = OprogStatus.deltaMC*(ranf()-0.5);
@@ -1618,7 +1630,10 @@ void tra_move(int ip)
   ry[ip]+= dy;
   rz[ip]+= dz;
 #ifdef MC_BOND_POS
-  for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+#endif
+  for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots + extraspots; k1++)
     {
 	bpos[0][ip][k1] += dx;
 	bpos[1][ip][k1] += dy;
@@ -1664,6 +1679,9 @@ void remove_parall(int ip, double *ox, double *oy, double *oz)
 }
 void rot_move(int ip, int flip)
 {
+#ifdef MC_BOND_POS
+  int extraspots = 0;
+#endif
   double theta, thetaSq, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   int k1, k2, k3;
@@ -1744,7 +1762,10 @@ void rot_move(int ip, int flip)
   rA[1] = ry[ip];
   rA[2] = rz[ip];
   BuildAtomPos(ip, rA, R[ip], ratA);
-  for (k1 = 0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+#endif
+  for (k1 = 0; k1 < typesArr[typeOfPart[ip]].nspots + extraspots; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	bpos[k2][ip][k1] = ratA[k1+1][k2];
@@ -2725,6 +2746,34 @@ int overlapMC(int ip, int *err)
 #ifdef MC_BOND_POS
 extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
 extern int totspots;
+#ifdef MC_BOUNDING_SPHERES
+extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
+extern int totspotsBS;
+#endif
+#ifdef MC_BOUNDING_SPHERES
+void remove_from_current_cell_BS(int i)
+{
+  int n;
+  n = (inCellBS[2][i] * cellsyBS + inCellBS[1][i])*cellsxBS + inCellBS[0][i]
+    + totspotsBS;
+  
+  while (cellListBS[n] != i) 
+    n = cellListBS[n];
+  /* Eliminazione di evIdA dalla lista della cella n-esima */
+  cellListBS[n] = cellListBS[i];
+}
+void insert_in_new_cell_BS(int i)
+{
+  int n;
+  n = (inCellBS[2][i] * cellsyBS + inCellBS[1][i])*cellsxBS + 
+    inCellBS[0][i] + totspotsBS;
+  /* Inserimento di evIdA nella nuova cella (head) */
+  cellListBS[i] = cellListBS[n];
+  cellListBS[n] = i;
+}
+
+
+#endif
 void remove_from_current_cell_BP(int i)
 {
   int n;
@@ -2866,7 +2915,7 @@ void pbc(int ip)
 {
   double L2[3], Ll[3];
 #ifdef MC_BOND_POS
-  int k1;
+  int k1, extraspots = 0;
   double Dx, Dy, Dz;
 #endif  
 #ifdef MD_LXYZ
@@ -2887,7 +2936,10 @@ void pbc(int ip)
   rx[ip] -= Dx;
   ry[ip] -= Dy;
   rz[ip] -= Dz;
-  for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots; k1++)
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[ip]].nspotsBS;
+#endif
+  for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots + extraspots; k1++)
     {
       bpos[0][ip][k1] -= Dx;
       bpos[1][ip][k1] -= Dy;
@@ -2949,6 +3001,9 @@ int cxini=-1, cyini=-1, czini=-1;
 #ifdef MC_BOND_POS
 int cxiniBP=-1, cyiniBP=-1, cziniBP=-1;
 #endif
+#ifdef MC_BOUNDING_SPHERES
+int cxiniBS=-1, cyiniBS=-1, cziniBS=-1;
+#endif
 void update_numcells(void)
 {
 #ifdef MD_LXYZ
@@ -2970,14 +3025,29 @@ void update_numcells(void)
   cellsyBP = L[1] / Oparams.rcutBP;
   cellszBP = L[2] / Oparams.rcutBP;
 #else
-  cellsx = L / Oparams.rcut;
-  cellsy = L / Oparams.rcut;
-  cellsz = L / Oparams.rcut;
+  cellsxBP = L / Oparams.rcutBP;
+  cellsyBP = L / Oparams.rcutBP;
+  cellszBP = L / Oparams.rcutBP;
 #endif
-  if (cellsxBP > cxini || cellsyBP > cyini || cellszBP > czini)
+  if (cellsxBP > cxiniBP || cellsyBP > cyiniBP || cellszBP > cziniBP)
     {
       cellListBP = realloc(cellListBP, sizeof(int)*(cellsxBP*cellsyBP*cellszBP+totspots));
     } 
+#ifdef MC_BOUNDING_SPHERES
+#ifdef MD_LXYZ
+  cellsxBS = L[0] / Oparams.rcutBS;
+  cellsyBS = L[1] / Oparams.rcutBS;
+  cellszBS = L[2] / Oparams.rcutBS;
+#else
+  cellsxBS = L / Oparams.rcutBS;
+  cellsyBS = L / Oparams.rcutBS;
+  cellszBS = L / Oparams.rcutBS;
+#endif
+  if (cellsxBS > cxiniBS || cellsyBS > cyiniBS || cellszBS > cziniBS)
+    {
+      cellListBS = realloc(cellListBS, sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totspotsBS));
+    } 
+#endif
 #endif
 }
 void find_bonds_flex_NNL(void);
@@ -4148,7 +4218,12 @@ int check_bonds_mc(char *txt)
 void update_spot_pos_dir(int i, int dir, double del)
 {
   int k2;
-  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+  int extraspots = 0;
+
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typesArr[i]].nspotsBS;
+#endif
+  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
     {
       bpos[dir][i][k2] += del;
     }
@@ -4156,7 +4231,12 @@ void update_spot_pos_dir(int i, int dir, double del)
 void update_spot_pos(int i, double dx, double dy, double dz)
 {
   int k2;
-  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+  int extraspots = 0;
+
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typesArr[i]].nspotsBS;
+#endif
+  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
     {
       bpos[0][i][k2] += dx;
       bpos[1][i][k2] += dy;
@@ -4170,34 +4250,49 @@ void update_spot_pos(int i, double dx, double dy, double dz)
 void store_all_coords(void)
 {
   int i, k1, k2;
+#ifdef MC_BOND_POS
+  int extraspots = 0;
+#endif
   memcpy(vx, rx, sizeof(double)*Oparams.parnum);
   memcpy(vy, ry, sizeof(double)*Oparams.parnum);
   memcpy(vz, rz, sizeof(double)*Oparams.parnum);
 #ifdef MC_BOND_POS
   for (i=0; i < Oparams.parnum; i++)
-    for (k1=0; k1 < 3; k1++)
-      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	{
-	  bposold[k1][i][k2] = bpos[k1][i][k2];
-	} 
+    {
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typeOfPart[i].nspotsBS;
+#endif
+      for (k1=0; k1 < 3; k1++)
+    	for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
+  	  {
+  	    bposold[k1][i][k2] = bpos[k1][i][k2];
+  	  } 
+    }
 #endif
 }
 void restore_all_coords(void)
 {
   int k1, k2, i;
-  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
+#ifdef MC_BOND_POS
+  int extraspots = 0;
+#endif
+   memcpy(rx, vx, sizeof(double)*Oparams.parnum);
   memcpy(ry, vy, sizeof(double)*Oparams.parnum);
   memcpy(rz, vz, sizeof(double)*Oparams.parnum);
 #ifdef MC_BOND_POS
   for (i=0; i < Oparams.parnum; i++)
-    for (k1=0; k1 < 3; k1++)
-      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-	{
-	  bpos[k1][i][k2] = bposold[k1][i][k2];
-	} 
+    {
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typeOfPart[i].nspotsBS;
+#endif
+      for (k1=0; k1 < 3; k1++)
+    	for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
+  	  {
+  	    bpos[k1][i][k2] = bposold[k1][i][k2];
+  	  } 
+    }
 #endif
 }
-
 
 void move_box_cluster_xyz(int *ierr)
 {
@@ -9904,6 +9999,14 @@ void move(void)
       cxiniBP=cellsxBP;
       cyiniBP=cellsyBP;
       cziniBP=cellszBP;
+    }
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  if (cxiniBS==-1)
+    {
+      cxiniBS=cellsxBS;
+      cyiniBS=cellsyBS;
+      cziniBS=cellszBS;
     }
 #endif
   if (OprogStatus.nvbbias > 0)

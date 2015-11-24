@@ -149,6 +149,10 @@ typedef struct
   int ignoreCore;/* if 1 ignore collisions of the core object */
   int brownian;
   int nspots;
+#ifdef MC_BOUNDING_SPHERES
+  int nspotsBS;
+  double bsdiam;
+#endif
   spotStruct* spots; 
   int nhardobjs; /* one can add other sub-objects to build a super-object made of 
 		   several super-ellipsoids with their spots */
@@ -1010,6 +1014,9 @@ double a[2];
   double rcut;
 #ifdef MC_BOND_POS
   double rcutBP;
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  double rcutBS;
 #endif
   int equilibrat;               /* != 0 if equilibrating */
   int M;                        /* number of cells in each direction 
