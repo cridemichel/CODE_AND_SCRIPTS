@@ -756,7 +756,6 @@ void find_bonds_one_BP(int i)
   int nn,  amin, bmin, j, nbonds, bonded, is, nnn, na, nb;
   double shift[3], dist, sigmaflex;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
-
   for (ns1 = 0; ns1 < typesArr[typeOfPart[i]].nspots; ns1++)
     {
       for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
