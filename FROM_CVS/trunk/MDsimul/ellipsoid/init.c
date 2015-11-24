@@ -5024,7 +5024,8 @@ void build_linked_list_bs(void)
 #ifdef MC_BOND_POS
 void build_linked_list_bp(void)
 {
-  int kk, img, j, n, np, dix, diy, diz, i, ns, bp[3];
+  int kk, img, j, n, np, dix, diy, diz, i, ns;
+  double bp[3];
   
   totspots=0;
   for (i=0; i < Oparams.parnum; i++)
