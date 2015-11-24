@@ -2637,9 +2637,11 @@ void find_part_with_BS(int i)
 
   nb=-1;
 
+  for (j=0; j < Oparams.parnum; j++)
+    checkBS[j] = 0;
   for (ns = typesArr[typeOfPart[i]].nspots; ns < typesArr[typeOfPart[i]].nspotsBS + typesArr[typeOfPart[i]].nspots; ns++)
     {
-      na = sp2n_map[i][ns];
+      na = sp2n_map[i][ns]-totspots;
       for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
 
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -2711,15 +2713,15 @@ void find_part_with_BS(int i)
 		      shift[0] = L;
 #endif
 		    }
-		  n = (jZ *cellsy + jY) * cellsxBS + jX + totspotsBS;
+		  n = (jZ *cellsyBS + jY) * cellsxBS + jX + totspotsBS;
 
 		  for (n = cellListBS[n]; n > -1; n = cellListBS[n]) 
 		    {
 		      if (n != na && n != nb && (nb >= -1 || n < na)) 
 			{
 			  //assign_bond_mapping(i,j);
-			  j = n2sp_map[n].i;
-			  ns2 = n2sp_map[n].ns;
+			  j = n2sp_map[n+totspots].i;
+			  ns2 = n2sp_map[n+totspots].ns;
 			  if (j==i)
 			    continue;
 			  for (kk=0; kk < 3; kk++)
@@ -2731,7 +2733,7 @@ void find_part_with_BS(int i)
 			      rspB[kk] = bpos[kk][j][ns2] + shift[kk];
 			    }
 			  distSq = Sqr(rspA[0]-rspB[0])+Sqr(rspA[1]-rspB[1])+Sqr(rspA[2]-rspB[2]);
-			  sigmabs = 0.5*(typesArr[typeOfPart[i]].bsdiam + typesArr[typeOfPart[j]].bsdiam);
+			  sigmabs = 0.5*(typesArr[typeOfPart[i]].spots[ns].sigma + typesArr[typeOfPart[j]].spots[ns2].sigma);
 			  if (distSq < Sqr(sigmabs))
 			    {
 			      checkBS[j] = 1; 
@@ -2836,10 +2838,10 @@ int overlapMC_LL(int ip, int *err)
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
 #ifdef MC_BOUNDING_SPHERES
+#if 1
 		      if (!checkBS[n])
 			continue;
-		      else
-			checkBS[n] = 0;
+#endif
 #endif
 #if defined(EDHE_FLEX) && 0
 		      if (!may_interact_all(na, n))
