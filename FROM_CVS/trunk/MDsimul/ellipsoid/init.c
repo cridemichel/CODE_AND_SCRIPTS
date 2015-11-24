@@ -4909,7 +4909,7 @@ void calc_vbonding(void)
 
 #endif
 #ifdef MC_SIMUL
-void build_parallelepipeds(void);
+extern void build_parallelepipeds(void);
 double vnonbond;
 double *max_step_MC;
 double *overestimate_of_displ;
@@ -7463,7 +7463,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	   }
 	 fprintf(fs, ".Bonds: 0-1[0.1:green],0-2[0.1:green],0-3[0.1:green],1-2[0.1:green],1-3[0.1:green],2-3[0.1:green]\n");
 #else
-#if 1
+#if 0
 	 for (nn = 1+ typesArr[typeOfPart[i]].nspots; nn < typesArr[typeOfPart[i]].nspots+1+typesArr[typeOfPart[i]].nspotsBS; nn++)
 	   {
 //	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 

@@ -370,6 +370,7 @@ extern double scalProd(double *A, double *B);
 extern int numOfClusters, *clsdim;
 #endif
 extern void build_clusters(int *Ncls, int *percolating, int check_perc);
+#if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined (MC_NPT_XYZ)
 void calc_monodimtri(int cs[], int nmax)
 {
   int nc, ncls, percolating, kk;
@@ -382,6 +383,7 @@ void calc_monodimtri(int cs[], int nmax)
 	(cs[(clsdim[nc]/2)-1])++;
     }
 }
+#endif
 double calc_average_relative_orient(void)
 {
   int kk, i;
