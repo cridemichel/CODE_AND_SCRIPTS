@@ -2065,7 +2065,9 @@ extern double rA[3], rB[3];
 extern double **ratA, **ratB;
 #endif
 extern void find_bonds_flex_all(void);
-
+#ifdef MC_BOUNDING_SPHERES
+void build_linked_list_bs(void);
+#endif
 void StartRun(void)
 {
   int j, k, n;
@@ -5038,7 +5040,7 @@ void usrInitAft(void)
 {
   long long int maxp;
 #ifdef MC_BOUNDING_SPHERES
-  int maxdir, nBSsp;
+  int maxdir, nBSsp, nt;
   double x0[3];
 #endif
   int numll, k1old, k2old, nl, numbm;
@@ -5550,8 +5552,8 @@ void usrInitAft(void)
       for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
 	{
 	  for (kk=0; kk < 3; kk++)
-	    typesArr[nt].spots[ns+typesArr[nt].nspots].sigma.x[kk] = 0.0;
-	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma.x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
+	    typesArr[nt].spots[ns+typesArr[nt].nspots].x[kk] = 0.0;
+	  typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
 	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0)*1.0001;
 	}
     }
@@ -5644,7 +5646,7 @@ void usrInitAft(void)
       for (k2=0; k2 < typesArr[k1].nspotsBS; k2++)
 	{
 	  if (typesArr[k1].spots[k2+typesArr[k1].nspots].sigma > maxsig)
-	    maxsig = typesArr[k1].spots[k2+typsArr[k1].nspots].sigma;
+	    maxsig = typesArr[k1].spots[k2+typesArr[k1].nspots].sigma;
 	}
     }
   Oparams.rcutBS = maxsig*1.0001;
