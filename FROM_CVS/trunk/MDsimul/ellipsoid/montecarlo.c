@@ -13,7 +13,10 @@ extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 extern int totspotsBS;
 extern int *checkBS;
 #endif
-
+#ifdef MC_BOND_POS
+extern struct n2sp_struct *n2sp_map;
+extern int **sp2n_map;
+#endif
 #ifdef MD_SPOT_GLOBAL_ALLOC
 extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
 #else
@@ -1579,7 +1582,7 @@ void store_coord(int ip)
       Rold[k1][k2]=R[ip][k1][k2]; 
 #ifdef MC_BOND_POS
 #ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+  extraspots = typesArr[typeOfPart[ip]].nspotsBS;
 #endif
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots + extraspots; k2++)
@@ -1602,7 +1605,7 @@ void restore_coord(int ip)
       R[ip][k1][k2]=Rold[k1][k2]; 
 #ifdef MC_BOND_POS
 #ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+  extraspots = typesArr[typeOfPart[ip]].nspotsBS;
 #endif
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots + extraspots; k2++)
@@ -1640,7 +1643,7 @@ void tra_move(int ip)
   rz[ip]+= dz;
 #ifdef MC_BOND_POS
 #ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+  extraspots = typesArr[typeOfPart[ip]].nspotsBS;
 #endif
   for (k1=0; k1 < typesArr[typeOfPart[ip]].nspots + extraspots; k1++)
     {
@@ -1772,7 +1775,7 @@ void rot_move(int ip, int flip)
   rA[2] = rz[ip];
   BuildAtomPos(ip, rA, R[ip], ratA);
 #ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typeOfPart[ip].nspotsBS];
+  extraspots = typesArr[typeOfPart[ip]].nspotsBS;
 #endif
   for (k1 = 0; k1 < typesArr[typeOfPart[ip]].nspots + extraspots; k1++)
     {
@@ -2630,6 +2633,7 @@ void find_part_with_BS(int i)
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na, ns, ns2, j;
   int cellRangeT[6];
   double shift[3], sigmabs, distSq;
+  double rspA[3], rspB[3];
 
   nb=-1;
 
@@ -2753,7 +2757,7 @@ int overlapMC_LL(int ip, int *err)
       cellRange[2*kk+1] =   1;
     }
 #ifdef MC_BOUNDING_SPHERES
-  find_part_with_BS(i);
+  find_part_with_BS(ip);
 #endif
   for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
 
@@ -2943,10 +2947,7 @@ void insert_in_new_cell(int i)
   cellList[i] = cellList[n];
   cellList[n] = i;
 }
-#ifdef MC_BOND_POS
-extern struct n2sp_struct *n2sp_map;
-extern int **sp2n_map;
-#endif
+
 void update_LL(int n)
 {
   int cox, coy, coz, cx, cy, cz;
@@ -4344,7 +4345,7 @@ void update_spot_pos_dir(int i, int dir, double del)
   int extraspots = 0;
 
 #ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typesArr[i]].nspotsBS;
+  extraspots = typesArr[typeOfPart[i]].nspotsBS;
 #endif
   for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
     {
@@ -4357,7 +4358,7 @@ void update_spot_pos(int i, double dx, double dy, double dz)
   int extraspots = 0;
 
 #ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typesArr[i]].nspotsBS;
+  extraspots = typesArr[typeOfPart[i]].nspotsBS;
 #endif
   for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
     {
@@ -4383,7 +4384,7 @@ void store_all_coords(void)
   for (i=0; i < Oparams.parnum; i++)
     {
 #ifdef MC_BOUNDING_SPHERES
-      extraspots = typeOfPart[i].nspotsBS;
+      extraspots = typesArr[typeOfPart[i]].nspotsBS;
 #endif
       for (k1=0; k1 < 3; k1++)
     	for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
@@ -4406,7 +4407,7 @@ void restore_all_coords(void)
   for (i=0; i < Oparams.parnum; i++)
     {
 #ifdef MC_BOUNDING_SPHERES
-      extraspots = typeOfPart[i].nspotsBS;
+      extraspots = typesArr[typeOfPart[i]].nspotsBS;
 #endif
       for (k1=0; k1 < 3; k1++)
     	for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
