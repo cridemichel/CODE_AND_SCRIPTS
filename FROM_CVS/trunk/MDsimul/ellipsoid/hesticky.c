@@ -3342,7 +3342,9 @@ void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3])
   spots = typesArr[typei].spots;
   NSP = typesArr[typei].nspots+1;
   BSP = 0;
-
+#ifdef MC_BOUNDING_SPHERES
+  NSP += typesArr[typei].nspotsBS;
+#endif
 #if 1 //defined(MD_SUPERELLIPSOID)
   /* NOTA 16/04/2010: se BuildAtomPos viene chiamata durante la ricerca del tempo di uscita degli spot
      allora considera anche gli MD_SPNNL_NUMSP spot extra utilizzati per le SPNNL (sticky spots NNL) */
