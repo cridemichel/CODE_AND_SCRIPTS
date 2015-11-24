@@ -10766,6 +10766,9 @@ void velsBrown(double T)
 }
 #ifdef MC_BOND_POS
 extern void build_linked_list_bp(void);
+#ifdef MC_BOUNDING_SPHERES
+extern void build_linked_list_bs(void);
+#endif
 #endif
 void rebuildLinkedList(void)
 {
@@ -10773,6 +10776,9 @@ void rebuildLinkedList(void)
 
 #ifdef MC_BOND_POS
   build_linked_list_bp();
+#ifdef MC_BOUNDING_SPHERES
+  build_linked_list_bs();
+#endif
 #endif
   for (j = 0; j < cellsx*cellsy*cellsz + Oparams.parnum; j++)
     cellList[j] = -1;
