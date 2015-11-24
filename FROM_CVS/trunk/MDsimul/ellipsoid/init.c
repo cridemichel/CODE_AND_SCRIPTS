@@ -5053,6 +5053,7 @@ void build_linked_list_bp(void)
 void usrInitAft(void)
 {
   long long int maxp;
+  int numsps;
 #ifdef MC_BOUNDING_SPHERES
   int maxdir, nBSsp, nt;
   double x0[3];
@@ -5452,6 +5453,36 @@ void usrInitAft(void)
   RtB = matrix(3, 3);
   Aip = matrix(3,3);
   R = malloc(sizeof(double**)*Oparams.parnum);
+#ifdef MC_BOUNDING_SPHERES
+  for (nt = 0; nt < Oparams.ntypes; nt++)
+    {
+      /* assume che le particelle siano uniassiali e dispongo le bounding spheres lungo
+       * l'asse più lungo */
+      if (typesArr[nt].sax[0] > typesArr[nt].sax[1])
+	maxdir = 0;
+      else 
+	maxdir = 1;
+      if (typesArr[nt].sax[maxdir] < typesArr[nt].sax[2])
+	maxdir = 2;
+
+      typesArr[nt].bsdiam = 2.0*typesArr[nt].sax[(maxdir+1)%3];
+      typesArr[nt].nspotsBS = rint(typesArr[nt].sax[maxdir]*2.0/typesArr[nt].bsdiam);    
+     
+      x0[(maxdir+1)%3] = 0.0;
+      x0[(maxdir+2)%3] = 0.0;
+      x0[maxdir] = -typesArr[nt].sax[maxdir]+typesArr[nt].bsdiam*0.5;
+      for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    typesArr[nt].spots[ns+typesArr[nt].nspots].x[kk] = 0.0;
+	  typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
+	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0);
+	}
+      typesArr[nt].bsdiam *= sqrt(2.0);
+      printf("maxdir=%d nspotsBS=%d sigma=%f\n", maxdir, typesArr[nt].nspotsBS, typesArr[nt].bsdiam*sqrt(2.0)*1.0001);
+    }
+#endif
+
 #ifdef MC_CLUSTER_MOVE
   RoldAll = malloc(sizeof(double**)*Oparams.parnum);
 #endif
@@ -5520,11 +5551,16 @@ void usrInitAft(void)
 #ifdef MD_SPOT_GLOBAL_ALLOC
   for (pt = 0; pt < Oparams.ntypes; pt++)
     {
-      if (first || typesArr[pt].nspots > maxsp)
-	{
-	  maxsp = typesArr[pt].nspots;
-	  first = 0;
-	}
+#ifdef MC_BOUNDING_SPHERES
+      numsps = typesArr[pt].nspots + typesArr[pt].nspotsBS;
+#else
+      numsps = typesArr[pt].nspots;
+#endif
+     	if (first || numsps > maxsp)
+  	  {
+  	    maxsp = numsps;
+  	    first = 0;
+  	  }
     }
   maxsp += MD_SPNNL_NUMSP+1;
   printf("============>maxsp=%d\n", maxsp);
@@ -5545,33 +5581,6 @@ void usrInitAft(void)
       ratAll[k] = ratAll[k-1] + 3;
 #endif
     }
-#ifdef MC_BOUNDING_SPHERES
-  for (nt = 0; nt < Oparams.ntypes; nt++)
-    {
-      /* assume che le particelle siano uniassiali e dispongo le bounding spheres lungo
-       * l'asse più lungo */
-      if (typesArr[nt].sax[0] > typesArr[nt].sax[1])
-	maxdir = 0;
-      else 
-	maxdir = 1;
-      if (typesArr[nt].sax[maxdir] < typesArr[nt].sax[2])
-	maxdir = 2;
-
-      typesArr[nt].bsdiam = 2.0/typesArr[nt].sax[(maxdir+1)%3];
-      typesArr[nt].nspotsBS = rint(typesArr[nt].sax[maxdir]*2.0/typesArr[nt].bsdiam);    
-     
-      x0[(maxdir+1)%3] = 0.0;
-      x0[(maxdir+2)%3] = 0.0;
-      x0[maxdir] = -typesArr[nt].sax[maxdir]+typesArr[nt].bsdiam*0.5;
-      for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
-	{
-	  for (kk=0; kk < 3; kk++)
-	    typesArr[nt].spots[ns+typesArr[nt].nspots].x[kk] = 0.0;
-	  typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
-	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0)*1.0001;
-	}
-    }
-#endif
 #ifdef MC_BOND_POS
   bpos[0] = malloc(sizeof(double*)*Oparams.parnum);
   bpos[1] = malloc(sizeof(double*)*Oparams.parnum);
@@ -5664,7 +5673,7 @@ void usrInitAft(void)
 	}
     }
   Oparams.rcutBS = maxsig*1.0001;
-
+  printf("rcutBS=%f\n", Oparams.rcutBS);
   checkBS = malloc(sizeof(int)*Oparams.parnum);
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -6962,7 +6971,9 @@ void usrInitAft(void)
       break;
 #endif
     }
-
+#ifdef MC_BOUNDING_SPHERES
+  printf("Using bounding sphere complexes\n");
+#endif
 #if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined(MC_NPT_XYZ) 
   if (OprogStatus.clsmovprob > 0.0)
     printf("Using cluster moves!\n");
@@ -7451,6 +7462,11 @@ void writeAllCor(FILE* fs, int saveAll)
 	   }
 	 fprintf(fs, ".Bonds: 0-1[0.1:green],0-2[0.1:green],0-3[0.1:green],1-2[0.1:green],1-3[0.1:green],2-3[0.1:green]\n");
 #else
+#if 0
+	 for (nn = 1+ typesArr[typeOfPart[i]].nspots; nn < typesArr[typeOfPart[i]].nspots+1+typesArr[typeOfPart[i]].nspotsBS; nn++)
+	   fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#endif
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
