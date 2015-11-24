@@ -2634,15 +2634,20 @@ void find_part_with_BS(int i)
   int cellRangeT[6];
   double shift[3], sigmabs, distSq;
   double rspA[3], rspB[3];
-
+  
   nb=-1;
-
   for (j=0; j < Oparams.parnum; j++)
     checkBS[j] = 0;
+
   for (ns = typesArr[typeOfPart[i]].nspots; ns < typesArr[typeOfPart[i]].nspotsBS + typesArr[typeOfPart[i]].nspots; ns++)
     {
       na = sp2n_map[i][ns] - totspots;
       for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
+      for (kk = 0;  kk < 3; kk++)
+	{
+	  cellRange[2*kk]   = - 1;
+	  cellRange[2*kk+1] =   1;
+	}
 
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
 	{
@@ -2721,6 +2726,8 @@ void find_part_with_BS(int i)
 			{
 			  //assign_bond_mapping(i,j);
 			  j = n2sp_map[n+totspots].i;
+			  if (checkBS[j])
+			    continue;
 			  ns2 = n2sp_map[n+totspots].ns;
 #if 0
 			  if (ns2 < 2)
@@ -2739,8 +2746,15 @@ void find_part_with_BS(int i)
 			      rspA[kk] = bpos[kk][i][ns];
 			      rspB[kk] = bpos[kk][j][ns2] + shift[kk];
 			    }
+
 			  distSq = Sqr(rspA[0]-rspB[0])+Sqr(rspA[1]-rspB[1])+Sqr(rspA[2]-rspB[2]);
 			  sigmabs = 0.5*(typesArr[typeOfPart[i]].spots[ns].sigma + typesArr[typeOfPart[j]].spots[ns2].sigma);
+#if 0
+			  if ((i==2328 && j==2330)||(i==2330 && j==2328))
+			    {
+			      printf("[%d-%d] distSq=%f sigmaSq=%f ns=%d ns2=%d\n", i, j, distSq, Sqr(sigmabs), ns, ns2);
+			    }
+#endif	
 			  if (distSq <= Sqr(sigmabs))
 			    {
 			      checkBS[j] = 1; 
@@ -2847,7 +2861,17 @@ int overlapMC_LL(int ip, int *err)
 #ifdef MC_BOUNDING_SPHERES
 #if 1
 		      if (!checkBS[n])
-			continue;
+			{
+#if 0
+			  if (check_overlap(na, n, shift, err)<0.0)
+			    {
+			      printf("we have a big problem!\n");
+			      store_bump(na, n);
+			      exit(-1);
+			    }			    
+#endif
+			  continue;
+			}
 #endif
 #endif
 #if defined(EDHE_FLEX) && 0
