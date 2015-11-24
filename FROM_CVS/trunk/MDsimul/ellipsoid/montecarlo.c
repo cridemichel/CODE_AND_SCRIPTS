@@ -1,5 +1,10 @@
 #include<mdsimul.h>
 #undef DEBUG_HCMC
+#ifdef MC_BOND_POS
+void update_spot_pos(int i, double dx, double dy, double dz);
+void update_spot_pos_dir(int i, int dir, double fact);
+#endif
+
 #ifdef MD_SPOT_GLOBAL_ALLOC
 extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
 #else
@@ -44,9 +49,6 @@ extern int *numbondsP, **bondsP;
 extern int *refind_bondsP;
 #endif
 
-#endif
-#ifdef MC_BOND_POS
-void update_spot_pos(int i, double dx, double dy, double dz);
 #endif
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
@@ -4141,6 +4143,28 @@ int check_bonds_mc(char *txt)
   return 0;
 }
 #endif
+
+#ifdef MC_BOND_POS
+void update_spot_pos_dir(int i, int dir, double del)
+{
+  int k2;
+  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+    {
+      bpos[dir][i][k2] += del;
+    }
+}
+void update_spot_pos(int i, double dx, double dy, double dz)
+{
+  int k2;
+  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
+    {
+      bpos[0][i][k2] += dx;
+      bpos[1][i][k2] += dy;
+      bpos[2][i][k2] += dz;
+    }
+}
+#endif
+
 #ifdef MC_NPT_XYZ
 #define MC_CLSNPT_LOG
 void store_all_coords(void)
@@ -4175,18 +4199,6 @@ void restore_all_coords(void)
 }
 
 
-#ifdef MC_BOND_POS
-void update_spot_pos(int i, double dx, double dy, double dz)
-{
-  int k2;
-  for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
-    {
-      bpos[0][i][k2] += dx;
-      bpos[1][i][k2] += dy;
-      bpos[2][i][k2] += dz;
-    }
-}
-#endif
 void move_box_cluster_xyz(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
@@ -4522,7 +4534,7 @@ void move_box_cluster_xyz(int *ierr)
 	  ry[i] += Dypar[i];
 	  rz[i] += Dzpar[i]; 
 #ifdef MC_BOND_POS
-  	  update_spot_pos(i,  Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]]  );
+  	  update_spot_pos(i,  Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]]);
 #endif 
 	  pbc(i);
 	}
@@ -4606,9 +4618,7 @@ void move_box_cluster(int *ierr)
     }
 #ifdef MC_STORE_ALL_COORDS
   /* I use velocity arrays to store coordinates, in MC simulations they are unused! */
-  memcpy(vx, rx, sizeof(double)*Oparams.parnum);
-  memcpy(vy, ry, sizeof(double)*Oparams.parnum);
-  memcpy(vz, rz, sizeof(double)*Oparams.parnum);
+  store_all_coords();
 #endif
   for (nc=0; nc < ncls; nc++)
     {
@@ -4645,9 +4655,15 @@ void move_box_cluster(int *ierr)
 	  lastry = ry[iold];
 	  lastrz = rz[iold];
 #ifdef MC_STORE_ALL_COORDS
-	  rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
-	  ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
-	  rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+	  del[0] = L[0]*rint((rx[i]-lastrx)/L[0]);
+	  del[1] = L[1]*rint((ry[i]-lastry)/L[1]); 
+	  del[2] = L[2]*rint((rz[i]-lastrz)/L[2]);
+	  rx[i] -= del[0];
+	  ry[i] -= del[1];
+	  rz[i] -= del[2];
+#ifdef MC_BOND_POS
+	  update_spot_pos(i, -del[0], -del[1], -del[2]);
+#endif
 #else
 #ifdef MD_LXYZ
 	  Dxpar[i] = L[0]*rint((rx[i]-lastrx)/L[0]);
@@ -4661,6 +4677,9 @@ void move_box_cluster(int *ierr)
     	  rx[i] -= Dxpar[i];
 	  ry[i] -= Dypar[i];
 	  rz[i] -= Dzpar[i];
+#ifdef MC_BOND_POS
+	  update_spot_pos(i, -Dxpar[i], -Dypar[i], -Dzpar[i]);
+#endif
 #endif
 	  clsCoM[0][nc] += rx[i];
 	  clsCoM[1][nc] += ry[i];
@@ -4745,6 +4764,9 @@ void move_box_cluster(int *ierr)
       rx[i] += Dxcls[color[i]];
       ry[i] += Dycls[color[i]];
       rz[i] += Dzcls[color[i]];
+#ifdef MC_BOND_POS
+      update_spot_pos(i, Dxcls[color[i]],Dycls[color[i]],Dzcls[color[i]]); 
+#endif
 #ifdef MC_STORE_ALL_COORDS
       pbc(i);
 #else
@@ -4799,14 +4821,15 @@ void move_box_cluster(int *ierr)
 	      rx[ii] += Dxpar[ii];
 	      ry[ii] += Dypar[ii];
 	      rz[ii] += Dzpar[ii]; 
-	
+#ifdef MC_BOND_POS
+	      update_spot_pos(i, Dxpar[color[ii]]-Dxcls[color[ii]], Dypar[color[ii]]-Dycls[color[ii]],
+			      Dzpar[color[ii]]-Dzcls[color[ii]]);
+#endif
+
 	      pbc(ii);
 	    }
 #else
-	  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
-	  memcpy(ry, vy, sizeof(double)*Oparams.parnum);
-	  memcpy(rz, vz, sizeof(double)*Oparams.parnum);
-
+	restore_all_coords();
 #endif
 
 	  volrejMC++;
@@ -4909,12 +4932,13 @@ void move_box_cluster(int *ierr)
 	  rx[i] += Dxpar[i];
 	  ry[i] += Dypar[i];
 	  rz[i] += Dzpar[i]; 
+#ifdef MC_BOND_POS
+  	  update_spot_pos(i,  Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]], Dxpar[i]-Dxcls[color[i]]);
+#endif 
 	  pbc(i);
 	}
 #else
-      memcpy(rx, vx, sizeof(double)*Oparams.parnum);
-      memcpy(ry, vy, sizeof(double)*Oparams.parnum);
-      memcpy(rz, vz, sizeof(double)*Oparams.parnum);
+      restore_all_coords();
 #endif
       volrejMC++;
 #ifdef MC_STORELL
@@ -4955,6 +4979,9 @@ extern int refFB, fakeFB;
 #ifdef MC_NPT_XYZ
 void move_box_xyz(int *ierr)
 {
+#ifdef MC_BOND_POS
+  double oldrr, del;
+#endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 #ifdef MD_LL_BONDS
   int nb, kk;
@@ -4991,7 +5018,14 @@ void move_box_xyz(int *ierr)
 
   for (i=0; i < Oparams.parnum; i++)
     {
+#ifdef MC_BOND_POS
+      oldrr = rr[dir][i];
+#endif
       rr[dir][i] *= Lfact;
+#ifdef MC_BOND_POS
+      del = rr[dir][i] - oldrr;
+      update_spot_pos_dir(i, dir, del);
+#endif
       pbc(i);
     }
   update_numcells();
@@ -5013,8 +5047,15 @@ void move_box_xyz(int *ierr)
 	  L2[dir] = L[dir]*0.5;
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
+#ifdef MC_BOND_POS
+	      oldrr = rr[dir][ii];
+#endif
 	      rr[dir][ii] /= Lfact;
-	      pbc(ii);
+#ifdef MC_BOND_POS
+	      del = rr[dir][ii] - oldrr;
+	      update_spot_pos_dir(ii, dir, del);
+#endif
+ 	      pbc(ii);
 	    }
 	  volrejMC++;
 	  update_numcells();
@@ -5110,8 +5151,15 @@ void move_box_xyz(int *ierr)
       
       for (i=0; i < Oparams.parnum; i++)
 	{
+#ifdef MC_BOND_POS
+      	  oldrr = rr[dir][i];
+#endif
 	  rr[dir][i] /= Lfact;
-	  pbc(i);
+#ifdef MC_BOND_POS
+	  del = rr[dir][i] - oldrr;
+    	  update_spot_pos_dir(i, dir, del);
+#endif
+ 	  pbc(i);
 	}
       volrejMC++;
       update_numcells();
@@ -5180,6 +5228,9 @@ void move_box_xyz(int *ierr)
 
 void move_box(int *ierr)
 {
+#ifdef MC_BOND_POS
+  double del[3], oldrr[3];
+#endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
 #ifdef MD_LL_BONDS
   int nb, kk;
@@ -5220,9 +5271,20 @@ void move_box(int *ierr)
 
   for (i=0; i < Oparams.parnum; i++)
     {
+#ifdef MC_BOND_POS
+      oldrr[0] = rx[i];
+      oldrr[1] = ry[i];
+      oldrr[2] = rz[i];
+#endif
       rx[i] *= Lfact;
       ry[i] *= Lfact;
       rz[i] *= Lfact; 
+#ifdef MC_BOND_POS
+      del[0] = rx[i] - oldrr[0];
+      del[1] = ry[i] - oldrr[1];
+      del[2] = rz[i] - oldrr[2];
+      update_spot_pos(i, del[0], del[1], del[2]);
+#endif
       pbc(i);
     }
   update_numcells();
@@ -5253,9 +5315,20 @@ void move_box(int *ierr)
 #endif
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
+#ifdef MC_BOND_POS
+	      oldrr[0] = rx[ii];
+	      oldrr[1] = ry[ii];
+	      oldrr[2] = rz[ii];
+#endif
 	      rx[ii] /= Lfact;
 	      ry[ii] /= Lfact;
 	      rz[ii] /= Lfact; 
+#ifdef MC_BOND_POS
+	      del[0] = rx[ii] - oldrr[0];
+	      del[1] = ry[ii] - oldrr[1];
+	      del[2] = rz[ii] - oldrr[2];
+	      update_spot_pos(ii, del[0], del[1], del[2]);
+#endif
 	      pbc(ii);
 	    }
 	  volrejMC++;
@@ -5361,9 +5434,20 @@ void move_box(int *ierr)
       
       for (i=0; i < Oparams.parnum; i++)
 	{
+#ifdef MC_BOND_POS
+	  oldrr[0] = rx[i];
+	  oldrr[1] = ry[i];
+	  oldrr[2] = rz[i];
+#endif
 	  rx[i] /= Lfact;
 	  ry[i] /= Lfact;
 	  rz[i] /= Lfact; 
+#ifdef MC_BOND_POS
+    	  del[0] = rx[i] - oldrr[0];
+	  del[1] = ry[i] - oldrr[1];
+	  del[2] = rz[i] - oldrr[2];
+	  update_spot_pos(i, del[0], del[1], del[2]);
+#endif
 	  pbc(i);
 	}
       volrejMC++;
