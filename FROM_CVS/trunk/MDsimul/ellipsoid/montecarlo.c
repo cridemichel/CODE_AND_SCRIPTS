@@ -2641,7 +2641,7 @@ void find_part_with_BS(int i)
     checkBS[j] = 0;
   for (ns = typesArr[typeOfPart[i]].nspots; ns < typesArr[typeOfPart[i]].nspotsBS + typesArr[typeOfPart[i]].nspots; ns++)
     {
-      na = sp2n_map[i][ns]-totspots;
+      na = sp2n_map[i][ns] - totspots;
       for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
 
       for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
@@ -2722,6 +2722,13 @@ void find_part_with_BS(int i)
 			  //assign_bond_mapping(i,j);
 			  j = n2sp_map[n+totspots].i;
 			  ns2 = n2sp_map[n+totspots].ns;
+#if 0
+			  if (ns2 < 2)
+			    {
+			      printf("we have a problem\n");
+			      exit(-1);
+			    }
+#endif
 			  if (j==i)
 			    continue;
 			  for (kk=0; kk < 3; kk++)
@@ -2734,7 +2741,7 @@ void find_part_with_BS(int i)
 			    }
 			  distSq = Sqr(rspA[0]-rspB[0])+Sqr(rspA[1]-rspB[1])+Sqr(rspA[2]-rspB[2]);
 			  sigmabs = 0.5*(typesArr[typeOfPart[i]].spots[ns].sigma + typesArr[typeOfPart[j]].spots[ns2].sigma);
-			  if (distSq < Sqr(sigmabs))
+			  if (distSq <= Sqr(sigmabs))
 			    {
 			      checkBS[j] = 1; 
 			    }
@@ -3002,6 +3009,30 @@ void update_LL(int n)
 	  inCellBP[1][ns] = cy;
 	  inCellBP[2][ns] = cz;
 	  insert_in_new_cell_BP(ns);
+	}
+    }
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  for (k1 = typesArr[typeOfPart[n]].nspots; k1 < typesArr[typeOfPart[n]].nspots + typesArr[typeOfPart[n]].nspotsBS; k1++)
+    {
+      ns = sp2n_map[n][k1] - totspots;
+      cox=inCellBS[0][ns];
+      coy=inCellBS[1][ns];
+      coz=inCellBS[2][ns];
+      /* consider spot in the first box */
+      for (kk=0; kk < 3; kk++)
+	bp[kk] = bpos[kk][n][k1] - L[kk]*rint(bpos[kk][n][k1]/L[kk]);
+
+      cx =  (bp[0] + 0.5*L[0]) * cellsxBS / L[0];
+      cy =  (bp[1] + 0.5*L[1]) * cellsyBS / L[1];
+      cz =  (bp[2] + 0.5*L[2]) * cellszBS / L[2];
+      if (cx!=cox || cy!=coy || cz!=coz)
+	{
+	  remove_from_current_cell_BS(ns);
+	  inCellBS[0][ns] = cx;
+	  inCellBS[1][ns] = cy;
+	  inCellBS[2][ns] = cz;
+	  insert_in_new_cell_BS(ns);
 	}
     }
 #endif
@@ -4402,7 +4433,7 @@ void restore_all_coords(void)
 #ifdef MC_BOND_POS
   int extraspots = 0;
 #endif
-   memcpy(rx, vx, sizeof(double)*Oparams.parnum);
+  memcpy(rx, vx, sizeof(double)*Oparams.parnum);
   memcpy(ry, vy, sizeof(double)*Oparams.parnum);
   memcpy(rz, vz, sizeof(double)*Oparams.parnum);
 #ifdef MC_BOND_POS
