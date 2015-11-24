@@ -2204,18 +2204,18 @@ void StartRun(void)
      mancherebbero tutti gli eventi relativi alle collisioni
      tra gli spot! */
 #ifdef MC_BOND_POS
-#ifdef MC_BOUNDING_SPHERES
-  extraspots = typesArr[typeOfPart[i]].nspotsBS;
-#else
-  extraspots = 0;
-#endif
-  for (i=0; i < Oparams.parnum; i++)
+ for (i=0; i < Oparams.parnum; i++)
     {
       rA[0] = rx[i];
       rA[1] = ry[i];
       rA[2] = rz[i];
       BuildAtomPos(i, rA, R[i], ratA);
-      //printf("i=%d rat= %f %f %f %f %f %f\n", i, ratA[1][0], ratA[1][1],ratA[1][2],ratA[2][0],ratA[2][1],ratA[2][2]);
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typesArr[typeOfPart[i]].nspotsBS;
+#else
+      extraspots = 0;
+#endif
+       //printf("i=%d rat= %f %f %f %f %f %f\n", i, ratA[1][0], ratA[1][1],ratA[1][2],ratA[2][0],ratA[2][1],ratA[2][2]);
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  //printf("i=%d spots=%d\n", i, typesArr[typeOfPart[i]].nspots);
@@ -2229,13 +2229,26 @@ void StartRun(void)
   n=0;
   for (i=0; i < Oparams.parnum; i++)
     {
-      for (k2=0; k2 < typesArr[typeOfPart[i]].nspots + extraspots; k2++)
+     for (k2=0; k2 < typesArr[typeOfPart[i]].nspots; k2++)
 	{
 	  n2sp_map[n].i=i;
 	  n2sp_map[n].ns=k2;
 	  sp2n_map[i][k2] = n;
 	  n++;
 	}	
+    }
+#ifdef MC_BOUNDING_SPHERES
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      extraspots = typesArr[typeOfPart[i]].nspotsBS;
+      for (k2=typesArr[typeOfPart[i]].nspots; k2 < typesArr[typeOfPart[i]].nspots+extraspots; k2++)
+	{
+	  n2sp_map[n].i=i;
+	  n2sp_map[n].ns=k2;
+	  sp2n_map[i][k2] = n;
+	  n++;
+	}	
+#endif
     } 
   build_linked_list_bp();
 #ifdef MC_BOUNDING_SPHERES
@@ -2259,6 +2272,7 @@ void StartRun(void)
     }
 
 ///////////
+  //printf("QUIIII\n")
   //exit(-1);
 ///////////
   if (Oparams.saveBonds && Oparams.maxbondsSaved==-1)
@@ -5662,11 +5676,6 @@ void usrInitAft(void)
   cellListBS = malloc(sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totspotsBS));
   inCellBS[0] = malloc(sizeof(int)*totspotsBS);
   inCellBS[1] = malloc(sizeof(int)*totspotsBS);
-  inCellBS[2] = malloc(sizeof(int)*totspotsBS);
-
-  cellListBS = malloc(sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totspotsBS));
-  inCellBS[0] = malloc(sizeof(int)*totspotsBS);
-  inCellBS[1]= malloc(sizeof(int)*totspotsBS);
   inCellBS[2] = malloc(sizeof(int)*totspotsBS);
 #endif
    for (k = 0; k < 6; k++)
