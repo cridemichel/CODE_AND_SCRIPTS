@@ -10182,6 +10182,9 @@ extern void BuildAtomPos(int i, double *rO, double **R, double **rat);
 extern void BuildAtomPos(int i, double *rO, double **R, double rat[NA][3]);
 #endif
 #endif
+#ifdef MC_BOND_POS
+extern double **bpos[3], **bposold[3];
+#endif
 void store_bump(int i, int j)
 {
   char fileop2[512], fileop[512];
@@ -10258,6 +10261,7 @@ void store_bump(int i, int j)
   RCMx = (rx[i]+rx[j]+Drx)*0.5;
   RCMy = (ry[i]+ry[j]+Dry)*0.5;
   RCMz = (rz[i]+rz[j]+Drz)*0.5;
+  //RCMx=RCMy=RCMz=Drx=Dry=Drz=0;
 #ifdef EDHE_FLEX
 #if 0
   RCMx=RCMy=RCMz=Drx=Dry=Drz=0.0;
@@ -10306,9 +10310,19 @@ void store_bump(int i, int j)
   rA[2] = rz[i]-RCMz;
   BuildAtomPos(i, rA, R[i], ratA);
 #ifdef EDHE_FLEX
+#ifdef MC_BOUNDING_SPHERES
+  for (nn = typesArr[typeOfPart[i]].nspots; nn < typesArr[typeOfPart[i]].nspots+typesArr[typeOfPart[i]].nspotsBS; nn++)
+    {
+      fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+  		     bpos[0][i][nn]-RCMx, bpos[1][i][nn]-RCMy, bpos[2][i][nn]-RCMz, typesArr[typeOfPart[i]].spots[nn].sigma*0.5);
+    }
+#else
   for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
-    fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-	    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+    {
+       fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+  	      ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+    }
+#endif
 #else
   for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
@@ -10319,9 +10333,17 @@ void store_bump(int i, int j)
   rB[2] = rz[j]-RCMz+Drz;
   BuildAtomPos(j, rB, R[j], ratB);
 #ifdef EDHE_FLEX
+#ifdef MC_BOUNDING_SPHERES
+  for (nn = typesArr[typeOfPart[j]].nspots; nn < typesArr[typeOfPart[j]].nspots+typesArr[typeOfPart[j]].nspotsBS; nn++)
+    {
+      fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+  		     bpos[0][j][nn]-RCMx+Drx, bpos[1][j][nn]-RCMy+Dry, bpos[2][j][nn]-RCMz+Drz, typesArr[typeOfPart[j]].spots[nn].sigma*0.5);
+    }
+#else
   for (nn = 1; nn < typesArr[typeOfPart[j]].nspots+1; nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 	    ratB[nn][0], ratB[nn][1], ratB[nn][2], typesArr[typeOfPart[j]].spots[nn-1].sigma*0.5);
+#endif
 #else
   for (nn = 1; nn < ((j < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
     fprintf(bf,"%.15f %.15f %.15f @ %.15G C[brown]\n",

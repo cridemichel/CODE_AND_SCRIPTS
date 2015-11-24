@@ -4996,7 +4996,8 @@ double **eneij;
 #ifdef MC_BOUNDING_SPHERES
 void build_linked_list_bs(void)
 {
-  int kk, img, j, n, np, dix, diy, diz, i, ns, bp[3];
+  int kk, img, j, n, np, dix, diy, diz, i, ns;
+  double  bp[3];
   
   for (j = 0; j < cellsxBS*cellsyBS*cellszBS + totspotsBS; j++)
     cellListBS[j] = -1;
@@ -7462,14 +7463,20 @@ void writeAllCor(FILE* fs, int saveAll)
 	   }
 	 fprintf(fs, ".Bonds: 0-1[0.1:green],0-2[0.1:green],0-3[0.1:green],1-2[0.1:green],1-3[0.1:green],2-3[0.1:green]\n");
 #else
-#if 0
+#if 1
 	 for (nn = 1+ typesArr[typeOfPart[i]].nspots; nn < typesArr[typeOfPart[i]].nspots+1+typesArr[typeOfPart[i]].nspotsBS; nn++)
-	   fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
-		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
-#endif
+	   {
+//	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+//		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
+  		     bpos[0][i][nn-1], bpos[1][i][nn-1], bpos[2][i][nn-1], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+
+	   }
+#else
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#endif
 #endif
 #else
 	  for (nn = 1; nn < ((i < Oparams.parnumA)?MD_STSPOTS_A+1:MD_STSPOTS_B+1); nn++)
