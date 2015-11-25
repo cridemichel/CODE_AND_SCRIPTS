@@ -3198,7 +3198,7 @@ void update_numcells(void)
   cellsy = L / Oparams.rcut;
   cellsz = L / Oparams.rcut;
 #endif
-  if (cellsx > cxini || cellsy > cyini || cellsz > czini)
+  if (cellsx*cellsy*cellsz > cxini*cyini*czini)
     {
       cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
     } 
@@ -3212,7 +3212,7 @@ void update_numcells(void)
   cellsyBP = L / Oparams.rcutBP;
   cellszBP = L / Oparams.rcutBP;
 #endif
-  if (cellsxBP > cxiniBP || cellsyBP > cyiniBP || cellszBP > cziniBP)
+  if (cellsxBP*cellsyBP*cellszBP > cxiniBP*cyiniBP*cziniBP)
     {
       cellListBP = realloc(cellListBP, sizeof(int)*(cellsxBP*cellsyBP*cellszBP+totspots));
     } 
@@ -3226,7 +3226,7 @@ void update_numcells(void)
   cellsyBS = L / Oparams.rcutBS;
   cellszBS = L / Oparams.rcutBS;
 #endif
-  if (cellsxBS > cxiniBS || cellsyBS > cyiniBS || cellszBS > cziniBS)
+  if (cellsxBS*cellsyBS*cellszBS > cxiniBS*cyiniBS*cziniBS)
     {
       cellListBS = realloc(cellListBS, sizeof(int)*(cellsxBS*cellsyBS*cellszBS+totspotsBS));
     } 
@@ -10102,6 +10102,24 @@ for (np=0; np < clsdim[nc]; np++)
   return movetype;
 }
 #endif
+void set_ini_numcells(void)
+{
+  cxini=cellsx;
+  cyini=cellsy;
+  czini=cellsz;
+
+#ifdef MC_BOND_POS
+  cxiniBP=cellsxBP;
+  cyiniBP=cellsyBP;
+  cziniBP=cellszBP;
+    
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  cxiniBS=cellsxBS;
+  cyiniBS=cellsyBS;
+  cziniBS=cellszBS;
+#endif
+}
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
@@ -10171,28 +10189,7 @@ void move(void)
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
 #endif
-  if (cxini==-1)
-    {
-      cxini=cellsx;
-      cyini=cellsy;
-      czini=cellsz;
-    }
-#ifdef MC_BOND_POS
-  if (cxiniBP==-1)
-    {
-      cxiniBP=cellsxBP;
-      cyiniBP=cellsyBP;
-      cziniBP=cellszBP;
-    }
-#endif
-#ifdef MC_BOUNDING_SPHERES
-  if (cxiniBS==-1)
-    {
-      cxiniBS=cellsxBS;
-      cyiniBS=cellsyBS;
-      cziniBS=cellszBS;
-    }
-#endif
+  set_ini_numcells();
   if (OprogStatus.nvbbias > 0)
     deln=OprogStatus.nvbbias;
   else
