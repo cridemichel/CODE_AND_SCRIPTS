@@ -6973,6 +6973,9 @@ void usrInitAft(void)
       break;
 #endif
     }
+#ifdef MC_BOND_POS
+  printf("Using separate linked cell list for sticky spots\n");
+#endif
 #ifdef MC_BOUNDING_SPHERES
   printf("Using bounding sphere complexes\n");
 #endif
