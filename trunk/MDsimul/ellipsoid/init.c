@@ -5038,7 +5038,7 @@ void build_linked_list_bp(void)
     {
       i = n2sp_map[n].i;
       ns = n2sp_map[n].ns;
-        /* consider spot in the first box */
+      /* consider spot in the first box */
       for (kk=0; kk < 3; kk++)
 	bp[kk] = bpos[kk][i][ns] - L[kk]*rint(bpos[kk][i][ns]/L[kk]);
 

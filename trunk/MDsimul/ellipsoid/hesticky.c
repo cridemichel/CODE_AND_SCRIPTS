@@ -747,8 +747,12 @@ extern int totspots;
 extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
 extern double **bpos[3], **bposold[3];
 
+int nbiDBG;
 void find_bonds_one_BP(int i)
 {
+#ifdef MC_KERN_FRENKEL
+  int permbonds;
+#endif
   int ns1, ns2, kk;
 #ifdef MC_HCSOFT
   int err;
@@ -756,6 +760,12 @@ void find_bonds_one_BP(int i)
   int nn,  amin, bmin, j, nbonds, bonded, is, nnn, na, nb;
   double shift[3], dist, sigmaflex;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
+  //build_linked_list_bp();
+#ifdef MC_KERN_FRENKEL
+  permbonds = 0;
+#endif
+  if (checkMoveKF==1)
+    rejectMove = 1;
   for (ns1 = 0; ns1 < typesArr[typeOfPart[i]].nspots; ns1++)
     {
       for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
@@ -874,47 +884,32 @@ void find_bonds_one_BP(int i)
 			shift[kk] = L[kk]*rint((bpos[kk][i][ns1]-bpos[kk][j][ns2])/L[kk]); 
 
 		      assign_bond_mapping(i,j);
+
 		      dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 		      nbonds = nbondsFlex;
 		      //printf("nbondsFlex=%d checking i=%d j=%d\n", nbondsFlex, i, j);
 		      for (nn=0; nn < nbonds; nn++)
 			{
+#if 1
 			  if ((mapbondsaFlex[nn] != na) || (mapbondsbFlex[nn] != nb)) 
-			    continue;
-			  //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
+			    {
+			      continue;
+			    }
+#endif
 #ifdef MC_KERN_FRENKEL
-			  if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
-			      && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
-			    {
-			      rejectMove = 1;
-			      continue;
-			    }
+			  /* NOTA: questa soluzione va testata!!! */
+			  if (dists[nn] < 0 &&  bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]) && 
+			      checkMoveKF == 1 && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
+			    permbonds++;
+			  if (permbonds == 2)
+			    rejectMove = 0;
 #elif defined(MC_GAPDNA)
-#if 0
-			  if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
-			    printf("qui mapbondsaFlex=%d %d\n", mapbondsaFlex[nn], mapbondsbFlex[nn]);
-#endif
-			  if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
-			      && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
+			  if (dists[nn] < 0 && (i/OprogStatus.polylen == j/OprogStatus.polylen) &&//bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]) &&
+			      checkMoveKF == 1 && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
 			    {
-			      rejectMove = 1;
-			      continue;
+			      rejectMove=0;
 			    }
-
-#if 0
-			  if (checkMoveKF && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
-			    printf("qui dist=%f i=%d j=%d mapbondsaFlex=%d %d rejectMove=%d\n", dists[nn], i, j, mapbondsaFlex[nn], mapbondsbFlex[nn], rejectMove);
-#endif
-#endif
-#if 0
-#ifdef MC_GAPDNA
-			  if (clsNPT==1 && dists[nn] < 0.0 && mapbondsaFlex[nn] > 1 && mapbondsbFlex[nn] > 1)
-			    {
-			      //printf("mapbondsaFlex=%d mapbondsaFlex=%d i=%d j=%d\n", mapbondsaFlex[nn], mapbondsaFlex[nn], i, j);
-			      cls_move_bonds++;
-			    }
-#endif
-#endif
+#endif 
 			  if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			    {
 #ifdef MC_KERN_FRENKEL
@@ -937,6 +932,7 @@ void find_bonds_one_BP(int i)
 				  continue;
 				}
 
+	
 #endif
 #if ((defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE)) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
 			      /* se trova un solo bond termina */
@@ -950,6 +946,7 @@ void find_bonds_one_BP(int i)
 			      //if (mapbondsaFlex[nn]==3 && mapbondsbFlex[nn])
 			      //printf("%d %d\n", i, j);
 			      //printf("add bonds i=%d j=%d\n", i, j);
+ 
 			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 			    }
@@ -966,7 +963,7 @@ void find_bonds_one(int i)
 #ifdef MC_HCSOFT
   int err;
 #endif
-  int nn,  amin, bmin, j, nbonds, bonded;
+  int nn,  amin, bmin, j, nbonds, bonded, nbi;
   double shift[3], dist;
   int cellRangeT[2 * NDIM], iX, iY, iZ, jX, jY, jZ, k;
 #ifdef MC_FREEZE_BONDS
@@ -979,6 +976,7 @@ void find_bonds_one(int i)
 #endif
 #endif
 #ifdef MC_BOND_POS
+  //build_linked_list_bp();
   find_bonds_one_BP(i);
   return;
 #endif
@@ -1239,12 +1237,26 @@ void find_bonds_one(int i)
 			  //printf("add bonds i=%d j=%d\n", i, j);
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
+#if 0
+			  if (i==1455)
+			    {
+			      printf("bond found %d-%d\n", i, j);
+			      store_bump(i, j);
+			    }
+#endif
 			}
 		    }
 		}
 	    }
 	}
     }
+#if 0
+  if (numbonds[i]!=nbiDBG)
+   {
+     printf("eccolo numbonds[%d]=%d nbiDBG=%d\n", i, numbonds[i], nbiDBG);
+     exit(-1);
+   }
+#endif
 }
 
 
@@ -2906,7 +2918,6 @@ int get_inter_pair(int t1, int t2)
 {
   return t1*Oparams.ntypes+t2;
 }
-
 void assign_bond_mapping(int i, int j)
 {
   int ni, type1, type2, a, k, nl;

@@ -5899,6 +5899,7 @@ void update_bonds_MC(int ip)
   numbonds[ip] = 0;
 #endif
 #endif
+
   if (OprogStatus.useNNL)
     find_bonds_one_NLL(ip);
   else
