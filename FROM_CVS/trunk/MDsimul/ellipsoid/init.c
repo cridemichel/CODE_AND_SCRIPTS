@@ -5058,7 +5058,7 @@ void usrInitAft(void)
   int numsps;
 #ifdef MC_BOUNDING_SPHERES
   int maxdir, nBSsp, nt;
-  double x0[3];
+  double x0[3], hlenbs;
 #endif
   int numll, k1old, k2old, nl, numbm;
   /* DESCRIPTION:
@@ -5467,12 +5467,14 @@ void usrInitAft(void)
       if (typesArr[nt].sax[maxdir] < typesArr[nt].sax[2])
 	maxdir = 2;
 
-      typesArr[nt].bsdiam = 2.0*typesArr[nt].sax[(maxdir+1)%3];
-      typesArr[nt].nspotsBS = rint(typesArr[nt].sax[maxdir]*2.0/typesArr[nt].bsdiam);    
-     
+      typesArr[nt].nspotsBS = typesArr[nt].sax[maxdir]/typesArr[nt].sax[(maxdir+1)%3];    
+      typesArr[nt].bsdiam = 2.0*typesArr[nt].sax[maxdir]/typesArr[nt].nspotsBS;
+
+      printf("DIAM=%f maxsax=%f nspotsBS=%d\n",  typesArr[nt].bsdiam, typesArr[nt].sax[maxdir], typesArr[nt].nspotsBS);
+      hlenbs = typesArr[nt].bsdiam*typesArr[nt].nspotsBS*0.5;
       x0[(maxdir+1)%3] = 0.0;
       x0[(maxdir+2)%3] = 0.0;
-      x0[maxdir] = -typesArr[nt].sax[maxdir]+typesArr[nt].bsdiam*0.5;
+      x0[maxdir] = -hlenbs+typesArr[nt].bsdiam*0.5;
       for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
 	{
 	  for (kk=0; kk < 3; kk++)
@@ -5481,10 +5483,10 @@ void usrInitAft(void)
 	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0);
 	}
       typesArr[nt].bsdiam *= sqrt(2.0);
-      printf("maxdir=%d nspotsBS=%d sigma=%f\n", maxdir, typesArr[nt].nspotsBS, typesArr[nt].bsdiam*sqrt(2.0)*1.0001);
+      printf("maxdir=%d nspotsBS=%d sigma=%f diam=%f hlenvbs=%f\n", maxdir, typesArr[nt].nspotsBS, typesArr[nt].bsdiam*sqrt(2.0)*1.0001, 
+	     typesArr[nt].bsdiam, hlenbs);
     }
 #endif
-
 #ifdef MC_CLUSTER_MOVE
   RoldAll = malloc(sizeof(double**)*Oparams.parnum);
 #endif
