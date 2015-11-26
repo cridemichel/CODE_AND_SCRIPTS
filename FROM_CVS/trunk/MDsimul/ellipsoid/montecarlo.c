@@ -3368,6 +3368,12 @@ void remove_par_GC(int ip)
 	  remove_from_nnl_MC(ip);
 	}
       Oparams.parnum--;
+#ifdef MC_BOND_POS
+      totspots -= typesArr[0].nspots;
+#ifdef MC_BOUNDING_SPHERES
+      totspotsBS -= typesArr[0].nspotsBS;
+#endif
+#endif
       typeNP[0]--;
 #ifdef MCGC_OPTLLREBUILD
       /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
@@ -3423,6 +3429,12 @@ void remove_par_GC(int ip)
     inCell[k][ip] = inCell[k][lp];
   typeNP[0]--;
   Oparams.parnum--;
+#ifdef MC_BOND_POS
+  totspots -= typesArr[0].nspots;
+#ifdef MC_BOUNDING_SPHERES
+  totspotsBS -= typesArr[0].nspotsBS;
+#endif
+#endif
   update_bonds_GC(lp, ip);
 #ifdef MCGC_OPTLLREBUILD
   /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
@@ -4081,6 +4093,12 @@ int insert_particle_GC(void)
   typeNP[0]++;
   Oparams.parnum++;
 #ifdef MC_BOND_POS
+  totspots += typesArr[0].nspots;
+#ifdef MC_BOUNDING_SPHERES
+  totspotsBS += typesArr[0].nspotsBS;
+#endif
+#endif
+#ifdef MC_BOND_POS
   rA[0] = rx[np];
   rA[1] = ry[np];
   rA[2] = rz[np];
@@ -4339,6 +4357,12 @@ void mcexc(int *ierr)
 #endif
 	  Oparams.parnum--;
 	  typeNP[0]--;
+#ifdef MC_BOND_POS
+    	  totspots -= typesArr[0].nspots;
+#ifdef MC_BOUNDING_SPHERES
+	  totspotsBS -= typesArr[0].nspotsBS;
+#endif
+#endif
 #ifdef MCGC_OPTLLREBUILD
 	  //printf("Celllist[parnum]=%d\n", cellList[Oparams.parnum+1]);
 	  adjLinkedListRemove();
@@ -4377,6 +4401,12 @@ void mcexc(int *ierr)
 #endif
 	  Oparams.parnum--;
 	  typeNP[0]--;
+#ifdef MC_BOND_POS
+    	  totspots -= typesArr[0].nspots;
+#ifdef MC_BOUNDING_SPHERES
+	  totspotsBS -= typesArr[0].nspotsBS;
+#endif
+#endif
 #ifdef MCGC_OPTLLREBUILD
 	  adjLinkedListRemove();
 #else
