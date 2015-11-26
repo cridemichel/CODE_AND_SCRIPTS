@@ -16,6 +16,11 @@
 #define MC_STOREBONDS
 #define MC_STORE_ALL_COORDS
 #define MCGC_OPTLLREBUILD
+#ifdef MC_BOND_POS
+/* questa ottimizzazione per il GC richiederebbe un po' di tempo per essere adattata
+ * a BONDPOS per cui per ora evito di usarla */
+#undef MCGC_OPTLLREBUILD
+#endif 
 #define MD_RAND48
 #define MD_HARDSPHERES
 //#undef MD_SAVE_DISTANCE
