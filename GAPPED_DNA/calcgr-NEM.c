@@ -6,7 +6,7 @@
 double lenHC=4.0, surfRad=10.0;
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
-int mcsim=0, cubic_box=1, nonem=0, calcnv=0;
+int mcsim=0, cubic_box=1, nonem=0, calcnv=0, no2d=0;
 int N, particles_type=1, k1, k2;
 double *x[3], L, ti, *w[3], storerate; 
 double Lx, Ly, Lz;
@@ -170,7 +170,7 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 
 void print_usage(void)
 {
-  printf("calcgr [--lenhc/-lhc] [--nonem/-nn] [--calcnemvec/-cv] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
+  printf("calcgr [ --no2d/-n2 ] [--lenhc/-lhc] [--nonem/-nn] [--calcnemvec/-cv] [--mcsim/-mc] [--isoav/-ia] [--nemvector/-nv (x,y,z) ] [-gp/-gnuplot] <confs_file> [points]\n");
   exit(0);
 }
 double threshold=0.05;
@@ -196,6 +196,10 @@ void parse_param(int argc, char** argv)
        else if (!strcmp(argv[cc],"--mcsim")||!strcmp(argv[cc],"-mc"))
 	{
 	  mcsim=1;
+	}
+      else if (!strcmp(argv[cc],"--no2d")||!strcmp(argv[cc],"-n2"))
+	{
+	  no2d=1;
 	}
       else if (!strcmp(argv[cc],"--gnuplot")||!strcmp(argv[cc],"-gp"))
 	{
@@ -626,9 +630,11 @@ int main(int argc, char** argv)
     printf("Lx=%.15G Ly=%.15G Lz=%.15G\n", Lx, Ly, Lz);
   if (!nonem)
     {
-      g0Perp = malloc(sizeof(double*)*4*points);
-      g0Parall= malloc(sizeof(double*)*4*points);
-
+      if (!no2d)
+	{
+	  g0Perp = malloc(sizeof(double*)*4*points);
+	  g0Parall= malloc(sizeof(double*)*4*points);
+	}
 
       for (k1=0; k1 < 4*points; k1++)
 	{
@@ -654,7 +660,7 @@ int main(int argc, char** argv)
 	  //normPerpAv[k1] = normParaAv[k1] = 0.0;
  
 	}
-      if (!nonem)
+      if (!nonem && !no2d)
 	{
 	  for (k2=0; k2 < 4*points; k2++)
 	    {
@@ -728,9 +734,10 @@ int main(int argc, char** argv)
       for (i=0; i < NP; i++)
 	{
 	  for (a=0; a < 3; a++)
-	    uhc[a] = R[0][a][i];
-	  pos1[a]=x[a][i] + uhc[a]*lenHC/2.0; 
-	  pos2[a]=x[a][i] - uhc[a]*lenHC/2.0;
+	    {  uhc[a] = R[0][a][i];
+	      pos1[a]=x[a][i] + uhc[a]*lenHC/2.0; 
+	      pos2[a]=x[a][i] - uhc[a]*lenHC/2.0;
+	    }
   	  lab2nem(pos1,pos1Nem);
 	  lab2nem(pos2,pos2Nem);
 	  if (pos1Nem[2]*pos2Nem[2] < 0.0 && (Sqr(pos1Nem[0])+Sqr(pos2Nem[1]) < Sqr(surfRad)))
@@ -798,11 +805,13 @@ int main(int argc, char** argv)
 		      } 
 		    if (binx==0 || binx==-1)
 		      {
-		    	g0Parall[biny+2*points][binz+2*points] += 2.0;
+			if (!no2d)
+			  g0Parall[biny+2*points][binz+2*points] += 2.0;
 		      }
 		    if (binz==0 || binz==-1)
 		      {
-			g0Perp[binx+2*points][biny+2*points] += 2.0;
+			if (!no2d)
+			  g0Perp[binx+2*points][biny+2*points] += 2.0;
 			//if (binx < 5)	
 			//  printf("binx=%d biny=%d\n", binx, biny);
 			if (isoav)
@@ -904,68 +913,71 @@ int main(int argc, char** argv)
     }
   if (nonem)
     return 0;
-  f1 = fopen("grpara.dat", "w+");
-  f2 = fopen("grperp.dat", "w+");
-  r = delr*0.5;
-  if (cubic_box)
-    cost = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
-  else
-    cost = (Lx*Ly*Lz)/((double)NP)/((double)NP)/(delr*delr*delr);
-  cost /= 2; /* N.B. divido per due poiché sto considerando in realtà due piani: uno appena
-		sopra e uno appena sotto (z=0 o x=0) */
-
-  for (k1 = 0; k1 < 4*points; k1++)
+  if (!no2d)
     {
-      for (k2 = 0; k2 < 4*points; k2++)
-	{
-	  //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
-	  g0perp = cost*g0Perp[k1][k2]/((double)nf);
-	  g0para = cost*g0Parall[k1][k2]/((double)nf);
-#if 0
-	  g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
-	  g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
-	  g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
-	  fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
-#endif
-	  if (cubic_box)
-	    {
-	      rx = (((double)k1)-2*points)*delr;
-	      ry = (((double)k2)-2*points)*delr;
-	    }
-	  else
-	    {
-	      rx = (((double)k1)-2*points)*delr;
-	      ry = (((double)k2)-2*points)*delr;
-	    }
-	  fprintf(f1, "%.15G %.15G %.15G\n", rx, ry, g0para);
-	  fprintf(f2, "%.15G %.15G %.15G\n", rx, ry, g0perp);
-	  if (k2==0 && k1==0)
-	    {
-	      minpara = maxpara = g0para;
-	      minperp = maxperp =g0perp;
-	    }
-	  else
-	    {
-	      if (g0para < minpara)
-		minpara = g0para;
-	      if (g0para > maxpara)
-		maxpara = g0para;
-	      if (g0perp < minperp)
-		minperp = g0perp;
-	      if (g0perp > maxperp)
-		maxperp = g0perp;
-	    }
+      f1 = fopen("grpara.dat", "w+");
+      f2 = fopen("grperp.dat", "w+");
+      r = delr*0.5;
+      if (cubic_box)
+	cost = (L*L*L)/((double)NP)/((double)NP)/(delr*delr*delr);
+      else
+	cost = (Lx*Ly*Lz)/((double)NP)/((double)NP)/(delr*delr*delr);
+      cost /= 2; /* N.B. divido per due poiché sto considerando in realtà due piani: uno appena
+		    sopra e uno appena sotto (z=0 o x=0) */
 
-	}
-      if (gnuplot && k1 < 4*points-1)
+      for (k1 = 0; k1 < 4*points; k1++)
 	{
-	  fprintf(f1, "\n");
-	  fprintf(f2, "\n");
+	  for (k2 = 0; k2 < 4*points; k2++)
+	    {
+	      //printf("nf=%d nIdeal=%.15G g0[%d]=%.15G\n", nf, nIdeal, ii, g0[ii]);
+	      g0perp = cost*g0Perp[k1][k2]/((double)nf);
+	      g0para = cost*g0Parall[k1][k2]/((double)nf);
+#if 0
+	      g2m = (3.0*g2[ii]/cc[ii] - 1.0)/2.0;
+	      g4m = (35.0*g4[ii]/cc[ii] - 30.0*g2[ii]/cc[ii] + 3.0) / 8.0;
+	      g6m = (231.0*g6[ii]/cc[ii] - 315.0*g4[ii]/cc[ii] + 105.0*g2[ii]/cc[ii] - 5.0)/16.0;
+	      fprintf(f, "%.15G %.15G %.15G %.15G %.15G\n", r, g0m, g2m, g4m, g6m);
+#endif
+	      if (cubic_box)
+		{
+		  rx = (((double)k1)-2*points)*delr;
+		  ry = (((double)k2)-2*points)*delr;
+		}
+	      else
+		{
+		  rx = (((double)k1)-2*points)*delr;
+		  ry = (((double)k2)-2*points)*delr;
+		}
+	      fprintf(f1, "%.15G %.15G %.15G\n", rx, ry, g0para);
+	      fprintf(f2, "%.15G %.15G %.15G\n", rx, ry, g0perp);
+	      if (k2==0 && k1==0)
+		{
+		  minpara = maxpara = g0para;
+		  minperp = maxperp =g0perp;
+		}
+	      else
+		{
+		  if (g0para < minpara)
+		    minpara = g0para;
+		  if (g0para > maxpara)
+		    maxpara = g0para;
+		  if (g0perp < minperp)
+		    minperp = g0perp;
+		  if (g0perp > maxperp)
+		    maxperp = g0perp;
+		}
+
+	    }
+	  if (gnuplot && k1 < 4*points-1)
+	    {
+	      fprintf(f1, "\n");
+	      fprintf(f2, "\n");
+	    }
 	}
+      //printf("gnuplot=%d\n", gnuplot);
+      fclose(f1);
+      fclose(f2);
     }
-  //printf("gnuplot=%d\n", gnuplot);
-  fclose(f1);
-  fclose(f2);
   printf("Parallel Range [%.15G:%.15G]\n", minpara, maxpara);
   printf("Perpendicular Range [%.15G:%.15G]\n", minperp, maxperp);
   printf("Average S=%f\n", S/((double)nf));

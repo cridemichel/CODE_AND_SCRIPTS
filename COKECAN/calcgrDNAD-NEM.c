@@ -220,6 +220,7 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  lenHC = atof(argv[cc]);
 	}
+
       else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
 	{
 	  cc++;
@@ -729,9 +730,13 @@ int main(int argc, char** argv)
 	{
 	  for (a=0; a < 3; a++)
 	    uhc[a] = R[0][a][i];
-	  pos1[a]=x[a][i] + uhc[a]*lenHC/2.0; 
-	  pos2[a]=x[a][i] - uhc[a]*lenHC/2.0;
-  	  lab2nem(pos1,pos1Nem);
+	
+	  for (a=0; a < 3; a++)
+            {
+	       pos1[a]=x[a][i] + uhc[a]*lenHC/2.0; 
+	       pos2[a]=x[a][i] - uhc[a]*lenHC/2.0;
+  	    }
+          lab2nem(pos1,pos1Nem);
 	  lab2nem(pos2,pos2Nem);
 	  if (pos1Nem[2]*pos2Nem[2] < 0.0 && (Sqr(pos1Nem[0])+Sqr(pos2Nem[1]) < Sqr(surfRad)))
 	    numsd++;
