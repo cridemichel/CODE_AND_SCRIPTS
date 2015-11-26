@@ -2961,6 +2961,25 @@ void insert_in_new_cell_BP(int i)
 }
 
 #endif
+#if defined(MC_BOND_POS) || defined(MC_BOUNDING_SPHERES)
+void remove_from_current_cell_all_spots(int n)
+{
+  int ns, k1;
+  for (k1 = 0; k1 < typesArr[typeOfPart[n]].nspots; k1++)
+    {
+      ns = sp2n_map[n][k1];
+      remove_from_current_cell_BP(ns);
+    } 
+
+#ifdef MC_BOUNDING_SPHERES
+  for (k1 = typesArr[typeOfPart[n]].nspots; k1 < typesArr[typeOfPart[n]].nspots + typesArr[typeOfPart[n]].nspotsBS; k1++)
+    {
+      ns = sp2n_map[n][k1] - totspots;
+      remove_from_current_cell_BS(ns);
+    } 
+#endif
+}
+#endif
 void remove_from_current_cell(int i)
 {
   int n;
@@ -2972,7 +2991,24 @@ void remove_from_current_cell(int i)
   /* Eliminazione di evIdA dalla lista della cella n-esima */
   cellList[n] = cellList[i];
 }
-
+#if defined(MC_BOND_POS) || defined(MC_BOUNDING_SPHERES)
+void insert_in_new_cell_all_spots(int n)
+{
+  int k1, ns;
+  for (k1 = 0; k1 < typesArr[typeOfPart[n]].nspots; k1++)
+    {
+      ns = sp2n_map[n][k1];
+      insert_in_new_cell_BP(ns);
+    }
+#ifdef MC_BOUNDING_SPHERES
+  for (k1 = typesArr[typeOfPart[n]].nspots; k1 < typesArr[typeOfPart[n]].nspots + typesArr[typeOfPart[n]].nspotsBS; k1++)
+    {
+      ns = sp2n_map[n][k1] - totspots;
+      insert_in_new_cell_BS(ns);
+    } 
+#endif
+}
+#endif
 void insert_in_new_cell(int i)
 {
   int n;
@@ -3265,7 +3301,6 @@ void adjLinkedListRemove(void)
     {
       cellList[k] = cellList[k+1];
     }
-
 }
 void adjLinkedListInsert(void)
 {
@@ -3323,6 +3358,9 @@ void remove_par_GC(int ip)
 
 #ifdef MCGC_OPTLLREBUILD
       remove_from_current_cell(ip);
+#if defined(MC_BOND_POS) || defined(MC_BOUNDING_SPHERES)
+      remove_from_current_cell_all_spots(ip);
+#endif
 #endif
       if (OprogStatus.useNNL)
 	{
@@ -3376,6 +3414,10 @@ void remove_par_GC(int ip)
 #ifdef MCGC_OPTLLREBUILD
   remove_from_current_cell(ip);
   remove_from_current_cell(lp);
+#if defined(MC_BOND_POS) || defined(MC_BOUNDING_SPHERES)
+  remove_from_current_cell_all_spots(ip);
+  remove_from_current_cell_all_spots(lp);
+#endif
 #endif
   for (k=0; k < 3; k++)
     inCell[k][ip] = inCell[k][lp];
@@ -3388,6 +3430,9 @@ void remove_par_GC(int ip)
      in questo caso vanno spostate di uno a sinistra) */
   adjLinkedListRemove();
   insert_in_new_cell(ip);
+#if defined(MC_BOND_POS) || defined(MC_BOUNDING_SPHERES)
+  insert_in_new_cell_all_spots(ip);
+#endif
 #else
   rebuildLinkedList(); 
 #endif
@@ -3547,6 +3592,9 @@ void check_alloc_GC(void)
 {
   int size, allocnpGCold, k, i;
   double *rt[3];
+#ifdef MC_BOND_POS
+  int extraspots, kk, k1;
+#endif
   if (Oparams.parnum+1 > allocnpGC)
     {
       allocnpGCold=allocnpGC;
@@ -3688,7 +3736,61 @@ void check_alloc_GC(void)
       inCell[0] = realloc(inCell[0],sizeof(int)*allocnpGC);
       inCell[1] = realloc(inCell[1],sizeof(int)*allocnpGC);
       inCell[2] = realloc(inCell[2],sizeof(int)*allocnpGC);
-      
+#ifdef MC_BOND_POS
+      /* per continuiamo ad assumere un solo tipo di particelle nel GC */
+      bpos[0] = malloc(sizeof(double*)*allocnpGC);
+      bpos[1] = malloc(sizeof(double*)*allocnpGC);
+      bpos[2] = malloc(sizeof(double*)*allocnpGC); 
+      bposold[0] = malloc(sizeof(double*)*allocnpGC);
+      bposold[1] = malloc(sizeof(double*)*allocnpGC);
+      bposold[2] = malloc(sizeof(double*)*allocnpGC); 
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typesArr[0].nspotsBS;
+#else
+      extraspots = 0;
+#endif
+      bpos[0] = realloc(bpos[0],sizeof(double*)*allocnpGC*(typesArr[0].nspots+extraspots));
+      bpos[1] = realloc(bpos[1],sizeof(double*)*allocnpGC*(typesArr[0].nspots+extraspots));
+      bpos[2] = realloc(bpos[2],sizeof(double*)*allocnpGC*(typesArr[0].nspots+extraspots)); 
+      bposold[0] = realloc(bposold[0],sizeof(double*)*allocnpGC*(typesArr[0].nspots+extraspots));
+      bposold[1] = realloc(bposold[1],sizeof(double*)*allocnpGC*(typesArr[0].nspots+extraspots));
+      bposold[2] = realloc(bposold[2],sizeof(double*)*allocnpGC*(typesArr[0].nspots+extraspots)); 
+      for (i=1; i < allocnpGC; i++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+#ifdef MC_BOUNDING_SPHERES
+	      bpos[kk][i] = bpos[kk][i-1] + typesArr[typeOfPart[i-1]].nspots + typesArr[typeOfPart[i-1]].nspotsBS;
+	      bposold[kk][i] = bposold[kk][i-1] + typesArr[typeOfPart[i-1]].nspots + typesArr[typeOfPart[i-1]].nspotsBS;
+#else
+    	      bpos[kk][i] = bpos[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
+    	      bposold[kk][i] = bposold[kk][i-1] + typesArr[typeOfPart[i-1]].nspots;
+#endif
+	    }
+	}
+      cellListBP = realloc(cellListBP,sizeof(int)*(cellsxBP*cellsyBP*cellszBP+allocnpGC*typesArr[0].nspots));
+      inCellBP[0] = realloc(inCellBP[0],sizeof(int)*allocnpGC*typesArr[0].nspots);
+      inCellBP[1] = realloc(inCellBP[1],sizeof(int)*allocnpGC*typesArr[0].nspots);
+      inCellBP[2] = realloc(inCellBP[2],sizeof(int)*allocnpGC*typesArr[0].nspots);
+#ifdef MC_BOUNDING_SPHERES
+      cellListBS = realloc(cellListBS,sizeof(int)*(cellsxBS*cellsyBS*cellszBS+allocnpGC*extraspots));
+      inCellBS[0] = realloc(inCellBS[0],sizeof(int)*allocnpGC*extraspots);
+      inCellBS[1] = realloc(inCellBS[1],sizeof(int)*allocnpGC*extraspots);
+      inCellBS[2] = realloc(inCellBS[2],sizeof(int)*allocnpGC*extraspots);
+#endif
+      checkBS = realloc(checkBS,sizeof(int)*allocnpGC);
+      n2sp_map = realloc(n2sp_map,sizeof(struct n2sp_struct)*allocnpGC*(typesArr[0].nspots+extraspots));
+      sp2n_map = realloc(sp2n_map,sizeof(int*)*allocnpGC);
+      sp2n_map[0] = realloc(sp2n_map[0],sizeof(int)*allocnpGC*(typesArr[0].nspots+extraspots));
+      for (i=1; i < allocnpGC; i++)
+	{
+#ifdef MC_BOUNDING_SPHERES
+	  sp2n_map[i] = sp2n_map[i-1] + typesArr[typeOfPart[i-1]].nspots + typesArr[typeOfPart[i-1]].nspotsBS;
+#else  
+	  sp2n_map[i] = sp2n_map[i-1] + typesArr[typeOfPart[i-1]].nspots;
+#endif
+	}
+#endif 
 #ifdef MD_DYNAMIC_OPROG
       dyn_realloc_oprog(allocnpGC);
 #endif
@@ -3737,6 +3839,9 @@ double calc_maxstep_MC(int i);
 #ifdef MCGC_OPTLLREBUILD
 void assign_cell_GC(int np)
 {
+#ifdef MC_BOND_POS
+  int ns, k1;
+#endif
 #ifdef MD_LXYZ
   inCell[0][np] =  (rx[np] + L2[0]) * cellsx / L[0];
   inCell[1][np] =  (ry[np] + L2[1]) * cellsy / L[1];
@@ -3749,6 +3854,24 @@ void assign_cell_GC(int np)
 #else
   inCell[2][np] =  (rz[np] + L2)  * cellsz / L;
 #endif
+#endif
+#ifdef MC_BOND_POS
+  for (k1 = 0; k1 < typesArr[typeOfPart[np]].nspots; k1++)
+    {
+      ns = sp2n_map[np][k1];
+      inCellBP[0][ns] =  (bpos[0][np][k1] + L2[0]) * cellsxBP / L[0];
+      inCellBP[1][ns] =  (bpos[1][np][k1] + L2[1]) * cellsyBP / L[1];
+      inCellBP[2][ns] =  (bpos[2][np][k1] + L2[2]) * cellszBP / L[2];
+    }
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  for (k1 = typesArr[typeOfPart[np]].nspots; k1 < typesArr[typeOfPart[np]].nspots + typesArr[typeOfPart[np]].nspotsBP; k1++)
+    {
+      ns = sp2n_map[n][k1] - totspots;
+      inCellBS[0][ns] =  (bpos[0][np][k1] + L2[0]) * cellsxBS / L[0];
+      inCellBS[1][ns] =  (bpos[1][np][k1] + L2[1]) * cellsyBS / L[1];
+      inCellBS[2][ns] =  (bpos[2][np][k1] + L2[2]) * cellszBS / L[2];
+    } 
 #endif
 }
 #endif
@@ -3845,6 +3968,9 @@ void calc_ax(void)
 }
 int insert_particle_GC(void)
 {
+#ifdef MC_BOND_POS
+  int extraspots = 0;
+#endif
   int np, k1, k2;
   double ox, oy, oz, Rl[3][3];
   np = Oparams.parnum;
@@ -3879,9 +4005,7 @@ int insert_particle_GC(void)
 	  ry[np] = L*(ranf()-0.5);
 	  rz[np] = -L*(ranf()*0.5);
 #endif
-
 	}
-
     }
   else 
     {
@@ -3956,6 +4080,21 @@ int insert_particle_GC(void)
   //update_LL(np);
   typeNP[0]++;
   Oparams.parnum++;
+#ifdef MC_BOND_POS
+  rA[0] = rx[np];
+  rA[1] = ry[np];
+  rA[2] = rz[np];
+  BuildAtomPos(np, rA, R[np], ratA);
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[np]].nspotsBS;
+#endif
+  for (k1 = 0; k1 < typesArr[typeOfPart[np]].nspots + extraspots; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	bpos[k2][np][k1] = ratA[k1+1][k2];
+    }
+#endif
+ 
 #ifdef MCGC_OPTLLREBUILD
   /* N.B. essendo cambiato Oparams.parnum le linked list vanno aggiustate (poichè
      le linked lists head stanno da Oparams.parnum compreso in poi  vanno shiftate, 
@@ -3963,6 +4102,9 @@ int insert_particle_GC(void)
   adjLinkedListInsert();
   assign_cell_GC(np);
   insert_in_new_cell(np);
+#if defined(MC_BOND_POS) || defined(MC_BOUNDING_SPHERES)
+  insert_in_new_cell_all_spots(np);
+#endif
 #else
   rebuildLinkedList();
 #endif
