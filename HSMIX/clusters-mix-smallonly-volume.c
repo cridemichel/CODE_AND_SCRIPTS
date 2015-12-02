@@ -1109,7 +1109,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      AiDjnj = scalProd(AiDj,nj);
 	      vectProdVec(AiDj,nj,AiDjnjvec);
 	      for (kk=0; kk < 3; kk++)
-		VV[kk] =  0.5*D*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
+		VV[kk] =  0.5*Diamj*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
 	      for (kk=0; kk < 3; kk++)
 		{
 		  Tjp[kk] = Dj[j2][kk] + VV[kk];
