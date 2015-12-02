@@ -764,8 +764,11 @@ void find_bonds_one_BP(int i)
 #ifdef MC_KERN_FRENKEL
   permbonds = 0;
 #endif
+
+#if defined(MC_GAPDNA) || defined(MC_KERN_FRENKEL)
   if (checkMoveKF==1)
     rejectMove = 1;
+#endif
   for (ns1 = 0; ns1 < typesArr[typeOfPart[i]].nspots; ns1++)
     {
       for (k = 0; k < 2 * NDIM; k++) cellRangeT[k] = cellRange[k];
@@ -4945,7 +4948,7 @@ int grazing_try_harder(int i, int j, int nn, double tref, double t1, double delt
 #ifndef MD_GRAZING_TRYHARDER
   return 0;
 #endif
-  printf("[grazing_try_harder] i=%d j=%d nn=%d time=%.15G\n", i, j, nn, tref+t1);
+  //printf("[grazing_try_harder] i=%d j=%d nn=%d time=%.15G\n", i, j, nn, tref+t1);
   /* Brent looks always for a minimum hence we have to change sign
      if grazing occurrs coming from negative distances */
   brentSign = ((d1>0.0)?1.0:-1.0);

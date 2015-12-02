@@ -379,7 +379,7 @@ void calc_monodimtri(int cs[], int nmax)
   build_clusters(&ncls, &percolating, 1);
   for (nc = 0; nc < ncls; nc++)
     {
-      if (clsdim[nc]!=0 && clsdim[nc]/2 < nmax)
+      if (clsdim[nc]!=0 && clsdim[nc]/2 <= nmax)
 	(cs[(clsdim[nc]/2)-1])++;
     }
 }
