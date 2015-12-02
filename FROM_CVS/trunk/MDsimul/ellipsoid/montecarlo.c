@@ -3789,8 +3789,8 @@ void check_alloc_GC(void)
       inCellBS[0] = realloc(inCellBS[0],sizeof(int)*allocnpGC*extraspots);
       inCellBS[1] = realloc(inCellBS[1],sizeof(int)*allocnpGC*extraspots);
       inCellBS[2] = realloc(inCellBS[2],sizeof(int)*allocnpGC*extraspots);
-#endif
       checkBS = realloc(checkBS,sizeof(int)*allocnpGC);
+#endif
       n2sp_map = realloc(n2sp_map,sizeof(struct n2sp_struct)*allocnpGC*(typesArr[0].nspots+extraspots));
       sp2n_map = realloc(sp2n_map,sizeof(int*)*allocnpGC);
       sp2n_map[0] = realloc(sp2n_map[0],sizeof(int)*allocnpGC*(typesArr[0].nspots+extraspots));
