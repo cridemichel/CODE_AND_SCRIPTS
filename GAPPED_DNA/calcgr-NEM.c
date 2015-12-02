@@ -4,6 +4,8 @@
 #include <string.h>
 #define Sqr(x) ((x)*(x))
 double lenHC=4.0, surfRad=10.0;
+extern void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+                double* w, double* work, int* lwork, int* info );
 char line[1000000], parname[124], parval[1000000];
 char dummy[2048];
 int mcsim=0, cubic_box=1, nonem=0, calcnv=0, no2d=0;
@@ -134,7 +136,7 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 	    	      &(R[0][0][i]), &(R[0][1][i]), &(R[0][2][i]), &(R[1][0][i]), &(R[1][1][i]), 
 	    	      &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &dummyint);
 
-	      //printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
+	     // printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
 	  if (mcsim==1)
 	    {
@@ -383,6 +385,12 @@ void build_ref_system(void)
   for (k=0; k < 3 ; k++)
     vecx[k] = vecx[k]/norm;
   vectProdVec(vecz, vecx, vecy);
+#if 1
+  printf("normx=%f\n", sqrt(Sqr(vecx[0])+Sqr(vecx[1])+Sqr(vecx[2])));
+  printf("{{%f,%f,%f},\n", vecx[0], vecx[1], vecx[2]);
+  printf("{%f,%f,%f},\n", vecy[0], vecy[1], vecy[2]);
+  printf("{%f,%f,%f}}\n", vecz[0], vecz[1], vecz[2]);
+#endif
 }
 
 void calc_nem_vec(void)
@@ -451,6 +459,7 @@ int main(int argc, char** argv)
   f2 = fopen(inputfile,"r");
   fscanf(f2, "%[^\n]\n", fname);
   pi = acos(0)*2.0;
+  printf("pi=%f\n", pi);
   nat = 0;
   f = fopen(fname,"r");
   while (!feof(f) && nat < 3) 
@@ -731,6 +740,7 @@ int main(int argc, char** argv)
 	  build_ref_system();
 	}
       //printf("NP=%d NPA=%d\n", NP, NPA);
+#if 0
       for (i=0; i < NP; i++)
 	{
 	  for (a=0; a < 3; a++)
@@ -743,6 +753,7 @@ int main(int argc, char** argv)
 	  if (pos1Nem[2]*pos2Nem[2] < 0.0 && (Sqr(pos1Nem[0])+Sqr(pos2Nem[1]) < Sqr(surfRad)))
 	    numsd++;
 	}
+#endif
       for (i=0; i < NP-1; i++)
 	for (j = i+1; j < NP; j++)
 	  {
@@ -765,6 +776,8 @@ int main(int argc, char** argv)
 	    if (!nonem)
 	      {
 		lab2nem(Dx,DxNem);
+		//printf("Dxnem[%d]=%f %f %f\n",i, DxNem[0], DxNem[1], DxNem[2] );
+		//printf("Dx   [%d]=%f %f %f\n",i, Dx[0], Dx[1], Dx[2] );
 	      }	      
 	   //printf("DxNem=%f %f %f\n", DxNem[0], DxNem[1], DxNem[2]);
 	    distSq = 0.0;
@@ -859,6 +872,7 @@ int main(int argc, char** argv)
 	{
 	  rlower = ( (double) k1) * delr;
 	  rupper = rlower + delr;
+	  //nIdeal =  pi * delr * (Sqr(rupper) - Sqr(rlower));
 	  nIdeal =  pi * delr * (Sqr(rupper) - Sqr(rlower));
 	  g0PerpAv[k1] *= costPerpAv / nIdeal / ((double)nf);
 	  g0ParaAv[k1] *= costParaAv / ((double) nf);
@@ -981,7 +995,7 @@ int main(int argc, char** argv)
   printf("Parallel Range [%.15G:%.15G]\n", minpara, maxpara);
   printf("Perpendicular Range [%.15G:%.15G]\n", minperp, maxperp);
   printf("Average S=%f\n", S/((double)nf));
-  printf("surface number density=%f\n", numsd/3.1415926535897932385/Sqr(surfRad)/((double)nf));
+  //printf("surface number density=%f\n", numsd/3.1415926535897932385/Sqr(surfRad)/((double)nf));
   return 0;
 }
 

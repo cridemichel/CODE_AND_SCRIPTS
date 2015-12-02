@@ -59,7 +59,7 @@ int main(int argc, char **argv)
   double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta, MoI;
-  double phi, targetphi=0.25, xtrafact, pD, temp, rTemp;
+  double phi, targetphi=0.25, xtrafact, pD, temp, rTemp, wx, wy, wz, mean;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b;
   int nx, ny, nz, nxmax, nymax, nzmax, idx;
   del=0.5;
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
   fprintf(f,"2 2 2\n");
   MoI=2.0/3.0*(Diam/2.0)*(Diam/2.0);
   pD = 0.11965683746373801*Diam;
-  fprintf(f, "1 %f %f %f 0 0\n", MoI, MoI, MoI);
+  fprintf(f, "1 %f %f %f 2 0\n", MoI, MoI, MoI);
 #ifdef HARD_SPHERES
   fprintf(f, "0 0\n");
 #else
@@ -338,7 +338,12 @@ int main(int argc, char **argv)
   rTemp=sqrt(temp);
   for (i=0; i < parnum; i++)
     {
-      fprintf(f, "%f %f %f 0 0 0\n", rTemp*gauss(), rTemp*gauss(), rTemp*gauss());
+      mean = sqrt(temp / MoI);
+      wx = mean*gauss();
+      wy = mean*gauss();
+      wz = mean*gauss();
+      fprintf(f, "%f %f %f %f %f %f\n", rTemp*gauss(), rTemp*gauss(), rTemp*gauss(),
+	      wx, wy, wz);
     }
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
   printf("phi=%f\n", parnum*vol/(L[0]*L[1]*L[2]));
