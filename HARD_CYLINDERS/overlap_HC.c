@@ -368,7 +368,7 @@ double calc_norm(double *vec)
 }
 void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
-  const int meshpts = 32;
+  const int meshpts = 16;
   double Pj[3], Rj[3][3], AiCi[3];
   int kk, k1, k2, nn;
   static int firstcall=1;
@@ -980,6 +980,12 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      }
 	    normPiDi = calc_norm(PiDi);
 	    normPjDj = calc_norm(PjDj);
+#ifdef DEBUG_HCMC
+	    printf("Di=%f %f %f\n", Di[j1][0], Di[j1][1], Di[j1][2]);
+	    printf("Dj=%f %f %f\n", Dj[j2][0], Dj[j2][1], Dj[j2][2]);
+	    printf("normPiDi: %f normPjDj=%f\n", normPiDi, normPjDj);
+	    printf("0.5*Diami=%f 0.5*Diamj=%f\n", 0.5*Diami, 0.5*Diamj);
+#endif
 	    if (normPiDi <= 0.5*Diami && normPjDj <= 0.5*Diamj)
 	      {
 		Q1 = sqrt(Sqr(Diami)/4.0-Sqr(normPiDi));
@@ -1768,55 +1774,67 @@ int main(int argc, char **argv)
   FILE *f, *f2, *f3, *fcls, *fd;
   int kk, k, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ, iold, jold, totcyl;
+  int jX, jY, jZ, iX, iY, iZ, iold, jold, totcyl, n, numpts;
   long long int tt;
   const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G C[%s]\n";
   //int coppie;
   char fn[256];
   double angle, d1, d2, rmax, rs1[3], rs2[3], delvol, PVtot, norm, refTime=0.0, ti, ene=0.0, ucyl[3], rcm[3], r0old[3], lenc, Lmc[3], pp[3], ov;
-  double shift[3];
+  double shift[3], dang;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   wellWidth=-1.0;
   pi = acos(0.0)*2.0;
     /* parse arguments */
 
   cylinders = malloc(sizeof(struct cylstr)*2);
-  cylinders[0].u[0]=0;
-  cylinders[0].u[1]=0;
-  cylinders[0].u[2]=1;
-  cylinders[0].r[0] = 0;
-  cylinders[0].r[1] = 0;
-  cylinders[0].r[2] = 0;
-  cylinders[0].L = 2.0;
-  cylinders[0].D = 1.0;
-  
-  angle=atof(argv[1]);
-  cylinders[1].L = 1.0;
-  cylinders[1].D = 0.5;
-  cylinders[1].u[0]=sin(pi*angle/180.);//atof(argv[1]);
-  cylinders[1].u[1]=0; //atof(argv[2]);
-  cylinders[1].u[2]=cos(pi*angle/180.);//atof(argv[3]);
-  cylinders[1].r[0] = (cylinders[1].L/2.0)*cos(pi*(90-angle)/180.)+(cylinders[1].D/2.0)*cos(pi*(angle)/180.)+
-    cylinders[0].D/2.0+atof(argv[2]);
-  cylinders[1].r[1] = 0;//atof(argv[5]);
-  cylinders[1].r[2] = 0;//atof(argv[6]);
-   shift[0]=shift[1]=shift[2] = 0;
-  f=fopen("cyl.mgl","w+");
-  fprintf(f, ".Vol: 100.0\n");
-  fprintf(f, tipodat2_mgl, cylinders[0].r[0], cylinders[0].r[1], cylinders[0].r[2],
-	  cylinders[0].u[0], cylinders[0].u[1], cylinders[0].u[2], 
-	  cylinders[0].D / 2.0, cylinders[0].L, "red");  
-  fprintf(f, tipodat2_mgl, cylinders[1].r[0], cylinders[1].r[1], cylinders[1].r[2],
-	  cylinders[1].u[0], cylinders[1].u[1], cylinders[1].u[2], 
-	  cylinders[1].D / 2.0, cylinders[1].L, "blue");  
 
-  fclose(f);
-
-  if (check_cyl_overlap(0, 1, shift))
-    printf("They overlap!\n");
+  angle=0;
+  if (argc==1)
+    numpts = 16;
   else
-    printf("They *do not* overlap!\n");
+    numpts = atoi(argv[1]);
+	
+  dang = 120./numpts;
+  for (n=0; n < numpts; n++)
+    {
+      cylinders[0].u[0]=0;
+      cylinders[0].u[1]=1./sqrt(2.0);
+      cylinders[0].u[2]=1./sqrt(2.0);
+      cylinders[0].r[0] = 0;
+      cylinders[0].r[1] = 0;
+      cylinders[0].r[2] = 0;
+      cylinders[0].L = 2.0;
+      cylinders[0].D = 1.0;
 
+      cylinders[1].L = 2.0;
+      cylinders[1].D = 1.0;
+      cylinders[1].u[0]=sin(pi*angle/180.);//atof(argv[1]);
+      cylinders[1].u[1]=0; //atof(argv[2]);
+      cylinders[1].u[2]=cos(pi*angle/180.);//atof(argv[3]);
+      cylinders[1].r[0] = cylinders[0].D*0.5 + cylinders[1].D*0.5 + 0.5;
+      // (cylinders[1].L/2.0)*cos(pi*(90-angle)/180.)+(cylinders[1].D/2.0)*cos(pi*(angle)/180.)+
+      //cylinders[0].D/2.0+atof(argv[2]);
+      cylinders[1].r[1] = 0;//atof(argv[5]);
+      cylinders[1].r[2] = 0;//atof(argv[6]);
+      shift[0]=shift[1]=shift[2] = 0;
+      sprintf(fn, "cyl-%d.mgl", n);
+      f=fopen(fn,"w+");
+      fprintf(f, ".Vol: 100.0\n");
+      fprintf(f, tipodat2_mgl, cylinders[0].r[0], cylinders[0].r[1], cylinders[0].r[2],
+	      cylinders[0].u[0], cylinders[0].u[1], cylinders[0].u[2], 
+	      cylinders[0].D / 2.0, cylinders[0].L, "red");  
+      fprintf(f, tipodat2_mgl, cylinders[1].r[0], cylinders[1].r[1], cylinders[1].r[2],
+	      cylinders[1].u[0], cylinders[1].u[1], cylinders[1].u[2], 
+	      cylinders[1].D / 2.0, cylinders[1].L, "blue");  
+
+      fclose(f);
+
+      if (check_cyl_overlap(0, 1, shift))
+	printf("Case #%d ang = %f They overlap!\n", n, angle);
+      else
+	printf("Case #%d ang = %f They *do not* overlap!\n",n, angle);
+      angle += dang;
+    }
   exit(-1);
 
 
