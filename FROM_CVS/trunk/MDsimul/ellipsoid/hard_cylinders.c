@@ -366,9 +366,9 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
   Cj[1] = ry[j] + shift[1];
   Cj[2] = rz[j] + shift[2]; 
   Li = 2.0*typesArr[typeOfPart[i]].sax[0];
-  Diami = 2.0*typeOfPart[typeOfPart[i]].sax[1];
+  Diami = 2.0*typesArr[typeOfPart[i]].sax[1];
   Lj = 2.0*typesArr[typeOfPart[j]].sax[0];
-  Diamj = 2.0*typeOfPart[typeOfPart[j]].sax[1];
+  Diamj = 2.0*typesArr[typeOfPart[j]].sax[1];
 
   for (kk=0; kk < 3; kk++)
     {
@@ -608,7 +608,7 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
 	      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
 		break;
 	    }
-	  //totitsHC += it;
+	  totitsHC += it;
 #ifdef DEBUG_HCMC
 	  printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
 		 TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
@@ -648,7 +648,7 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
 
     }
   /* =================================== >>> Part B <<< ========================= */
-  //numcallsHC += 4.0; 
+  numcallsHC += 4.0; 
 
   /* case A.3 rim-rim overlap */
   CiCjni = scalProd(CiCj,ni);
@@ -706,7 +706,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
-      || typeOfPart[typeOfPart[i]].sax[1] != typeOfPart[typeOfPart[j]].sax[1])
+      || typesArr[typeOfPart[i]].sax[1] != typesArr[typeOfPart[j]].sax[1])
     return calcDistNegHCdiff(i, j, shift, retchk);
 
   *retchk = 0; 
