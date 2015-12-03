@@ -327,6 +327,358 @@ void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], do
 #ifdef MC_HC_SPHERO_OPT
 double check_spherocyl(double CiCj[3], double D, double L, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim);
 #endif
+double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
+{
+  const int MAX_ITERATIONS = 1000000;
+#ifdef MC_HC_SPHERO_OPT
+  int rim;
+  double sphov;
+#endif
+  int it, k2;
+  double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
+  double LiTmp, LjTmp, DiamiTmp, DiamjTmp;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
+  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
+  double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
+  double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
+  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
+  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
+  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
+  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
+  double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
+  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
+  double normCiCj;	
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
+  int kk, j1, j2;
+  *retchk = 0; 
+
+  // return calcDistNegHCsame(i, j, shift, retchk);
+  for (kk=0; kk < 3; kk++)
+    {
+      ni[kk] = R[i][0][kk];
+      nj[kk] = R[j][0][kk];
+    }
+  Ci[0] = rx[i];
+  Ci[1] = ry[i];
+  Ci[2] = rz[i];
+  Cj[0] = rx[j] + shift[0];
+  Cj[1] = ry[j] + shift[1];
+  Cj[2] = rz[j] + shift[2]; 
+  Li = 2.0*typesArr[typeOfPart[i]].sax[0];
+  Diami = 2.0*typeOfPart[typeOfPart[i]].sax[1];
+  Lj = 2.0*typesArr[typeOfPart[j]].sax[0];
+  Diamj = 2.0*typeOfPart[typeOfPart[j]].sax[1];
+
+  for (kk=0; kk < 3; kk++)
+    {
+      CiCj[kk] = Ci[kk] - Cj[kk];
+    }
+
+  for (kk=0; kk < 3; kk++)
+    {
+      /* centers of mass of disks */
+      Di[0][kk]=Ci[kk]+0.5*Li*ni[kk];
+      Di[1][kk]=Ci[kk]-0.5*Li*ni[kk];
+      Dj[0][kk]=Cj[kk]+0.5*Lj*nj[kk];
+      Dj[1][kk]=Cj[kk]-0.5*Lj*nj[kk];
+    }
+  /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
+  if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
+    {
+      /* special case of collinear cylinders (parallel disks) */
+      normCiCj = calc_norm(CiCj);
+      for (kk=0; kk < 3; kk++)
+	VV[kk] = CiCj[kk]/normCiCj;
+
+      if (scalProd(VV,ni)==1.0)
+	{
+	  if (normCiCj <= 0.5*(Li+Lj))
+	    return -1;
+	  else
+	    return 1;
+	}
+
+      /* parallel disks */
+      for (j1=0; j1 < 2; j1++)
+	for (j2=j1; j2 < 2; j2++)
+	  {
+	    sp=0.0;
+	    for (kk=0; kk < 3; kk++)
+	      {
+		VV[kk] = Di[j1][kk]-Dj[j2][kk];
+		sp += ni[kk]*VV[kk];
+	      }
+	    if (sp == 0 && calc_norm(VV) < 0.5*(Diami+Diamj))
+	      {
+		return -1;
+	      }
+	  }
+    }
+  else 
+    {
+      /* loop over all disk pairs (they are 4) */
+      vectProdVec(ni, nj, N);
+      vectProdVec(ni,N,niN);
+      vectProdVec(nj,N,njN);
+      normN=calc_norm(N);
+      normNSq=Sqr(normN);
+      for (j1=0; j1 < 2; j1++)
+	for (j2=0; j2 < 2; j2++)
+	  {
+	    DiN = scalProd(Di[j1],N);
+	    DjN = scalProd(Dj[j2],N);
+	    Dini = scalProd(Di[j1],ni);
+	    Djnj = scalProd(Dj[j2],nj);
+	    for (kk=0; kk < 3; kk++)
+	      { 
+		Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/normNSq;
+		Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/normNSq;
+	      }
+	    for (kk=0; kk < 3; kk++)
+	      {
+		PiDi[kk] = Pi[kk] - Di[j1][kk];
+		PjDj[kk] = Pj[kk] - Dj[j2][kk];
+	      }
+	    normPiDi = calc_norm(PiDi);
+	    normPjDj = calc_norm(PjDj);
+#ifdef DEBUG_HCMC
+	    printf("Di=%f %f %f\n", Di[j1][0], Di[j1][1], Di[j1][2]);
+	    printf("Dj=%f %f %f\n", Dj[j2][0], Dj[j2][1], Dj[j2][2]);
+	    printf("normPiDi: %f normPjDj=%f\n", normPiDi, normPjDj);
+	    printf("0.5*Diami=%f 0.5*Diamj=%f\n", 0.5*Diami, 0.5*Diamj);
+#endif
+	    if (normPiDi <= 0.5*Diami && normPjDj <= 0.5*Diamj)
+	      {
+		Q1 = sqrt(Sqr(Diami)/4.0-Sqr(normPiDi));
+		Q2 = sqrt(Sqr(Diamj)/4.0-Sqr(normPjDj));
+		for (kk=0; kk < 3; kk++)
+		  {
+		    PiPj[kk] = Pi[kk] - Pj[kk];
+		  }
+		normPiPj = calc_norm(PiPj);
+		if (normPiPj <= Q1 + Q2)
+		  {
+#ifdef DEBUG_HCMC
+		    if (dostorebump)
+		      printf("disk-disk\n");
+#endif
+		    return -1;
+		  }
+		//else 
+		//return 1;
+	      }
+	    //else 
+	    //return 1;
+	  }
+    }
+  /* case A.2 overlap of rim and disk */
+
+  /* =================================== >>> Part A <<< ========================= */
+  for (j1=0; j1 < 2; j1++)
+    {
+
+      if (j1==1)
+	{
+	  //break;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      for (k2=0; k2 < 2; k2++)
+		DjTmp[k2][kk] = Dj[k2][kk];
+	      CiTmp[kk] = Ci[kk];
+	      niTmp[kk] = ni[kk];
+	      njTmp[kk] = nj[kk];
+	      DiamiTmp = Diami;
+	      DiamjTmp = Diamj;
+	      LiTmp = Li;
+	      LjTmp = Lj;
+	      /* exhange the two particles */	
+	      for (k2=0; k2 < 2; k2++)
+		Dj[k2][kk] = Di[k2][kk];
+	      Ci[kk] = Cj[kk];
+	      ni[kk] = nj[kk];
+	      nj[kk] = niTmp[kk];
+	      Diami = Diamj;
+	      Diamj = DiamiTmp;
+	      Li = Lj;
+	      Lj = LiTmp;
+	    }
+	}
+      for (j2=0; j2 < 2; j2++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    DjCi[kk] = Dj[j2][kk] - Ci[kk];
+	  normDjCi = calc_norm(DjCi);
+	  DjCini = scalProd(DjCi,ni);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Ui[kk] = Ci[kk] + DjCini*ni[kk];
+	      DjUi[kk] = Dj[j2][kk] - Ui[kk];
+	    }
+
+	  DjUini = scalProd(DjUi,ni);
+	  normDjUi = calc_norm(DjUi);
+
+	  if (normDjUi > 0.5*(Diami+Diamj))
+	    continue;
+
+	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
+	     there is some mess about following conditions:
+	     The second and third condition on right column of page 514 
+	     should read (D=sigma):
+	     |Di-Uj| < D/2  && |(Dj-Ci).ni| > L/2
+
+	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
+
+	   */
+	  if (normDjUi < Diami*0.5 && fabs(DjCini) > Li*0.5)
+	    continue;
+
+	  if (normDjUi < Diami*0.5 && fabs(DjCini) <= Li*0.5)
+	    {
+#ifdef DEBUG_HCMC
+	      if (dostorebump)
+		printf("A #1 disk-rim NP=%d\n", Oparams.parnum);
+#endif	
+	      return -1;
+	    }
+#if 1
+	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
+#else
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      //Ai[kk] = Ci[kk];
+	      Ai[kk] = Ui[kk];  
+	    }
+#endif
+	  for (it = 0; it < MAX_ITERATIONS; it++)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		{
+		  AiDj[kk] = Ai[kk] - Dj[j2][kk];
+		}
+	      AiDjnj = scalProd(AiDj,nj);
+	      vectProdVec(AiDj,nj,AiDjnjvec);
+	      for (kk=0; kk < 3; kk++)
+		VV[kk] =  0.5*Diamj*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
+	      for (kk=0; kk < 3; kk++)
+		{
+		  Tjp[kk] = Dj[j2][kk] + VV[kk];
+		  Tjm[kk] = Dj[j2][kk] - VV[kk];
+		  TjpCi[kk] = Tjp[kk] - Ci[kk];
+		  TjmCi[kk] = Tjm[kk] - Ci[kk];
+		}
+	      TjpCini = scalProd(TjpCi,ni);  
+	      TjmCini = scalProd(TjmCi,ni);
+	      for (kk=0; kk < 3; kk++)
+		{
+		  Tjp_perp[kk] = TjpCi[kk]-TjpCini*ni[kk];
+		  Tjp_para[kk] = TjpCini*ni[kk];
+		  Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
+		  Tjm_para[kk] = TjmCini*ni[kk];
+		} 
+	      normTjm_perp = calc_norm(Tjp_perp);
+	      for (kk=0; kk < 3; kk++)
+		TjOld[kk] = TjNew[kk];
+	      if (calc_norm(Tjm_perp) < calc_norm(Tjp_perp))
+		{
+		  for (kk=0; kk < 3; kk++)
+		    TjNew[kk] = Tjm[kk];
+		}	  
+	      else
+		{
+		  for (kk=0; kk < 3; kk++)
+		    TjNew[kk] = Tjp[kk];
+		}
+
+	      for (kk=0; kk < 3; kk++)
+		TjNewCi[kk] = TjNew[kk] - Ci[kk];
+	      TjNewCini = scalProd(TjNewCi,ni);
+
+#ifdef DEBUG_HCMC
+	      printf("j1=%d A it=%d Aiold=%.15G %.15G %.15G\n", j1, it, Ai[0], Ai[1], Ai[2]);
+#endif
+	      for (kk=0; kk < 3; kk++)
+		Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+#ifdef DEBUG_HCMC
+	      printf("A it=%d Ainew=%.15G %.15G %.15G TjNewCini=%.15G\n", it, Ai[0], Ai[1], Ai[2], TjNewCini);
+	      printf("A Ci=%.15G %.15G %.15G\n", Ci[0], Ci[1], Ci[2]);
+	      printf("A ni=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+#endif
+	      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
+		break;
+	    }
+	  //totitsHC += it;
+#ifdef DEBUG_HCMC
+	  printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
+		 TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
+#endif
+	  if (it >= MAX_ITERATIONS)
+	    {
+	      printf("MAX ITERATIONS REACHED in A!\n");
+	      *retchk=1;
+	      return -1;
+	    }
+	  if ( (calc_norm(Tjp_para) <= Li*0.5 && calc_norm(Tjp_perp) <= Diami*0.5)||
+	       (calc_norm(Tjm_para) <= Li*0.5 && calc_norm(Tjm_perp) <= Diami*0.5) )
+	    {
+#ifdef DEBUG_HCMC
+	      if (dostorebump)
+		printf("A #2 disk-rim\n");
+#endif	   
+	      return -1;
+	    }
+	}
+      if (j1==1)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      /* restore particles*/
+	      for (k2=0; k2 < 2; k2++)
+		Dj[k2][kk] = DjTmp[k2][kk];
+	      Ci[kk] = CiTmp[kk];
+	      ni[kk] = niTmp[kk];
+	      nj[kk] = njTmp[kk];
+	      Diami = DiamiTmp;
+	      Diamj = DiamjTmp;
+	      Li = LiTmp;
+	      Lj = LjTmp;
+	    }
+	}
+
+    }
+  /* =================================== >>> Part B <<< ========================= */
+  //numcallsHC += 4.0; 
+
+  /* case A.3 rim-rim overlap */
+  CiCjni = scalProd(CiCj,ni);
+  CiCjnj = scalProd(CiCj,nj);
+  ninj = scalProd(ni, nj);
+  detA = Sqr(ninj)-1;
+
+  /* WARNING: solution given in Ibarra et al. Mol. Sim. 33,505 (2007) is wrong */
+  lambdai = ( CiCjni - CiCjnj*ninj)/detA;
+  lambdaj = (-CiCjnj + CiCjni*ninj)/detA;
+
+  for (kk=0; kk < 3; kk++)
+    {
+      Vi[kk] = Ci[kk] + lambdai*ni[kk];   
+      Vj[kk] = Cj[kk] + lambdaj*nj[kk];
+      ViVj[kk] = Vi[kk] - Vj[kk];
+    }
+  if (calc_norm(ViVj) < 0.5*(Diami+Diamj) && fabs(lambdai) < 0.5*Li && fabs(lambdaj) < 0.5*Lj)
+    {
+#ifdef DEBUG_HCMC
+      if (dostorebump)
+	printf("rim-rim NP=%d\n", Oparams.parnum);
+#endif	
+//      if (sphov > 0.0)
+//	printf("boh\n");
+      return -1;
+    }
+  return 1;
+}
+
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 1000000;
@@ -350,6 +702,12 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   double normCiCj;	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
   int kk, j1, j2;
+
+  /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
+   * which is able to handle this! */
+  if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
+      || typeOfPart[typeOfPart[i]].sax[1] != typeOfPart[typeOfPart[j]].sax[1])
+    return calcDistNegHCdiff(i, j, shift, retchk);
 
   *retchk = 0; 
 
