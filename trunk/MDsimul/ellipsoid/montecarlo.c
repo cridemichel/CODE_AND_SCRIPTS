@@ -9713,6 +9713,9 @@ void tra_cls_move(int nc)
       rx[ip] += dx;
       ry[ip] += dy;
       rz[ip] += dz;
+#ifdef MC_BOND_POS
+      update_spot_pos(ip,  dx, dy, dz);
+#endif
     }
   if (OprogStatus.useNNL)
     {
@@ -9734,7 +9737,10 @@ int is_cls_percolating(int nc)
 #endif
 void rot_cls_move(int nc, int flip)
 {
-  double theta, thetaSq, sinw, cosw;
+#ifdef MC_BOUNDING_SPHERES
+  int extraspots; 
+#endif
+   double theta, thetaSq, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
   double rhb[3], rhbn[3];
   int k1, k2, k3, ip, np;
@@ -9842,6 +9848,21 @@ void rot_cls_move(int nc, int flip)
       printf("}\n");
 #endif
 #endif
+#ifdef MC_BOND_POS
+      rA[0] = rx[ip];
+      rA[1] = ry[ip];
+      rA[2] = rz[ip];
+      BuildAtomPos(ip, rA, R[ip], ratA);
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typesArr[typeOfPart[ip]].nspotsBS;
+#endif
+      for (k1 = 0; k1 < typesArr[typeOfPart[ip]].nspots + extraspots; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    bpos[k2][ip][k1] = ratA[k1+1][k2];
+	}
+#endif
+
     }
   rotclsmoveMC++;
 }
@@ -9895,6 +9916,9 @@ void find_clsbonds_MC(int nc)
 
 void store_cls_coord(int nc)
 {
+#ifdef MC_BOUNDING_SPHERES
+  int extraspots;
+#endif
   int np, ip, k1, k2;
   for (np = 0; np < clsdim[nc]; np++)
     {
@@ -9905,10 +9929,23 @@ void store_cls_coord(int nc)
       for (k1=0; k1<3; k1++)
 	for (k2=0; k2<3; k2++)
 	  RoldAll[ip][k1][k2]=R[ip][k1][k2];
+#ifdef MC_BOND_POS
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typesArr[typeOfPart[ip]].nspotsBS;
+#endif
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots + extraspots; k2++)
+	  {
+	    bposold[k1][ip][k2] = bpos[k1][ip][k2];
+	  } 
+#endif
     } 
 }
 void restore_cls_coord(int nc)
 {
+#ifdef MC_BOUNDING_SPHERES
+  int extraspots;
+#endif
   int np, ip, k1, k2;
 
   for (np = 0; np < clsdim[nc]; np++)
@@ -9920,6 +9957,16 @@ void restore_cls_coord(int nc)
       for (k1=0; k1<3; k1++)
 	for (k2=0; k2<3; k2++)
 	  R[ip][k1][k2]=RoldAll[ip][k1][k2]; 
+#ifdef MC_BOND_POS
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typesArr[typeOfPart[ip]].nspotsBS;
+#endif
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < typesArr[typeOfPart[ip]].nspots + extraspots; k2++)
+	  {
+	    bpos[k1][ip][k2] = bposold[k1][ip][k2];
+	  } 
+#endif
     }
 }
 void store_particles_cls(int nc)
