@@ -1152,6 +1152,10 @@ void build_clusters(int *Ncls, int *percolating, int check_perc)
       for (j=0; j < numbonds[i]; j++)
 	{
 	  jj = bonds[i][j] / (NANA);
+#ifdef MC_ALMARZA
+	  if (bondsYN[i][j]==0)
+	    continue;	    
+#endif
 	  //printf("i=%d jj=%d\n", i, jj);
 	  if (color[jj] == -1)
 	    color[jj] = color[i];
@@ -4648,7 +4652,41 @@ void restore_all_coords(void)
     }
 #endif
 }
-
+#ifdef MC_ALMARZA
+void assign_bonds_almarza(void)
+{
+  int i, k, yn;
+  long long int jj, jj2;
+  double thr;
+  thr = exp(-1.0/Oparams.T);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (k=0; k < numbonds[i]; k++)
+	{
+	  bondsYN[k] = -1;
+	}
+    }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (k=0; k < numbonds[i]; k++)
+	{
+	  xi = ranf();
+	  if (bondsYN[i][k]==-1)
+	    { 
+	      jj = bonds[i][k] / (NANA);
+	      yn = (ranf() > thr)?1:0
+  	      bondsYN[jj2][k2] = yn;  
+	      for (k2 = 0; k2 < numbonds[jj]; k2++)
+		{
+		  jj2 = bonds[jj][k2] / (NANA); 
+		  if (jj2 == i)
+		    bondsYN[jj2][k2] = yn;  
+	      	}
+	    }
+	}
+    }
+}
+#endif
 void move_box_cluster_xyz(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
@@ -4691,6 +4729,9 @@ void move_box_cluster_xyz(int *ierr)
     delv = (Lfact - 1.0); /* FINISH HERE */
   //printf("Lfact=%.15G vmax=%f vn=%f vo=%f\n", Lfact, OprogStatus.vmax, vn, vo); 
   // Lfact=1;
+#ifdef MC_ALMARZA
+  assign_bonds_almarza();
+#endif
   build_clusters(&ncls, &percolating, 1);
   numOfClusters = ncls;
 
@@ -4699,6 +4740,7 @@ void move_box_cluster_xyz(int *ierr)
 #if 1
   if (percolating)
     {
+      //printf("is percolating\n");
       volrejMC++;
       return;
     }
@@ -10101,12 +10143,16 @@ int cluster_move(void)
   nc = ranf()*ncls;
   /* discard move if the cluster is percolating */ 
   //printf("clsdim[%d]=%d\n", nc, clsdim[nc]);
-  
+ 
+  //printf("CLUSTER MOVE dim=%d\n", clsdim[nc]); 
 #if 1 // FIX THIS!!!
   if (is_cls_percolating(nc))
-    return -1;
+    {
+      return -1;
+    }
 #endif
   eno = calcpotene();
+
 #if 0
 #ifdef MC_GAPDNA
   if (cluster_is_not_a_dimer(nc))

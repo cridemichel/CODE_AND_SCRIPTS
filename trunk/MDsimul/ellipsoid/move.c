@@ -1748,7 +1748,7 @@ int get_dof_flex(int filter)
 	  if (typesArr[pt].nspots == 0 || (typesArr[pt].nspots!=0 && all_spots_in_CoM(pt)))	  
     	    dofOfType = 3;
 	  else
-	    dofOfType = 5;
+	    dofOfType = 6;
 	}
       else if (typesArr[pt].nspots == 0)
 	{

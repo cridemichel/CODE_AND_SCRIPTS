@@ -1124,7 +1124,7 @@ int get_dof_flex_per_type(int *doft)
 	  if (typesArr[pt].nspots == 0 || (typesArr[pt].nspots!=0 && all_spots_in_CoM(pt)))	  
     	    dofOfType = 3;
 	  else
-	    dofOfType = 5;
+	    dofOfType = 6;
 	}
       else if (typesArr[pt].nspots == 0)
 	{
@@ -1272,6 +1272,7 @@ void temperat(void)
       tempTra = 2.0 * Krot / (dofTra-3.0);
     }
 #endif
+  //printf("dof=%f frozedDof=%d\n", dof, OprogStatus.frozenDOF);
   mf = fopenMPI(absMisHD("temp.dat"),"a");
 #ifdef MD_INELASTIC
   mf2 =fopenMPI(absMisHD("temp_granular.dat"), "a"); 
