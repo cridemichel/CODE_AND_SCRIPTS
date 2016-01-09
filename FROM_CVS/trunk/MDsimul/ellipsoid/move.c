@@ -10354,16 +10354,8 @@ void store_bump(int i, int j)
   fclose(bf);
 
 }
-
 extern void delete_events(int evIdA);
-#ifdef MD_SURV_PROB
-extern double *sp_firstcolltime, sp_start_time;
-extern int *sp_has_collided, sp_equilib;
-extern int sp_tot_collisions;
-extern void sp_reset_fct(void);
-extern double gauss(void);
-extern void save_sp(void);
-extern double ranf(void);
+#if defined(MD_SURV_PROB) || defined(MD_SUBENZYME)
 void sp_update_cal(int ip)
 {
 #if 0
@@ -10385,6 +10377,15 @@ void sp_update_cal(int ip)
 #endif
   ScheduleEvent(-1, ATOM_LIMIT+10,OprogStatus.nextDt);
 }
+#endif
+#ifdef MD_SURV_PROB
+extern double *sp_firstcolltime, sp_start_time;
+extern int *sp_has_collided, sp_equilib;
+extern int sp_tot_collisions;
+extern void sp_reset_fct(void);
+extern double gauss(void);
+extern void save_sp(void);
+extern double ranf(void);
 #endif
 void ProcessCollision(void)
 {
@@ -10421,7 +10422,7 @@ void ProcessCollision(void)
   //if (typeOfPart[evIdA]==2 || typeOfPart[evIdB]==2)
     //printf("===> %d %d\n", evIdA, evIdB);
 #ifdef MD_PATCHY_HE
-  /* i primi due bit sono il tipo di event (uscit buca, entrata buca, collisione con core 
+  /* i primi due bit sono il tipo di event (uscita buca, entrata buca, collisione con core 
    * mentre nei bit restanti c'e' la particella con cui tale evento e' avvenuto */
   bumpSP(evIdA, evIdB, evIdC, evIdD, &W, evIdE);
 #else
@@ -10448,8 +10449,6 @@ void ProcessCollision(void)
 	  /* SE -> P + E */
 	  typeOfPart[evIdA] == 2;
  	}
-      /* rebuild calendar */
-      sp_update_cal(ip);
     }
   else if (Oparams.ntypes == 4)
     {
