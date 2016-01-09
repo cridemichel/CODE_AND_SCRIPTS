@@ -5959,6 +5959,10 @@ void usrInitAft(void)
 	  fclose(f);
 	}
 #endif
+#ifdef MD_SUBENZYME
+      f = fopenMPI(absMisHD("SP-popul.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MD_RABBIT
       f = fopenMPI(absMisHD("bi-mono-bonds.dat"), "w+");
       fclose(f);

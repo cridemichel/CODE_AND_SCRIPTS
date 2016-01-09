@@ -477,6 +477,11 @@ void calcV(void)
 #else
   V = 0;
 #endif
+#ifdef MD_SUBENZYME
+  mf = fopenMPI(absMisHD("SP-popul.dat"),"a");
+  fprintf(mf, "%G %d %d\n", Oparams.time + OprogStatus.refTime, typeNP[1], typeNP[2]);
+  fclose(mf); 
+#endif
 #ifdef MD_RABBIT
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
   get_bimono_bonds(&bulk, &mono, &bi);
