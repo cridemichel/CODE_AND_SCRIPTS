@@ -3,18 +3,72 @@
 #include<math.h>
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
-double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz;
+double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, wx, wy, wz;
 double *Rc[3][3], *Ri[3][3];
 int full, ibeg, numpoly;
 #define maxpolylen 10000;
 double R0[3][3];
+double ranf(void)
+{
+  /*  Returns a uniform random variate in the range 0 to 1.         
+      Good random number generators are machine specific.
+      please use the one recommended for your machine. */
+  return drand48();
+}
+/* ============================= >>> gauss <<< ============================= */
+double gauss(void)
+{
+  
+  /* 
+     Random variate from the standard normal distribution.
+     
+     The distribution is gaussian with zero mean and unit variance.
+     REFERENCE:                                                    
+                                                                
+     Knuth D, The art of computer programming, (2nd edition        
+     Addison-Wesley), 1978                                      
+                                                                
+     ROUTINE REFERENCED:                                           
+                                                                
+     COORD_TYPE ranf()                                  
+     Returns a uniform random variate on the range zero to one  
+  */
+
+  double  a1=3.949846138, a3 = 0.252408784, a5 = 0.076542912, 
+    a7 = 0.008355968, a9 = 0.029899776;
+  double sum, r, r2;
+  int i;
+
+  sum = 0.0;
+
+  for (i=0; i < 12; i++)
+    {
+      sum = sum + ranf();
+    }
+  
+  r  = ( sum - 6.0 ) / 4.0;
+  r2 = r * r;
+
+  return  (((( a9 * r2 + a7 ) * r2 + a5 ) * r2 + a3 ) * r2 + a1 ) * r;
+}
+double max3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  if (c > m)
+    m = c;
+  return m;
+}
+
 
 int main(int argc, char **argv)
 {
   FILE *f;
-  double MoI1, MoI2, mass, massE, massS, massP, rTemp;
-  double vxCM, vyCM, vzCM, mCM;
-  double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
+  double MoI1, MoI2, mass, massE, massS, massP, rTemp, temp=1.0;
+  double vxCM, vyCM, vzCM, mCM=0;
+  double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, LenE, LenS, LenP, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
@@ -51,6 +105,7 @@ int main(int argc, char **argv)
   if (argc > 5)
     targetphi = atof(argv[5]);
 
+  DiamE=DiamS=DiamP=1.0;
   if (argc > 6)
     DiamE = atof(argv[6]);
 
