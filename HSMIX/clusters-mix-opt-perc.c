@@ -433,26 +433,6 @@ void build_linked_list_perc(int clsdim, double Lbig)
       cellList[j] = n;
     }
 }
-void add_bond(int i, int j)
-{
-  bonds[i][numbonds[i]] = j;
-  numbonds[i]++;
-  if (numbonds[i] >= MAXBONDS)
-    {
-      printf("Too many bonds!\n");
-      exit(-1);
-    }
-}
-void add_bondP(int i, int j)
-{
-  bondsP[i][numbondsP[i]] = j;
-  numbondsP[i]++;
-  if (numbonds[i] >= MAXBONDS)
-    {
-      printf("Too many bonds P!\n");
-      exit(-1);
-    }
-}
 /* Allocate memory for a matrix of integers */
 int** AllocMatI(int size1, int size2)
 {
@@ -463,7 +443,39 @@ int** AllocMatI(int size1, int size2)
   for (k = 1; k < size1; k++)
     v[k] = v[k-1] + size2;
   return v;
+}void freeMatI(int **v)
+{
+  free(v[0]);
+  free(v);  
 }
+void add_bond(int i, int j)
+{
+  bonds[i][numbonds[i]] = j;
+  numbonds[i]++;
+  if (numbonds[i] >= MAXBONDS)
+    {
+      freeMatI(bonds);
+      MAXBONDS *= 1.5;
+      bonds = AllocMatI(NP, MAXBONDS);
+      //printf("Too many bonds!\n");
+      //exit(-1);
+    }
+}
+void add_bondP(int i, int j)
+{
+  bondsP[i][numbondsP[i]] = j;
+  numbondsP[i]++;
+  if (numbondsP[i] >= MAXBONDS)
+    {
+      freeMatI(bondsP);
+      MAXBONDS *= 1.5;
+      bondsP = AllocMatI(NP*NUMREP, MAXBONDS);
+      //printf("Too many bonds P!\n");
+      //exit(-1);
+    }
+}
+
+
 int get_image(int i, int j, int k)
 {
   int ii;
@@ -574,9 +586,7 @@ int main(int argc, char **argv)
 	  bondsP = AllocMatI(NP*8, MAXBONDS);
 	  numbondsP = malloc(sizeof(int)*NP*8);
 	}
-      for (i=0; i < NP; i++)
-	numbonds[i] = 0;
-    }
+     }
   if (wellWidth==-1)
     wellWidth=sigmaBB;
   maxsaxAA = fabs(sigmaAA);
@@ -609,6 +619,8 @@ int main(int argc, char **argv)
     }      
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
+      for (i=0; i < NP; i++)
+	numbonds[i] = 0;
       if (cellList)
 	{
 	  free(cellList);
