@@ -22,7 +22,7 @@ int *ip;
 char **fname; 
 
 const int NUMREP = 8;
-int MAXBONDS = 10000;
+int MAXBONDS = 1000;
 double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
