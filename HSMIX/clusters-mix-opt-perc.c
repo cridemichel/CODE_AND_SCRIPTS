@@ -22,7 +22,7 @@ int *ip;
 char **fname; 
 
 const int NUMREP = 8;
-int MAXBONDS = 10;
+int MAXBONDS = 10000;
 double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
@@ -36,7 +36,7 @@ int NP, NPA=-1, ncNV, ncNV2, START, END;
 int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, media_log=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
-int foundDRs=0, foundrot=0, *color, *colorP, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
+int foundDRs=0, foundrot=0, *color, *colorP, *clsdim, *clsdimP, *clsdimNV, *clscolNV, *clscol, 
     *clsdimsort, *clssizedst, *percola;
 double *clssizedstAVG;
 double calc_norm(double *vec)
@@ -220,8 +220,8 @@ void change_all_colorsP(int NP, int* color, int colorsrc, int colordst)
   for (n = 0; n < NP; n++)
     {
       ii = dupcluster[n];
-      if (color[ii] == colorsrc)
-	color[ii] = colordst;
+      if (colorP[ii] == colorsrc)
+	colorP[ii] = colordst;
     }
 }
 void change_all_colors(int NP, int* color, int colorsrc, int colordst)
@@ -235,6 +235,19 @@ void change_all_colors(int NP, int* color, int colorsrc, int colordst)
 }
 char fncls[1024];
 char fn[1024];
+int findmaxColorP(int NP, int *color)
+{
+  int i, n, maxc=-1;
+  for (n = 0; n < NP; n++) 
+    {
+      i = dupcluster[n];
+      if (color[i] > maxc)
+	maxc = color[i];
+    }
+  return maxc;
+}
+
+
 int findmaxColor(int NP, int *color)
 {
   int i, maxc=-1;
@@ -424,11 +437,21 @@ void add_bond(int i, int j)
 {
   bonds[i][numbonds[i]] = j;
   numbonds[i]++;
+  if (numbonds[i] >= MAXBONDS)
+    {
+      printf("Too many bonds!\n");
+      exit(-1);
+    }
 }
 void add_bondP(int i, int j)
 {
   bondsP[i][numbondsP[i]] = j;
   numbondsP[i]++;
+  if (numbonds[i] >= MAXBONDS)
+    {
+      printf("Too many bonds P!\n");
+      exit(-1);
+    }
 }
 /* Allocate memory for a matrix of integers */
 int** AllocMatI(int size1, int size2)
@@ -458,7 +481,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   double Drx, Dry, Drz;
-  int numimg_i, numimg_jj, jj, k, n, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, numcolors=0, nclsP;
+  int ok, numimg_i, numimg_jj, jj, k, n, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, numcolors=0, nclsP;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, jold;
   //int coppie;
@@ -530,8 +553,7 @@ int main(int argc, char **argv)
     }
   color = malloc(sizeof(int)*NP);
   colorP= malloc(sizeof(int)*NP*8);
-  color2= malloc(sizeof(int)*NP*NUMREP);
-  clsdim2=malloc(sizeof(int)*NP*NUMREP);
+  clsdimP=malloc(sizeof(int)*NP*NUMREP);
   nspots = malloc(sizeof(int)*NP);
   clsdim = malloc(sizeof(int)*NP);
   clsdimNV = malloc(sizeof(int)*NP);
@@ -543,12 +565,17 @@ int main(int argc, char **argv)
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
   ip = malloc(sizeof(int)*NP);
-  if (output_bonds)
+  if (output_bonds||check_percolation)
     {
       numbonds  = malloc(sizeof(int)*NP); 
       bonds = AllocMatI(NP, MAXBONDS);
       if (check_percolation)
-	bondsP = AllocMatI(NP*8, MAXBONDS);
+	{
+	  bondsP = AllocMatI(NP*8, MAXBONDS);
+	  numbondsP = malloc(sizeof(int)*NP*8);
+	}
+      for (i=0; i < NP; i++)
+	numbonds[i] = 0;
     }
   if (wellWidth==-1)
     wellWidth=sigmaBB;
@@ -817,26 +844,7 @@ int main(int argc, char **argv)
 	  cluster_sort[nc].color = clscolNV[nc];
 	}
       qsort(cluster_sort, ncls, sizeof(struct cluster_sort_struct), compare_func);
-#if 1
-      /* =================== >>> RENORMALIZE CLUSTERS <<< ===============
-	 se la stessa particella appartiene a n frame allora il cluster di n particelle
-	 corrispondente conta 1 */
-      for (i=0; i < NP/block; i++)
-	{
-	  for (j=NP/block; j < NP; j++)
-	    {
-	      if (ip[j]==i)
-		{
-		  for (nc = 0; nc < ncls; nc++)
-		    {
-		      if (cluster_sort[nc].color==color[i])
-			cluster_sort[nc].dim--;
-		    }
-       		}
-	    }
-	}
-#endif
-      /* ============== >>> PERCOLATION <<< ================== */
+     /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
 	  for (nc = ncls-1; nc >= 0; nc--)
@@ -856,21 +864,49 @@ int main(int argc, char **argv)
 		    {
 		      for (c = 0; c < NUMREP; c++)
 			{
-			  dupcluster[c*cluster_sort[nc].dim+na] = i;
+			  dupcluster[c*cluster_sort[nc].dim+na] = i+c*NP;
 			}
 		      na++;
 		    }
 		}
+	      printf("START=%d END=%d cluster[%d] dim=%d\n", START, END, nc, cluster_sort[nc].dim);
 	      /* build cluster in the replicated system */
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
+		  //if (nc==ncls-1)
+		    //printf("nc=%d i=%d NP=%d\n", nc, i, NP);
 		  numbondsP[i] = numbonds[i%NP];
 		  numimg_i = i / NP;
 		  for (k=0; k < numbonds[i%NP]; k++)
 		    {
 		      jj = bonds[i%NP][k];
-		      //jj2 = bonds[i%NP][k] % (NANA);
+#if 0
+		        ok=0;
+		      for (n=0; n < cluster_sort[nc].dim; n++)
+			{
+			  if (jj==dupcluster[n])
+			    {
+			      ok=1;
+			      break;
+			    }
+			}
+		      if (!ok)
+			{
+			  printf("abbiamo un problema AA boh boh jj=%d\n", jj);
+			  printf("particelle nel cluster:\n");
+			  printf("color[%d]=%d color cls=%d\n", jj, color[jj], cluster_sort[nc].color);
+			  printf("color[%d]=%d \n", i, color[i]);
+			  printf("bonds[%d][%d]=%d\n", i, k, bonds[i][k]);
+			  for (n=0; n < cluster_sort[nc].dim; n++)
+			    {
+			      printf(" %d ", dupcluster[n]);
+			    }
+			  printf("\n"); 
+			  exit(-1);
+			}
+#endif
+		     //jj2 = bonds[i%NP][k] % (NANA);
 		      Drx = L*rint((r0[0][i%NP]-r0[0][jj])/L);
 		      Dry = L*rint((r0[1][i%NP]-r0[1][jj])/L);
 		      Drz = L*rint((r0[2][i%NP]-r0[2][jj])/L); 
@@ -919,6 +955,22 @@ int main(int argc, char **argv)
 		  for (j=0; j < numbondsP[i]; j++)
 		    {
 		      jj = bondsP[i][j];
+#if 0
+		      ok=0;
+		      for (n=0; n < cluster_sort[nc].dim; n++)
+			{
+			  if (jj==dupcluster[n])
+			    {
+			      ok=1;
+			      break;
+			    }
+			}
+		      if (!ok)
+			{
+			  printf("abbiamo un problema\n");
+			  exit(-1);
+			}
+#endif
 		      //printf("i=%d jj=%d\n", i, jj);
 		      if (colorP[jj] == -1)
 			colorP[jj] = colorP[i];
@@ -943,47 +995,70 @@ int main(int argc, char **argv)
 			}
 		    }
 
-		  curcolor = findmaxColor(NP, colorP)+1;
+		  curcolor = findmaxColorP(cluster_sort[nc].dim*8, colorP)+1;
 		  //printf("curcolor=%d\n", curcolor);
 		}
 	      nclsP = numcolors;
-
-
+#if 0
 	      /* ======================================== */
-	      ncls2 = curcolor;
+	      ncls2 = nclsP;
 	      for (nc2 = 0; nc2 < ncls2; nc2++)
 		{
-		  clsdim2[nc2] = 0; 
+		  clsdimP[nc2] = 0; 
 		}
 	      for (nc2 = 0; nc2 < ncls2; nc2++)
 		{
-		  for (a = 0; a < na*NUMREP; a++)
-		    if (color2[a] == nc2)
-		      {
-			clsdim2[color2[a]]++;
-		      }
+		  for (a = 0; a < cluster_sort[nc2].dim*NUMREP; a++)
+		    { 
+		      a = dupcluster[a];
+		      if (colorP[a] == nc2)
+		      	{
+		  	  clsdimP[colorP[a]]++;
+		    	}
+		    }
 		}
 
 	      /* ==== >>> REMOVE_VOIDS <<< ==== */
 	      ncNV2=0;
 	      for (nc2 = 0; nc2 < ncls2; nc2++)
 		{
-		  if (clsdim2[nc2] != 0)
+		  if (clsdimP[nc2] != 0)
 		    {
 		      ncNV2++;
 		    }
 		}
+#endif
 	      //printf("ncls2=%d\n", ncNV2);
-	      if (ncNV2 < NUMREP)
+	      if (nclsP < NUMREP)
 		{
 		  percola[nc] = 1;
 		  printf("cluster #%d is percolating\n", nc);
-		  printf("#clusters in the replicated system: %d (of %d replicas)\n", ncNV2, NUMREP);
-		  break;
+		  printf("#clusters in the replicated system: %d (of %d replicas)\n", nclsP, NUMREP);
+		  //break;
 		}
 	    }
 	  //printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
 	}
+#if 1
+      /* =================== >>> RENORMALIZE CLUSTERS <<< ===============
+	 se la stessa particella appartiene a n frame allora il cluster di n particelle
+	 corrispondente conta 1 */
+      for (i=0; i < NP/block; i++)
+	{
+	  for (j=NP/block; j < NP; j++)
+	    {
+	      if (ip[j]==i)
+		{
+		  for (nc = 0; nc < ncls; nc++)
+		    {
+		      if (cluster_sort[nc].color==color[i])
+			cluster_sort[nc].dim--;
+		    }
+       		}
+	    }
+	}
+#endif
+ 
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
 
