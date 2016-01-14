@@ -441,12 +441,25 @@ int** AllocMatI(int size1, int size2)
     v[k] = v[k-1] + size2;
   return v;
 }
+int get_image(int i, int j, int k)
+{
+  int ii;
+  for (ii=0; ii < 8; ii++)
+    {
+      if ((images_array[ii][0]==i)&&
+	  (images_array[ii][1]==j)&&
+	  (images_array[ii][2]==k))
+	return ii;
+    }
+  return -1;	
+}
 
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
-  int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, numcolors=0, nclsP;
-  int  NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
+  double Drx, Dry, Drz;
+  int numimg_i, numimg_jj, jj, k, n, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, numcolors=0, nclsP;
+  int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, jold;
   //int coppie;
   double refTime=0.0, ti, ene=0.0, dist, dx, dy, dz;
@@ -851,25 +864,25 @@ int main(int argc, char **argv)
 	      /* build cluster in the replicated system */
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
-		  i = dupcluster[n]
+		  i = dupcluster[n];
 		  numbondsP[i] = numbonds[i%NP];
 		  numimg_i = i / NP;
 		  for (k=0; k < numbonds[i%NP]; k++)
 		    {
-		      jj = bonds[i%NP][k] / (NANA);
+		      jj = bonds[i%NP][k];
 		      //jj2 = bonds[i%NP][k] % (NANA);
-		      Drx = L[0]*rint((rx[i%NP]-rx[jj])/L[0]);
-		      Dry = L[1]*rint((ry[i%NP]-ry[jj])/L[1]);
-		      Drz = L[2]*rint((rz[i%NP]-rz[jj])/L[2]); 
-		      if (fabs(Drx) > L[0]*0.5)
+		      Drx = L*rint((r0[0][i%NP]-r0[0][jj])/L);
+		      Dry = L*rint((r0[1][i%NP]-r0[1][jj])/L);
+		      Drz = L*rint((r0[2][i%NP]-r0[2][jj])/L); 
+		      if (fabs(Drx) > L*0.5)
 			djx = 1;
 		      else
 			djx = 0;
-		      if (fabs(Dry) > L[1]*0.5)
+		      if (fabs(Dry) > L*0.5)
 			djy = 1;
 		      else
 			djy = 0;
-		      if (fabs(Drz) > L[2]*0.5)
+		      if (fabs(Drz) > L*0.5)
 			djz = 1;
 		      else 
 			djz = 0;
@@ -964,11 +977,12 @@ int main(int argc, char **argv)
 	      if (ncNV2 < NUMREP)
 		{
 		  percola[nc] = 1;
+		  printf("cluster #%d is percolating\n", nc);
 		  printf("#clusters in the replicated system: %d (of %d replicas)\n", ncNV2, NUMREP);
 		  break;
 		}
 	    }
-	  printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
+	  //printf("E/N (PERCOLATION) = %.15G\n", ene/((double)(NUMREP))/((double)NP));
 	}
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
