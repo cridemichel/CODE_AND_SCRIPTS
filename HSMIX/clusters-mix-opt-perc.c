@@ -37,8 +37,8 @@ int check_percolation = 1, *nspots, output_bonds=0, mix_type=-1, media_log=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *colorP, *clsdim, *clsdimP, *clsdimNV, *clscolNV, *clscol, 
-    *clsdimsort, *clssizedst, *percola;
-double *clssizedstAVG;
+    *clsdimsort, *clssizedst, *clssizedst_P, *percola;
+double *clssizedstAVG, *clssizedstAVG_P;
 double calc_norm(double *vec)
 {
   int k1;
@@ -574,6 +574,11 @@ int main(int argc, char **argv)
   cluster_sort = malloc(sizeof(struct cluster_sort_struct)*NP);
   clssizedst = malloc(sizeof(int)*NP);
   clssizedstAVG = malloc(sizeof(double)*NP);
+  if (check_percolation)
+    {
+      clssizedst_P = malloc(sizeof(int)*NP);
+      clssizedstAVG_P = malloc(sizeof(double)*NP);
+    }
   dupcluster = malloc(sizeof(int)*NP*NUMREP); 
   percola = malloc(sizeof(int)*NP);
   ip = malloc(sizeof(int)*NP);
@@ -616,6 +621,8 @@ int main(int argc, char **argv)
   for (i = 0; i < NP; i++)
     {
       clssizedstAVG[i] = 0.0;
+      if (check_percolation)
+	clssizedstAVG_P[i] = 0.0;
     }      
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
@@ -697,6 +704,8 @@ int main(int argc, char **argv)
 	{
 	  //color[i] = -1;	  
 	  clssizedst[i] = 0;
+	  if (check_percolation)
+	    clssizedst_P[i] = 0;
 	}
       curcolor = 0;
       ene=0;
@@ -881,7 +890,7 @@ int main(int argc, char **argv)
 		      na++;
 		    }
 		}
-	      printf("START=%d END=%d cluster[%d] dim=%d\n", START, END, nc, cluster_sort[nc].dim);
+	      //printf("START=%d END=%d cluster[%d] dim=%d\n", START, END, nc, cluster_sort[nc].dim);
 	      /* build cluster in the replicated system */
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
@@ -1109,8 +1118,24 @@ int main(int argc, char **argv)
       for (nc = 0; nc < ncls; nc++)
 	{
 	  //printf("cluster_sort[%d].dim=%d color=%d\n", nc, cluster_sort[nc].dim, cluster_sort[nc].color);
-	  clssizedst[cluster_sort[nc].dim]++;
-	  clssizedstAVG[cluster_sort[nc].dim] += 1.0;
+	  if (check_percolation)
+	    {
+	      if (percola[nc])
+		{
+		  clssizedst_P[cluster_sort[nc].dim]++;
+		  clssizedstAVG_P[cluster_sort[nc].dim] += 1.0;
+		}
+	      else
+		{
+		  clssizedst[cluster_sort[nc].dim]++;
+		  clssizedstAVG[cluster_sort[nc].dim] += 1.0;
+		}
+	    }
+	  else
+	    {
+	      clssizedst[cluster_sort[nc].dim]++;
+	      clssizedstAVG[cluster_sort[nc].dim] += 1.0;
+	    }
 	}
       sprintf(fncls, "%s.clsdst", fname[nr1]);
       f = fopen(fncls, "w+");
@@ -1120,6 +1145,17 @@ int main(int argc, char **argv)
 	    fprintf(f, "%d %d\n", i, clssizedst[i]);
 	}
       fclose(f);
+      if (check_percolation)
+	{
+	  sprintf(fncls, "%s_perc.clsdst", fname[nr1]);
+	  f = fopen(fncls, "w+");
+	  for (i = 1; i < NP; i++)
+	    {
+	      if (clssizedst_P[i] != 0)
+		fprintf(f, "%d %d\n", i, clssizedst_P[i]);
+	    }
+	  fclose(f);
+	}
       if (output_bonds)
 	{
 	  sprintf(fn, "%s.bonds", fname[nr1]);
@@ -1189,5 +1225,57 @@ int main(int argc, char **argv)
 	}
     }
   fclose(f);
+  if (check_percolation)
+    {
+      f = fopen("avg_cluster_size_distr_perc.dat", "w+");
+      if (media_log)
+	{
+	  for (kk=1; kk <= 51; kk++)
+	    l1[kk]=(int) nlin*pow(1.25,kk-1);
+
+	  for(kk=1; kk <= 50; kk++)
+	    {
+	      l2[kk]=l1[kk+1]-1;
+	      if (l2[kk] < npmax) 
+		kmax=kk;
+	    }
+	  for(kk=1; kk <= kmax; kk++)
+	    {
+	      dlog[kk]=0.0;
+	      xlog[kk]=0.0;
+	      for (kj=l1[kk]; kj <= l2[kk]; kj++)
+		{
+		  if (kj < NP && clssizedstAVG_P[kj] !=0)
+		    {   
+		      dlog[kk]=dlog[kk]+clssizedstAVG_P[kj];
+		    }		  
+		  xlog[kk]=xlog[kk]+kj;
+		}
+	    }
+	  for (i3=0; i3 < nlin; i3++)
+	    {
+	      if (clssizedstAVG_P[i3] != 0) fprintf(f,"%d %.15G\n", i3,((double)clssizedstAVG_P[i3])/((double)(nfiles)));
+	    }
+	  for (kk=1; kk <= kmax; kk++)
+	    {
+	      if (dlog[kk]!=0) 
+		{
+		  am=l2[kk]-l1[kk]+1; 
+		  xmed=xlog[kk]/am;
+		  dlog[kk]=dlog[kk]/am; 
+		  fprintf(f,"%.15G %.15G\n", xmed,((double) dlog[kk])/((double)nfiles));
+		}
+	    }
+	}
+      else
+	{
+	  for (i = 1; i < NP; i++)
+	    {
+	      if (clssizedstAVG_P[i] != 0.0)
+		fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG_P[i])/((double)nfiles));
+	    }
+	}
+      fclose(f);
+    }
   return 0;
 }
