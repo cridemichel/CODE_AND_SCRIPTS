@@ -980,25 +980,11 @@ int main(int argc, char **argv)
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
-		  colorP[i] = -1;
-		}
-	      for (i=0; i < NP/block; i++)
-		{
-		  colorP[i] = i;
-		  numcolors++;
-		  for (j=i+NP/block; j < NP; j=j+NP/block)
-		    {
-		      colorP[j] = colorP[i];
-		    }
-		}	
-	      for (c=1; c < 8; c++)
-		{
-		  for (i=0; i < NP; i++)
-		    {
-		      colorP[i+c*NP]=colorP[i]+c*NP;
-		    }
+		  colorP[i] = color[i%NP]+i/NP;
+		  //printf("colorP[%d]=%d\n", i, colorP[i]);
 		}
 	      curcolor = findmaxColor(NP, colorP)+1;
+	      numcolors = curcolor-1;
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
