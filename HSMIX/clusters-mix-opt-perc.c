@@ -22,7 +22,7 @@ int *ip;
 char **fname; 
 
 const int NUMREP = 8;
-int MAXBONDS = 1000;
+int MAXBONDS = 100;
 double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
@@ -626,8 +626,11 @@ int main(int argc, char **argv)
     }      
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
-      for (i=0; i < NP; i++)
-	numbonds[i] = 0;
+      if (check_percolation)
+	{
+	  for (i=0; i < NP; i++)
+	    numbonds[i] = 0;
+	}
       if (cellList)
 	{
 	  free(cellList);
@@ -649,6 +652,7 @@ int main(int argc, char **argv)
 	}
 
       readconf(fname[nr1], &time, &refTime, NP, r0);
+      numcolors = 0;
 #if 0
       for (i=0; i < NP/block; i++)
 	{
@@ -678,12 +682,14 @@ int main(int argc, char **argv)
       for (i=0; i < NP/block; i++)
 	{
 	  color[i] = i;
+	  numcolors++;
 	  for (j=i+NP/block; j < NP; j=j+NP/block)
 	    {
 	      color[j] = color[i];
 	    }
 	}	
 #endif
+      
       printf("RCUT=%f NP/block=%d block=%d NP=%d\n", RCUT, NP/block, block, NP);
       ti = time + refTime;
       /* costruisce la posizione di tutti gli sticky spots */
@@ -707,19 +713,23 @@ int main(int argc, char **argv)
 	  if (check_percolation)
 	    clssizedst_P[i] = 0;
 	}
-      curcolor = 0;
+      //curcolor = 0;
       ene=0;
       //coppie = 0;
 
       build_linked_list();
-   
+
       jbeg = 0; 
       ifin = NP;
+      curcolor = findmaxColor(NP, color)+1;
       for (i = START; i < END; i++)
 	{
     	  if (color[i] == -1)
-	    color[i] = curcolor;
-	    
+	    {
+	      color[i] = curcolor;
+	      numcolors++;    
+	      curcolor++;
+	    }
 	  for (iZ = -1; iZ <= +1; iZ++) 
 	    {
 	      jZ = inCell[2][i] + iZ;    
@@ -782,9 +792,15 @@ int main(int argc, char **argv)
 			      else
 				{
 				  if (color[i] < color[j])
-				    change_all_colors(NP, color, color[j], color[i]);
+				    {
+				      change_all_colors(NP, color, color[j], color[i]);
+				      numcolors--;
+				    }
 				  else if (color[i] > color[j])
-				    change_all_colors(NP, color, color[i], color[j]);
+				    {
+				      change_all_colors(NP, color, color[i], color[j]);
+				      numcolors--;
+				    }
 				}
 			    }
 			}
@@ -813,7 +829,7 @@ int main(int argc, char **argv)
 		}
 	    }
 #endif
-	  curcolor = findmaxColor(NP, color)+1;
+	  //curcolor = findmaxColor(NP, color)+1;
 	}
       /* considera la particelle singole come cluster da 1 */
       for (i = START; i < END; i++)
@@ -822,6 +838,7 @@ int main(int argc, char **argv)
 	    {	    
 	      color[i] = curcolor;
 	      curcolor++;
+	      numcolors++;
 	    } 
 	  //printf("color[%d]=%d\n", i, color[i]);
 	}
@@ -854,6 +871,10 @@ int main(int argc, char **argv)
 	      ncNV++;
 	    }
 
+	}
+      if (ncNV != numcolors)
+	{
+	  printf("We have problems ncNV=%d numcolors=%d\n", ncNV, numcolors);
 	}
       ncls = ncNV;
       printf("E/N = %.15G\n", ene/((double)NP));
@@ -903,7 +924,7 @@ int main(int argc, char **argv)
 		    {
 		      jj = bonds[i%NP][k];
 #if 0
-		        ok=0;
+		      ok=0;
 		      for (n=0; n < cluster_sort[nc].dim; n++)
 			{
 			  if (jj==dupcluster[n])
@@ -954,15 +975,30 @@ int main(int argc, char **argv)
 		      bondsP[i][k] = jj+numimg_jj*NP;
 		    }
 		}
-	      curcolor=0;
-	      numcolors = 0;
 	      //init_freecolor(&fcstack, NP);
+	      numcolors = 0;
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
 		  colorP[i] = -1;
 		}
-
+	      for (i=0; i < NP/block; i++)
+		{
+		  colorP[i] = i;
+		  numcolors++;
+		  for (j=i+NP/block; j < NP; j=j+NP/block)
+		    {
+		      colorP[j] = colorP[i];
+		    }
+		}	
+	      for (c=1; c < 8; c++)
+		{
+		  for (i=0; i < NP; i++)
+		    {
+		      colorP[i+c*NP]=colorP[i]+c*NP;
+		    }
+		}
+	      curcolor = findmaxColor(NP, colorP)+1;
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
@@ -970,6 +1006,7 @@ int main(int argc, char **argv)
 		    {
 		      colorP[i] = curcolor;
 		      numcolors++;
+		      curcolor++;
 		      //printf("pop i=%d idx=%d col=%d\n", i, fcstack.idx+1, color[i]);
 		    }
 		  //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
@@ -1016,7 +1053,11 @@ int main(int argc, char **argv)
 			}
 		    }
 
-		  curcolor = findmaxColorP(cluster_sort[nc].dim*8, colorP)+1;
+#if 0
+		  if (n%100==0)
+		    printf("n=%d sono qui (of %d)\n", n, cluster_sort[nc].dim*8);
+#endif
+		  //curcolor = findmaxColorP(cluster_sort[nc].dim*8, colorP)+1;
 		  //printf("curcolor=%d\n", curcolor);
 		}
 	      nclsP = numcolors;
@@ -1082,7 +1123,6 @@ int main(int argc, char **argv)
  
       //printf("coppie PERC=%d\n", coppie);
       almenouno = 0;
-
       sprintf(fn, "perc%s.dat", fname[nr1]);
       f2 = fopen(fn, "w");
       fclose(f2);
