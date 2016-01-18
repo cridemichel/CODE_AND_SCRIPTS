@@ -894,6 +894,7 @@ int main(int argc, char **argv)
 	      if (cluster_sort[nc].dim==1)
 		continue;
 
+	      //printf("cluster[%d].size=%d\n", nc, cluster_sort[nc].dim);
 	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
 	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
@@ -1100,7 +1101,7 @@ int main(int argc, char **argv)
 	      if (nclsP < NUMREP)
 		{
 		  percola[nc] = 1;
-		  printf("cluster #%d is percolating\n", nc);
+		  printf("cluster #%d is percolating size=%d\n", nc, cluster_sort[nc].dim);
 		  printf("#clusters in the replicated system: %d (of %d replicas)\n", nclsP, NUMREP);
 		  //break;
 		}
