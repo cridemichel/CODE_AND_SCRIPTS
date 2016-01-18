@@ -461,6 +461,14 @@ void add_bond(int i, int j)
       //exit(-1);
     }
 }
+int bound(int na, int n)
+{
+  int i;
+  for (i = 0; i < numbonds[na]; i++)
+    if (bonds[na][i] == n)
+      return 1;
+  return 0;
+}
 void add_bondP(int i, int j)
 {
   bondsP[i][numbondsP[i]] = j;
@@ -687,11 +695,11 @@ int main(int argc, char **argv)
 	  for (j=i+NP/block; j < NP; j=j+NP/block)
 	    {
 	      color[j] = color[i];
-#if 0
+#if 1
 	      if (check_percolation)
 		{
 		  add_bond(j, jold);
-		  add_bond(jold, j);
+	      	  add_bond(jold, j);
 		}
 #endif
 	      jold = j;
@@ -792,8 +800,11 @@ int main(int argc, char **argv)
 			    {
 			      if (output_bonds || check_percolation)
 				{
-				  add_bond(i, j);
-				  add_bond(j, i);
+				  if (!bound(i,j))
+				    {
+				      add_bond(i, j);
+				      add_bond(j, i);
+				    }
 				}
 			      ene=ene+1.0;
 			      if (color[j] == -1)
@@ -917,25 +928,27 @@ int main(int argc, char **argv)
 		      for (c = 0; c < NUMREP; c++)
 			{
 			  dupcluster[c*cluster_sort[nc].dim+na] = i+c*NP;
-			  colorP[i+c*NP] = c*NP;
+			  //colorP[i+c*NP] = c*NP;
 			}
 		      na++;
 		    }
 		}
-	      numcolors = 8;
-	      curcolor = 8; //findmaxColor(NP, colorP)+1;
+	      numcolors = 0;
+	      curcolor = 0; //findmaxColor(NP, colorP)+1;
 	      //printf("START=%d END=%d cluster[%d] dim=%d\n", START, END, nc, cluster_sort[nc].dim);
 	      /* build cluster in the replicated system */
 	     
       	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
-		  // colorP[i] = -1;
+		  colorP[i] = -1;
 		  //if (nc==ncls-1)
 		    //printf("nc=%d i=%d NP=%d\n", nc, i, NP);
 		  numbondsP[i] = numbonds[i%NP];
-		  //for (k=0; k < numbondsP[i]; k++)
-		    //bondsP[i][k] = bondsP[i%NP][k];
+#if 0
+		  for (k=0; k < numbondsP[i]; k++)
+		    bondsP[i][k] = bondsP[i%NP][k];
+#endif
 		  numimg_i = i / NP;
 		  for (k=0; k < numbonds[i%NP]; k++)
 		    {
@@ -1024,7 +1037,7 @@ int main(int argc, char **argv)
 		  if (colorP[i] == -1)
 		    {
 		      colorP[i] = curcolor;
-		      //printf("numcolors=%d\n", numcolors);
+		      //printf("BOH numcolors=%d\n", numcolors);
 		      numcolors++;
 		      curcolor++;
 		      //printf("pop i=%d idx=%d col=%d\n", i, fcstack.idx+1, color[i]);
@@ -1051,7 +1064,9 @@ int main(int argc, char **argv)
 #endif
 		      //printf("i=%d jj=%d\n", i, jj);
 		      if (colorP[jj] == -1)
-			colorP[jj] = colorP[i];
+			{
+		  	  colorP[jj] = colorP[i];
+			}
 		      else
 			{
 			  if (colorP[i] < colorP[jj])
