@@ -493,9 +493,9 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f3;
   double Drx, Dry, Drz;
-  int ok, numimg_i, numimg_jj, jj, k, n, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, numcolors=0, nclsP;
+  int iold, ok, numimg_i, numimg_jj, jj, k, n, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a, numcolors=0, nclsP;
   int NN=-1, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
-  int jX, jY, jZ, iX, iY, iZ, jold;
+  int jX, jY, jZ, iX, iY, iZ, jold, ncc;
   //int coppie;
   double refTime=0.0, ti, ene=0.0, dist, dx, dy, dz;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
@@ -916,9 +916,12 @@ int main(int argc, char **argv)
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
+		  colorP[i] = -1;
 		  //if (nc==ncls-1)
 		    //printf("nc=%d i=%d NP=%d\n", nc, i, NP);
 		  numbondsP[i] = numbonds[i%NP];
+		  //for (k=0; k < numbondsP[i]; k++)
+		    //bondsP[i][k] = bondsP[i%NP][k];
 		  numimg_i = i / NP;
 		  for (k=0; k < numbonds[i%NP]; k++)
 		    {
@@ -977,20 +980,37 @@ int main(int argc, char **argv)
 		}
 	      //init_freecolor(&fcstack, NP);
 	      numcolors = 0;
+	      ncc = 1;
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
-		  colorP[i] = color[i%NP]+i/NP;
-		  //printf("colorP[%d]=%d\n", i, colorP[i]);
+#if 0
+		  colorP[i] = color[i%NP]+NP*(i/NP);
+		  if (n > 0 && colorP[i]!=colorP[iold])
+		    ncc++;
+		  iold=i;
+#endif
+		  //printf("colorP[%d]=%d NP*(i/NP)=%d colorP[i\%%NP]=%d\n", i, colorP[i], NP*(i/NP),
+		//	 colorP[i%NP]);
 		}
-	      curcolor = findmaxColor(NP, colorP)+1;
-	      numcolors = curcolor-1;
+#if 0
+	      numcolors = 8;
+	      if (ncc!=numcolors)
+		{
+		  printf("problem... ncc=%d \n", ncc);
+		  exit(-1);
+		}
+#endif
+	      curcolor = 0; //findmaxColor(NP, colorP)+1;
+	      //printf("ncls=%d numcolors=%d\n", ncls, numcolors);
+	      //numcolors = curcolor-1;
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
 		  if (colorP[i] == -1)
 		    {
 		      colorP[i] = curcolor;
+		      //printf("numcolors=%d\n", numcolors);
 		      numcolors++;
 		      curcolor++;
 		      //printf("pop i=%d idx=%d col=%d\n", i, fcstack.idx+1, color[i]);
