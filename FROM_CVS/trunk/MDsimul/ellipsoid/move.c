@@ -10442,7 +10442,7 @@ void ProcessCollision(void)
       if (typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
 	  /* SE -> P + E */
-	  typeOfPart[evIdB] == 2;
+	  typeOfPart[evIdB] = 2;
 	  typeNP[2]+=1;
 	  typeNP[1]-=1;
 	  // printf("evIdA: %d evIdB: %d\n", typeOfPart[evIdA], typeOfPart[evIdB]);
@@ -10450,7 +10450,7 @@ void ProcessCollision(void)
       if (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0)
 	{
 	  /* SE -> P + E */
-	  typeOfPart[evIdA] == 2;
+	  typeOfPart[evIdA] = 2;
  	  typeNP[2]+=1;
 	  typeNP[1]-=1;
 	}
