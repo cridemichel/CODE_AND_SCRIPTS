@@ -460,8 +460,9 @@ void add_bond(int i, int j)
   if (numbonds[i] >= MAXBONDS[i])
     {
       MAXBONDS[i] *= 1.5;
-      bonds = realloc(bonds[i], MAXBONDS[i]); 
-      //printf("Too many bonds!\n");
+      //printf("MAXBONDS[%d]=%d\n", i, MAXBONDS[i]);
+      bonds[i] = realloc(bonds[i], MAXBONDS[i]*sizeof(int)); 
+      //printif("Too many bonds!\n");
       //exit(-1);
     }
 }
@@ -610,12 +611,14 @@ int main(int argc, char **argv)
     {
       numbonds  = malloc(sizeof(int)*NP); 
       bonds = AllocMatI(NP, MAXBONDS_INIT);
+     
       if (check_percolation)
 	{
 	  //bondsP = AllocMatI(NP*8, MAXBONDS_INIT);
 	  numbondsP = malloc(sizeof(int)*NP*8);
 	}
      }
+  //printf("bonds[25812][2]=%d\n", bonds[25812][2]);
   if (wellWidth==-1)
     wellWidth=sigmaBB;
   maxsaxAA = fabs(sigmaAA);
@@ -925,9 +928,9 @@ int main(int argc, char **argv)
      /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
-	  bondsP = (int**) malloc(sizeof(int)*NP*8);
+	  bondsP = (int**) malloc(sizeof(int*)*NP*8);
 	  for (i=0; i < NP*8; i++)
-	    bondsP[i] = (int*) malloc(sizeof(int)*MAXBONDS[i%NP]);
+	    bondsP[i] = (int*) malloc(sizeof(int)*numbonds[i%NP]);
 
 	  for (nc = ncls-1; nc >= 0; nc--)
 	    {
