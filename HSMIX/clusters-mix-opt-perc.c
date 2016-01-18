@@ -22,7 +22,7 @@ int *ip;
 char **fname; 
 
 const int NUMREP = 8;
-int MAXBONDS = 100;
+int *MAXBONDS, MAXBONDS_INIT=10;
 double wellWidth;
 double Lx, Ly, Lz, L, time, *ti, *R[3][3], *r0[3], r0L[3], RL[3][3], *DR0[3], maxsax, maxax0, maxax1,
        maxsaxAA, maxsaxAB, maxsaxBB, RCUT;
@@ -345,14 +345,6 @@ void parse_params(int argc, char** argv)
 	  cc++;
 	  wellWidth = atof(argv[cc]);
 	} 
-      else if (!strcmp(argv[cc],"--maxbonds") || !strcmp(argv[cc],"-mb" ))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  MAXBONDS = atoi(argv[cc]);
- 	  output_bonds = 1;
-	} 
       else if (cc == argc)
 	print_usage();
       else
@@ -434,6 +426,7 @@ void build_linked_list_perc(int clsdim, double Lbig)
     }
 }
 /* Allocate memory for a matrix of integers */
+#if 0
 int** AllocMatI(int size1, int size2)
 {
   int** v;
@@ -443,7 +436,19 @@ int** AllocMatI(int size1, int size2)
   for (k = 1; k < size1; k++)
     v[k] = v[k-1] + size2;
   return v;
-}void freeMatI(int **v)
+}
+#else
+int** AllocMatI(int size1, int size2)
+{
+  int** v;
+  int k;
+  v = (int**) malloc(size1 * sizeof(int*));
+  for (k = 0; k < size1; k++)
+    v[k] = (int*) malloc(size2 * sizeof(int));
+  return v;
+}
+#endif
+void freeMatI(int **v)
 {
   free(v[0]);
   free(v);  
@@ -452,11 +457,10 @@ void add_bond(int i, int j)
 {
   bonds[i][numbonds[i]] = j;
   numbonds[i]++;
-  if (numbonds[i] >= MAXBONDS)
+  if (numbonds[i] >= MAXBONDS[i])
     {
-      freeMatI(bonds);
-      MAXBONDS *= 1.5;
-      bonds = AllocMatI(NP, MAXBONDS);
+      MAXBONDS[i] *= 1.5;
+      bonds = realloc(bonds[i], MAXBONDS[i]); 
       //printf("Too many bonds!\n");
       //exit(-1);
     }
@@ -469,20 +473,20 @@ int bound(int na, int n)
       return 1;
   return 0;
 }
+#if 0
 void add_bondP(int i, int j)
 {
   bondsP[i][numbondsP[i]] = j;
   numbondsP[i]++;
-  if (numbondsP[i] >= MAXBONDS)
+  if (numbondsP[i] >= MAXBONDS_P[i])
     {
-      freeMatI(bondsP);
-      MAXBONDS *= 1.5;
-      bondsP = AllocMatI(NP*NUMREP, MAXBONDS);
+      MAXBONDS_P[i] *= 1.5;
+      bondsP = realloc(bondsP, MAXBONDS_P[i]);
       //printf("Too many bonds P!\n");
       //exit(-1);
     }
 }
-
+#endif
 
 int get_image(int i, int j, int k)
 {
@@ -571,6 +575,18 @@ int main(int argc, char **argv)
       START=NPA;
       END=NP;
     }
+  MAXBONDS = malloc(sizeof(int)*NP);
+  //MAXBONDS_P = malloc(sizeof(int)*NP*8);
+  for (i=0; i < NP; i++)
+    {
+      MAXBONDS[i] = MAXBONDS_INIT;
+    }
+#if 0
+  for (i=0; i < NP*8; i++)
+    {
+      MAXBONDS_P[i] = MAXBONDS_INIT;
+    }
+#endif
   color = malloc(sizeof(int)*NP);
   colorP= malloc(sizeof(int)*NP*8);
   clsdimP=malloc(sizeof(int)*NP*NUMREP);
@@ -593,10 +609,10 @@ int main(int argc, char **argv)
   if (output_bonds||check_percolation)
     {
       numbonds  = malloc(sizeof(int)*NP); 
-      bonds = AllocMatI(NP, MAXBONDS);
+      bonds = AllocMatI(NP, MAXBONDS_INIT);
       if (check_percolation)
 	{
-	  bondsP = AllocMatI(NP*8, MAXBONDS);
+	  //bondsP = AllocMatI(NP*8, MAXBONDS_INIT);
 	  numbondsP = malloc(sizeof(int)*NP*8);
 	}
      }
@@ -909,6 +925,10 @@ int main(int argc, char **argv)
      /* ============== >>> PERCOLATION <<< ================== */
       if (check_percolation)
 	{
+	  bondsP = (int**) malloc(sizeof(int)*NP*8);
+	  for (i=0; i < NP*8; i++)
+	    bondsP[i] = (int*) malloc(sizeof(int)*MAXBONDS[i%NP]);
+
 	  for (nc = ncls-1; nc >= 0; nc--)
 	    {
 	      if (cluster_sort[nc].dim==1)
