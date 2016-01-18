@@ -72,7 +72,7 @@ int main(int argc, char **argv)
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
-  int k1, k2, numpoly, parnum=1000, i, j, polylen=4, a, b, parnumE, parnumS, typeP;
+  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP;
   int nx, ny, nz, nxmax, nymax, nzmax, idx;
   del=0.5;
   /* permanent spots diameter */
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
   LenE=DiamE;
   LenS=DiamS;
   LenP=DiamP;
- 
+  
   if (argc > 9)
     LenE = atof(argv[9]);
 
@@ -131,7 +131,8 @@ int main(int argc, char **argv)
   Len=max3(LenS,LenE,LenP);
   Diam=max3(DiamS,DiamE,DiamP);
  
-  parnum = 4*nxmax*nymax*nzmax;
+  printf("Len=%f Diam=%f\n", Len, Diam);
+  parnum = polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
@@ -166,10 +167,10 @@ int main(int argc, char **argv)
     for (k2=0; k2 < 3; k2++)
       R0[k1][k2]=0.0;
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
-  delta = 0.1;
+  delta = 0.01;
   /* building the dimer... */
-  rxc[0] = Len/2.0+delta;
-  ryc[0] = -Diam/2.0-delta;
+  rxc[0] = 0.0;
+  ryc[0] = 0.0;
   rzc[0] = 0.0;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
@@ -177,6 +178,7 @@ int main(int argc, char **argv)
 	Rc[a][b][0] = R0[a][b];
       }
 
+#if 0
   rxc[1] = Len/2.0+delta;
   ryc[1] = Diam/2.0+delta;
   rzc[1] = 0.0;
@@ -204,10 +206,10 @@ int main(int argc, char **argv)
 	Rc[a][b][3] = R0[a][b];
       }
   Rc[0][0][3] = -Rc[0][0][3];
-
-  bs[0] = 2.0*Len+2.0*delta;
-  bs[1] = 2.0*Diam+2.0*delta;
-  bs[2] = Diam;
+#endif
+  bs[0] = Len+2.0*delta;
+  bs[1] = Diam+2.0*delta;
+  bs[2] = Diam+2.0*delta;
 #if 0
   for (i=0; i < polylen; i++)
     {
@@ -230,12 +232,12 @@ int main(int argc, char **argv)
   fprintf(f, "parnum: %d\n", parnum);
   fprintf(f, "ninters: 0\n");
   fprintf(f, "nintersIJ: 0\n");
-  fprintf(f, "ntypes: 1\n");
+  fprintf(f, "ntypes: 3\n");
   fprintf(f, "saveBonds: 0\n");
   fprintf(f, "@@@\n");
   /* #Enzymes #Substrates #Products at t=0 */
-  parnumE=parnum-1;
-  parnumS=1;
+  parnumS=parnum-1;
+  parnumE=1;
   fprintf(f, "%d %d %d\n", parnumE, parnumS, 0);
   fprintf(f,"%f %f %f\n", LenE/2.0, DiamE/2.0, DiamE/2.0); 
   fprintf(f,"2 2 2\n");
@@ -281,8 +283,8 @@ int main(int argc, char **argv)
   del0x = 0.01;
   del0y=del0z=Diam*0.1;
 #endif
-  drx = bs[2]; //0.500000000001;
-  dry = bs[2];
+  drx = bs[0]; //0.500000000001;
+  dry = bs[1];
   drz = bs[2];
 #if 0
   if (parnum%polylen != 0)
@@ -304,12 +306,13 @@ int main(int argc, char **argv)
   L[0] = (nxmax)*drx;
   L[1] = (nymax)*dry;
   L[2] = (nzmax)*drz;
-
+  printf("nx=%d %d %d dr=%f %f %f\n", nxmax, nymax, nzmax, drx, dry, drz);
   printf("step #1 L=%f %f %f\n", L[0], L[1], L[2]);
   /* expand system according to tetramer size bs[3] */
-  factor[0] = 1.0001*(bs[0]/bs[2]);
-  factor[1] = 1.0001*(bs[1]/bs[2]);
-  factor[2] = 1.0001;
+#if 1
+  factor[0] = 1.0001*(bs[0]);
+  factor[1] = 1.0001*(bs[1]);
+  factor[2] = 1.0001*(bs[2]);
   for (i=0; i < numpoly; i++)
     {
       rxCM[i] *= factor[0];
@@ -319,7 +322,9 @@ int main(int argc, char **argv)
   for (a=0; a < 3; a++)
     L[a] *= factor[a];
   printf("step #2 [factor] L=%f %f %f\n", L[0], L[1], L[2]);
-  vol = acos(0.0)*2.0*(Diam/2)*(Diam/2)*Len;
+#endif
+  vol = acos(0.0)*8.0*(Diam/2)*(Diam/2)*(Len/2)/3.0;
+
   phi=parnum*vol/(L[0]*L[1]*L[2]);
   xtrafact = pow(phi/targetphi, 1.0/3.0);
   printf("vol=%f targetphi=%f phi=%f xtrafact=%f\n", vol, targetphi, phi, xtrafact);
@@ -386,6 +391,7 @@ int main(int argc, char **argv)
       for (j=0; j < polylen; j++)
 	{
 	  idx = i*polylen + j;
+	  //printf("idx=%d i=%d\n", idx, i);
 	  rx[idx] = rxCM[i] + rxc[j];
 	  ry[idx] = ryCM[i] + ryc[j];
 	  rz[idx] = rzCM[i] + rzc[j];
