@@ -1211,19 +1211,22 @@ void angvelMB(void)
     {
       if (is_sphere(i))
 	continue;
-      inert = typesArr[typeOfPart[i]].I[0];
-      mean = sqrt(Oparams.T / inert);
-      wx[i] = mean*gauss();
-      wy[i] = mean*gauss();
-      wz[i] = mean*gauss();
-      sp = wx[i]*R[i][zax][0]+wy[i]*R[i][zax][1]+wz[i]*R[i][zax][2];
-      wx[i] -= sp*R[i][zax][0];
-      wy[i] -= sp*R[i][zax][1];
-      wz[i] -= sp*R[i][zax][2];
-      Mx[i] = wx[i]*inert;
-      My[i] = wy[i]*inert;
-      Mz[i] = wz[i]*inert;
-      //printf("w=%f %f %f\n", wx[i], wy[i], wz[i]);
+      if (typesArr[typeOfPart[i]].brownian==1)
+	{
+     	  inert = typesArr[typeOfPart[i]].I[0];
+	  mean = sqrt(Oparams.T / inert);
+	  wx[i] = mean*gauss();
+	  wy[i] = mean*gauss();
+	  wz[i] = mean*gauss();
+	  sp = wx[i]*R[i][zax][0]+wy[i]*R[i][zax][1]+wz[i]*R[i][zax][2];
+	  wx[i] -= sp*R[i][zax][0];
+	  wy[i] -= sp*R[i][zax][1];
+	  wz[i] -= sp*R[i][zax][2];
+	  Mx[i] = wx[i]*inert;
+	  My[i] = wy[i]*inert;
+     	  Mz[i] = wz[i]*inert;
+	  //printf("w=%f %f %f\n", wx[i], wy[i], wz[i]);
+	} 
     }
 }
 
