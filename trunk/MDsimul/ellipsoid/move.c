@@ -10443,12 +10443,17 @@ void ProcessCollision(void)
 	{
 	  /* SE -> P + E */
 	  typeOfPart[evIdB] == 2;
- 	}
+	  typeNP[2]+=1;
+	  typeNP[1]-=1;
+	  // printf("evIdA: %d evIdB: %d\n", typeOfPart[evIdA], typeOfPart[evIdB]);
+	}
       if (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0)
 	{
 	  /* SE -> P + E */
 	  typeOfPart[evIdA] == 2;
- 	}
+ 	  typeNP[2]+=1;
+	  typeNP[1]-=1;
+	}
     }
   else if (Oparams.ntypes == 4)
     {
