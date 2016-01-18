@@ -1209,6 +1209,8 @@ void angvelMB(void)
 #endif
   for (i = 0; i < Oparams.parnum; i++)
     {
+      if (is_sphere(i))
+	continue;
       inert = typesArr[typeOfPart[i]].I[0];
       mean = sqrt(Oparams.T / inert);
       wx[i] = mean*gauss();
