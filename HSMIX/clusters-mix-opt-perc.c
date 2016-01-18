@@ -687,11 +687,13 @@ int main(int argc, char **argv)
 	  for (j=i+NP/block; j < NP; j=j+NP/block)
 	    {
 	      color[j] = color[i];
+#if 0
 	      if (check_percolation)
 		{
 		  add_bond(j, jold);
 		  add_bond(jold, j);
 		}
+#endif
 	      jold = j;
 	    }
 	}	
@@ -900,14 +902,14 @@ int main(int argc, char **argv)
 	    {
 	      if (cluster_sort[nc].dim==1)
 		continue;
-
-	      //printf("cluster[%d].size=%d\n", nc, cluster_sort[nc].dim);
+     	      //printf("cluster[%d].size=%d\n", nc, cluster_sort[nc].dim);
 	      //printf("Analysing cluster #%d of #%d\n", nc+1, ncls);
 	      /* N.B per verificare la percolazione ogni cluster va "duplicato"
 	       * in tutte le direzioni e se alla fine risulta comunque un unico 
 	       * cluster allora tale cluster è percolante.*/
 	      na = 0;
 	      //printf("i=1011 j=277 rat=%.15G %.15G\n", rat[0][0][1011], rat[0][0][377]);
+	      //init_freecolor(&fcstack, NP);
 	      for (i=START; i < END; i++)
 		{
 		  if (color[i]==cluster_sort[nc].color)
@@ -915,16 +917,20 @@ int main(int argc, char **argv)
 		      for (c = 0; c < NUMREP; c++)
 			{
 			  dupcluster[c*cluster_sort[nc].dim+na] = i+c*NP;
+			  colorP[i+c*NP] = c*NP;
 			}
 		      na++;
 		    }
 		}
+	      numcolors = 8;
+	      curcolor = 8; //findmaxColor(NP, colorP)+1;
 	      //printf("START=%d END=%d cluster[%d] dim=%d\n", START, END, nc, cluster_sort[nc].dim);
 	      /* build cluster in the replicated system */
-	      for (n=0; n < cluster_sort[nc].dim*8; n++)
+	     
+      	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
-		  colorP[i] = -1;
+		  // colorP[i] = -1;
 		  //if (nc==ncls-1)
 		    //printf("nc=%d i=%d NP=%d\n", nc, i, NP);
 		  numbondsP[i] = numbonds[i%NP];
@@ -986,9 +992,9 @@ int main(int argc, char **argv)
 		      bondsP[i][k] = jj+numimg_jj*NP;
 		    }
 		}
-	      //init_freecolor(&fcstack, NP);
-	      numcolors = 0;
-	      ncc = 1;
+
+     	      ncc = 1;
+#if 0
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
 		{
 		  i = dupcluster[n];
@@ -1001,6 +1007,7 @@ int main(int argc, char **argv)
 		  //printf("colorP[%d]=%d NP*(i/NP)=%d colorP[i\%%NP]=%d\n", i, colorP[i], NP*(i/NP),
 		//	 colorP[i%NP]);
 		}
+#endif
 #if 0
 	      numcolors = 8;
 	      if (ncc!=numcolors)
@@ -1009,7 +1016,6 @@ int main(int argc, char **argv)
 		  exit(-1);
 		}
 #endif
-	      curcolor = 0; //findmaxColor(NP, colorP)+1;
 	      //printf("ncls=%d numcolors=%d\n", ncls, numcolors);
 	      //numcolors = curcolor-1;
 	      for (n=0; n < cluster_sort[nc].dim*8; n++)
