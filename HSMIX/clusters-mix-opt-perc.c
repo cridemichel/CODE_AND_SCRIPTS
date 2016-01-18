@@ -545,7 +545,7 @@ int main(int argc, char **argv)
   sigmaAB=0.5*(sigmaAA+sigmaBB);
   fclose(f);
  
-  printf("NP=%d NPA=%d sigmaBB=%f\n", NP, NPA, sigmaBB);  
+  printf("NP=%d NPA=%d sigmaBB=%f L=%f\n", NP, NPA, sigmaBB, L);  
   NPA=0;
   mix_type=-1;
   if (mix_type==-1 || NPA==NP)
@@ -683,9 +683,16 @@ int main(int argc, char **argv)
 	{
 	  color[i] = i;
 	  numcolors++;
+	  jold = i;
 	  for (j=i+NP/block; j < NP; j=j+NP/block)
 	    {
 	      color[j] = color[i];
+	      if (check_percolation)
+		{
+		  add_bond(j, jold);
+		  add_bond(jold, j);
+		}
+	      jold = j;
 	    }
 	}	
 #endif
