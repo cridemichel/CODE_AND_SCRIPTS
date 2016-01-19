@@ -69,8 +69,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
   for (i = 0; i < NP; i++) 
     {
       fscanf(f, "%lf %lf %lf %d\n", &(r[0][i]), &(r[1][i]), &(r[2][i]), &(ip[i])); 
+      
       //printf("%.15G %.15G %.15G\n", R[2][0][i],R[2][1][i], R[2][2][i] );
-      //printf("%f, %f, %f\n", r[0][i], r[1][i], r[2][i]);
+      //printf("i=%d %f, %f, %f\n", i, r[0][i], r[1][i], r[2][i]);
 #if 0
       if (fabs(r[2][i]) > Lz)
 	{
@@ -365,9 +366,10 @@ void build_linked_list(void)
   printf("L=%f cells=%d %d %d NP=%d s=%d e=%d\n", L, cellsx, cellsy, cellsz, NP, START, END);
   for (n = START; n < END; n++)
     {
-      inCell[0][n] =  (r0[0][n] + L2) * cellsx / L;
-      inCell[1][n] =  (r0[1][n] + L2) * cellsy / L;
-      inCell[2][n] =  (r0[2][n] + L2) * cellsz / L;
+      inCell[0][n] = (r0[0][n] + L2) * cellsx / L;
+      inCell[1][n] = (r0[1][n] + L2) * cellsy / L;
+      inCell[2][n] = (r0[2][n] + L2) * cellsz / L;
+
       //printf("incell[%d]=%d %d %d\n", n, inCell[0][n], inCell[1][n], inCell[2][n]);
       if (inCell[0][n] == cellsx)
 	inCell[0][n]=cellsx-1;
@@ -665,7 +667,6 @@ int main(int argc, char **argv)
 	  free(inCell[1]);
 	  free(inCell[2]);
 	}
-      
       cellsx = L / RCUT;
       cellsy = L / RCUT;
       cellsz = L / RCUT;
@@ -673,6 +674,7 @@ int main(int argc, char **argv)
       inCell[0] = malloc(sizeof(int)*NP);
       inCell[1] = malloc(sizeof(int)*NP);
       inCell[2] = malloc(sizeof(int)*NP);
+    
       for (i = 0; i < NP; i++)
 	{
 	  percola[i] = 0; 
