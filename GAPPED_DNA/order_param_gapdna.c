@@ -240,13 +240,13 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
 calc_I2(double theta, double phi, double *reI2, double *imI2)
 {
   double A;
-  double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi;
+  double sin2th, cos2th, cosphi, sinphi, cos2phi, sin2phi, costh, sinth;
   costh= cos(theta);
   sinth= sin(theta);
   cos2th = Sqr(cos(theta));
-  cos4th = Sqr(cos2th);
+  //cos4th = Sqr(cos2th);
   sin2th = Sqr(sin(theta));
-  sin4th = Sqr(sin2th);
+  //sin4th = Sqr(sin2th);
   cosphi = cos(phi);
   sinphi = sin(phi);
   cos2phi = cos(2.0*phi);
@@ -270,7 +270,8 @@ calc_I2(double theta, double phi, double *reI2, double *imI2)
 double calc_I4(double theta, double phi, double *reI2, double *imI2)
 {
   double A;
-  double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi;
+  double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi, cos2phi, sin2phi, cos3phi, sin3phi;
+  double costh, sinth;
   costh = cos(theta);
   sinth = sin(theta);
   cos2th = Sqr(cos(theta));
@@ -281,19 +282,37 @@ double calc_I4(double theta, double phi, double *reI2, double *imI2)
   sinphi = sin(phi);
   cos2phi = cos(2.0*phi);
   sin2phi = sin(2.0*phi);
-  
+  cos3phi = cos(3.0*phi);
+  sin3phi = sin(3.0*phi);
+  cos4phi = cos(4.0*phi);
+  sin4phi = sin(4.0*phi); 
   /* here 0,1,... are m=-4,3,... */
-  reI2[0] = ;
-  imI2[0] = ;
-  reI2[1] = ;
-  imI2[1] = ;
-  reI2[2] = ;
-  imI2[2] = ;
-  reI2[3] = ;
-  imI2[3] = ;
-  reI2[4] = ;
-  imI2[4] = ;
+  A = (3.0/16.0)*sqrt(35.0/2.0/M_PI)*sin4th; 
+  reI2[0] = cos4phi*A;
+  imI2[0] = -sin4phi*A;
+  reI2[8] = cos4phi*A;
+  imI2[8] = sin4phi*A;
 
+  A = (3.0/8.0)*sqrt(35.0/M_PI)*costh*sin2th*sinth; 
+  reI2[1] = cos3phi*A;
+  imI2[1] = -sin3phi*A;
+  reI2[7] = cos3phi*A;
+  imI2[7] = sin3phi*A;
+
+  A = (3.0/8.0)*sqrt(5.0/2.0/M_PI)*(-1.0+7.0*cos2th)*sin2th;
+  reI2[2] = cos2phi*A;
+  imI2[2] = -sin2phi*A;
+  reI2[6] = cos2phi*A;
+  imI2[6] = sin2phi*A;
+
+  A = (3.0/8.0)*sqrt(5.0/2.0/M_PI)*(-3.0+7.0*cos2th)*sinth; 
+  reI2[3] = cosphi*A;
+  imI2[3] = -sinphi*A;
+  reI2[5] = cosphi*A;
+  imI2[5] = sinphi*A;
+
+  reI2[4] = 3.0*(3.0-30.0*cos2th+35*cos4th)/16.0/sqrt(M_PI);
+  imI2[4] = 0.0;
 }
 
 int main(int argc, char** argv)
