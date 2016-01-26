@@ -237,7 +237,7 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
 
 }
 
-calc_I2(double theta, double phi, double *reI2, double *imI2)
+void calc_I2(double theta, double phi, double *reI2, double *imI2)
 {
   double A;
   double sin2th, cos2th, cosphi, sinphi, cos2phi, sin2phi, costh, sinth;
@@ -267,11 +267,11 @@ calc_I2(double theta, double phi, double *reI2, double *imI2)
   imI2[2] = 0;
 }
 
-double calc_I4(double theta, double phi, double *reI2, double *imI2)
+void calc_I4(double theta, double phi, double *reI2, double *imI2)
 {
   double A;
   double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi, cos2phi, sin2phi, cos3phi, sin3phi;
-  double costh, sinth;
+  double costh, sinth, cos4phi, sin4phi;
   costh = cos(theta);
   sinth = sin(theta);
   cos2th = Sqr(cos(theta));
@@ -318,8 +318,8 @@ double calc_I4(double theta, double phi, double *reI2, double *imI2)
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f_n;
-  int nf, i, a, b, dummyint, k, nbin;
-  double sum_reI2[5], sum_imI2[5], sum_reI4[9], sum_imI4[9], I2, I4, theta, phi, reK2[5], imK[5], reK4[9], imK4[9];
+  int nf, i, a, b, dummyint, k, nbin, mm;
+  double sum_reI2[5], sum_imI2[5], sum_reI4[9], sum_imI4[9], I2, I4, theta, phi, reK2[5], imK2[5], reK4[9], imK4[9];
   double ev[3], ti=-1, S, tref=0.0, Dx, Qt[3][3], ev_t[3];
 #if 0
   if (argc == 1)
@@ -458,8 +458,8 @@ int main(int argc, char** argv)
 	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]));
 
 	  theta = acos(R[0][2]);
-	  phi = asin(R[0][1]/sin(theta))
-	  calc_I2(theta, phi, reK, imK); 
+	  phi = asin(R[0][1]/sin(theta));
+	  calc_I2(theta, phi, reK2, imK2); 
 	  for (mm=0; mm < 5; mm++)
 	    {
 	      sum_reI2[mm] += reK2[mm];
