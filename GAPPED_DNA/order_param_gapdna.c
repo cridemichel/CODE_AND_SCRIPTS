@@ -239,20 +239,26 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
 
 double calc_I2(double theta)
 {
-  return (5.0/16.0/M_PI)*Sqr(-1.0+3.0*Sqr(cos(theta)))+15.0/4.0/M_PI*Sqr(cos(theta)*sin(theta))+15.0/16.0/M_PI/Sqr(sin(theta))*Sqr(sin(theta));
+  return (5.0/16.0/M_PI)*Sqr(-1.0+3.0*Sqr(cos(theta)))+15.0/4.0/M_PI*Sqr(cos(theta)*sin(theta))+15.0/16.0/M_PI*Sqr(sin(theta))*Sqr(sin(theta));
 
 }
 
 double calc_I4(double theta)
 {
-  return (5.0/16.0/M_PI)*Sqr(-1.0+3.0*Sqr(cos(theta)))+15.0/4.0/M_PI*Sqr(cos(theta)*sin(theta))+15.0/16.0/M_PI/Sqr(sin(theta))*Sqr(sin(theta));
+  double cos2, cos4, sin2, sin4;
+  cos2 = Sqr(cos(theta));
+  cos4 = Sqr(cos2);
+  sin2 = Sqr(sin(theta));
+  sin4 = Sqr(sin2);
+  return 9.0/256.0/M_PI*Sqr(3.0 - 30.0*cos2 + 35.0*cos4) + 45.0/32.0/M_PI*Sqr(-3.0+7.0*cos2)*cos2*sin2+
+   45.0/64.0/M_PI*Sqr(-1.0+7.0*cos2)*sin4 + 315.0/32.0/M_PI*sin4*sin2*cos2 + 315.0/256.0/M_PI*sin4*sin4;
 
 }
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f_n;
   int nf, i, a, b, dummyint, k, nbin;
-  double sumI2=0.0, I2, theta;
+  double sumI2=0.0, sumI4=0.0, I2, I4, theta;
   double ev[3], ti=-1, S, tref=0.0, Dx, Qt[3][3], ev_t[3];
 #if 0
   if (argc == 1)
@@ -386,6 +392,7 @@ int main(int argc, char** argv)
 
 	  theta = acos(R[0][2]);
 	  sumI2+=calc_I2(theta); 
+	  sumI4+=calc_I4(theta);
 	  //printf("R=%.15G %.15G %.15G\n", R[0][1], R[0][1], R[0][2]);
 	  /* BUG FIX 21/01/13 */
 	  if (plane>=0)
@@ -516,8 +523,9 @@ int main(int argc, char** argv)
     for (b=0; b < 3; b++)
       Q[a][b] /= ((double)N)*((double)nf); 
   //printf("N*nf=%f Nr=%f Nl=%f\n", ((double)N)*nf, Nr, Nl);
-  I2 = sumI2 / ((double)N)*((double)nf);
-  printf("I2 = %f\n", I2);
+  I2 = sumI2 / (((double)N)*((double)nf));
+  I4 = sumI4 / (((double)N)*((double)nf));
+  printf("I2 = %f I4 = %f\n", I2, I4);
   if (plane >= 0)
     {
       for (a=0; a < 3; a++)
