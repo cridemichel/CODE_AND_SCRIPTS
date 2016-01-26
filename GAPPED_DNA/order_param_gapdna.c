@@ -305,7 +305,7 @@ void calc_I4(double theta, double phi, double *reI2, double *imI2)
   reI2[6] = cos2phi*A;
   imI2[6] = sin2phi*A;
 
-  A = (3.0/8.0)*sqrt(5.0/2.0/M_PI)*(-3.0+7.0*cos2th)*sinth; 
+  A = (3.0/8.0)*sqrt(5.0/M_PI)*(-3.0+7.0*cos2th)*sinth*costh; 
   reI2[3] = cosphi*A;
   imI2[3] = -sinphi*A;
   reI2[5] = cosphi*A;
