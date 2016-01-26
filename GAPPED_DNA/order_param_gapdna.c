@@ -533,10 +533,16 @@ int main(int argc, char** argv)
 		  }
 	      }
 	}
-      sum_reI2 /= ((double)N);
-      sum_imI2 /= ((double)N);
-      sum_reI4 /= ((double)N);
-      sum_imI4 /= ((double)N);
+      for (mm=0; mm < 5; mm++)
+	{
+  	  sum_reI2[mm] /= ((double)N);
+	  sum_imI2[mm] /= ((double)N);
+	}
+      for (mm=0; mm < 9; mm++)
+	{
+   	  sum_reI4[mm] /= ((double)N);
+       	  sum_imI4[mm] /= ((double)N);
+	}
       if (timeEvol)
 	{
 	  for (a=0; a < 3; a++)
@@ -590,6 +596,14 @@ int main(int argc, char** argv)
 	}
 
       fclose(f);
+      for (mm = 0; mm < 5; mm++)
+	{
+	  I2 += (4.0*M_PI/5.0)*(Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm])) / ((double)nf);
+	}
+      for (mm = 0; mm < 9; mm++)
+	{
+ 	  I4 += (4.0*M_PI/9.0)*(Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm])) / ((double)nf);
+	}    
     }
   fclose(f2); 
   
@@ -605,8 +619,8 @@ int main(int argc, char** argv)
     for (b=0; b < 3; b++)
       Q[a][b] /= ((double)N)*((double)nf); 
   //printf("N*nf=%f Nr=%f Nl=%f\n", ((double)N)*nf, Nr, Nl);
-  I2 = (4.0*M_PI/5.0)*(Sqr(sum_reI2) + Sqr(sum_imI2)) / ((double)nf);
-  I4 = (4.0*M_PI/9.0)*(Sqr(sum_reI4) + Sqr(sum_imI4)) / ((double)nf);
+  I2 /= ((double)nf);
+  I4 /= ((double)nf);
   printf("I2 = %f I4 = %f\n", I2, I4);
   if (plane >= 0)
     {
