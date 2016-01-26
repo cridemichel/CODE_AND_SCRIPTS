@@ -4,6 +4,9 @@
 #include <string.h>
 //#include <lapack.h>
 
+extern void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+                double* w, double* work, int* lwork, int* info );
+
 
 double max3(double a, double b, double c)
 {
@@ -239,7 +242,6 @@ double calc_I2(double theta)
   return (5.0/16.0/M_PI)*Sqr(-1.0+3.0*Sqr(cos(theta)))+15.0/4.0/M_PI*Sqr(cos(theta)*sin(theta))+15.0/16.0/M_PI/Sqr(sin(theta))*Sqr(sin(theta));
 
 }
-
 
 double calc_I4(double theta)
 {
