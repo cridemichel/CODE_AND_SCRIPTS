@@ -319,6 +319,7 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2, *f_n;
   int nf, i, a, b, dummyint, k, nbin, mm;
+  double A2, A4;
   double sum_reI2[5], sum_imI2[5], sum_reI4[9], sum_imI4[9], I2, I4, theta, phi, reK2[5], imK2[5], reK4[9], imK4[9];
   double ev[3], ti=-1, S, tref=0.0, Dx, Qt[3][3], ev_t[3];
 #if 0
@@ -596,14 +597,17 @@ int main(int argc, char** argv)
 	}
 
       fclose(f);
+      A2 = A4 = 0;
       for (mm = 0; mm < 5; mm++)
 	{
-	  I2 += (4.0*M_PI/5.0)*sqrt(Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]));
+	  A2 += Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]);
 	}
       for (mm = 0; mm < 9; mm++)
 	{
- 	  I4 += (4.0*M_PI/9.0)*sqrt(Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]));
+ 	  A4 += Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]);
 	}    
+      I2 += sqrt((4.0*M_PI/5.0)*A2);
+      I4 += sqrt((4.0*M_PI/9.0)*A4);
     }
   fclose(f2); 
   
