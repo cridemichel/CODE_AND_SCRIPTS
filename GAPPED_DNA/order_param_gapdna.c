@@ -598,11 +598,11 @@ int main(int argc, char** argv)
       fclose(f);
       for (mm = 0; mm < 5; mm++)
 	{
-	  I2 += (4.0*M_PI/5.0)*(Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]));
+	  I2 += (4.0*M_PI/5.0)*sqrt(Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]));
 	}
       for (mm = 0; mm < 9; mm++)
 	{
- 	  I4 += (4.0*M_PI/9.0)*(Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]));
+ 	  I4 += (4.0*M_PI/9.0)*sqrt(Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]));
 	}    
     }
   fclose(f2); 
