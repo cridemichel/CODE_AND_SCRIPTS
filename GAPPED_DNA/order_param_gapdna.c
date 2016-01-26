@@ -458,6 +458,7 @@ int main(int argc, char** argv)
 	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]));
 
 	  theta = acos(R[0][2]);
+	  phi = asin(R[0][1]/sin(theta))
 	  calc_I2(theta, phi, reK, imK); 
 	  for (mm=0; mm < 5; mm++)
 	    {
@@ -604,8 +605,8 @@ int main(int argc, char** argv)
     for (b=0; b < 3; b++)
       Q[a][b] /= ((double)N)*((double)nf); 
   //printf("N*nf=%f Nr=%f Nl=%f\n", ((double)N)*nf, Nr, Nl);
-  I2 = sumI2 / (((double)N)*((double)nf));
-  I4 = sumI4 / (((double)N)*((double)nf));
+  I2 = (4.0*M_PI/5.0)*(Sqr(sum_reI2) + Sqr(sum_imI2)) / ((double)nf);
+  I4 = (4.0*M_PI/9.0)*(Sqr(sum_reI4) + Sqr(sum_imI4)) / ((double)nf);
   printf("I2 = %f I4 = %f\n", I2, I4);
   if (plane >= 0)
     {
