@@ -237,28 +237,70 @@ void build_ref_axes(double u1[3], double u2[3], double u3[3])
 
 }
 
-double calc_I2(double theta)
+calc_I2(double theta, double phi, double *reI2, double *imI2)
 {
-  return (5.0/16.0/M_PI)*Sqr(-1.0+3.0*Sqr(cos(theta)))+15.0/4.0/M_PI*Sqr(cos(theta)*sin(theta))+15.0/16.0/M_PI*Sqr(sin(theta))*Sqr(sin(theta));
+  double A;
+  double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi;
+  costh= cos(theta);
+  sinth= sin(theta);
+  cos2th = Sqr(cos(theta));
+  cos4th = Sqr(cos2th);
+  sin2th = Sqr(sin(theta));
+  sin4th = Sqr(sin2th);
+  cosphi = cos(phi);
+  sinphi = sin(phi);
+  cos2phi = cos(2.0*phi);
+  sin2phi = sin(2.0*phi);
+  A = (1.0/4.0)*sqrt(15.0/2.0/M_PI)*sin2th;
+  /* 0, 1... are m=-2, -1...*/
+  reI2[0] =  cos2phi*A;
+  imI2[0] =  -sin2phi*A;
+  reI2[4] =  cos2phi*A;
+  imI2[4] =  sin2phi*A;
+  A = (1.0/2.0)*sqrt(15.0/2.0/M_PI)*costh*sinth;
+  reI2[1] = cosphi*A;
+  imI2[1] = -sinphi*A;
+  reI2[3] = cosphi*A;
+  imI2[3] = sinphi*A;
+  A = (1.0/4.0)*sqrt(5.0/M_PI)*(-1.0+3.0*cos2th);
+  reI2[2] = A;
+  imI2[2] = 0;
+}
+
+double calc_I4(double theta, double phi, double *reI2, double *imI2)
+{
+  double A;
+  double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi;
+  costh = cos(theta);
+  sinth = sin(theta);
+  cos2th = Sqr(cos(theta));
+  cos4th = Sqr(cos2th);
+  sin2th = Sqr(sin(theta));
+  sin4th = Sqr(sin2th);
+  cosphi = cos(phi);
+  sinphi = sin(phi);
+  cos2phi = cos(2.0*phi);
+  sin2phi = sin(2.0*phi);
+  
+  /* here 0,1,... are m=-4,3,... */
+  reI2[0] = ;
+  imI2[0] = ;
+  reI2[1] = ;
+  imI2[1] = ;
+  reI2[2] = ;
+  imI2[2] = ;
+  reI2[3] = ;
+  imI2[3] = ;
+  reI2[4] = ;
+  imI2[4] = ;
 
 }
 
-double calc_I4(double theta)
-{
-  double cos2, cos4, sin2, sin4;
-  cos2 = Sqr(cos(theta));
-  cos4 = Sqr(cos2);
-  sin2 = Sqr(sin(theta));
-  sin4 = Sqr(sin2);
-  return 9.0/256.0/M_PI*Sqr(3.0 - 30.0*cos2 + 35.0*cos4) + 45.0/32.0/M_PI*Sqr(-3.0+7.0*cos2)*cos2*sin2+
-   45.0/64.0/M_PI*Sqr(-1.0+7.0*cos2)*sin4 + 315.0/32.0/M_PI*sin4*sin2*cos2 + 315.0/256.0/M_PI*sin4*sin4;
-
-}
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *f_n;
   int nf, i, a, b, dummyint, k, nbin;
-  double sumI2=0.0, sumI4=0.0, I2, I4, theta;
+  double sum_reI2[5], sum_imI2[5], sum_reI4[9], sum_imI4[9], I2, I4, theta, phi, reK2[5], imK[5], reK4[9], imK4[9];
   double ev[3], ti=-1, S, tref=0.0, Dx, Qt[3][3], ev_t[3];
 #if 0
   if (argc == 1)
@@ -301,6 +343,7 @@ int main(int argc, char** argv)
 	      }
 	  }
       }
+  I2=I4=0;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -363,6 +406,11 @@ int main(int argc, char** argv)
 		  }
 	      }
 	}
+
+      for (mm=0; mm < 5; mm++)
+	sum_reI2[mm]=sum_imI2[mm]=0;
+      for (mm=0; mm < 9; mm++)
+	sum_reI4[mm]=sum_imI4[mm]=0;
       for (i=0; i < N; i++)
 	{
 	  if (readLapo)
@@ -391,9 +439,20 @@ int main(int argc, char** argv)
 	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]));
 
 	  theta = acos(R[0][2]);
-	  sumI2+=calc_I2(theta); 
-	  sumI4+=calc_I4(theta);
-	  //printf("R=%.15G %.15G %.15G\n", R[0][1], R[0][1], R[0][2]);
+	  calc_I2(theta, phi, reK, imK); 
+	  for (mm=0; mm < 5; mm++)
+	    {
+	      sum_reI2[mm] += reK2[mm];
+	      sum_imI2[mm] += imK2[mm];
+	    }
+	    
+	  calc_I4(theta, phi, reK4, imK4);
+	   for (mm=0; mm < 9; mm++)
+	    {
+	      sum_reI4[mm] += reK4[mm];
+	      sum_imI4[mm] += imK4[mm];
+	    }
+	   //printf("R=%.15G %.15G %.15G\n", R[0][1], R[0][1], R[0][2]);
 	  /* BUG FIX 21/01/13 */
 	  if (plane>=0)
 	    {
@@ -454,7 +513,10 @@ int main(int argc, char** argv)
 		  }
 	      }
 	}
-
+      sum_reI2 /= ((double)N);
+      sum_imI2 /= ((double)N);
+      sum_reI4 /= ((double)N);
+      sum_imI4 /= ((double)N);
       if (timeEvol)
 	{
 	  for (a=0; a < 3; a++)
