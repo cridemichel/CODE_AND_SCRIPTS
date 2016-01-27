@@ -20,7 +20,7 @@ double max3(double a, double b, double c)
 }
 char line[100000], parname[124], parval[256000];
 int N, mcsim=0;
-double x[3], R[3][3], Q[3][3], *Qn[3][3], *Nn;
+double x[3], R[3][3], Q[3][3], *Qn[3][3], *Nn, Qsum[3][3];
 double r1[3], r2[3], r3[3], u1[3], u2[3], u3[3], dt, L[3];
 double *ev_n[3];
 double ppos;
@@ -354,6 +354,7 @@ int main(int argc, char** argv)
     for (b=0; b < 3; b++)
       {
 	Q[a][b] = 0.0;      
+	Qsum[a][b] = 0.0;
 	if (plane >= 0)
 	  {
 	    for (k=0; k < nslabs; k++)
@@ -534,6 +535,14 @@ int main(int argc, char** argv)
 		  }
 	      }
 	}
+      if (timeEvol)
+	{
+	  for (a=0; a < 3; a++)
+	    for (b=0; b < 3; b++)
+	      {
+		Qsum[a][b] += Q[a][b];
+	      }	   
+	} 
       for (mm=0; mm < 5; mm++)
 	{
   	  sum_reI2[mm] /= ((double)N);
@@ -610,59 +619,72 @@ int main(int argc, char** argv)
       I4 += sqrt((4.0*M_PI/9.0)*A4);
     }
   fclose(f2); 
-  
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      Q[a][b] /= ((double)N)*((double)nf); 
+ 
+  if (!timeEvol) 
+    {
+      for (a=0; a < 3; a++)
+ 	for (b=0; b < 3; b++)
+ 	  Q[a][b] /= ((double)N)*((double)nf); 
+
+    }
+  else
+    {
+      for (a=0; a < 3; a++)
+	for (b=0; b < 3; b++)
+	  Qsum[a][b] /= ((double)N)*((double)nf); 
+    }
   //printf("N*nf=%f Nr=%f Nl=%f\n", ((double)N)*nf, Nr, Nl);
   I2 /= ((double)nf);
   I4 /= ((double)nf);
   if (!timeEvol)
-    printf("I2 = %f I4 = %f\n", I2, I4);
-  if (plane >= 0)
     {
-      for (a=0; a < 3; a++)
-	for (b=0; b < 3; b++)
-	  {
-	    for (k=0; k < nslabs; k++)
-	      {
-	       	if (Nn[k] > 0)
-		  Qn[a][b][k] /= Nn[k];
-	      }
-	  }
-      for (k=0; k < nslabs; k++)
+      printf("I2 = %f I4 = %f\n", I2, I4);
+      if (plane >= 0)
 	{
 	  for (a=0; a < 3; a++)
+	    for (b=0; b < 3; b++)
+	      {
+		for (k=0; k < nslabs; k++)
+		  {
+		    if (Nn[k] > 0)
+		      Qn[a][b][k] /= Nn[k];
+		  }
+	      }
+	  for (k=0; k < nslabs; k++)
 	    {
-	      for (b=0; b < 3; b++)
-		Qt[a][b] = Qn[a][b][k];
-	    }
-	  diagonalize(Qt, ev_t);
-	  for (a=0; a < 3; a++)
-	    {
-	      ev_n[a][k] = ev_t[a];
-	      for (b=0; b < 3; b++)
-		eigvec_n[a][b][k] = eigvec[a][b];	  
-	    }
+	      for (a=0; a < 3; a++)
+		{
+		  for (b=0; b < 3; b++)
+		    Qt[a][b] = Qn[a][b][k];
+		}
+	      diagonalize(Qt, ev_t);
+	      for (a=0; a < 3; a++)
+		{
+		  ev_n[a][k] = ev_t[a];
+		  for (b=0; b < 3; b++)
+		    eigvec_n[a][b][k] = eigvec[a][b];	  
+    		}
+    	    }
 	}
     }
-  diagonalize(Q, ev);
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      eigvec_t[a][b] = eigvec[a][b];	  
+  if (timeEvol)
+    {
+      diagonalize(Qsum, ev);
+      for (a=0; a < 3; a++)
+	for (b=0; b < 3; b++)
+	  eigvec_t[a][b] = eigvec[a][b];	  
 
-  if (fabs(ev[0]) > fabs(ev[1]))
-    S = ev[0];
-  else
-    S = ev[1];  
-  if (fabs(ev[2]) > S)
-    S = ev[2];
-  if (!timeEvol)
-    printf("Order Parameter: %.8G (of %.8G %.8G %.8G)\n", S, 
-	   ev[0], ev[1], ev[2]);
+      if (fabs(ev[0]) > fabs(ev[1]))
+	S = ev[0];
+      else
+	S = ev[1];  
+      if (fabs(ev[2]) > S)
+	S = ev[2];
+    }
   f = fopen("cubatic_order.dat", "w+");
   fprintf(f,"%G %G %G\n", S, I2, I4);
   fclose(f);
+  
   if (timeEvol)
     {
       if (plane >= 0)
@@ -671,6 +693,20 @@ int main(int argc, char** argv)
 	}
       return 0;
     }
+
+  diagonalize(Q, ev);
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      eigvec_t[a][b] = eigvec[a][b];	  
+
+    if (fabs(ev[0]) > fabs(ev[1]))
+    S = ev[0];
+  else
+    S = ev[1];  
+  if (fabs(ev[2]) > S)
+    S = ev[2];
+  printf("Order Parameter: %.8G (of %.8G %.8G %.8G)\n", S, 
+	 ev[0], ev[1], ev[2]);
   if (plane >= 0)
     {
       for (k=0; k < nslabs; k++)
@@ -678,17 +714,18 @@ int main(int argc, char** argv)
 	  if (fabs(ev_n[0][k]) > fabs(ev_n[1][k]))
 	    S = ev_n[0][k];
 	  else
-	    S = ev_n[1][k];  
+		S = ev_n[1][k];  
 	  if (fabs(ev_n[2][k]) > S)
 	    S = ev_n[2][k];
 
-	  printf("[slab %d/%d] Order Parameter (plane = %f): %.8G (of %.8G %.8G %.8G)\n",
+      	  printf("[slab %d/%d] Order Parameter (plane = %f): %.8G (of %.8G %.8G %.8G)\n",
 		 k, nslabs, ppos, S, 
 		 ev_n[0][k], ev_n[1][k], ev_n[2][k]);
 	}
     }
+
 #if 1
-  if (!timeEvol && ordmatrix)
+  if (ordmatrix)
     {
       printf("Ordering matrix Q:\n");
       printf("{");
@@ -738,7 +775,7 @@ int main(int argc, char** argv)
 	    }
 	}
     }
-  if (!timeEvol && eigenvectors)
+  if (eigenvectors)
     {
       printf("Eigenvectors matrix:\n");
       for (a=0; a < 3; a++)
