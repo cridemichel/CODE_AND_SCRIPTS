@@ -544,6 +544,15 @@ int main(int argc, char** argv)
    	  sum_reI4[mm] /= ((double)N);
        	  sum_imI4[mm] /= ((double)N);
 	}
+      A2 = A4 = 0;
+      for (mm = 0; mm < 5; mm++)
+	{
+	  A2 += Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]);
+	}
+      for (mm = 0; mm < 9; mm++)
+	{
+ 	  A4 += Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]);
+	}  
       if (timeEvol)
 	{
 	  for (a=0; a < 3; a++)
@@ -581,7 +590,7 @@ int main(int argc, char** argv)
 
 	  if (mcsim) 
 	    {
-	      printf("%d %.15G %.15G %.15G\n", curStep, ev[0], ev[1], ev[2]); 
+	      printf("%d %.15G %.15G %.15G %.15G %.15G\n", curStep, ev[0], ev[1], ev[2], sqrt((4.0*M_PI/5.0)*A2),sqrt((4.0*M_PI/9.0)*A4)); 
 	      if (plane >= 0)
 		{
 		  fprintf(f_n, "%d ", curStep); 
@@ -597,35 +606,19 @@ int main(int argc, char** argv)
 	}
 
       fclose(f);
-      A2 = A4 = 0;
-      for (mm = 0; mm < 5; mm++)
-	{
-	  A2 += Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]);
-	}
-      for (mm = 0; mm < 9; mm++)
-	{
- 	  A4 += Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]);
-	}    
       I2 += sqrt((4.0*M_PI/5.0)*A2);
       I4 += sqrt((4.0*M_PI/9.0)*A4);
     }
   fclose(f2); 
   
-  if (timeEvol)
-    {
-      if (plane >= 0)
-	{	
-	  fclose(f_n);
-	}
-      return 0;
-    }
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       Q[a][b] /= ((double)N)*((double)nf); 
   //printf("N*nf=%f Nr=%f Nl=%f\n", ((double)N)*nf, Nr, Nl);
   I2 /= ((double)nf);
   I4 /= ((double)nf);
-  printf("I2 = %f I4 = %f\n", I2, I4);
+  if (!timeEvol)
+    printf("I2 = %f I4 = %f\n", I2, I4);
   if (plane >= 0)
     {
       for (a=0; a < 3; a++)
@@ -664,8 +657,20 @@ int main(int argc, char** argv)
     S = ev[1];  
   if (fabs(ev[2]) > S)
     S = ev[2];
-  printf("Order Parameter: %.8G (of %.8G %.8G %.8G)\n", S, 
-	 ev[0], ev[1], ev[2]);
+  if (!timeEvol)
+    printf("Order Parameter: %.8G (of %.8G %.8G %.8G)\n", S, 
+	   ev[0], ev[1], ev[2]);
+  f = fopen("cubatic_order.dat", "w+");
+  fprintf(f,"%G %G %G\n", S, I2, I4);
+  fclose(f);
+  if (timeEvol)
+    {
+      if (plane >= 0)
+	{	
+	  fclose(f_n);
+	}
+      return 0;
+    }
   if (plane >= 0)
     {
       for (k=0; k < nslabs; k++)
