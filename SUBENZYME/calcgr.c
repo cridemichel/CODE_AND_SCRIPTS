@@ -21,7 +21,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
   int curstp=-1;
   *ti = -1.0;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f) && nat < 3) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -30,6 +30,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	{
 	  nat++;
 	}
+      //printf("nat=%d line=%s\n", nat, line);
       if (nat < 2)
 	{
 	  fseek(f, cpos, SEEK_SET);
@@ -92,8 +93,9 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else
+      else if (nat >= 3)	
 	{
+	  //printf("qui B\n");
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
@@ -101,6 +103,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		{
 		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 		}
+	      //printf("i=%d %f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
 	    }
 	  break; 
 	}
@@ -361,9 +364,11 @@ int main(int argc, char** argv)
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
 	    bin = ((int) (sqrt(distSq) / delr)); 
+#if 0
 	    if (bin==0 || bin==1)
 	      printf("(%d-%d) bin=%d ri=%f %f %f rj=%f %f %f\n", i, j, bin, x[0][i], x[1][i], x[2][i],
 		     x[0][j], x[1][j], x[2][j]);
+#endif
 	    if (bin < points || bin >= 0)
 	      {
 		g0[bin] += 2.0;
