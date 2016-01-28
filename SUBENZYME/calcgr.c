@@ -180,13 +180,13 @@ int main(int argc, char** argv)
   pi = acos(0)*2.0;
   nat = 0;
   f = fopen(fname,"r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f) && nat < 3) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (nat==2)
+	  if (nat==3)
 	    {
 	      for (i=0; i < 2*NP; i++)
 		fscanf(f, "%[^\n]\n", line);
@@ -361,7 +361,9 @@ int main(int argc, char** argv)
 	    for (a = 0; a < 3; a++)
 	      distSq += Sqr(Dx[a]);
 	    bin = ((int) (sqrt(distSq) / delr)); 
-	    //printf("(%d-%d) bin=%d\n", i, j, bin);
+	    if (bin==0 || bin==1)
+	      printf("(%d-%d) bin=%d ri=%f %f %f rj=%f %f %f\n", i, j, bin, x[0][i], x[1][i], x[2][i],
+		     x[0][j], x[1][j], x[2][j]);
 	    if (bin < points || bin >= 0)
 	      {
 		g0[bin] += 2.0;
