@@ -245,7 +245,7 @@ int main(int argc, char **argv)
   mass = massE = 1.0;
   MoI1 = 1.0;
   MoI2 = 1.0;
-  fprintf(f, "%f %f %f %f 2 0\n", mass, MoI1, MoI2, MoI2);
+  fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
   fprintf(f,"%f %f %f\n", LenS/2.0, DiamS/2.0, DiamS/2.0);
   fprintf(f,"2 2 2\n");
@@ -253,7 +253,7 @@ int main(int argc, char **argv)
   mass = massS = 1.0;
   MoI1 = 1.0;
   MoI2 = 1.0;
-  fprintf(f, "%f %f %f %f 2 0\n", mass, MoI1, MoI2, MoI2);
+  fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
   fprintf(f,"%f %f %f\n", LenP/2.0, DiamP/2.0, DiamP/2.0); 
   fprintf(f,"2 2 2\n");
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
   mass = massP = 1.0;
   MoI1 = 1.0;
   MoI2 = 1.0;
-  fprintf(f, "%f %f %f %f 2 0\n", mass, MoI1, MoI2, MoI2);
+  fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
 #if 0
   fprintf(f,"%f 0 0 %f\n", permdiam*0.5+Len/2.0, permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
