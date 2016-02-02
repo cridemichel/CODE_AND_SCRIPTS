@@ -5,7 +5,9 @@
 void update_spot_pos(int i, double dx, double dy, double dz);
 void update_spot_pos_dir(int i, int dir, double fact);
 #endif
-
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+extern int rejectMove, checkMoveKF;
+#endif
 #ifdef MC_BOND_POS
 extern int *inCellBP[3], *cellListBP, cellsxBP, cellsyBP, cellszBP;
 extern int totspots;
@@ -5601,7 +5603,7 @@ void move_box_xyz(int *ierr)
 	  jj2 = bonds[i][kk] % (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
-	  if (aa > 0 && bb > 0)
+	  if (aa > 1 && bb > 1)
     	    {
 	      //remove_bond(jj, i, bb, aa);
 	      remove_bond(i, jj, aa, bb);
@@ -5620,10 +5622,20 @@ void move_box_xyz(int *ierr)
       fakeFB=1;
     }
 #endif
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+      rejectMove = 0;
+      checkMoveKF=1;
+#endif
+
   if (OprogStatus.useNNL)
     find_bonds_flex_NNL();
   else
     find_bonds_flex_all();
+
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+  checkMoveKF = 0;
+#endif	
+
 #ifdef MC_FREEZE_BONDS
   if (OprogStatus.freezebonds==1)
     fakeFB=0;
@@ -5633,6 +5645,8 @@ void move_box_xyz(int *ierr)
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(Oparams.parnum+1)*log(vn/vo)*Oparams.T);
 #ifdef MC_FREEZE_BONDS
   if (ranf() > exp(arg)|| (OprogStatus.freezebonds && refFB==1))
+#elif defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+  if (ranf() > exp(arg) || rejectMove)
 #else
   if (ranf() > exp(arg))
 #endif
@@ -5875,7 +5889,7 @@ void move_box(int *ierr)
 	  jj2 = bonds[i][kk] % (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
-	  if (aa > 0 && bb > 0)
+	  if (aa > 1 && bb > 1)
     	    {
 	      //remove_bond(jj, i, bb, aa);
 	      remove_bond(i, jj, aa, bb);
@@ -5894,10 +5908,20 @@ void move_box(int *ierr)
       fakeFB=1;
     }
 #endif
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+      rejectMove = 0;
+      checkMoveKF=1;
+#endif
+
   if (OprogStatus.useNNL)
     find_bonds_flex_NNL();
   else
     find_bonds_flex_all();
+
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+  checkMoveKF = 0;
+#endif	
+
 #ifdef MC_FREEZE_BONDS
   if (OprogStatus.freezebonds==1)
     fakeFB=0;
@@ -5907,6 +5931,8 @@ void move_box(int *ierr)
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(Oparams.parnum+1)*log(vn/vo)*Oparams.T);
 #ifdef MC_FREEZE_BONDS
   if (ranf() > exp(arg)|| (OprogStatus.freezebonds && refFB==1))
+#elif defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+  if (ranf() > exp(arg) || rejectMove)
 #else
   if (ranf() > exp(arg))
 #endif
@@ -9510,9 +9536,7 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
     return 0;
 }
 #endif
-#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
-extern int rejectMove, checkMoveKF;
-#endif
+
 int mcmotion(void)
 {
   int ip, dorej, movetype, err;

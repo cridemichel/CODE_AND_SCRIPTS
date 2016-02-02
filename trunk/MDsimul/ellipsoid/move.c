@@ -10428,6 +10428,14 @@ void ProcessCollision(void)
 #else
   bump(evIdA, evIdB, rxC, ryC, rzC, &W);
 #endif
+#if 0
+  if (typeOfPart[evIdA]==0 || typeOfPart[evIdB]==0)
+    {
+      printf(">>> logging time=%f bump A=%d[%d] B=%d[%d] NS=%d\n", Oparams.time+OprogStatus.refTime, evIdA, typeOfPart[evIdA], evIdB, typeOfPart[evIdB], typeNP[1]);
+    }
+  else
+      printf("logging bump time=%f A=%d[%d] B=%d[%d] NS=%d\n", Oparams.time+OprogStatus.refTime, evIdA, typeOfPart[evIdA], evIdB, typeOfPart[evIdB], typeNP[1]);
+#endif
   MD_DEBUG10(calc_energy("dopo"));
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
