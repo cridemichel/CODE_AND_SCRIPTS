@@ -5623,8 +5623,8 @@ void move_box_xyz(int *ierr)
     }
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
-      rejectMove = 0;
-      checkMoveKF=1;
+  rejectMove = 0;
+  checkMoveKF=1;
 #endif
 
   if (OprogStatus.useNNL)
@@ -5641,6 +5641,13 @@ void move_box_xyz(int *ierr)
     fakeFB=0;
 #endif
   enn = calcpotene();
+#if 0
+  if (enn > -840)
+    {
+      printf("buuuummm\n");
+      exit(-1);
+    }
+#endif
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(Oparams.parnum+1)*log(vn/vo)*Oparams.T);
 #ifdef MC_FREEZE_BONDS

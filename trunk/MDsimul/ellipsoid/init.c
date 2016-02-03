@@ -7201,6 +7201,9 @@ extern void mgl_helix(FILE* fs, int i, char* col);
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
+#ifdef MC_GAPDNA
+  char colrgb[256];
+#endif
   int i;
   int nn;
 #ifdef MC_HELIX
@@ -7407,8 +7410,25 @@ void writeAllCor(FILE* fs, int saveAll)
 		    colsFlex[typeOfPart[i]%numcols]);
 	  }
 	else
+#ifdef MC_GAPDNA
+#if 0
+	  {
+	    if (i%OprogStatus.polylen==0)
+	      fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
+	    	      2.0*typesArr[typeOfPart[i]].sax[0], "blue1");
+	    else
+	      fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
+		  2.0*typesArr[typeOfPart[i]].sax[0], "cyan1");
+    	  }
+#else
+	sprintf(colrgb, "%f,%f,%f", (255.-((i/OprogStatus.polylen)%100)*2.0)/255.0, (255.-((i/OprogStatus.polylen)%100)*2.0)/255.0, 0.2+(((i/OprogStatus.polylen)%100)*2.0)/255.0);
+	fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
+	      	2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[i/OprogStatus.polylen%3]);
+#endif
+#else
 	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
 		  2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
+#endif
 #endif
 #else
 #ifdef EDHE_FLEX
@@ -7488,9 +7508,26 @@ void writeAllCor(FILE* fs, int saveAll)
 
 	   }
 #else
+#ifdef MC_GAPDNA
+	 for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
+ 	   fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
+		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5,
+		   colsFlex[i/OprogStatus.polylen%3]);
+	
+#if 0
+	   if (i%OprogStatus.polylen==0)	   
+	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[blue2]\n", 
+		     ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+	   else
+	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[cyan2]\n", 
+		     ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#endif	
+#else
+
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#endif
 #endif
 #endif
 #else
