@@ -21,6 +21,7 @@ int main(int argc, char **argv)
   del=0.5;
   /* permanent spots diameter */
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
+  //permdiam=0.5;
   Len=16.0; /* 48 bp equal roughly to 16 nm */
   if (argc == 1)
    {
