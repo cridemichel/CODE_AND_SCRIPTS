@@ -7198,11 +7198,59 @@ extern void set_pos_R_ho(int i, int a);
 #ifdef MC_HELIX
 extern void mgl_helix(FILE* fs, int i, char* col);
 #endif
+
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes h, s, and l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 255].
+ *
+ * @param   Number  h       The hue
+ * @param   Number  s       The saturation
+ * @param   Number  l       The lightness
+ * @return  Array           The RGB representation
+ */
+double hue2rgb(double p, double q, double t) 
+{
+  if (t < 0.) t += 1.;
+  if (t > 1.) t -= 1.;
+  if (t < 1./6.) return p + (q - p) * 6. * t;
+  if (t < 1./2.) return q;
+  if (t < 2./3.) return p + (q - p) * (2./3. - t) * 6.;
+  return p;
+}
+
+void hslToRgb(double h, double s, double l, double *r, double *g, double *b) 
+{
+  double p, q;
+  if (s == 0) 
+    {
+      *r = *g = *b = l; // achromatic
+    } 
+  else 
+    {
+      q = l < 0.5 ? l * (1. + s) : l + s - l * s;
+      p = 2. * l - q;
+
+      *r = hue2rgb(p, q, h + 1./3.);
+      *g = hue2rgb(p, q, h);
+      *b = hue2rgb(p, q, h - 1./3.);
+      //printf("h=%f rgb=%f %f %f p=%f q=%f\n", h, *r, *g, *b, p, q);
+    }
+}
+
+char *par2rgb(int i, double rgb[3])
+{
+  static char str[128];
+  hslToRgb(((double)i)/(Oparams.parnum/2.0),0.9,0.7,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
+  sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
+}
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
 #ifdef MC_GAPDNA
   char colrgb[256];
+  double rgb[3];
 #endif
   int i;
   int nn;
@@ -7421,9 +7469,10 @@ void writeAllCor(FILE* fs, int saveAll)
 		  2.0*typesArr[typeOfPart[i]].sax[0], "cyan1");
     	  }
 #else
-	sprintf(colrgb, "%f,%f,%f", (255.-((i/OprogStatus.polylen)%100)*2.0)/255.0, (255.-((i/OprogStatus.polylen)%100)*2.0)/255.0, 0.2+(((i/OprogStatus.polylen)%100)*2.0)/255.0);
+	par2rgb(i/OprogStatus.polylen, rgb);
+	sprintf(colrgb, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 	fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
-	      	2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[i/OprogStatus.polylen%3]);
+	      	2.0*typesArr[typeOfPart[i]].sax[0], colrgb);
 #endif
 #else
 	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
@@ -7509,11 +7558,15 @@ void writeAllCor(FILE* fs, int saveAll)
 	   }
 #else
 #ifdef MC_GAPDNA
+	par2rgb(i/OprogStatus.polylen, rgb);
+	sprintf(colrgb, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
+
 	 for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
- 	   fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
+ 	   {
+	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
 		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5,
-		   colsFlex[i/OprogStatus.polylen%3]);
-	
+		   colrgb);
+	   }
 #if 0
 	   if (i%OprogStatus.polylen==0)	   
 	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[blue2]\n", 
