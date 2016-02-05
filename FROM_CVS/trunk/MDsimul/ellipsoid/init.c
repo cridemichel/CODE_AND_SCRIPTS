@@ -7242,7 +7242,7 @@ void hslToRgb(double h, double s, double l, double *r, double *g, double *b)
 char *par2rgb(int i, double rgb[3])
 {
   static char str[128];
-  hslToRgb(((double)i)/(Oparams.parnum/2.0),0.9,0.7,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
+  hslToRgb(((double)i)/(Oparams.parnum/2.0),0.6,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
   sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 }
 /* ========================== >>> writeAllCor <<< ========================== */
