@@ -76,20 +76,20 @@ int main(int argc, char **argv)
 {
   FILE *f;
   double MoI1, MoI2, mass, massE, massS, massP, massC, rTemp, temp=1.0;
-  double vxCM, vyCM, vzCM, mCM=0;
+  double vxCM, vyCM, vzCM, mCM=0, mean;
   double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, DiamC, LenE, LenS, LenP, LenC,
 	 del0, del0x, del0y, del0z, maxL, pi, fractC;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, volE, volS, volC;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
-  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP, parnumC;
-  int nx, ny, nz, nxmax, nymax, nzmax, idx, nE, nS, nC, done;
+  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP, parnumC=0;
+  int nx, ny, nz, nxmax, nymax, nzmax, idx, nE, nS, nC, done, xi;
   del=0.5;
   /* permanent spots diameter */
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   if (argc == 1)
    {
-     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamP> <diamC>  <LenE> <LenS> <LenP> <LenC> <# enzymes> <fraction crowders> \n"); 
+     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# enzymes> <fraction of crowders> \n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -122,39 +122,43 @@ int main(int argc, char **argv)
   if (argc > 7)
     DiamS = atof(argv[7]);
 
+#if 0
   if (argc > 8)
     DiamP = atof(argv[8]);
-
-  if (argc > 9)
-    DiamC = atof(argv[9]);
+#endif
+  
+  if (argc > 8)
+    DiamC = atof(argv[8]);
 
   LenE=DiamE;
   LenS=DiamS;
   LenP=DiamP;
   LenC=DiamC;
   
+  if (argc > 9)
+    LenE = atof(argv[9]);
+
   if (argc > 10)
-    LenE = atof(argv[10]);
+    LenS = atof(argv[10]);
 
-  if (argc > 11)
-    LenS = atof(argv[11]);
-
+#if 0
   if (argc > 12)
     LenP = atof(argv[12]);
+#endif
 
-  if (argc > 13)
-    LenP = atof(argv[13]);
+  if (argc > 11)
+    LenC = atof(argv[11]);
 
+  LenP = LenS;
+  DiamP = DiamS;
   parnumE=1;
-  if (argc > 14)
-    parnumE = atoi(argv[14]);
-  if (argc > 15)
-    fractC = atof(argv[15]);
+  if (argc > 12)
+    parnumE = atoi(argv[12]);
+  if (argc > 13)
+    fractC = atof(argv[13]);
 
-  Len=max3(LenS,LenE,LenP);
-  Len=max2(Len,LenC);
-  Diam=max3(DiamS,DiamE,DiamP);
-  Diam=max2(Diam,DiamC);
+  Len=max3(LenE,LenS,LenC);
+  Diam=max3(DiamE,DiamS,DiamC);
 
   printf("Len=%f Diam=%f\n", Len, Diam);
   printf("parnumE=%d LenP=%f fractC:%f\n", parnumE, LenP, fractC);
@@ -338,9 +342,9 @@ int main(int argc, char **argv)
   del0x = 0.01;
   del0y=del0z=Diam*0.1;
 #endif
-  drx = bs[0]; //0.500000000001;
-  dry = bs[1];
-  drz = bs[2];
+  drx = 1.0;//bs[0]; //0.500000000001;
+  dry = 1.0;//bs[1];
+  drz = 1.0;//bs[2];
 #if 0
   if (parnum%polylen != 0)
     {
@@ -383,7 +387,7 @@ int main(int argc, char **argv)
   volC = M_PI*4.0*(DiamC/2.)*(DiamC/2.)*(LenC/2.)/3.0;
   printf("Diam=%f Len=%f\n", Diam, Len);
   if (fractC <= 0.0)
-    phi=(parnumE*volE+parnumS)/(L[0]*L[1]*L[2]);
+    phi=(parnumE*volE+parnumS*volS)/(L[0]*L[1]*L[2]);
   else
     phi=(parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]);
   xtrafact = pow(phi/targetphi, 1.0/3.0);
@@ -482,14 +486,14 @@ int main(int argc, char **argv)
 	  done = 0;
 	  while (!done)
 	    {
-	      typeP = drand48()*parnum;
-	      if (nE < parnumE && typeP < parnumE)
+	      xi = drand48()*parnum;
+	      if (nE < parnumE && xi < parnumE)
 		{
 		  typeP = 0;
 		  nE++;
 		  done = 1;
 		}
-	      else if (nS < parnumS && typeP < parnumS+parnumE)
+	      else if (nS < parnumS && xi < parnumS+parnumE)
 		{
 		  typeP = 1;
 		  nS++;
@@ -501,7 +505,7 @@ int main(int argc, char **argv)
 		  typeP = 3;
 		  done = 1;
 		}
-	      else 
+	      else if (nE+nS+nC==parnum)
 		done = 1;
 	    }
 	}
@@ -575,21 +579,28 @@ int main(int argc, char **argv)
       vx[i] -= vxCM/mCM;
       vy[i] -= vyCM/mCM;
       vz[i] -= vzCM/mCM;
-#if 0
-      if (i < parnumE)
-	mean = sqrt(temp / MoI1);
+#if 1
+      if (LenE==DiamE && LenS==DiamS && LenC==DiamC)
+	wx=wy=wz=0;
       else
-	mean = sqrt(temp / MoI1);
-      wx = mean*gauss();
-      wy = mean*gauss();
-      wz = mean*gauss();
+	{
+	  if (i < parnumE)
+	    mean = sqrt(temp / MoI1);
+	  else if (i < parnumS+parnumE)
+	    mean = sqrt(temp / MoI1);
+	  else 
+	    mean = sqrt(temp / MoI1);
+	  wx = mean*gauss();
+	  wy = mean*gauss();
+	  wz = mean*gauss();
+	}
 #else
       wx=wy=wz=0;
 #endif
       fprintf(f, "%f %f %f %f %f %f\n", vx[i], vy[i], vz[i], wx, wy, wz);
     }  
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
-  printf("phi=%f\n", parnum*vol/(L[0]*L[1]*L[2]));
+  printf("phi=%f\n", (parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]));
   fclose(f);
   return 1;
 } 
