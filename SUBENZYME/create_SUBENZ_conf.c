@@ -62,24 +62,34 @@ double max3(double a, double b, double c)
   return m;
 }
 
+double max2(double a, double b)
+{
+  double m;
+  m = a;
+  if (b > m)
+    m = b;
+  return m;
+}
+
 
 int main(int argc, char **argv)
 {
   FILE *f;
   double MoI1, MoI2, mass, massE, massS, massP, rTemp, temp=1.0;
   double vxCM, vyCM, vzCM, mCM=0;
-  double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, LenE, LenS, LenP, del0, del0x, del0y, del0z, maxL, pi;
+  double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, DiamC, LenE, LenS, LenP, LenC,
+	 del0, del0x, del0y, del0z, maxL, pi, fracC;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
-  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP;
+  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP, parnumC;
   int nx, ny, nz, nxmax, nymax, nzmax, idx;
   del=0.5;
   /* permanent spots diameter */
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   if (argc == 1)
    {
-     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamP> <LenE> <LenS> <LenP>\n"); 
+     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamP> <diamC>  <LenE> <LenS> <LenP> <LenC> <# enzymes> <fraction crowders> \n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -114,23 +124,35 @@ int main(int argc, char **argv)
 
   if (argc > 8)
     DiamP = atof(argv[8]);
-  
+
+  if (argc > 9)
+    DiamC = atof(argv[9]);
+
   LenE=DiamE;
   LenS=DiamS;
   LenP=DiamP;
+  LenC=DiamC;
   
-  if (argc > 9)
-    LenE = atof(argv[9]);
-
   if (argc > 10)
-    LenS = atof(argv[10]);
+    LenE = atof(argv[10]);
 
   if (argc > 11)
-    LenP = atof(argv[11]);
+    LenS = atof(argv[11]);
+
+  if (argc > 12)
+    LenP = atof(argv[12]);
+
+  if (argc > 13)
+    parnumE = atoi(argv[13]);
+
+  if (argc > 14)
+    fractC = atoi(argv[14]);
 
   Len=max3(LenS,LenE,LenP);
+  Len=max2(Len,LenC);
   Diam=max3(DiamS,DiamE,DiamP);
- 
+  Diam=max2(Diam,DiamC);
+
   printf("Len=%f Diam=%f\n", Len, Diam);
   parnum = polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
@@ -242,7 +264,7 @@ int main(int argc, char **argv)
   fprintf(f,"%f %f %f\n", LenE/2.0, DiamE/2.0, DiamE/2.0); 
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of a uniaxial ellipsoid */
-  mass = massE = 1.0;
+  mass = massE = 1.0*pow(DiamE/DiamS,3.0);
   MoI1 = 1.0;
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
@@ -258,11 +280,24 @@ int main(int argc, char **argv)
   fprintf(f,"%f %f %f\n", LenP/2.0, DiamP/2.0, DiamP/2.0); 
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of spheres */
-  mass = massP = 1.0;
+  mass = massP = 1.0*pow(DiamP/DiamS,3.0);;
   MoI1 = 1.0;
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
+
+  if (fractC > 0.)
+    {
+      fprintf(f,"%f %f %f\n", LenC/2.0, DiamC/2.0, DiamC/2.0); 
+      fprintf(f,"2 2 2\n");
+      /* set here moment of inertia of spheres */
+      mass = massC = 1.0*pow(DiamC/DiamS,3.0);
+      MoI1 = 1.0;
+      MoI2 = 1.0;
+      fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
+      fprintf(f,"0 0\n");
+    }
+
 #if 0
   fprintf(f,"%f 0 0 %f\n", permdiam*0.5+Len/2.0, permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
   fprintf(f,"%f 0 0 %f\n", -Len/2.0-0.15, 0.5);

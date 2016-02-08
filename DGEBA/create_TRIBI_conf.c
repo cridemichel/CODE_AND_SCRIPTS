@@ -393,15 +393,38 @@ int main(int argc, char **argv)
       totvy += mass*vy[i];
       totvz += mass*vz[i];
     }
-  totvx /= parnumA + parnumB*8.0;
-  totvy /= parnumA + parnumB*8.0;
-  totvz /= parnumA + parnumB*8.0;
+  printf("Mtot=%f totvx=%f totvy=%f totvz=%f\n", parnumA + parnumB*8., totvx, totvy, totvz);
+  totvx /= (parnumA + parnumB*8.0);
+  totvy /= (parnumA + parnumB*8.0);
+  totvz /= (parnumA + parnumB*8.0);
   for (i=0; i < parnum; i++)
     {
       vx[i] -= totvx;
       vy[i] -= totvy;
       vz[i] -= totvz;
     }
+  totvx=totvy=totvz=0;
+  for (i=0; i < parnum; i++)
+    {
+      if (typeofpar[i] == 0)
+	{
+	  rTemp = rTempA;
+	  mass = 1.0;
+	}
+      else
+	{
+	  mass = 8.0;
+	  rTemp = rTempB;
+	} 
+      totvx += mass*vx[i];
+      totvy += mass*vy[i];
+      totvz += mass*vz[i];
+    } 
+  printf("parnum=%d parnumA=%d parnumB=%d\n", parnum, parnumA, parnumB);
+  totvx /= (parnumA + parnumB*8.0);
+  totvy /= (parnumA + parnumB*8.0);
+  totvz /= (parnumA + parnumB*8.0);
+  printf("totv= %f %f %f\n", totvx, totvy, totvz); 
   for (i=0; i < parnum; i++)
     {
       if (typeofpar[i]==0)
