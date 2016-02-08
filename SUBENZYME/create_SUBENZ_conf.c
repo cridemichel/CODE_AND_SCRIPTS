@@ -75,10 +75,10 @@ double max2(double a, double b)
 int main(int argc, char **argv)
 {
   FILE *f;
-  double MoI1, MoI2, mass, massE, massS, massP, rTemp, temp=1.0;
+  double MoI1, MoI2, mass, massE, massS, massP, massC, rTemp, temp=1.0;
   double vxCM, vyCM, vzCM, mCM=0;
   double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, DiamC, LenE, LenS, LenP, LenC,
-	 del0, del0x, del0y, del0z, maxL, pi, fracC;
+	 del0, del0x, del0y, del0z, maxL, pi, fractC;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
@@ -142,12 +142,14 @@ int main(int argc, char **argv)
   if (argc > 12)
     LenP = atof(argv[12]);
 
-  parnumE=1;
   if (argc > 13)
-    parnumE = atoi(argv[13]);
+    LenP = atof(argv[13]);
 
+  parnumE=1;
   if (argc > 14)
-    fractC = atoi(argv[14]);
+    parnumE = atoi(argv[14]);
+  if (argc > 15)
+    fractC = atof(argv[15]);
 
   Len=max3(LenS,LenE,LenP);
   Len=max2(Len,LenC);
@@ -155,6 +157,7 @@ int main(int argc, char **argv)
   Diam=max2(Diam,DiamC);
 
   printf("Len=%f Diam=%f\n", Len, Diam);
+  printf("parnumE=%d LenP=%f fractC:%f\n", parnumE, LenP, fractC);
   parnum = polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
   rx = malloc(sizeof(double)*parnum);
@@ -256,14 +259,18 @@ int main(int argc, char **argv)
   fprintf(f, "parnum: %d\n", parnum);
   fprintf(f, "ninters: 0\n");
   fprintf(f, "nintersIJ: 0\n");
-  fprintf(f, "ntypes: 3\n");
+  if (fractC > 0.0)
+    fprintf(f, "ntypes: 4\n");
+  else
+    fprintf(f, "ntypes: 3\n");
   fprintf(f, "saveBonds: 0\n");
   fprintf(f, "@@@\n");
   /* #Enzymes #Substrates #Products at t=0 */
+  printf("fractC: %f\n", fractC);
   if (fractC > 0.0)
     {
       parnumS=parnum-parnumE;
-      parnumS = (int)(parnumS/(1.+fractC));
+      parnumS = (int)(((double)parnumS)/(1.+fractC));
       parnumC = parnum-parnumE-parnumS;
     }
   else
@@ -471,13 +478,13 @@ int main(int argc, char **argv)
 	  while (!done)
 	    {
 	      typeP = drand48()*parnum;
-	      if (nE < parnumE && typeP < parnumS)
+	      if (nE < parnumE && typeP < parnumE)
 		{
 		  typeP = 0;
 		  nE++;
 		  done = 1;
 		}
-	      else if (nS < parnumS && typeP < parnumP+parnumE)
+	      else if (nS < parnumS && typeP < parnumS+parnumE)
 		{
 		  typeP = 1;
 		  nS++;
