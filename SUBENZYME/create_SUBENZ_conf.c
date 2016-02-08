@@ -79,7 +79,7 @@ int main(int argc, char **argv)
   double vxCM, vyCM, vzCM, mCM=0;
   double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, DiamC, LenE, LenS, LenP, LenC,
 	 del0, del0x, del0y, del0z, maxL, pi, fractC;
-  double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
+  double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, volE, volS, volC;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP, parnumC;
@@ -378,9 +378,14 @@ int main(int argc, char **argv)
     L[a] *= factor[a];
   printf("step #2 [factor] L=%f %f %f\n", L[0], L[1], L[2]);
 #endif
-  vol = acos(0.0)*8.0*(Diam/2)*(Diam/2)*(Len/2)/3.0;
-
-  phi=parnum*vol/(L[0]*L[1]*L[2]);
+  volE = M_PI*4.0*(DiamE/2.)*(DiamE/2.)*(LenE/2.)/3.0;
+  volS = M_PI*4.0*(DiamE/2.)*(DiamS/2.)*(LenS/2.)/3.0;
+  volC = M_PI*4.0*(DiamC/2.)*(DiamC/2.)*(LenC/2.)/3.0;
+  printf("Diam=%f Len=%f\n", Diam, Len);
+  if (fractC <= 0.0)
+    phi=(parnumE*volE+parnumS)/(L[0]*L[1]*L[2]);
+  else
+    phi=(parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]);
   xtrafact = pow(phi/targetphi, 1.0/3.0);
   printf("vol=%f targetphi=%f phi=%f xtrafact=%f\n", vol, targetphi, phi, xtrafact);
 
