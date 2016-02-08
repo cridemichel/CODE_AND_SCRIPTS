@@ -115,7 +115,7 @@ int main(int argc, char **argv)
   if (argc > 5)
     targetphi = atof(argv[5]);
 
-  DiamE=DiamS=DiamP=1.0;
+  DiamE=DiamS=DiamP=DiamC=1.0;
   if (argc > 6)
     DiamE = atof(argv[6]);
 
