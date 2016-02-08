@@ -5,7 +5,7 @@ double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, wx, wy, wz;
 double *Rc[3][3], *Ri[3][3];
-int full, ibeg, numpoly;
+int full, ibeg, numpoly, *top;
 #define maxpolylen 10000;
 double R0[3][3];
 double ranf(void)
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP, parnumC;
-  int nx, ny, nz, nxmax, nymax, nzmax, idx;
+  int nx, ny, nz, nxmax, nymax, nzmax, idx, nE, nS, nC, done;
   del=0.5;
   /* permanent spots diameter */
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
@@ -142,6 +142,7 @@ int main(int argc, char **argv)
   if (argc > 12)
     LenP = atof(argv[12]);
 
+  parnumE=1;
   if (argc > 13)
     parnumE = atoi(argv[13]);
 
@@ -159,6 +160,7 @@ int main(int argc, char **argv)
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
   rz = malloc(sizeof(double)*parnum);
+  top = malloc(sizeof(int)*parnum);
   rxCM = malloc(sizeof(double)*numpoly);
   ryCM = malloc(sizeof(double)*numpoly);
   rzCM = malloc(sizeof(double)*numpoly);
@@ -258,9 +260,20 @@ int main(int argc, char **argv)
   fprintf(f, "saveBonds: 0\n");
   fprintf(f, "@@@\n");
   /* #Enzymes #Substrates #Products at t=0 */
-  parnumS=parnum-1;
-  parnumE=1;
-  fprintf(f, "%d %d %d\n", parnumE, parnumS, 0);
+  if (fractC > 0.0)
+    {
+      parnumS=parnum-parnumE;
+      parnumS = (int)(parnumS/(1.+fractC));
+      parnumC = parnum-parnumE-parnumS;
+    }
+  else
+    {
+      parnumS=parnum-parnumE;
+    }
+  if (fractC > 0.0)
+    fprintf(f, "%d %d %d %d\n", parnumE, parnumS, 0, parnumC);
+  else
+    fprintf(f, "%d %d %d\n", parnumE, parnumS, 0);
   fprintf(f,"%f %f %f\n", LenE/2.0, DiamE/2.0, DiamE/2.0); 
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of a uniaxial ellipsoid */
@@ -436,6 +449,8 @@ int main(int argc, char **argv)
 	  //printf("qui idx=%d\n", idx);
 	}
     }
+
+  nE = nS = nC = 0;
   for (i=0; i < parnum; i++)
     {
       rx[i] -= L[0]*0.5;
@@ -443,11 +458,43 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-      if (i < parnumE)
-	typeP = 0;
+      if (fractC <= 0.0 && parnumE==1)
+	{
+	  if (i < parnumE)
+	    typeP = 0;
+	  else
+	    typeP = 1;
+	}
       else
-	typeP = 1;
- 
+	{
+	  done = 0;
+	  while (!done)
+	    {
+	      typeP = drand48()*parnum;
+	      if (nE < parnumE && typeP < parnumS)
+		{
+		  typeP = 0;
+		  nE++;
+		  done = 1;
+		}
+	      else if (nS < parnumS && typeP < parnumP+parnumE)
+		{
+		  typeP = 1;
+		  nS++;
+		  done = 1;
+		}
+	      else if (nC < parnumC)
+		{
+		  nC++;
+		  typeP = 3;
+		  done = 1;
+		}
+	      else 
+		done = 1;
+	    }
+	}
+      top[i] = typeP;
+
       fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f %d\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i], typeP);
       //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
       //printf("qui2\n");
@@ -462,15 +509,26 @@ int main(int argc, char **argv)
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
 
-      if (i < parnumE)
+      if (parnumE==1 && fractC <= 0.0)
 	{
-	  mass = massE;
+	  if (i < parnumE)
+	    {
+	      mass = massE;
+	    }
+	  else
+	    {
+	      mass = massS;
+	    }
 	}
       else
 	{
-	  mass = massS;
+	  if (top[i]==0)
+	    mass = massE;
+	  else if (top[i]==1)
+	    mass = massS;
+	  else if (top[i]==3)
+	    mass = massC;
 	}
-
       rTemp = sqrt(temp / mass);  
       vx[i] = rTemp * gauss(); 
       vy[i] = rTemp * gauss();
@@ -479,10 +537,22 @@ int main(int argc, char **argv)
   vxCM=vyCM=vzCM=0.0;
   for (i=0; i < parnum; i++)
     {
-      if (i < parnumE)
-	mass = massE;
-      else 
-	mass = massS;
+      if (parnumE==1 && fractC <=0.0)
+	{
+	  if (i < parnumE)
+    	    mass = massE;
+	  else 
+	    mass = massS;
+	}
+      else
+	{
+	  if (top[i]==0)
+	    mass = massE;
+	  else if (top[i]==1)
+	    mass = massS;
+	  else if (top[i]==3)
+	    mass = massC;
+	}
       mCM += mass;
       vxCM+=mass*vx[i];
       vyCM+=mass*vy[i];
