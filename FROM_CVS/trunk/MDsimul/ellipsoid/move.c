@@ -10525,16 +10525,22 @@ void ProcessCollision(void)
 	{
 	  /* SE -> P + E */
 #ifdef MD_MULTIPLE_LL
-	  remove_part_from_cell_MLL(evIdA);
-	  remove_part_from_cell_MLL(evIdB);
+	  if (OprogStatus.multipleLL)
+	    {
+	      remove_part_from_cell_MLL(evIdA);
+	      remove_part_from_cell_MLL(evIdB);
+	    }
 #endif
   	  typeOfPart[evIdB] = 2;
 	  typeNP[2]+=1;
 	  typeNP[1]-=1;
 
 #ifdef MD_MULTIPLE_LL
-	  insert_part_in_cell_MLL(evIdA);
-	  insert_part_in_cell_MLL(evIdB);
+	  if (OprogStatus.multipleLL)
+	    {
+	      insert_part_in_cell_MLL(evIdA);
+	      insert_part_in_cell_MLL(evIdB);
+	    }
 #endif
 	  // printf("evIdA: %d evIdB: %d\n", typeOfPart[evIdA], typeOfPart[evIdB]);
 	}
@@ -10542,16 +10548,22 @@ void ProcessCollision(void)
 	{
 	  /* SE -> P + E */
 #ifdef MD_MULTIPLE_LL
-	  remove_part_from_cell_MLL(evIdA);
-	  remove_part_from_cell_MLL(evIdB);
+	  if (OprogStatus.multipleLL)
+	    {
+	      remove_part_from_cell_MLL(evIdA);
+	      remove_part_from_cell_MLL(evIdB);
+	    }
 #endif
 	  typeOfPart[evIdA] = 2;
  	  typeNP[2]+=1;
 	  typeNP[1]-=1;
 
 #ifdef MD_MULTIPLE_LL
-	  insert_part_in_cell_MLL(evIdA);
-	  insert_part_in_cell_MLL(evIdB);
+	  if (OprogStatus.multipleLL)
+	    {
+	      insert_part_in_cell_MLL(evIdA);
+	      insert_part_in_cell_MLL(evIdB);
+	    }
 #endif
 	}
     }
