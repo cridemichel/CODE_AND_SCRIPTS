@@ -701,6 +701,13 @@ double get_min_dist (int na, int *jmin, double *rCmin, double *rDmin, double *sh
 #endif
 		}
 	      n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+#if 0
+	      if (cellList[n] == -1)
+		{
+		  distMin = 0.9999*(Oparams.rcut-2.0*axa[n])/2.0;
+		  *jmin=0;
+		}
+#endif
 	      for (n = cellList[n]; n > -1; n = cellList[n]) 
 		{
 		  if (n!=na) 
@@ -1405,6 +1412,8 @@ void scale_Phi(void)
 	  curType++;
 	}	
       printf("[GROWTH IN STAGES]: Actual growing type is: %d\n", curType);
+      //printf("Actual size: %f %f %f\n", axa[0], axb[0], axc[0]);
+      //printf("target=%f axa[i] / axai=%f\n", target, axa[0]/5.0);
     }
 #endif
   for (i = 0; i < Oparams.parnum; i++)
@@ -10445,7 +10454,7 @@ void ProcessCollision(void)
      type = 1 Substrate in state S
      type = 2 Substrate in state P (product) */ 
 
-  if (Oparams.ntypes == 3)
+  if (Oparams.ntypes == 3||Oparams.ntypes == 4)
     {
       if (typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
@@ -10462,10 +10471,6 @@ void ProcessCollision(void)
  	  typeNP[2]+=1;
 	  typeNP[1]-=1;
 	}
-    }
-  else if (Oparams.ntypes == 4)
-    {
-      /* caso con crowders */
     }
 #endif
 #ifdef MD_SURV_PROB

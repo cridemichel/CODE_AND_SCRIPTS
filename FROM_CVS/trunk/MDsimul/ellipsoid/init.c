@@ -970,7 +970,7 @@ void resetCM(int onlyz)
   sumx = sumx / Mtot; 
   sumy = sumy / Mtot;
   sumz = sumz / Mtot;
-
+  //printf("Mtot=%f sumx=%.15G sumy=%.15G sumz=%.15G\n", Mtot, sumx, sumy, sumz);
   //Px=0.0; Py=0.0; Pz=0.0;
   /* Now (sumx, sumy, sumz) is the total momentum per atom (Ptot/(2*Nm)) */
   for(i = 0; i < Oparams.parnum; i++)
