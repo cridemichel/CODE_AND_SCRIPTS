@@ -966,7 +966,7 @@ void rebuildMultipleLL(void)
       for (j = 0; j < cellsxMLL[nl]*cellsyMLL[nl]*cellszMLL[nl] + Oparams.parnum; j++)
 	cellListMLL[nl][j] = -1;
     }
-
+  //printf("rebuilding multiLL...");
   maxnc = Oparams.ntypes;
   for (nc=0; nc < maxnc; nc++)
     {
@@ -1043,6 +1043,7 @@ void rebuildMultipleLL(void)
 	  cellListMLL[nl][j] = n;
 	}
     }
+  //printf("...done\n")
 }
 extern int use_bounding_spheres(int na, int n);
 extern int may_interact_all(int i, int j);
@@ -1419,7 +1420,6 @@ void PredictEventMLL(int na, int nb)
   if (typeOfPart[na]==4)
     OprogStatus.hardwall=0;
 #endif
-
   for (nc = 0; nc < Oparams.ntypes; nc++)
     {
       PredictCellCross(na, nc);
@@ -1444,7 +1444,6 @@ void PredictEventMLL(int na, int nb)
   if (typeOfPart[na]==4)
     OprogStatus.hardwall=1;
 #endif
-
 }
 #ifdef MD_EDHEFLEX_OPTNNL
 void rebuildMultipleLL_NLL(int nl)

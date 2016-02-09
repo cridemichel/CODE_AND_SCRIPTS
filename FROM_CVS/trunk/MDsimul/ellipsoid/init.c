@@ -1927,7 +1927,9 @@ void usrInitBef(void)
      * se tale valore resta vuol dire che non vengono settati nel file di parametri
      * e dunque assumeranno i valori degli epsd degli ellissoidi altrimenti
      * vengono usati i valori forniti dall'utente (ved. anche usrInitAft() */
-
+#ifdef MD_SUBENZYME
+    OprogStatus.SEreaction = 1;
+#endif
     OprogStatus.guessDistOpt = 0;
     OprogStatus.tolSD = 0.01;
     OprogStatus.tolSDlong = -1.0;
@@ -6568,6 +6570,7 @@ void usrInitAft(void)
 	      continue;
 	    }
 #endif
+#ifdef MD_OPT_MULTLL
 	  if (!may_interact_all_type(t1, t2))
 	    {
 	      ignoreMLL[k1] = 1;
@@ -6578,6 +6581,9 @@ void usrInitAft(void)
 	    {
 	      ignoreMLL[k1] = 0;
 	    }
+#else
+	  ignoreMLL[k1] = 0;
+#endif
 #ifdef MD_LXYZ
     	  printf("[%d] L=%.15G %.15G %.15G Oparams.rcut: %f cellsx:%d cellsy: %d cellsz:%d t1=%d t2=%d\n", k1, L[0], L[1], L[2],
 		 rcutMLL[k1], cellsxMLL[k1], cellsyMLL[k1], cellszMLL[k1], t1, t2);

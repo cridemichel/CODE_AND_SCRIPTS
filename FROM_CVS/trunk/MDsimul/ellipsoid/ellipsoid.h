@@ -893,6 +893,9 @@ struct progStatus
   double Tf; /* temperatura finale per il quench */
   double xi; /* rate di riduzione durante il quench per il folding */
 #endif
+#ifdef MD_SUBENZYME
+  int SEreaction;
+#endif
 #ifdef MD_EDHEFLEX_OPTNNL
   int optnnl;
 #endif
@@ -1376,6 +1379,9 @@ struct pascii opro_ascii[] =
   {"stripStore",   &OS(stripStore),        1, 1,             "%d"},
   {"Tf",           &OS(Tf),                1, 1,             "%.15G"},
   {"xi",           &OS(xi),                1, 1,             "%.15G"},
+#endif
+#ifdef MD_SUBENZYME
+  {"SEreaction",  &OS(SEreaction),          1, 1, "%d"},
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",       &OS(optnnl),            1, 1,              "%d"},
@@ -1915,6 +1921,9 @@ struct singlePar OsinglePar[] = {
   {"Tf",          &OprogStatus.Tf,          CT},
   {"xi",          &OprogStatus.xi,          CT},
   {"n_gauleg",    &OprogStatus.n_gauleg,    INT},
+#endif
+#ifdef MD_SUBENZYME
+  {"SEreaction",   &OprogStatus.SEreaction, INT},
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",      &OprogStatus.optnnl,      INT},
