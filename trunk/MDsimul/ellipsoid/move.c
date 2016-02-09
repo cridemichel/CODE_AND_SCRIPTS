@@ -10409,6 +10409,12 @@ void remove_part_from_cell_MLL(int evIdA)
   for (nc=0; nc < Oparams.ntypes; nc++)
     {
       nl = get_linked_list(evIdA, nc);
+#ifdef MD_OPT_MULTLL
+      if (ignoreMLL[nl])
+	{
+	  continue;
+	}
+#endif
       n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
 	inCellMLL[nc][0][evIdA] + Oparams.parnum;
       while (cellListMLL[nl][n] != evIdA) 
@@ -10426,6 +10432,12 @@ void insert_part_in_cell_MLL(int evIdA)
     {
       /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
       nl = get_linked_list(n, nc);
+#ifdef MD_OPT_MULTLL
+      if (ignoreMLL[nl])
+	{
+	  continue;
+	}
+#endif
 #ifdef MD_LXYZ
       inCellMLL[nc][0][n] =  (rx[n] + L2[0]) * cellsxMLL[nl] / L[0];
       inCellMLL[nc][1][n] =  (ry[n] + L2[1]) * cellsyMLL[nl] / L[1];
