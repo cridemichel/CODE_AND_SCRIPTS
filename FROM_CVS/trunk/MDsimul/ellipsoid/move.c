@@ -10396,8 +10396,58 @@ extern double gauss(void);
 extern void save_sp(void);
 extern double ranf(void);
 #endif
+void rebuild_all_events(void);
+#ifdef MD_MULTIPLE_LL
+extern int **crossevtodel;
+extern int ***inCellMLL;
+extern int **cellListMLL;
+extern int *cellsxMLL, *cellsyMLL, *cellszMLL, *ignoreMLL;
+void remove_part_from_cell_MLL(int evIdA)
+{
+  int nl, nc, n;
+  /* rimuove la particella da tutte le liste multiple */
+  for (nc=0; nc < Oparams.ntypes; nc++)
+    {
+      nl = get_linked_list(evIdA, nc);
+      n = (inCellMLL[nc][2][evIdA] * cellsyMLL[nl] + inCellMLL[nc][1][evIdA])*cellsxMLL[nl] + 
+	inCellMLL[nc][0][evIdA] + Oparams.parnum;
+      while (cellListMLL[nl][n] != evIdA) 
+	n = cellListMLL[nl][n];
+      /* Eliminazione di evIdA dalla lista della cella n-esima */
+      cellListMLL[nl][n] = cellListMLL[nl][evIdA];
+    } 
+}
+void insert_part_in_cell_MLL(int evIdA)
+{
+  int nc, maxnc, n, nl, j;
+  maxnc = Oparams.ntypes;
+  n=evIdA;
+  for (nc=0; nc < maxnc; nc++)
+    {
+      /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
+      nl = get_linked_list(n, nc);
+#ifdef MD_LXYZ
+      inCellMLL[nc][0][n] =  (rx[n] + L2[0]) * cellsxMLL[nl] / L[0];
+      inCellMLL[nc][1][n] =  (ry[n] + L2[1]) * cellsyMLL[nl] / L[1];
+      inCellMLL[nc][2][n] =  (rz[n] + L2[2])  * cellszMLL[nl] / L[2];
+#else
+      inCellMLL[nc][0][n] =  (rx[n] + L2) * cellsxMLL[nl] / L;
+      inCellMLL[nc][1][n] =  (ry[n] + L2) * cellsyMLL[nl] / L;
+      inCellMLL[nc][2][n] =  (rz[n] + L2) * cellszMLL[nl] / L;
+#endif
+      j = (inCellMLL[nc][2][n]*cellsyMLL[nl] + inCellMLL[nc][1][n])*cellsxMLL[nl] + 
+	inCellMLL[nc][0][n] + Oparams.parnum;
+      cellListMLL[nl][n] = cellListMLL[nl][j];
+      cellListMLL[nl][j] = n;
+    }
+}
+#endif
+
 void ProcessCollision(void)
 {
+#ifdef MD_MULTIPLE_LL
+  int k1, k2, mll_rebuild_cal, nc;
+#endif
 #ifdef MD_SURV_PROB
   int rebuilt_cal;
 #endif
@@ -10456,24 +10506,42 @@ void ProcessCollision(void)
 
   if (OprogStatus.SEreaction==1 && (Oparams.ntypes == 3||Oparams.ntypes == 4))
     {
+#ifdef MD_MULTIPLE_LL
+      //mll_rebuild_cal=0;
+#endif
       if (typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
 	  /* SE -> P + E */
-	  typeOfPart[evIdB] = 2;
+#ifdef MD_MULTIPLE_LL
+	  remove_part_from_cell_MLL(evIdA);
+	  remove_part_from_cell_MLL(evIdB);
+#endif
+  	  typeOfPart[evIdB] = 2;
 	  typeNP[2]+=1;
 	  typeNP[1]-=1;
+
+#ifdef MD_MULTIPLE_LL
+	  insert_part_in_cell_MLL(evIdA);
+	  insert_part_in_cell_MLL(evIdB);
+#endif
 	  // printf("evIdA: %d evIdB: %d\n", typeOfPart[evIdA], typeOfPart[evIdB]);
 	}
       if (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0)
 	{
 	  /* SE -> P + E */
+#ifdef MD_MULTIPLE_LL
+	  remove_part_from_cell_MLL(evIdA);
+	  remove_part_from_cell_MLL(evIdB);
+#endif
 	  typeOfPart[evIdA] = 2;
  	  typeNP[2]+=1;
 	  typeNP[1]-=1;
-	}
+
 #ifdef MD_MULTIPLE_LL
-      //rebuildMultipleLL();
+	  insert_part_in_cell_MLL(evIdA);
+	  insert_part_in_cell_MLL(evIdB);
 #endif
+	}
     }
 #endif
 #ifdef MD_SURV_PROB

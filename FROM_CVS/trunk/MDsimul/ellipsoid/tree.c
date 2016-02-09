@@ -750,7 +750,7 @@ void NextEvent (void)
 		   * (nc==0 e nc==1) */
 		  /* Serve assolutamente porre crossevtodel a -1  per evitare che ProcessCellCross 
 		   * tenti di rimuovere un evento già rimosso. */
-		      crossevtodel[nc][id-1] = -1;
+		  crossevtodel[nc][id-1] = -1;
 		}
 	    }
 	  else
