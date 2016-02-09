@@ -820,7 +820,6 @@ void NextEvent (void)
        exit(-1);     
      } 
     
-  /*printf("Next event evIdA: %d, evIdB:%d\n", evIdA, evIdB);*/
 }
 
 void DeletePQ (int id)

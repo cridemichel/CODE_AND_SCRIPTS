@@ -10454,7 +10454,7 @@ void ProcessCollision(void)
      type = 1 Substrate in state S
      type = 2 Substrate in state P (product) */ 
 
-  if (Oparams.ntypes == 3||Oparams.ntypes == 4)
+  if (OprogStatus.SEreaction==1 && (Oparams.ntypes == 3||Oparams.ntypes == 4))
     {
       if (typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
@@ -10471,6 +10471,9 @@ void ProcessCollision(void)
  	  typeNP[2]+=1;
 	  typeNP[1]-=1;
 	}
+#ifdef MD_MULTIPLE_LL
+      //rebuildMultipleLL();
+#endif
     }
 #endif
 #ifdef MD_SURV_PROB
