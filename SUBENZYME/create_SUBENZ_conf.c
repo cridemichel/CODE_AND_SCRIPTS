@@ -160,7 +160,7 @@ int main(int argc, char **argv)
   Len=max3(LenE,LenS,LenC);
   Diam=max3(DiamE,DiamS,DiamC);
 
-  printf("Len=%f Diam=%f\n", Len, Diam);
+  printf("Len=%f Diam=%f LenE=%f DiamE=%f LenC=%f DiamC=%f LenS=%f DiamS=%f\n", Len, Diam, LenE, DiamE, LenC, DiamC, LenS, DiamS);
   printf("parnumE=%d LenP=%f fractC:%f\n", parnumE, LenP, fractC);
   parnum = polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
@@ -383,7 +383,7 @@ int main(int argc, char **argv)
   printf("step #2 [factor] L=%f %f %f\n", L[0], L[1], L[2]);
 #endif
   volE = M_PI*4.0*(DiamE/2.)*(DiamE/2.)*(LenE/2.)/3.0;
-  volS = M_PI*4.0*(DiamE/2.)*(DiamS/2.)*(LenS/2.)/3.0;
+  volS = M_PI*4.0*(DiamS/2.)*(DiamS/2.)*(LenS/2.)/3.0;
   volC = M_PI*4.0*(DiamC/2.)*(DiamC/2.)*(LenC/2.)/3.0;
   printf("Diam=%f Len=%f\n", Diam, Len);
   if (fractC <= 0.0)
@@ -391,7 +391,7 @@ int main(int argc, char **argv)
   else
     phi=(parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]);
   xtrafact = pow(phi/targetphi, 1.0/3.0);
-  printf("vol=%f targetphi=%f phi=%f xtrafact=%f\n", vol, targetphi, phi, xtrafact);
+  printf("volE=%f volS=%f volC=%f targetphi=%f phi=%f xtrafact=%f\n", volE, volS, volC, targetphi, phi, xtrafact);
 
   for (i=0; i < numpoly; i++)
     {
