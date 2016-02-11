@@ -16,7 +16,7 @@ STA="600.0" #0.001
 L=`tail -n 1 startEQ.cnf| awk '{print $1}'`
 PN=`cat startEQ.cnf | grep parnum | awk -F : '{print $2}'`
 echo "L=" $L " PN=" $PN
-STB="3000.0" #`cat $FN| tail -1 | LANG=C awk '{print 9.*$1/10.}'`
+STB="7000.0" #`cat $FN| tail -1 | LANG=C awk '{print 9.*$1/10.}'`
 A1=1000.0
 B1=1000.1
 echo "a=$A1; b=$B1; fit [${STA}:${STB}] a*exp(-(x/b)) \"$FN\" via a,b;" > fit.tmp
@@ -27,7 +27,9 @@ B1=`tail -n 12 gpout.tmp | awk '{if ($1=="b" && $2=="=" ) print $3}'`
 echo "A1= " $A1 " B1= " $B1
 KK=`echo "1.0/${B1}" | bc -l`
 #KK=`echo "($PN/$L/$L/$L)/${B1}" | bc -l`
-echo "$PHI $KK"  >> ../$FNT
+RHO=`echo $PN/$L/$L/$L|bc -l`
+#KK=`echo "100000/${B1}/(${SIG}+1.0)/($PN/$L/$L/$L)" | bc -l`
+echo "$PHI $KK $RHO $SIG"  >> ../$FNT
 ###
 #rm fit.tmp
 cd ..
