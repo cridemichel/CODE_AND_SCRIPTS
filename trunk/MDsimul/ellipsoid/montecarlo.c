@@ -5488,6 +5488,9 @@ void move_box_xyz(int *ierr)
   double nn;
 #if 1
   double vo, lnvn, vn, Lfact, enn, eno, arg, delv=0.0;
+#ifdef MC_STORE_ALL_COORDS
+  double Lold[3];
+#endif
   double *rr[3];
   //printf("moving box\n");
 #ifdef MD_LXYZ
@@ -5506,11 +5509,15 @@ void move_box_xyz(int *ierr)
   Lfact = vn/vo;
   if (OprogStatus.useNNL)
     delv = (Lfact - 1.0); /* FINISH HERE */
-//	Lfact=1;
+#ifdef MC_STORE_ALL_COORDS
+  for (kk=0; kk < 3; kk++)
+    Lold[kk] = L[kk];
+  store_all_coords();
+#endif
+ //	Lfact=1;
   L[dir] *= Lfact;
   L2[dir] = L[dir]*0.5;
-
-  for (i=0; i < Oparams.parnum; i++)
+ for (i=0; i < Oparams.parnum; i++)
     {
 #ifdef MC_BOND_POS
       oldrr = rr[dir][i];
@@ -5537,8 +5544,18 @@ void move_box_xyz(int *ierr)
 	{
 	  //printf("overlap di %d Lfact=%.15G\n", i, Lfact);
 	  /* move rejected restore old positions */
+#ifdef MC_STORE_ALL_COORDS
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      L[kk] = Lold[kk];
+	      L2[kk] = Lold[kk]*0.5;
+	    }
+#else
 	  L[dir] /= Lfact;
 	  L2[dir] = L[dir]*0.5;
+
+#endif	 
+#ifndef MC_STORE_ALL_COORDS
 	  for (ii=0; ii < Oparams.parnum; ii++)
 	    {
 #ifdef MC_BOND_POS
@@ -5551,6 +5568,9 @@ void move_box_xyz(int *ierr)
 #endif
  	      pbc(ii);
 	    }
+#else
+       	  restore_all_coords();
+#endif
 	  volrejMC++;
 	  update_numcells();
 #ifdef MC_STORELL
@@ -5658,10 +5678,19 @@ void move_box_xyz(int *ierr)
   if (ranf() > exp(arg))
 #endif
     {
+#ifdef MC_STORE_ALL_COORDS
+      for (kk=0; kk < 3; kk++)
+	{
+	  L[kk] = Lold[kk];
+	  L2[kk] = Lold[kk]*0.5;
+	}
+#else
       /* move rejected restore old positions */
       L[dir] /= Lfact;
       L2[dir] = L[dir]*0.5;
-      
+#endif 
+#ifndef MC_STORE_ALL_COORDS
+      //printf("qui\n");
       for (i=0; i < Oparams.parnum; i++)
 	{
 #ifdef MC_BOND_POS
@@ -5674,6 +5703,9 @@ void move_box_xyz(int *ierr)
 #endif
  	  pbc(i);
 	}
+#else
+      restore_all_coords();
+#endif
       volrejMC++;
       update_numcells();
 #ifdef MC_STORELL
@@ -5735,8 +5767,6 @@ void move_box_xyz(int *ierr)
 	}
     }
 }
-
-
 #endif
 
 void move_box(int *ierr)

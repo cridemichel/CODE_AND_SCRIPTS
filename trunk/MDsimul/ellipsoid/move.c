@@ -12014,6 +12014,13 @@ void move(void)
       printf("[MSDcheck] steps %d time %.15G\n", Oparams.curStep, Oparams.time);
       ENDSIM=1;
     }
+#ifdef MD_SUBENZYME
+  if (typeNP[1]==0)
+    {
+      printf("All substrate particles converted, end of simulation\n");
+      ENDSIM=1;
+    }
+#endif
   /* termina la simulazione dopo un certo numero di collisioni
      OprogStatus.maxcoll > 0
    */
