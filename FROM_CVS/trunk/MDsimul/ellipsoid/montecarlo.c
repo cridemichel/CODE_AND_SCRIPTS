@@ -5473,6 +5473,7 @@ extern int refFB, fakeFB;
 #ifdef MC_NPT_XYZ
 void move_box_xyz(int *ierr)
 {
+  int k1, extraspots, k2;
 #ifdef MC_BOND_POS
   double oldrr, del;
 #endif
@@ -5526,6 +5527,22 @@ void move_box_xyz(int *ierr)
 #ifdef MC_BOND_POS
       del = rr[dir][i] - oldrr;
       update_spot_pos_dir(i, dir, del);
+#endif
+      
+#if 0
+      rA[0] = rx[i];
+      rA[1] = ry[i];
+      rA[2] = rz[i];
+
+      BuildAtomPos(i, rA, R[i], ratA);
+#ifdef MC_BOUNDING_SPHERES
+      extraspots = typesArr[typeOfPart[i]].nspotsBS;
+#endif
+      for (k1 = 0; k1 < typesArr[typeOfPart[i]].nspots + extraspots; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    bpos[k2][i][k1] = ratA[k1+1][k2];
+	}
 #endif
       pbc(i);
     }
@@ -5678,6 +5695,7 @@ void move_box_xyz(int *ierr)
   if (ranf() > exp(arg))
 #endif
     {
+     
 #ifdef MC_STORE_ALL_COORDS
       for (kk=0; kk < 3; kk++)
 	{
@@ -5755,6 +5773,11 @@ void move_box_xyz(int *ierr)
 #endif
 #endif
       return;
+    }
+  else
+    {
+      //if (Oparams.curStep==46)
+      //printf("step=%d volume change accepted rejectMove=%d energy=%f!\n", Oparams.curStep, rejectMove, calcpotene());
     }
 #endif
   if (OprogStatus.useNNL)
