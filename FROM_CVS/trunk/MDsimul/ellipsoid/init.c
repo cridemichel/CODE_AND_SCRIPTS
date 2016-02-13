@@ -2271,6 +2271,7 @@ void StartRun(void)
       if (Oparams.ninters != 0)
 	{
 	  find_bonds_flex_all();
+	  //find_bonds();
 	}
 #else
       if (Oparams.ninters != 0)
@@ -3206,6 +3207,9 @@ extern int clsNPT;
 #ifdef MC_FREEZE_BONDS
 int refFB, fakeFB;
 #endif
+#ifdef MC_GAPDNA
+extern int rejectMove, checkMoveKF;
+#endif
 void find_bonds_flex_all(void)
 {
   int i;
@@ -3217,7 +3221,10 @@ void find_bonds_flex_all(void)
     {
       //printf("pos=%.15G %.15G %.15G\n", rx[i], ry[i], rz[i]);
 #ifdef MC_BOND_POS
+      //find_bonds_one(i);
       find_bonds_one_BP(i);
+      if (checkMoveKF && rejectMove)
+	return;
 #else
       find_bonds_one(i);
 #endif

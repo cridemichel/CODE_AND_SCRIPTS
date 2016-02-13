@@ -912,6 +912,18 @@ void find_bonds_one_BP(int i)
 			    {
 			      rejectMove=0;
 			    }
+#if 0
+			  if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
+			      && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
+			    {
+			      if (Oparams.curStep==47)
+				fprintf(stderr,"step# %d i=%d j=%d permanent bond broken dists[%d]=%.15G\n", Oparams.curStep, i, j, nn, dists[nn]);
+			      rejectMove=1;
+			      return;
+			    }
+#endif
+
+			  
 #endif 
 			  if (dists[nn] < 0.0 && !bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
 			    {
@@ -950,6 +962,10 @@ void find_bonds_one_BP(int i)
 			      //printf("%d %d\n", i, j);
 			      //printf("add bonds i=%d j=%d\n", i, j);
  
+#if 0
+			      if (Oparams.curStep==46)
+				  fprintf(stderr, "bond found i=%d j=%d!\n", i, j);
+#endif
 			      add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			      add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 			    }
@@ -1186,6 +1202,10 @@ void find_bonds_one(int i)
 			  && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
 			{
 		  	  rejectMove = 1;
+#if 0
+			  if (Oparams.curStep==47)
+		    	    fprintf(stderr,"step# %d i=%d j=%d permanent bond broken dists[%d]=%.15G\n", Oparams.curStep, i, j, nn, dists[nn]);
+#endif
 			  continue;
 			}
 
@@ -1238,6 +1258,10 @@ void find_bonds_one(int i)
 //if (mapbondsaFlex[nn]==3 && mapbondsbFlex[nn])
   //printf("%d %d\n", i, j);
 			  //printf("add bonds i=%d j=%d\n", i, j);
+#if 0
+			  if (Oparams.curStep==46)
+			    fprintf(stderr, "bond found i=%d j=%d!\n", i, j);
+#endif
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
 #if 0
@@ -3775,6 +3799,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
   BuildAtomPos(j, rB, RtB, ratB);
 #endif
   na = (j < Oparams.parnumA)?0:1;
+#if 1
 #ifdef MC_BOND_POS
   for (kk=0; kk < typesArr[typeOfPart[j]].nspots+1; kk++)
     {
@@ -3785,6 +3810,7 @@ double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *am
       //printf("ratA[%d]=%f %f %f\n", kk, ratA[kk][0], ratA[kk][1], ratA[kk][2]);
       //printf("ratB[%d]=%f %f %f\n", kk, ratB[kk][0], ratB[kk][1], ratB[kk][2]);
     }
+#endif
 #endif
   /* calcola sigmaSq[][]!!! */
   distmin = 0;
