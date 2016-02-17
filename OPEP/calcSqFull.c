@@ -346,9 +346,10 @@ int main(int argc, char** argv)
 			  i = np*numat + a;	  
 			  for (kk=0; kk < 3; kk++)  
 			    rCM[kk] += r[kk][i];
-			  for (kk=0; kk < 3; kk++)  
-			    rCM[kk] /= numat;
 			}	
+		      for (kk=0; kk < 3; kk++)  
+	    		rCM[kk] /= numat;
+
 		      reRhoFns=0.0;
 		      imRhoFns=0.0;
 		      for (a=0; a < numat; a++)
@@ -450,7 +451,7 @@ int main(int argc, char** argv)
   of = fopen("SqAA.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      SqAA[qmod] = SqAA[qmod]/((double)numprot) / ((double) ntripl[qmod]) / ((double)nf);  
+      SqAA[qmod] = SqAA[qmod]/(((double)numprot)*numat) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAA[qmod]); 
