@@ -486,8 +486,8 @@ int main(int argc, char** argv)
   of = fopen("SqAAovFF.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      P[qmod] = P[qmod] / ((double) ntripl[qmod]) / ((double)nf);  
-      SqAAovFF = SqAA[qmod] / P[qmod];
+      P[qmod] = P[qmod] / ((double) ntripl[qmod]) / ((double)nf) / Sqr((double) numat) / ((double) numprot);  
+      SqAAovFF = SqAA[qmod] * ((double)numat) / P[qmod];
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAAovFF); 
@@ -499,7 +499,7 @@ int main(int argc, char** argv)
   of = fopen("SqAAovFFbetter.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Fq = (Sqr(reF[qmod])+Sqr(imF[qmod])) / ((double) ntripl[qmod]) / ((double)nf);
+      Fq = (Sqr(reF[qmod])+Sqr(imF[qmod])) / ((double) ntripl[qmod]) / ((double)nf) /((double) numprot);
       SqAAovFF = (SqAA[qmod] - P[qmod])/Fq + 1.0;  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
