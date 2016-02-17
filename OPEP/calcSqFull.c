@@ -24,7 +24,7 @@ double twopi;
 double Sq[KMODMAX], SqCM[KMODMAX], sumRho, reRho, imRho, rCM[3], rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
 double P[KMODMAX], reF[KMODMAX], imF[KMODMAX];
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
-double rpk, rp[3], reRhoCM, imRhoCM, sumRhoCM, reRhoFns, imRhoFns, sumRhoFns, sumreRhoFns, sumimRhoFns, rk;
+double rr[3], rpk, rp[3], reRhoCM, imRhoCM, sumRhoCM, reRhoFns, imRhoFns, sumRhoFns, sumreRhoFns, sumimRhoFns, rk;
 double SqAAovFF, Fq;
 void print_usage(void)
 {
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
-  double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
+  double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4, shift[3];
   int qmod, first = 1, NP1, NP2, kk, np;
 #if 0
   if (argc == 1)
@@ -344,8 +344,19 @@ int main(int argc, char** argv)
 		      for (a=0; a < numat; a++)
 			{
 			  i = np*numat + a;	  
+			  for (kk=0; kk < 3; kk++)
+			    rr[kk] = r[kk][i];
+			  if (a > 0)
+			    { 
+			      shift[0] = L*rint((r[0][i]-r[0][np*numat])/L);
+			      shift[1] = L*rint((r[1][i]-r[1][np*numat])/L);
+			      shift[2] = L*rint((r[2][i]-r[2][np*numat])/L);
+			      rr[0] -= shift[0];
+			      rr[1] -= shift[1];
+			      rr[2] -= shift[2];
+			    }
 			  for (kk=0; kk < 3; kk++)  
-			    rCM[kk] += r[kk][i];
+			    rCM[kk] += rr[kk];
 			}	
 		      for (kk=0; kk < 3; kk++)  
 	    		rCM[kk] /= numat;

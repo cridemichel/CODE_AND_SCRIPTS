@@ -157,7 +157,11 @@ int main(int argc, char **argv)
 
   while (!feof(fin))
     {
+#ifdef COM
+      sprintf(fnout,"StoreCM-%d", nframe);
+#else
       sprintf(fnout,"Store-%d", nframe);
+#endif
       fout = fopen(fnout, "w+");
       fprintf(fout, "initFormat:0\n");
       fprintf(fout, "@@@\n");
