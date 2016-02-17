@@ -111,7 +111,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
-  int qmod, first = 1, NP1, NP2, kk;
+  int qmod, first = 1, NP1, NP2, kk, np;
 #if 0
   if (argc == 1)
     {
@@ -296,7 +296,7 @@ int main(int argc, char** argv)
 	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
-	      Sq[qmod] = 0.0;      
+	      SqAA[qmod] = SqCM[qmod] = P[qmod] = reF[qmod] = imF[qmod] = 0.0;      
 	      if (NA < N)
 		{
 	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
@@ -333,16 +333,17 @@ int main(int argc, char** argv)
 	      sumRhoFns = 0.0;
 	      sumreRhoFns = 0.0;
 	      sumimRhoFns = 0.0;
+	      sumRhoCM = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
 		{
 		  reRho = 0.0;
 		  imRho = 0.0;
-		  for(n=0; n < numprot; n++)
+		  for(np=0; np < numprot; np++)
 		    {
 		      rCM[0]=rCM[1]=rCM[2]=0;
 		      for (a=0; a < numat; a++)
 			{
-			  i = n*numat + a;	  
+			  i = np*numat + a;	  
 			  for (kk=0; kk < 3; kk++)  
 			    rCM[kk] += r[kk][i];
 			  for (kk=0; kk < 3; kk++)  
@@ -352,7 +353,7 @@ int main(int argc, char** argv)
 		      imRhoFns=0.0;
 		      for (a=0; a < numat; a++)
 			{
-			  i = n*numat + a;	  
+			  i = np*numat + a;	  
 			  /* il passo della mesh e' 0.5*pi2/L */
 			  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
 			      mesh[n][mp][2] == 0)
@@ -385,9 +386,9 @@ int main(int argc, char** argv)
 		      sumimRhoFns += imRhoFns;
 		    }
 		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
-		  sumRhoCM = sumRho + Sqr(reRhoCM) + Sqr(imRhoCM);
+		  sumRhoCM = sumRhoCM + Sqr(reRhoCM) + Sqr(imRhoCM);
 		}
-	      Sq[n] += sumRho;  
+	      SqAA[n] += sumRho;  
 	      SqCM[n] += sumRhoCM;
 	      P[n] += sumRhoFns;
 	      reF[n] += sumreRhoFns;
@@ -449,12 +450,12 @@ int main(int argc, char** argv)
   of = fopen("SqAA.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      SqAA[qmod] = (SqAA[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
+      SqAA[qmod] = SqAA[qmod]/((double)numprot) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
-	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAA[qmod]); 
       else
-	fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
+	fprintf(of, "%d %.15G\n", qmod, SqAA[qmod]); 
     }
   fclose(of);
  
@@ -474,7 +475,7 @@ int main(int argc, char** argv)
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
       P[qmod] = P[qmod] / ((double) ntripl[qmod]) / ((double)nf);  
-      SqAAovFF = SqAA[qmod] / ((double) ntripl[qmod]) / ((double)nf);  
+      SqAAovFF = SqAA[qmod] / P[qmod];
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAAovFF); 
