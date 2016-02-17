@@ -9,6 +9,7 @@ int N, NA=-1;
 double x[3], *r[3];
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
+const int numat=1038, numprot=64;
 #define KMODMAX 599
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
@@ -20,11 +21,14 @@ int ntripl[]=
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
 double twopi;
-double Sq[KMODMAX], SqFF[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
+double Sq[KMODMAX], SqCM[KMODMAX], sumRho, reRho, imRho, rCM[3], rCMk, scalFact, invNm, invL, L, invNmAA, invNmBB, invNmAB;
+double P[KMODMAX], reF[KMODMAX], imF[KMODMAX];
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
+double rpk, rp[3], reRhoCM, imRhoCM, sumRhoCM, reRhoFns, imRhoFns, sumRhoFns, sumreRhoFns, sumimRhoFns, rk;
+double SqAAovFF;
 void print_usage(void)
 {
-  printf("calcSq [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
+  printf("calcSqFull [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -115,7 +119,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
-  int qmod, first = 1, NP1, NP2;
+  int qmod, first = 1, NP1, NP2, n, a, kk;
 #if 0
   if (argc == 1)
     {
@@ -338,30 +342,68 @@ int main(int argc, char** argv)
 	  for(n = qmin; n <= qmax; n++)
 	    {
 	      sumRho = 0.0;
+	      sumRhoFns = 0.0;
+	      sumreRhoFns = 0.0;
+	      sumimRhoFns = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
 		{
 		  reRho = 0.0;
 		  imRho = 0.0;
-		  for(i=0; i < N; i++)
+		  for(n=0; n < numprot; n++)
 		    {
-		      /* il passo della mesh e' 0.5*pi2/L */
-		      if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
-			  mesh[n][mp][2] == 0)
+		      rCM[0]=rCM[1]=rCM[2]=0;
+		      for (a=0; a < numat; a++)
 			{
-			  printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
-				 mp, ntripl[n]);
-			  exit(-1);
+			  i = n*numat + a;	  
+			  for (kk=0; kk < 3; kk++)  
+			    rCM[kk] += r[kk][i];
+			  for (kk=0; kk < 3; kk++)  
+			    rCM[kk] /= numat;
+			}	
+		      reRhoFns=0.0;
+		      imRhoFns=0.0;
+		      for (a=0; a < numat; a++)
+			{
+			  i = n*numat + a;	  
+			  /* il passo della mesh e' 0.5*pi2/L */
+			  if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
+			      mesh[n][mp][2] == 0)
+			    {
+			      printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
+				     mp, ntripl[n]);
+			      exit(-1);
+			    }
+			  for (kk=0; kk < 3; kk++)
+			    rp[kk] = r[kk][i] - rCM[kk];
+			  rpk = kbeg + scalFact * 
+			    (rp[0][i] * mesh[n][mp][0] + rp[1][i] * mesh[n][mp][1] + 
+			     rp[2][i] * mesh[n][mp][2]);
+			  rk = kbeg + scalFact * 
+			    (r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
+			     r[2][i] * mesh[n][mp][2]);
+			  reRhoFns += cos(rpk);
+			  imRhoFns += sin(rpk);
+			  reRho = reRho + cos(rk); 
+			  imRho = imRho + sin(rk);
+			  /* Imaginary part of exp(i*k*r) for the actual molecule*/
 			}
-		      rCMk = kbeg + scalFact * 
-			(r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
-			 r[2][i] * mesh[n][mp][2]);
-		      reRho = reRho + cos(rCMk); 
-		      imRho = imRho + sin(rCMk);
-		      /* Imaginary part of exp(i*k*r) for the actual molecule*/
+		      rCMk = scalFact * 
+			    (rCM[0] * mesh[n][mp][0] + rCM[1] * mesh[n][mp][1] + 
+			     rCM[2] * mesh[n][mp][2]);
+		      reRhoCM += cos(rCMk);
+		      imRhoCM += sin(rCMk);
+		      sumRhoFns += Sqr(reRhoFns) + Sqr(imRhoDns);
+		      sumreRhoFns += reRhoFns;
+		      sumimRhoFns += imrhoFns;
 		    }
 		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
+		  sumRhoCM = sumRho + Sqr(reRhoCM) + Sqr(imRhoCM);
 		}
 	      Sq[n] += sumRho;  
+	      SqCM[n] += sumRhoCM;
+	      P[n] += sumRhoFns;
+	      reF[n] += sumreRhoFns;
+	      imF[n] += sumimRhoFns;	
 	      //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
 	    }
 	  fclose(f);
@@ -416,10 +458,10 @@ int main(int argc, char** argv)
 	}
     }
   fclose(f2); 
-  of = fopen("Sq.dat", "w+");
+  of = fopen("SqAA.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
+      SqAA[qmod] = (SqAA[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
@@ -427,6 +469,45 @@ int main(int argc, char** argv)
 	fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
+ 
+  of = fopen("SqCM.dat", "w+");
+  for (qmod = qmin; qmod  <= qmax; qmod++)
+    {
+      SqCM[qmod] = (SqCM[qmod]/numprot) / ((double) ntripl[qmod]) / ((double)nf);  
+      //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
+      if (physunit)
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqCM[qmod]); 
+      else
+	fprintf(of, "%d %.15G\n", qmod, SqCM[qmod]); 
+    }
+  fclose(of);
+  
+  of = fopen("SqAAovFF.dat", "w+");
+  for (qmod = qmin; qmod  <= qmax; qmod++)
+    {
+      P[qmod] = P[qmod] / ((double) ntripl[qmod]) / ((double)nf);  
+      SqAAovFF = SqAA[qmod] / ((double) ntripl[qmod]) / ((double)nf);  
+      //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
+      if (physunit)
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAAovFF); 
+      else
+	fprintf(of, "%d %.15G\n", qmod, SqAAovFF); 
+    }
+  fclose(of);
+  
+  of = fopen("SqAAovFFbetter.dat", "w+");
+  for (qmod = qmin; qmod  <= qmax; qmod++)
+    {
+      F[qmod] = (Sqr(reF[qmod])+Sqr(imF[qmod])) / ((double) ntripl[qmod]) / ((double)nf);
+      SqAAovFF = (SqAA[qmod] - P[qmod])/F[qmod] + 1.0;  
+      //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
+      if (physunit)
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAAovFF); 
+      else
+	fprintf(of, "%d %.15G\n", qmod, SqAAovFF); 
+    }
+  fclose(of);
+  
   if (NA < N) 
     {
       of = fopen("SqAA.dat", "w+");
