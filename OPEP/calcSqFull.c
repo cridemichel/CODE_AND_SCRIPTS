@@ -14,7 +14,7 @@ const int numat=1038, numprot=64;
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double qavg[KMODMAX];
-int qmin=0, qmax=KMODMAX-1, eventDriven = 0, formfactor=0;
+int qmin=0, qmax=KMODMAX-1, eventDriven = 0;
 double qminpu=-1.0, qmaxpu=-1.0;
 int ntripl[]=
 #include "./ntripl.dat"
@@ -25,7 +25,7 @@ double Sq[KMODMAX], SqCM[KMODMAX], sumRho, reRho, imRho, rCM[3], rCMk, scalFact,
 double P[KMODMAX], reF[KMODMAX], imF[KMODMAX];
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
 double rpk, rp[3], reRhoCM, imRhoCM, sumRhoCM, reRhoFns, imRhoFns, sumRhoFns, sumreRhoFns, sumimRhoFns, rk;
-double SqAAovFF;
+double SqAAovFF, Fq;
 void print_usage(void)
 {
   printf("calcSqFull [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
@@ -80,14 +80,6 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  qmaxpu = atof(argv[cc]);
 	}
-      else if (!strcmp(argv[cc],"--formfactor") || !strcmp(argv[cc],"-ff"))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  formfactor = atoi(argv[cc]);
-	}
-
       else if (cc == argc || extraparam == 3)
 	print_usage();
       else if (extraparam == 0)
@@ -119,7 +111,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *of;
   int nf, i, a, b, n, mp;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
-  int qmod, first = 1, NP1, NP2, n, a, kk;
+  int qmod, first = 1, NP1, NP2, kk;
 #if 0
   if (argc == 1)
     {
@@ -253,7 +245,7 @@ int main(int argc, char** argv)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
 	   //printf("line=%s\n", line);
-	   if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+	   if (!(sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3))
 	     {
 	       //printf("boh\n");
 	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
@@ -305,10 +297,6 @@ int main(int argc, char** argv)
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
 	      Sq[qmod] = 0.0;      
-	      if (formfactor)
-		{
-		  SqFF[qmod]=0;
-		}
 	      if (NA < N)
 		{
 	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
@@ -376,8 +364,8 @@ int main(int argc, char** argv)
 			  for (kk=0; kk < 3; kk++)
 			    rp[kk] = r[kk][i] - rCM[kk];
 			  rpk = kbeg + scalFact * 
-			    (rp[0][i] * mesh[n][mp][0] + rp[1][i] * mesh[n][mp][1] + 
-			     rp[2][i] * mesh[n][mp][2]);
+			    (rp[0] * mesh[n][mp][0] + rp[1] * mesh[n][mp][1] + 
+			     rp[2] * mesh[n][mp][2]);
 			  rk = kbeg + scalFact * 
 			    (r[0][i] * mesh[n][mp][0] + r[1][i] * mesh[n][mp][1] + 
 			     r[2][i] * mesh[n][mp][2]);
@@ -392,9 +380,9 @@ int main(int argc, char** argv)
 			     rCM[2] * mesh[n][mp][2]);
 		      reRhoCM += cos(rCMk);
 		      imRhoCM += sin(rCMk);
-		      sumRhoFns += Sqr(reRhoFns) + Sqr(imRhoDns);
+		      sumRhoFns += Sqr(reRhoFns) + Sqr(imRhoFns);
 		      sumreRhoFns += reRhoFns;
-		      sumimRhoFns += imrhoFns;
+		      sumimRhoFns += imRhoFns;
 		    }
 		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
 		  sumRhoCM = sumRho + Sqr(reRhoCM) + Sqr(imRhoCM);
@@ -498,8 +486,8 @@ int main(int argc, char** argv)
   of = fopen("SqAAovFFbetter.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      F[qmod] = (Sqr(reF[qmod])+Sqr(imF[qmod])) / ((double) ntripl[qmod]) / ((double)nf);
-      SqAAovFF = (SqAA[qmod] - P[qmod])/F[qmod] + 1.0;  
+      Fq = (Sqr(reF[qmod])+Sqr(imF[qmod])) / ((double) ntripl[qmod]) / ((double)nf);
+      SqAAovFF = (SqAA[qmod] - P[qmod])/Fq + 1.0;  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAAovFF); 

@@ -364,7 +364,7 @@ int main(int argc, char **argv)
 	    type=0;
 	}
       typeofpar[i] = type;
-      fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f %d\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i], type);
+      fprintf(f, "%.15G %.15G %.15G %f %f %f %f %f %f %f %f %f %d\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i], type);
       //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
       //printf("qui2\n");
     }
@@ -424,7 +424,7 @@ int main(int argc, char **argv)
   totvx /= (parnumA + parnumB*8.0);
   totvy /= (parnumA + parnumB*8.0);
   totvz /= (parnumA + parnumB*8.0);
-  printf("totv= %f %f %f\n", totvx, totvy, totvz); 
+  printf("totv= %.15G %.15G %.15G\n", totvx, totvy, totvz); 
   for (i=0; i < parnum; i++)
     {
       if (typeofpar[i]==0)
@@ -434,7 +434,7 @@ int main(int argc, char **argv)
       wx = mean*gauss();
       wy = mean*gauss();
       wz = mean*gauss();
-      fprintf(f, "%f %f %f %f %f %f\n", vx[i], vy[i], vz[i],
+      fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G\n", vx[i], vy[i], vz[i],
 	      wx, wy, wz);
     }
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
