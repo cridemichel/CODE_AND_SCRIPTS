@@ -376,8 +376,19 @@ int main(int argc, char** argv)
 				     mp, ntripl[n]);
 			      exit(-1);
 			    }
+		  	  for (kk=0; kk < 3; kk++)
+			    rr[kk] = r[kk][i];
+			  if (a > 0)
+			    { 
+			      shift[0] = L*rint((r[0][i]-r[0][np*numat])/L);
+			      shift[1] = L*rint((r[1][i]-r[1][np*numat])/L);
+			      shift[2] = L*rint((r[2][i]-r[2][np*numat])/L);
+			      rr[0] -= shift[0];
+			      rr[1] -= shift[1];
+			      rr[2] -= shift[2];
+			    }
 			  for (kk=0; kk < 3; kk++)
-			    rp[kk] = r[kk][i] - rCM[kk];
+			    rp[kk] = rr[kk] - rCM[kk];
 			  rpk = kbeg + scalFact * 
 			    (rp[0] * mesh[n][mp][0] + rp[1] * mesh[n][mp][1] + 
 			     rp[2] * mesh[n][mp][2]);
@@ -501,13 +512,15 @@ int main(int argc, char** argv)
   of = fopen("SqAAovFFbetter.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      Fq = (Sqr(reF[qmod])+Sqr(imF[qmod])) / ((double) ntripl[qmod]) / ((double)nf) /((double) numprot);
-      SqAAovFF = (SqAA[qmod] - P[qmod])/Fq + 1.0;  
+      reF[qmod] = reF[qmod] / ((double) ntripl[qmod]) / ((double)nf) /((double) numprot);
+      imF[qmod] = imF[qmod] / ((double) ntripl[qmod]) / ((double)nf) /((double) numprot); 
+      Fq = Sqr(reF[qmod])+Sqr(imF[qmod]);
+      SqAAovFF = (SqAA[qmod]*numat - P[qmod])/Fq + 1.0;  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
-	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqAAovFF); 
+	fprintf(of, "%.15G %.15G %.15G\n", qavg[qmod], SqAAovFF, Fq); 
       else
-	fprintf(of, "%d %.15G\n", qmod, SqAAovFF); 
+	fprintf(of, "%d %.15G %.15G\n", qmod, SqAAovFF, Fq); 
     }
   fclose(of);
   
