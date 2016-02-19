@@ -338,6 +338,8 @@ int main(int argc, char** argv)
 		{
 		  reRho = 0.0;
 		  imRho = 0.0;
+		  reRhoCM=0.0;
+		  imRhoCM=0.0;
 		  for(np=0; np < numprot; np++)
 		    {
 		      rCM[0]=rCM[1]=rCM[2]=0;
