@@ -293,7 +293,7 @@ int main(int argc, char** argv)
 	      if (qmax < 0)
 		qmax = 0;
 	    }
-	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
+	  printf("N:%d L:%f scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", N, L, scalFact, qmin, qmax, qminpu, qmaxpu);
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
 	      SqAA[qmod] = SqCM[qmod] = P[qmod] = reF[qmod] = imF[qmod] = 0.0;      
@@ -321,7 +321,7 @@ int main(int argc, char** argv)
 	    printf("[ED] ");
 	  else
 	    printf("[MD]");
-	  printf("twopi=%.15G N=%d invL=%.15G invNm:%.15G qmin: %d qmax: %d\n", twopi, N, invL, invNm,
+	  printf("twopi=%.15G N=%d L=%f invL=%.15G invNm:%.15G qmin: %d qmax: %d\n", twopi, N, L, invL, invNm,
 		 qmin, qmax);
 	  first = 0;
 	}
@@ -360,7 +360,7 @@ int main(int argc, char** argv)
 			}	
 		      for (kk=0; kk < 3; kk++)  
 	    		rCM[kk] /= ((double)numat);
-
+		     // printf("2)CM[%d] %f %f %f\n", np, rCM[0], rCM[1], rCM[2]);
 		      reRhoFns=0.0;
 		      imRhoFns=0.0;
 		      for (a=0; a < numat; a++)
