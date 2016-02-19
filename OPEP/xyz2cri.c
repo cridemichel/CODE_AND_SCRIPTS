@@ -3,7 +3,7 @@
 #include<stdio.h>
 #include<string.h>
 #define Sqr(x) ((x)*(x))
-const double L[3]={168.0,152.0,232.0};
+const double L[3]={174.0,174.0,174.0};
 const int numprot=64;
 const int stepinterval=20000;
 const double dt=0.5;
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
       sprintf(fnout,"StoreCM-%d", nframe);
 #else
       sprintf(fnout,"Store-%d", nframe);
-#endif
+#endif	
       fout = fopen(fnout, "w+");
       fprintf(fout, "initFormat:0\n");
       fprintf(fout, "@@@\n");
@@ -209,9 +209,9 @@ int main(int argc, char **argv)
 	  CM[0] = comx;
 	  CM[1] = comy;
 	  CM[2] = comz;
+#ifdef ORIENT
   	  calcItens(Itens, CM, i*natprot, i*natprot+natprot);
 	  diagonalize(Itens, ev);
-#if 1
 	  /* find max eigenval */
 	  if (fabs(ev[0]) > fabs(ev[1]))
 	    { 
@@ -228,7 +228,6 @@ int main(int argc, char **argv)
 	      St = ev[2];
 	      numev=2;
 	    }
-#endif
 	  //printf("i=%d numev=%d ev=%f %f %f\n", i, numev, ev[0], ev[1], ev[2]);
 	  evstruct[0].ev=ev[0];
 	  evstruct[1].ev=ev[1];
@@ -277,9 +276,13 @@ int main(int argc, char **argv)
 		  evstruct[2].eigvec[0], evstruct[2].eigvec[1], evstruct[2].eigvec[2], 
 		  evstruct[0].ev, evstruct[1].ev, evstruct[2].ev,
 		  maxpx, maxpy, maxpz);
+#else
+	  fprintf(fout, "%.12G %.12G %.12G\n", comx, comy, comz);
+
 	}
       for (i=0; i < numprot; i++) 
 	fprintf(fout, "0 0 0\n");
+#endif
 #else
       for (i=0; i < numatoms; i++) 
 	fprintf(fout, "%.12G %.12G %.12G\n", p[i].x, p[i].y, p[i].z);

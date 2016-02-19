@@ -359,7 +359,7 @@ int main(int argc, char** argv)
 			    rCM[kk] += rr[kk];
 			}	
 		      for (kk=0; kk < 3; kk++)  
-	    		rCM[kk] /= numat;
+	    		rCM[kk] /= ((double)numat);
 
 		      reRhoFns=0.0;
 		      imRhoFns=0.0;
@@ -474,7 +474,7 @@ int main(int argc, char** argv)
   of = fopen("SqCM.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      SqCM[qmod] = (SqCM[qmod]/numprot) / ((double) ntripl[qmod]) / ((double)nf);  
+      SqCM[qmod] = (SqCM[qmod]/((double)numprot)) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqCM[qmod]); 
