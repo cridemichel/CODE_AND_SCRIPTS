@@ -488,7 +488,7 @@ int main(int argc, char** argv)
   of = fopen("SqAAovFF.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      P[qmod] = P[qmod] / ((double) ntripl[qmod]) / ((double)nf) / Sqr((double) numat) / ((double) numprot);  
+      P[qmod] = P[qmod] / ((double) ntripl[qmod]) / ((double)nf) / ((double) numprot);  
       SqAAovFF = SqAA[qmod] * ((double)numat) / P[qmod];
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
