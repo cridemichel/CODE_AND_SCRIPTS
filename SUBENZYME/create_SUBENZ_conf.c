@@ -262,12 +262,6 @@ int main(int argc, char **argv)
   fprintf(f, "parnum: %d\n", parnum);
   fprintf(f, "ninters: 0\n");
   fprintf(f, "nintersIJ: 0\n");
-  if (parnumC > 0)
-    fprintf(f, "ntypes: 4\n");
-  else
-    fprintf(f, "ntypes: 3\n");
-  fprintf(f, "saveBonds: 0\n");
-  fprintf(f, "@@@\n");
   /* #Enzymes #Substrates #Products at t=0 */
   if (parnumS > 0 && parnumS < parnum-parnumE)
     {
@@ -283,7 +277,13 @@ int main(int argc, char **argv)
     {
       parnumS=parnum-parnumE;
     }
-  printf("parnumE=%d LenP=%f parnumC=%d \n", parnumE, LenP, parnumC);
+  if (parnumC > 0)
+    fprintf(f, "ntypes: 4\n");
+  else
+    fprintf(f, "ntypes: 3\n");
+  fprintf(f, "saveBonds: 0\n");
+  fprintf(f, "@@@\n");
+    printf("parnumE=%d LenP=%f parnumC=%d \n", parnumE, LenP, parnumC);
   if (parnumC > 0)
     fprintf(f, "%d %d %d %d\n", parnumE, parnumS, 0, parnumC);
   else
