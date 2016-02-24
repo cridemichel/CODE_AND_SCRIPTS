@@ -1929,6 +1929,7 @@ void usrInitBef(void)
      * vengono usati i valori forniti dall'utente (ved. anche usrInitAft() */
 #ifdef MD_SUBENZYME
     OprogStatus.SEreaction = 1;
+    OprogStatus.SEp=1.0;
 #endif
     OprogStatus.guessDistOpt = 0;
     OprogStatus.tolSD = 0.01;
