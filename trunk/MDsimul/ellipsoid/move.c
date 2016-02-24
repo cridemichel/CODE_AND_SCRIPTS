@@ -10463,6 +10463,10 @@ void ProcessCollision(void)
 #ifdef MD_SURV_PROB
   int rebuilt_cal;
 #endif
+#ifdef MD_SUBENZYME
+  int reactyes;
+  double xi;
+#endif
   int k;
   UpdateAtom(evIdA);
   UpdateAtom(evIdB);
@@ -10521,7 +10525,16 @@ void ProcessCollision(void)
 #ifdef MD_MULTIPLE_LL
       //mll_rebuild_cal=0;
 #endif
-      if (typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
+      reactyes=1;
+      if ((typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1) ||
+	  (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0))
+	{
+	  xi=ranf();
+       	  if (xi > OprogStatus.SEp)
+	    reactyes=0;
+	}
+
+      if (reactyes && typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
 	  /* SE -> P + E */
 #ifdef MD_MULTIPLE_LL
@@ -10544,7 +10557,7 @@ void ProcessCollision(void)
 #endif
 	  // printf("evIdA: %d evIdB: %d\n", typeOfPart[evIdA], typeOfPart[evIdB]);
 	}
-      if (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0)
+      if (reactyes && typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0)
 	{
 	  /* SE -> P + E */
 #ifdef MD_MULTIPLE_LL

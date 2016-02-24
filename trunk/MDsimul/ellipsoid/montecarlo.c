@@ -5776,8 +5776,14 @@ void move_box_xyz(int *ierr)
     }
   else
     {
+#if 0
       //if (Oparams.curStep==46)
-      //printf("step=%d volume change accepted rejectMove=%d energy=%f!\n", Oparams.curStep, rejectMove, calcpotene());
+      printf("step=%d volume change accepted rejectMove=%d energy=%f!\n", Oparams.curStep, rejectMove, calcpotene());
+      for (i=0;i< Oparams.parnum;i++)
+	numbonds[i]=0;
+      find_bonds_flex_all();
+      printf("step=%d volume change accepted rejectMove=%d energy=%f!\n", Oparams.curStep, rejectMove, calcpotene());
+#endif
     }
 #endif
   if (OprogStatus.useNNL)

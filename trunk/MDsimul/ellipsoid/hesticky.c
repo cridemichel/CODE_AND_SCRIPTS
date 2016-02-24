@@ -914,12 +914,12 @@ void find_bonds_one_BP(int i)
 			    }
 #if 0
 			  if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
-			      && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
+			      && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1 && (i/OprogStatus.polylen == j/OprogStatus.polylen))
 			    {
-			      if (Oparams.curStep==47)
+			     // if (Oparams.curStep==47)
 				fprintf(stderr,"step# %d i=%d j=%d permanent bond broken dists[%d]=%.15G\n", Oparams.curStep, i, j, nn, dists[nn]);
-			      rejectMove=1;
-			      return;
+			      //rejectMove=1;
+			      //return;
 			    }
 #endif
 

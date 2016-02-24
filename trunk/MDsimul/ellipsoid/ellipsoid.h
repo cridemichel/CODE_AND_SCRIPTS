@@ -895,6 +895,7 @@ struct progStatus
 #endif
 #ifdef MD_SUBENZYME
   int SEreaction;
+  double SEp;
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
   int optnnl;
@@ -1382,6 +1383,7 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MD_SUBENZYME
   {"SEreaction",  &OS(SEreaction),          1, 1, "%d"},
+  {"SEp",         &OS(SEp),                 1, 1, "%f"},
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",       &OS(optnnl),            1, 1,              "%d"},
@@ -1924,6 +1926,7 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef MD_SUBENZYME
   {"SEreaction",   &OprogStatus.SEreaction, INT},
+  {"SEp",          &OprogStatus.SEp,        CT},
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",      &OprogStatus.optnnl,      INT},
