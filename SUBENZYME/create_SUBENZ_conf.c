@@ -78,18 +78,18 @@ int main(int argc, char **argv)
   double MoI1, MoI2, mass, massE, massS, massP, massC, rTemp, temp=1.0;
   double vxCM, vyCM, vzCM, mCM=0, mean;
   double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, DiamC, LenE, LenS, LenP, LenC,
-	 del0, del0x, del0y, del0z, maxL, pi, fractC;
+	 del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, volE, volS, volC;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact;
-  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE, parnumS, typeP, parnumC=0;
+  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE=0, parnumS=0, typeP, parnumC=0;
   int nx, ny, nz, nxmax, nymax, nzmax, idx, nE, nS, nC, done, xi;
   del=0.5;
   /* permanent spots diameter */
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   if (argc == 1)
    {
-     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# enzymes> <fraction of crowders> \n"); 
+     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# enzymes> <# substrates> \n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -155,13 +155,12 @@ int main(int argc, char **argv)
   if (argc > 12)
     parnumE = atoi(argv[12]);
   if (argc > 13)
-    fractC = atof(argv[13]);
+    parnumS = atoi(argv[13]);
 
   Len=max3(LenE,LenS,LenC);
   Diam=max3(DiamE,DiamS,DiamC);
 
   printf("Len=%f Diam=%f LenE=%f DiamE=%f LenC=%f DiamC=%f LenS=%f DiamS=%f\n", Len, Diam, LenE, DiamE, LenC, DiamC, LenS, DiamS);
-  printf("parnumE=%d LenP=%f fractC:%f\n", parnumE, LenP, fractC);
   parnum = polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
   rx = malloc(sizeof(double)*parnum);
@@ -263,25 +262,29 @@ int main(int argc, char **argv)
   fprintf(f, "parnum: %d\n", parnum);
   fprintf(f, "ninters: 0\n");
   fprintf(f, "nintersIJ: 0\n");
-  if (fractC > 0.0)
+  if (parnumC > 0)
     fprintf(f, "ntypes: 4\n");
   else
     fprintf(f, "ntypes: 3\n");
   fprintf(f, "saveBonds: 0\n");
   fprintf(f, "@@@\n");
   /* #Enzymes #Substrates #Products at t=0 */
-  printf("fractC: %f\n", fractC);
-  if (fractC > 0.0)
+  if (parnumS > 0 && parnumS < parnum-parnumE)
     {
+#if 0
       parnumS=parnum-parnumE;
       parnumS = (int)(((double)parnumS)/(1.+fractC));
       parnumC = parnum-parnumE-parnumS;
+#else
+      parnumC=parnum-parnumE-parnumS;
+#endif
     }
   else
     {
       parnumS=parnum-parnumE;
     }
-  if (fractC > 0.0)
+  printf("parnumE=%d LenP=%f parnumC=%d \n", parnumE, LenP, parnumC);
+  if (parnumC > 0)
     fprintf(f, "%d %d %d %d\n", parnumE, parnumS, 0, parnumC);
   else
     fprintf(f, "%d %d %d\n", parnumE, parnumS, 0);
@@ -310,7 +313,7 @@ int main(int argc, char **argv)
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
 
-  if (fractC > 0.)
+  if (parnumC > 0)
     {
       fprintf(f,"%f %f %f\n", LenC/2.0, DiamC/2.0, DiamC/2.0); 
       fprintf(f,"2 2 2\n");
@@ -386,7 +389,7 @@ int main(int argc, char **argv)
   volS = M_PI*4.0*(DiamS/2.)*(DiamS/2.)*(LenS/2.)/3.0;
   volC = M_PI*4.0*(DiamC/2.)*(DiamC/2.)*(LenC/2.)/3.0;
   printf("Diam=%f Len=%f\n", Diam, Len);
-  if (fractC <= 0.0)
+  if (parnumC == 0)
     phi=(parnumE*volE+parnumS*volS)/(L[0]*L[1]*L[2]);
   else
     phi=(parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]);
@@ -474,7 +477,7 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-      if (fractC <= 0.0 && parnumE==1)
+      if (parnumC == 0.0 && parnumE==1)
 	{
 	  if (i < parnumE)
 	    typeP = 0;
@@ -525,7 +528,7 @@ int main(int argc, char **argv)
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
 
-      if (parnumE==1 && fractC <= 0.0)
+      if (parnumE==1 && parnumC == 0.0)
 	{
 	  if (i < parnumE)
 	    {
@@ -553,7 +556,7 @@ int main(int argc, char **argv)
   vxCM=vyCM=vzCM=0.0;
   for (i=0; i < parnum; i++)
     {
-      if (parnumE==1 && fractC <=0.0)
+      if (parnumE==1 && parnumC ==0.0)
 	{
 	  if (i < parnumE)
     	    mass = massE;
