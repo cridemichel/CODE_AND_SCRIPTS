@@ -10535,8 +10535,8 @@ void ProcessCollision(void)
        	  if (xi > OprogStatus.SEp)
 	    reactyes=0;
 	}
-      if (reactyes==0)
-	printf("discarded!\n");
+      //if (reactyes==0)
+	//printf("discarded!\n");
       if (reactyes && typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
 	  /* SE -> P + E */
