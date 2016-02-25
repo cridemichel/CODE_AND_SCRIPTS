@@ -2,12 +2,288 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-//#include <lapack.h>
+#define Sqr(x) ((x)*(x))
+double lenHC=4.0, surfRad=10.0;
+char line[1000000], parname[124], parval[1000000];
+char dummy[2048];
+int mcsim=0, cubic_box=1, nonem=0, calcnv=0, no2d=0;
+int N, particles_type=1, k1, k2;
+double *x[3], L, ti, *w[3], storerate, *angdistr; 
+double Lx, Ly, Lz;
+double nv[3], vecx[3], vecy[3], vecz[3], *R[3][3];
+double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-1.0, sigmaBB=-1.0, 
+       Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
+char fname[1024], inputfile[1024];
+int eventDriven=0;
+int points;
+int foundDRs=0, foundrot=0;
 
-extern void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
-                double* w, double* work, int* lwork, int* info );
+void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, double *r[3], double *w[3], double *DR[3])
+{
+  FILE *f;
+  int nat=0, i, cpos, dummyint;
+  double dt=-1;
+  int curstp=-1, NP1, NP2;
+  *ti = -1.0;
+  f = fopen(fname, "r");
+  while (!feof(f)) 
+    {
+      cpos = ftell(f);
+      //printf("cpos=%d\n", cpos);
+      fscanf(f, "%[^\n] ",line);
+      if (!strcmp(line,"@@@"))
+	{
+	  nat++;
+	  //printf("qui nat=%d\n", nat);
+	  continue;
+	}
+	//printf("line=%s\n", line);
+      if (nat < 2)
+	{
+	  fseek(f, cpos, SEEK_SET);
+	  fscanf(f, "%[^:]:", parname);
+	  //printf("[%s] parname=%s\n", fname, parname);
+	  if (!strcmp(parname,"parnum"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+		{
+		  *NP = atoi(parval);
+		}
+	      else
+		{
+		  *NP = NP1+NP2;
+		  *NPA = NP1;
+		}
+	    }
+	  else if (!strcmp(parname,"parnumA"))
+	    *NPA = atoi(parval);
+	  else if (!strcmp(parname,"DR"))
+	    {
+	      for (i=0; i < *NP; i++)
+		{
+		  fscanf(f, " %lf %lf %lf ", &DR[0][i], &DR[1][i], &DR[2][i]);
+		}
+	      foundDRs = 1;
+	    }
+	  else if (!strcmp(parname,"sumox"))
+	    {
+	      for (i=0; i < *NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[0][i]); 
+		}
+	      foundrot = 1;
+	    }
+	  else if (!strcmp(parname,"sumoy"))
+	    {
+	      for (i=0; i < *NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[1][i]); 
+		}
+	    }
+	  else if (!strcmp(parname,"sumoz"))
+	    {
+	      for (i=0; i < *NP; i++)
+		{
+		  fscanf(f, " %lf ", &w[2][i]); 
+		}
+	    }
+	  else if (!strcmp(parname, "time"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      *ti = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else if (!strcmp(parname, "curStep"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      curstp = atoi(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else if (!strcmp(parname, "steplength"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      dt = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }
+	  else if (!strcmp(parname, "refTime"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      *refTime = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+	  else
+	    fscanf(f, " %[^\n]\n", parval);
+	}
+      else if (nat==3)
+	{
+	  if (*NPA==-1)
+	    *NPA = *NP;
+	  fseek(f, cpos, SEEK_SET);
+	  for (i = 0; i < *NP; i++) 
+	    {
+	      fscanf(f, "%[^\n]\n", line); 
+#if 0	      
+	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+		{
+		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+		}
+#endif
+	      sscanf (line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+	    	      &(r[0][i]), &(r[1][i]), &(r[2][i]), 
+	    	      &(R[0][0][i]), &(R[0][1][i]), &(R[0][2][i]), &(R[1][0][i]), &(R[1][1][i]), 
+	    	      &(R[1][2][i]), &(R[2][0][i]), &(R[2][1][i]), &(R[2][2][i]), &dummyint);
 
+	     // printf("r[%d]=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
+	    }
+	  if (mcsim==1)
+	    {
+	      if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
+		{
+		  L=Lx;
+		}
+	      break;
+	    }
+	  else
+	    {
+	      /* if MD read vels */	
+	      for (i=0; i < *NP; i++)
+		fscanf(f, "%[^\n]\n", line);
+	      // fscanf(f, "%lf\n", &L);
+	      if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
+		{
+		  L=Lx;
+		}
+	      break;
+	    }
 
+	  break; 
+	}
+    }
+  /* N.B.nei codici non-event-driven non esiste il parametro time negli store 
+   * files ascii, quindi il tempo lo calcolo usando i passi correnti e il passo
+   * d'integrazione. */ 
+  if (*ti == -1)
+    *ti = ((double)curstp)*dt;
+  fclose(f);
+}
+
+void print_usage(void)
+{
+  printf("calc_folding [--mcsim/-mc] <confs_file> [points]\n");
+  exit(0);
+}
+double threshold=0.05;
+int gnuplot=0, isoav=0;
+void parse_param(int argc, char** argv)
+{
+  int extraparam=0;  
+  int cc=1;
+  points=100;
+  if (argc==1)
+    {
+      print_usage();
+      exit(1);
+    }
+  while (cc < argc)
+    {
+
+      printf("argc=%d argv[argc]=%s cc=%d\n", argc, argv[cc], cc);
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+       else if (!strcmp(argv[cc],"--mcsim")||!strcmp(argv[cc],"-mc"))
+	{
+	  mcsim=1;
+	}
+      else if (cc==argc|| extraparam==2)
+	print_usage();
+      else if (extraparam == 0)
+	{
+	  extraparam++;
+	  strcpy(inputfile,argv[cc]);
+	}
+      else if (extraparam==1)
+	{
+	  extraparam++;
+	  points=atoi(argv[cc]);
+	}
+      else 
+	print_usage();
+      cc++;
+    }
+}
+double pi;
+int *inCell[3]={NULL,NULL,NULL}, *cellList=NULL, cellsx, cellsy, cellsz;
+int NP, NPA;
+#if 0
+void build_linked_list(void)
+{
+  double L2;
+  int j, n;
+  L2 = 0.5 * L;
+
+  for (j = 0; j < cellsx*cellsy*cellsz + NP; j++)
+    cellList[j] = -1;
+
+  for (n = 0; n < NP; n++)
+    {
+      inCell[0][n] =  (x[0][n] + L2) * cellsx / L;
+      inCell[1][n] =  (x[1][n] + L2) * cellsy / L;
+      inCell[2][n] =  (x[2][n] + L2) * cellsz / L;
+      j = (inCell[2][n]*cellsy + inCell[1][n])*cellsx + 
+	inCell[0][n] + NP;
+      cellList[n] = cellList[j];
+      cellList[j] = n;
+    }
+}
+#endif
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+void lab2nem(double v[3], double vp[3])
+{
+  int k1, k2;
+  double R[3][3];
+
+  for (k1=0; k1 < 3; k1++)
+    {
+      R[0][k1] = vecx[k1];
+      R[1][k1] = vecy[k1];
+      R[2][k1] = vecz[k1];
+    } 
+  for (k1=0; k1 < 3; k1++)
+    {
+      vp[k1] = 0.0;
+      for (k2=0; k2 < 3; k2++)
+	vp[k1] += R[k1][k2]*v[k2];
+    }
+//  printf("vp=%f %f %f\n", vp[0], vp[1], vp[2]);
+  //printf("v=%f %f %f\n", v[0], v[1], v[2]);
+}
+double min3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b < m)
+    m = b;
+  if (c < m)
+    m = c;
+  return m;
+}
 double max3(double a, double b, double c)
 {
   double m;
@@ -18,68 +294,10 @@ double max3(double a, double b, double c)
     m = c;
   return m;
 }
-char line[100000], parname[124], parval[256000];
-int N, mcsim=0;
-double x[3], R[3][3], Q[3][3], *Qn[3][3], *Nn, Qsum[3][3];
-double r1[3], r2[3], r3[3], u1[3], u2[3], u3[3], dt, L[3];
-double *ev_n[3];
-double ppos;
-int plane=-1; /* -1=none 0 = x 1=y 2=z */
-char fname[1024], inputfile[1024];
-int readCnf = 0, timeEvol = 0, ordmatrix=0, eigenvectors=0, curStep, readLapo=0, heflex=0;
-int nslabs=2;
-#define Sqr(x) ((x)*(x))
-void vectProd(double r1x, double r1y, double r1z, 
-	 double r2x, double r2y, double r2z, 
-	 double* r3x, double* r3y, double* r3z)
-{
-  /* DESCRIPTIOM:
-     r3 = [ r1, r2 ] where [ , ] the vectorial product */
-  *r3x = r1y * r2z - r1z * r2y; 
-  *r3y = r1z * r2x - r1x * r2z;
-  *r3z = r1x * r2y - r1y * r2x;
-}
-void get_L(FILE* f, double L[3])
-{
-  int i;
-  if (readCnf)
-    {
-      do 
-	{
-	  fscanf(f,"%[^\n]\n",line);
-	}
-      while (strcmp(line,"@@@"));
-    }
-  do 
-    {
-      fscanf(f,"%[^\n]\n",line);
-    }
-  while (strcmp(line,"@@@"));
-  /* BUG FIX 21/01/13 */
-  if (heflex)
-    {
-      do 
-	{
-	  fscanf(f,"%[^\n]\n",line);
-	}
-      while (strcmp(line,"@@@"));
-    }
-
-  for (i=0; i < N; i++)
-    fscanf(f,"%[^\n]\n",line);
-  if (!mcsim)
-    {
-      for (i=0; i < N; i++)
-	fscanf(f,"%[^\n]\n",line);
-    }
-  if (fscanf(f, "%lf %lf %lf\n", &L[0], &L[1], &L[2]) == 1)
-    {
-      L[2] = L[0];
-      L[1] = L[0];
-    }
-  printf("L=%f %f %f\n", L[0], L[1], L[2]); 
-}
 double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
+int eigenvectors=1;
+double S=0, Q[3][3];
+#if 0
 void diagonalize(double M[3][3], double ev[3])
 {
   double a[9], work[45];
@@ -105,689 +323,280 @@ void diagonalize(double M[3][3], double ev[3])
       for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
     }	
 }
-void print_usage(void)
-{
-  printf("order_param [ --nslabs/-n | --plane/-p | --ppos/-x | -mc | --lapo/-l | --heflex/-fl |--cnf/-c | --time/-t | --ordmatrix/-Q ] [--eigenvec/-ev] <confs_file>\n");
-  exit(0);
-}
-void parse_param(int argc, char** argv)
-{
-  int cc=1;
-  
-  if (argc==1)
-    print_usage();
-  while (cc < argc)
-    {
-      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
-	{
-	  print_usage();
-	}
-      else if (!strcmp(argv[cc],"--nslabs") || !strcmp(argv[cc],"-n"))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  nslabs = atoi(argv[cc]);
-	}
-
-      else if (!strcmp(argv[cc],"--plane") || !strcmp(argv[cc],"-p"))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  plane = atoi(argv[cc]);
-	}
-      else if (!strcmp(argv[cc],"--ppos") || !strcmp(argv[cc],"-x"))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  ppos = atof(argv[cc]);
-	}
-      else if (!strcmp(argv[cc],"-mc"))
-	{
-	  mcsim = 1;
-	} 
-      else if (!strcmp(argv[cc],"--cnf") || !strcmp(argv[cc],"-c" ))
-	{
-	  readCnf = 1;
-	} 
-      else if (!strcmp(argv[cc],"--heflex") || !strcmp(argv[cc],"-fl" ))
-	{
-	  heflex = 1;
-	} 
-      else if (!strcmp(argv[cc],"--lapo") || !strcmp(argv[cc],"-l" ))
-	{
-	  readLapo = 1;
-	} 
-      else if (!strcmp(argv[cc],"--time") || !strcmp(argv[cc],"-t"))
-	{
-	  timeEvol = 1;
-	}
-      else if (!strcmp(argv[cc],"--ordmatrix") || !strcmp(argv[cc],"-Q"))
-	{
-	  ordmatrix = 1;
-	}
-      else if (!strcmp(argv[cc],"--eigenvec") || !strcmp(argv[cc],"-ev"))
-	{
-	  eigenvectors = 1;
-	}
-      else if (cc == argc)
-	print_usage();
-      else
-	strcpy(inputfile,argv[cc]);
-      cc++;
-    }
-}
-double calc_norm(double *v)
-{
-  int a;
-  double norm=0;
-  for (a = 0; a < 3; a++)
-   norm += Sqr(v[a]);
-  return sqrt(norm); 
-}
-void build_ref_axes2(double u1[3], double u2[3], double u3[3])
-{
-  int a;
-  double norm1, u1u2, norm2;
-  u1[0] = r2[0] - r1[0];
-  u1[1] = r2[1] - r1[1];
-  u1[2] = r2[2] - r1[2];
-  u2[0] = r3[0] - r1[0];
-  u2[1] = r3[1] - r1[1];
-  u2[2] = r3[2] - r1[2];
-  norm2 = calc_norm(u2);
-  for (a=0;  a < 3; a++)
-    u2[a] /= norm2;
-  u1u2 = u1[0]*u2[0] + u1[1]*u2[1] + u1[2]*u2[2];
-  for (a=0;  a < 3; a++)
-    {
-      u1[a] = u1[a] - u1u2*u2[a];
-    }
-  norm1 = calc_norm(u1);
-  for (a=0;  a < 3; a++)
-    {
-      u1[a] /= norm1;
-    }
-  vectProd(u1[0],u1[1],u1[2],u2[0],u2[1], u2[2],&u3[0], &u3[1], &u3[2]); 
-}
-
-void build_ref_axes(double u1[3], double u2[3], double u3[3])
-{
-  int a;
-  double n;
-  u1[0] = r2[0] - r1[0];
-  u1[1] = r2[1] - r1[1];
-  u1[2] = r2[2] - r1[2];
-  n = calc_norm(u1);
-  for (a = 0; a < 3; a++)
-    u1[a] /= n;
-    
-  u2[0] = 2.0*r3[0]-(r1[0] + r2[0]);
-  u2[1] = 2.0*r3[1]-(r1[1] + r2[1]);
-  u2[2] = 2.0*r3[2]-(r1[2] + r2[2]);
-  
-  n = calc_norm(u2);
-  for (a = 0; a < 3; a++)
-    u2[a] /= n;
-   
-  //fprintf(stderr,"u1.u2=%.15G\n", u1[0]*u2[0]+u1[1]*u2[1]+u1[2]*u2[2]);
-  vectProd(u1[0], u1[1], u1[2], u2[0], u2[1], u2[2], &u3[0], &u3[1], &u3[2]);  
-
-}
-
-void calc_I2(double theta, double phi, double *reI2, double *imI2)
-{
-  double A;
-  double sin2th, cos2th, cosphi, sinphi, cos2phi, sin2phi, costh, sinth;
-  costh= cos(theta);
-  sinth= sin(theta);
-  cos2th = Sqr(cos(theta));
-  //cos4th = Sqr(cos2th);
-  sin2th = Sqr(sin(theta));
-  //sin4th = Sqr(sin2th);
-  cosphi = cos(phi);
-  sinphi = sin(phi);
-  cos2phi = cos(2.0*phi);
-  sin2phi = sin(2.0*phi);
-  A = (1.0/4.0)*sqrt(15.0/2.0/M_PI)*sin2th;
-  /* 0, 1... are m=-2, -1...*/
-  reI2[0] =  cos2phi*A;
-  imI2[0] =  -sin2phi*A;
-  reI2[4] =  cos2phi*A;
-  imI2[4] =  sin2phi*A;
-  A = (1.0/2.0)*sqrt(15.0/2.0/M_PI)*costh*sinth;
-  reI2[1] = cosphi*A;
-  imI2[1] = -sinphi*A;
-  reI2[3] = cosphi*A;
-  imI2[3] = sinphi*A;
-  A = (1.0/4.0)*sqrt(5.0/M_PI)*(-1.0+3.0*cos2th);
-  reI2[2] = A;
-  imI2[2] = 0;
-}
-
-void calc_I4(double theta, double phi, double *reI2, double *imI2)
-{
-  double A;
-  double sin2th, sin4th, cos2th, cos4th, cosphi, sinphi, cos2phi, sin2phi, cos3phi, sin3phi;
-  double costh, sinth, cos4phi, sin4phi;
-  costh = cos(theta);
-  sinth = sin(theta);
-  cos2th = Sqr(cos(theta));
-  cos4th = Sqr(cos2th);
-  sin2th = Sqr(sin(theta));
-  sin4th = Sqr(sin2th);
-  cosphi = cos(phi);
-  sinphi = sin(phi);
-  cos2phi = cos(2.0*phi);
-  sin2phi = sin(2.0*phi);
-  cos3phi = cos(3.0*phi);
-  sin3phi = sin(3.0*phi);
-  cos4phi = cos(4.0*phi);
-  sin4phi = sin(4.0*phi); 
-  /* here 0,1,... are m=-4,3,... */
-  A = (3.0/16.0)*sqrt(35.0/2.0/M_PI)*sin4th; 
-  reI2[0] = cos4phi*A;
-  imI2[0] = -sin4phi*A;
-  reI2[8] = cos4phi*A;
-  imI2[8] = sin4phi*A;
-
-  A = (3.0/8.0)*sqrt(35.0/M_PI)*costh*sin2th*sinth; 
-  reI2[1] = cos3phi*A;
-  imI2[1] = -sin3phi*A;
-  reI2[7] = cos3phi*A;
-  imI2[7] = sin3phi*A;
-
-  A = (3.0/8.0)*sqrt(5.0/2.0/M_PI)*(-1.0+7.0*cos2th)*sin2th;
-  reI2[2] = cos2phi*A;
-  imI2[2] = -sin2phi*A;
-  reI2[6] = cos2phi*A;
-  imI2[6] = sin2phi*A;
-
-  A = (3.0/8.0)*sqrt(5.0/M_PI)*(-3.0+7.0*cos2th)*sinth*costh; 
-  reI2[3] = cosphi*A;
-  imI2[3] = -sinphi*A;
-  reI2[5] = cosphi*A;
-  imI2[5] = sinphi*A;
-
-  reI2[4] = 3.0*(3.0-30.0*cos2th+35*cos4th)/16.0/sqrt(M_PI);
-  imI2[4] = 0.0;
-}
-
-int main(int argc, char** argv)
-{
-  FILE *f, *f2, *f_n;
-  int nf, i, a, b, dummyint, k, nbin, mm;
-  double A2, A4;
-  double sum_reI2[5], sum_imI2[5], sum_reI4[9], sum_imI4[9], I2, I4, theta, phi, reK2[5], imK2[5], reK4[9], imK4[9];
-  double ev[3], ti=-1, S, tref=0.0, Dx, Qt[3][3], ev_t[3];
-#if 0
-  if (argc == 1)
-    {
-      printf("file with all confs to read as input\n");
-      exit(-1);
-    }
 #endif
-  parse_param(argc, argv);
-  f2 = fopen(inputfile,"r");
-  nf = 0;
-  if (plane >= 0)
+void build_ref_system(void)
+{
+  int k;
+  double sp, norm;
+  /* build the nematic reference system */
+  vecz[0] = nv[0];
+  vecz[1] = nv[1];
+  vecz[2] = nv[2];
+  //printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
+  vecx[0] = 1.0;
+  vecx[1] = 1.0;
+  vecx[2] = 1.0;
+  if (vecx[0] == vecz[0] && vecx[1]==vecz[1] && vecx[2]==vecz[2])
     {
-      f_n = fopen("Sslabs.dat","w+");
+      vecx[0] = 1.0;
+      vecx[1] = -1.0;
+      vecx[2] = 1.0;
     }
-  if (plane >= 0)
-    {
-      for (a=0; a < 3; a++)
-	for (b=0; b < 3; b++)
-	  {
-  	    Qn[a][b] = malloc(sizeof(double)*nslabs);
-	    eigvec_n[a][b] = malloc(sizeof(double)*nslabs);
-	  }
-      Nn = malloc(sizeof(double)*nslabs);
-      for (k=0; k < 3; k++)
-	{
-	  ev_n[k] = malloc(sizeof(double)*nslabs);
-	}
-    }
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=vecx[k]*vecz[k];
+  for (k=0; k < 3 ; k++)
+    vecx[k] -= sp*vecz[k];
+  norm = calc_norm(vecx);
+  for (k=0; k < 3 ; k++)
+    vecx[k] = vecx[k]/norm;
+  vectProdVec(vecz, vecx, vecy);
+#if 1
+  printf("normx=%f\n", sqrt(Sqr(vecx[0])+Sqr(vecx[1])+Sqr(vecx[2])));
+  printf("{{%f,%f,%f},\n", vecx[0], vecx[1], vecx[2]);
+  printf("{%f,%f,%f},\n", vecy[0], vecy[1], vecy[2]);
+  printf("{%f,%f,%f}}\n", vecz[0], vecz[1], vecz[2]);
+#endif
+}
+#if 0
+void calc_nem_vec(void)
+{
+  int a, b, numev, i;
+  double St, ev[3];
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Q[a][b] = 0.0;      
-	Qsum[a][b] = 0.0;
-	if (plane >= 0)
-	  {
-	    for (k=0; k < nslabs; k++)
-	      {
-  		Qn[k][a][b] = 0.0;
-		Nn[k] = 0.0;
-	      }
-	  }
       }
-  I2=I4=0;
+  for (i=0; i < NP; i++)
+    {
+      for (a=0; a < 3; a++)
+	for (b=0; b < 3; b++)
+	  {
+	    Q[a][b] += 1.5 * R[0][a][i]*R[0][b][i];
+	    if (a==b)
+	      Q[a][a] -= 0.5;
+	  }
+    }
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Q[a][b] /= ((double)NP);
+      } 
+  diagonalize(Q, ev);
+  if (fabs(ev[0]) > fabs(ev[1]))
+   { 
+     St = ev[0];
+     numev=0;
+   }
+  else
+    {
+      St = ev[1];
+      numev=1;
+    }  
+  if (fabs(ev[2]) > St)
+    {
+      St = ev[2];
+      numev=2;
+    }
+  S+=St;
+  for (a=0; a < 3; a++)
+    nv[a] = eigvec[numev][a];
+}
+#endif
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+double pos1[3], pos2[3], uhc[3], pos1Nem[3], pos2Nem[3], numsd=0.0;
+int main(int argc, char** argv)
+{
+  FILE *f, *f2, *f1;
+  int binx, biny, binz;
+  int k, nf, i, a, b, nat, NN, j, ii, bin, n, kk;
+  double angle, rx, ry, rz, norm, dang, sum;
+  double ni[3], nj[3];
+  double sp, time, refTime, RCUT;
+  int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
+  double shift[3];
+  double ene=0.0;
+
+#if 0
+  double g2m, g4m, g6m;
+  double *g2, *g4, *g6;
+#endif
+  parse_param(argc, argv);
+  f2 = fopen(inputfile,"r");
+  fscanf(f2, "%[^\n]\n", fname);
+  pi = acos(0)*2.0;
+  printf("pi=%f\n", pi);
+  nat = 0;
+  f = fopen(fname,"r");
+  while (!feof(f) && nat < 3) 
+    {
+      fscanf(f, "%[^\n]\n)", line);
+      if (!strcmp(line,"@@@"))
+	{
+	  nat++;
+	  if (nat==3)
+	    {
+	      if (mcsim==1)
+	       {
+		 for (i=0; i < NP; i++)
+		   {
+		     fscanf(f, "%[^\n]\n", line);
+		   }
+		 if (fscanf(f, "%lf %lf %lf\n", &Lx, &Ly, &Lz)==1)
+		   {
+		     cubic_box=1;
+		     L=Lx;
+		   }
+		 else
+		   {
+		     cubic_box=0;
+		   }
+	         break;
+               }
+              else
+               {
+	         for (i=0; i < 2*NP; i++)
+		   fscanf(f, "%[^\n]\n", line);
+	         fscanf(f, "%lf\n", &L);
+	         break;
+                }
+	    }
+	  continue;
+	}
+      sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
+      if (!strcmp(parname,"parnum"))
+	{
+	  if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
+	    {
+	      NP = atoi(parval);
+	    }
+	  else
+	    {
+	      NP = NP1+NP2;
+	      NPA = NP1;
+	    }
+	}
+      else if (!strcmp(parname,"parnumA"))
+	NPA = atoi(parval);
+      else if (nat == 0 && !strcmp(parname,"NN"))
+	NN = atoi(parval);
+      else if (!strcmp(parname,"storerate"))
+	{
+	  storerate = atof(parval);
+	  eventDriven = 1;
+	}
+      else if (nat==1 && !strcmp(parname,"a"))
+	sscanf(parval, "%lf %lf\n", &sa[0], &sa[1]);	
+      else if (nat==1 && !strcmp(parname,"b"))
+	sscanf(parval, "%lf %lf\n", &sb[0], &sb[1]);	
+      else if (nat==1 && !strcmp(parname,"c"))
+	sscanf(parval, "%lf %lf\n", &sc[0], &sc[1]);	
+      else if (nat==1 && !strcmp(parname,"sigma"))
+	sscanf(parval, "%lf %lf %lf %lf\n", &sigmaAA, &sigmaAB, &sigmaAB, &sigmaBB);	
+      else if (nat==1 && !strcmp(parname,"delta"))
+	sscanf(parval, "%lf %lf %lf %lf\n", &deltaAA, &deltaAB, &deltaAB, &deltaBB);	
+      else if (nat==1 && !strcmp(parname,"sigmaSticky"))
+	sigmaSticky = atof(parval);
+      else if (nat==1 && !strcmp(parname,"theta"))
+	theta = atof(parval);
+      else if (nat==1 && !strcmp(parname,"Dr"))
+	Dr = atof(parval);
+    }
+  fclose(f);
+  if (NPA == -1)
+    NPA = NP;
+  if (eventDriven)
+    printf("[ED] Event-Driven simulation\n");
+  else
+    printf("[MD] Time-Driven simulation\n");
+ 
+  if (NP==NPA)
+    {
+      printf("[MONODISPERSE] NP=%d\n", NP);
+    }
+  else
+    {
+      printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
+    }
+
+  for (a = 0; a < 3; a++)
+    {
+      x[a] = malloc(sizeof(double)*NP);
+      w[a] = malloc(sizeof(double)*NP);
+      /* allocate orientations */
+      for (b=0; b < 3; b++)      
+	R[a][b] = malloc(sizeof(double)*NP);
+    }
+  for (ii = 0; ii < 3; ii++)
+    {
+      DR[ii]  = malloc(sizeof(double)*NP);
+    }
+  angdistr = malloc(sizeof(double)*points);
+
+  if (cubic_box)
+    printf("L=%.15G\n", L);
+  else
+    printf("Lx=%.15G Ly=%.15G Lz=%.15G\n", Lx, Ly, Lz);
+  dang = 180.0/((double)points);
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
       //printf("fname=%s argv[2]=%s\n",fname, argv[2]);
-      f = fopen(fname,"r");
-      /* BUG FIX 21/01/13 */
-      if (N!=-1 && plane>=0)
-	{
-	  get_L(f, L); 
-	  rewind(f);
-	}
       nf++;
-      tref=0.0;
-      if (readCnf)
+      NPA = -1;
+      readconf(fname, &time, &refTime, &NP, &NPA, x, w, DR);
+      for (i=0; i < NP; i+=2)
 	{
-	  do 
+	  for (kk=0; kk < 3; kk++)
 	    {
-	      fscanf(f,"%[^\n]\n",line);
-	      sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
-	      if (!strcmp(parname,"refTime"))
-		tref = atof(parval);
+	      ni[kk] = R[0][kk][i];
+	      nj[kk] = R[0][kk][i+1];
 	    }
-	  while (strcmp(line,"@@@"));
+	  angle=180.0*acos(scalProd(ni,nj))/M_PI;
+	  bin = (int) (angle/dang);
+	  if (bin>=0 && bin < points)
+	    (angdistr[bin])++;
+	  //printf("angle=%f bin=%d M_PI=%f\n", angle, bin, M_PI);
 	}
-      do 
-	{
-	  fscanf(f,"%[^\n]\n",line);
-	  sscanf(line, "%[^:\n ]:%[^\n]\n", parname, parval);
-	  if (!strcmp(parname,"parnum"))
-	    N = atoi(parval);
-	  if (!strcmp(parname,"time"))
-	    ti = atof(parval);
-	  if ((readLapo||mcsim) && !strcmp(parname,"curStep"))
-	    curStep = atoi(parval);
-	  if (readLapo && !strcmp(parname,"steplength"))
-	    dt = atof(parval);
-  
-  	}
-      while (strcmp(line,"@@@"));
-      if (heflex)
-	{
-	  do 
-	    {
-	      fscanf(f,"%[^\n]\n",line);
-	    }
-	  while (strcmp(line,"@@@"));
-	}
-      //printf("fname=%s %d ellipsoids...\n", fname, N);
-      if (timeEvol)
-	{
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      {
-	    	Q[a][b] = 0.0;      
-		if (plane >= 0)
-		  {
-		    for (k=0; k < nslabs; k++)		    
-		      Qn[k][a][b] = 0.0;
-		    Nn[k] = 0;
-		  }
-	      }
-	}
-
-      for (mm=0; mm < 5; mm++)
-	sum_reI2[mm]=sum_imI2[mm]=0;
-      for (mm=0; mm < 9; mm++)
-	sum_reI4[mm]=sum_imI4[mm]=0;
-      for (i=0; i < N; i++)
-	{
-	  if (readLapo)
-	    {
-	      fscanf (f, "%lf %lf %lf\n %lf %lf %lf\n %lf %lf %lf\n",
-	  	    &(r1[0]), &(r1[1]), &(r1[2]), 
-	  	    &(r2[0]), &(r2[1]), &(r2[2]), 
-		    &(r3[0]), &(r3[1]), &(r3[2]));
-	      build_ref_axes(u1, u2, u3);
-	      for (a=0; a < 3; a++)
-		{
-		  R[0][a] = u1[a];
-		  R[1][a] = u2[a];
-		  R[2][a] = u3[a];
-		}
-	    }
-	  else if (heflex)
-	    fscanf (f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
-	  	    &(x[0]), &(x[1]), &(x[2]), 
-	  	    &(R[0][0]), &(R[0][1]), &(R[0][2]), &(R[1][0]), &(R[1][1]), 
-	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]), &dummyint);
-	  else
-	    fscanf (f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf \n",
-	  	    &(x[0]), &(x[1]), &(x[2]), 
-	  	    &(R[0][0]), &(R[0][1]), &(R[0][2]), &(R[1][0]), &(R[1][1]), 
-	  	    &(R[1][2]), &(R[2][0]), &(R[2][1]), &(R[2][2]));
-
-	  theta = acos(R[0][2]);
-	  phi = asin(R[0][1]/sin(theta));
-	  calc_I2(theta, phi, reK2, imK2); 
-	  for (mm=0; mm < 5; mm++)
-	    {
-	      sum_reI2[mm] += reK2[mm];
-	      sum_imI2[mm] += imK2[mm];
-	    }
-	    
-	  calc_I4(theta, phi, reK4, imK4);
-	   for (mm=0; mm < 9; mm++)
-	    {
-	      sum_reI4[mm] += reK4[mm];
-	      sum_imI4[mm] += imK4[mm];
-	    }
-	   //printf("R=%.15G %.15G %.15G\n", R[0][1], R[0][1], R[0][2]);
-	  /* BUG FIX 21/01/13 */
-	  if (plane>=0)
-	    {
-	      if (nslabs==2)
-		{
-		  if (x[plane] >= ppos)
-		    Nn[1] += 1.0;
-		  else
-		    Nn[0] += 1.0;
-		}
-	      else
-		{
-		  Dx = L[plane]/nslabs; 
-		  nbin = (int) ((x[plane]+L[plane]*0.5)/Dx);
-		  Nn[nbin] += 1.0;
-		}
-	    }
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      {
-		if (readLapo)
-		  Q[a][b] += 1.5 * R[2][a]*R[2][b];
-		else
-		  Q[a][b] += 1.5 * R[0][a]*R[0][b];
-		if (a==b)
-		  Q[a][a] -= 0.5;
-		if (plane >= 0)
-		  {
-		    if (nslabs==2)
-		      {
-			if (x[plane] >= ppos)
-			  {
-			    if (readLapo)
-			      Qn[a][b][1] += 1.5 * R[2][a]*R[2][b];
-			    else
-			      Qn[a][b][1] += 1.5 * R[0][a]*R[0][b];
-			    if (a==b)
-			      Qn[a][a][1] -= 0.5;
-			  }
-			else
-			  { 
-			    if (readLapo)
-			      Qn[a][b][0] += 1.5 * R[2][a]*R[2][b];
-			    else
-			      Qn[a][b][0] += 1.5 * R[0][a]*R[0][b];
-			    if (a==b)
-			      Qn[a][a][0] -= 0.5;
-			  }
-		      }
-	    	    else
-		      {
-		      	if (readLapo)
-	    		  Qn[nbin][a][b] += 1.5 * R[2][a]*R[2][b];
-    			else
-			  Qn[nbin][a][b] += 1.5 * R[0][a]*R[0][b];
-			Qn[nbin][a][a] -= 0.5;
-		      }
-		  }
-	      }
-	}
-      if (timeEvol)
-	{
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      {
-		Qsum[a][b] += Q[a][b];
-	      }	   
-	} 
-      for (mm=0; mm < 5; mm++)
-	{
-  	  sum_reI2[mm] /= ((double)N);
-	  sum_imI2[mm] /= ((double)N);
-	}
-      for (mm=0; mm < 9; mm++)
-	{
-   	  sum_reI4[mm] /= ((double)N);
-       	  sum_imI4[mm] /= ((double)N);
-	}
-      A2 = A4 = 0;
-      for (mm = 0; mm < 5; mm++)
-	{
-	  A2 += Sqr(sum_reI2[mm]) + Sqr(sum_imI2[mm]);
-	}
-      for (mm = 0; mm < 9; mm++)
-	{
- 	  A4 += Sqr(sum_reI4[mm]) + Sqr(sum_imI4[mm]);
-	}  
-      if (timeEvol)
-	{
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      {
-	    	Q[a][b] /= ((double)N);
-		if (plane >= 0)
-		  {
-		    for (k=0; k < nslabs; k++)
-	      	      {
-      			if (Nn[k] > 0)
-			  Qn[a][b][k] /= ((double)Nn[k]);
-		      }
-		  }
-	      } 
-	  diagonalize(Q, ev);
-	  if (plane >=0)
-	    {
-	      for (k=0; k < nslabs; k++)
-		{
-		  for (a=0; a < 3; a++)
-		    {
-		      for (b=0; b < 3; b++)
-			Qt[a][b] = Qn[a][b][k];
-		    }
-		  diagonalize(Qt, ev_t);
-		  for (a=0; a < 3; a++)
-		    {
-		      ev_n[a][k] = ev_t[a];
-		      for (b=0; b < 3; b++)
-			Qn[a][b][k] = Qt[a][b];
-		    }
-		}
-	    }
-
-	  if (mcsim) 
-	    {
-	      printf("%d %.15G %.15G %.15G %.15G %.15G\n", curStep, ev[0], ev[1], ev[2], sqrt((4.0*M_PI/5.0)*A2),sqrt((4.0*M_PI/9.0)*A4)); 
-	      if (plane >= 0)
-		{
-		  fprintf(f_n, "%d ", curStep); 
-		  for (k=0; k < nslabs; k++)
-		    fprintf(f_n, "%.15G ", max3(ev_n[0][k], ev_n[1][k], ev_n[2][k]));
-		  fprintf(f_n, "\n");
-		}
-	    }
-	  else if (readLapo)
-	    printf("%.15G %.15G %.15G %.15G\n", curStep*dt, ev[0], ev[1], ev[2]); 
-	  else
-	    printf("%.15G %.15G %.15G %.15G\n", ti+tref, ev[0], ev[1], ev[2]); 
-	}
-
-      fclose(f);
-      I2 += sqrt((4.0*M_PI/5.0)*A2);
-      I4 += sqrt((4.0*M_PI/9.0)*A4);
     }
   fclose(f2); 
- 
-  if (!timeEvol) 
+  f1 = fopen("angdistr.dat", "w+");
+  for (n=0; n < points; n++)
     {
-      for (a=0; a < 3; a++)
- 	for (b=0; b < 3; b++)
- 	  Q[a][b] /= ((double)N)*((double)nf); 
-
+      angdistr[n] = angdistr[n]/((double)NP)/2.0/((double)nf);
     }
-  else
+  sum = 0.0; 
+  for (n=0; n < points; n++)
     {
-      for (a=0; a < 3; a++)
-	for (b=0; b < 3; b++)
-	  Qsum[a][b] /= ((double)N)*((double)nf); 
-    }
-  //printf("N*nf=%f Nr=%f Nl=%f\n", ((double)N)*nf, Nr, Nl);
-  I2 /= ((double)nf);
-  I4 /= ((double)nf);
-  if (!timeEvol)
+      sum += angdistr[n]*dang;
+    } 
+  for (n=0; n < points; n++)
     {
-      printf("I2 = %f I4 = %f\n", I2, I4);
-      if (plane >= 0)
-	{
-	  for (a=0; a < 3; a++)
-	    for (b=0; b < 3; b++)
-	      {
-		for (k=0; k < nslabs; k++)
-		  {
-		    if (Nn[k] > 0)
-		      Qn[a][b][k] /= Nn[k];
-		  }
-	      }
-	  for (k=0; k < nslabs; k++)
-	    {
-	      for (a=0; a < 3; a++)
-		{
-		  for (b=0; b < 3; b++)
-		    Qt[a][b] = Qn[a][b][k];
-		}
-	      diagonalize(Qt, ev_t);
-	      for (a=0; a < 3; a++)
-		{
-		  ev_n[a][k] = ev_t[a];
-		  for (b=0; b < 3; b++)
-		    eigvec_n[a][b][k] = eigvec[a][b];	  
-    		}
-    	    }
-	}
+      angdistr[n] /= sum;
     }
-  if (timeEvol)
+  for (n=0; n < points; n++)
     {
-      diagonalize(Qsum, ev);
-      for (a=0; a < 3; a++)
-	for (b=0; b < 3; b++)
-	  eigvec_t[a][b] = eigvec[a][b];	  
-
-      if (fabs(ev[0]) > fabs(ev[1]))
-	S = ev[0];
-      else
-	S = ev[1];  
-      if (fabs(ev[2]) > S)
-	S = ev[2];
+      //printf("%f %.15G f=%p\n", n*dang-90.0, angdistr[n], f);
+      fprintf(f1, "%f %.15G\n", n*dang, angdistr[n]);
     }
-  f = fopen("cubatic_order.dat", "w+");
-  fprintf(f,"%G %G %G\n", S, I2, I4);
-  fclose(f);
-  
-  if (timeEvol)
+  fclose(f1);  
+  sum = 0.0;
+  for (n=0; n < points; n++)
     {
-      if (plane >= 0)
-	{	
-	  fclose(f_n);
-	}
-      return 0;
+      if (n*dang-90.0 < threshold)
+	sum += angdistr[n]*dang;
     }
-
-  diagonalize(Q, ev);
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      eigvec_t[a][b] = eigvec[a][b];	  
-
-    if (fabs(ev[0]) > fabs(ev[1]))
-    S = ev[0];
-  else
-    S = ev[1];  
-  if (fabs(ev[2]) > S)
-    S = ev[2];
-  printf("Order Parameter: %.8G (of %.8G %.8G %.8G)\n", S, 
-	 ev[0], ev[1], ev[2]);
-  if (plane >= 0)
-    {
-      for (k=0; k < nslabs; k++)
-	{
-	  if (fabs(ev_n[0][k]) > fabs(ev_n[1][k]))
-	    S = ev_n[0][k];
-	  else
-		S = ev_n[1][k];  
-	  if (fabs(ev_n[2][k]) > S)
-	    S = ev_n[2][k];
-
-      	  printf("[slab %d/%d] Order Parameter (plane = %f): %.8G (of %.8G %.8G %.8G)\n",
-		 k, nslabs, ppos, S, 
-		 ev_n[0][k], ev_n[1][k], ev_n[2][k]);
-	}
-    }
-
-#if 1
-  if (ordmatrix)
-    {
-      printf("Ordering matrix Q:\n");
-      printf("{");
-      for (a=0; a < 3; a++)
-	{
-	  printf("{");
-	  for (b=0; b < 3; b++)
-	    {
-	      if (b < 2)
-		printf("%.15f,", Q[a][b]);	  
-	      else
-		printf("%.15f",Q[a][b]);
-	    }
-	  if (a < 2)
-	    printf("},\n");
-	  else if (b < 2)
-	    printf("}\n");
-	  else 
-	    printf("}");
-	}
-      printf("}\n");
-      if (plane >= 0)
-	{
-	  for (k=0; k < nslabs; k++)
-	    {
-	      printf("[slab %d/%d] Ordering matrix Qn:\n", k, nslabs);
-	      printf("{");
-
-	      for (a=0; a < 3; a++)
-		{
-		  printf("{");
-		  for (b=0; b < 3; b++)
-		    {
-		      if (b < 2)
-			printf("%.15f,", Qn[a][b][k]);	  
-		      else
-		    printf("%.15f",Qn[a][b][k]);
-		    }
-		  if (a < 2)
-		    printf("},\n");
-		  else if (b < 2)
-		    printf("}\n");
-		  else 
-		    printf("}");
-		}
-	      printf("}\n");
-	    }
-	}
-    }
-  if (eigenvectors)
-    {
-      printf("Eigenvectors matrix:\n");
-      for (a=0; a < 3; a++)
-	{
-	  printf("lambda=%.15G {%.15f,%.15G,%.15G}\n",ev[a], eigvec_t[a][0], eigvec_t[a][1], eigvec_t[a][2]);	  
-	  if (plane >= 0)
-	    {
-	      for (k=0; k < nslabs; k++)
-		printf("[left] lambda=%.15G {%.15f,%.15G,%.15G}\n",
-		       ev_n[a][k], eigvec_n[a][0][k], eigvec_n[a][1][k], eigvec_n[a][2][k]);	  
-	    }
-	}
-    }
-#endif
+  f1 = fopen("foldfract.dat", "w+");
+  fprintf(f1, "%.15G\n", sum);
+  fclose(f1);
+  return 0;
 }
+
