@@ -170,10 +170,10 @@ void readconf(char *fname, double *ti, double *refTime, int *NP, int *NPA, doubl
 
 void print_usage(void)
 {
-  printf("calc_folding [--mcsim/-mc] <confs_file> [points]\n");
+  printf("calc_folding [--mcsim/-mc] [--threshold/-th <threshold>] <confs_file> [points]\n");
   exit(0);
 }
-double threshold=0.05;
+double threshold=30.0;
 int gnuplot=0, isoav=0;
 void parse_param(int argc, char** argv)
 {
@@ -196,6 +196,13 @@ void parse_param(int argc, char** argv)
        else if (!strcmp(argv[cc],"--mcsim")||!strcmp(argv[cc],"-mc"))
 	{
 	  mcsim=1;
+	}
+      else if (!strcmp(argv[cc],"--threshold")||!strcmp(argv[cc],"-tr"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  threshold = atof(argv[cc]);
 	}
       else if (cc==argc|| extraparam==2)
 	print_usage();
@@ -591,7 +598,7 @@ int main(int argc, char** argv)
   sum = 0.0;
   for (n=0; n < points; n++)
     {
-      if (n*dang-90.0 < threshold)
+      if (n*dang < threshold)
 	sum += angdistr[n]*dang;
     }
   f1 = fopen("foldfract.dat", "w+");
