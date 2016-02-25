@@ -10394,13 +10394,14 @@ extern int sp_tot_collisions;
 extern void sp_reset_fct(void);
 extern double gauss(void);
 extern void save_sp(void);
-extern double ranf(void);
 #endif
+extern double ranf(void);
 void rebuild_all_events(void);
 #ifdef MD_MULTIPLE_LL
 extern int **crossevtodel;
 extern int ***inCellMLL;
 extern int **cellListMLL;
+extern int get_linked_list(int na, int nc);
 extern int *cellsxMLL, *cellsyMLL, *cellszMLL, *ignoreMLL;
 void remove_part_from_cell_MLL(int evIdA)
 {
@@ -10530,10 +10531,12 @@ void ProcessCollision(void)
 	  (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0))
 	{
 	  xi=ranf();
+	  printf("xi=%f (SEp:%f)\n", xi, OprogStatus.SEp);
        	  if (xi > OprogStatus.SEp)
 	    reactyes=0;
 	}
-
+      if (reactyes==0)
+	printf("discarded!\n");
       if (reactyes && typeOfPart[evIdA] == 0 && typeOfPart[evIdB] == 1)
 	{
 	  /* SE -> P + E */
@@ -10929,6 +10932,7 @@ MD_DEBUG34(printf("OLD cellCrossing evIdA=%d k=%d inCells=%d %d %d\n", evIdA, k,
   cellList[evIdA] = cellList[n];
   cellList[n] = evIdA;
 }
+extern void angvelMB(void);
 void velsBrown(double T)
 {
   comvel_brown(T, Oparams.m); 
