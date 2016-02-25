@@ -425,7 +425,7 @@ int main(int argc, char** argv)
   FILE *f, *f2, *f1;
   int binx, biny, binz;
   int k, nf, i, a, b, nat, NN, j, ii, bin, n, kk;
-  double angle, rx, ry, rz, norm, dang, sum;
+  double angle, rx, ry, rz, norm, dang, sum, sum1, sum2, sum3;
   double ni[3], nj[3];
   double sp, time, refTime, RCUT;
   int iZ, jZ, iX, jX, iY, jY, NP1, NP2;
@@ -595,14 +595,18 @@ int main(int argc, char** argv)
       fprintf(f1, "%f %.15G\n", n*dang, angdistr[n]);
     }
   fclose(f1);  
-  sum = 0.0;
+  sum1 = sum2 = sum3 = 0.0;
   for (n=0; n < points; n++)
     {
       if (n*dang < threshold)
-	sum += angdistr[n]*dang;
+	sum1 += angdistr[n]*dang;
+      else if (n*dang > 180.0-threshold) 
+   	sum3 += angdistr[n]*dang;
+      else
+	sum2 += angdistr[n]*dang;
     }
   f1 = fopen("foldfract.dat", "w+");
-  fprintf(f1, "%.15G\n", sum);
+  fprintf(f1, "%.15G %.15G %.15G\n", sum1, sum2, sum3);
   fclose(f1);
   return 0;
 }
