@@ -10531,7 +10531,7 @@ void ProcessCollision(void)
 	  (typeOfPart[evIdA] == 1 && typeOfPart[evIdB] == 0))
 	{
 	  xi=ranf();
-	  printf("xi=%f (SEp:%f)\n", xi, OprogStatus.SEp);
+	  //printf("xi=%f (SEp:%f)\n", xi, OprogStatus.SEp);
        	  if (xi > OprogStatus.SEp)
 	    reactyes=0;
 	}
