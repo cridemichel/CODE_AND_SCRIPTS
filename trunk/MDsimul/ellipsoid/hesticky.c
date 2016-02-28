@@ -946,7 +946,11 @@ void find_bonds_one_BP(int i)
 				  //rejectMove = 1;
 				  continue;
 				}
-
+#if 0
+			  if (mapbondsaFlex[nn]==2 && mapbondsbFlex[nn]==2)
+			    printf("i=%d j=%d\n", i, j);
+#endif
+	
 	
 #endif
 #if ((defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE)) && defined(MC_OPT_CLSNPT)) || defined(MC_NPT_XYZ)
@@ -1261,6 +1265,10 @@ void find_bonds_one(int i)
 #if 0
 			  if (Oparams.curStep==46)
 			    fprintf(stderr, "bond found i=%d j=%d!\n", i, j);
+#endif
+#if 0
+			  if (mapbondsaFlex[nn]==2 && mapbondsbFlex[nn]==2)
+			    printf("i=%d j=%d", i, j);
 #endif
 			  add_bond(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]);
 			  add_bond(j, i, mapbondsbFlex[nn], mapbondsaFlex[nn]);
