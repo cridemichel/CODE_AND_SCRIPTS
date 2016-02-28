@@ -1254,11 +1254,13 @@ void build_clusters(int *Ncls, int *percolating, int check_perc)
 	}
     }
 #if 0
-  for (i = 0; i < NP; i++)
-    printf("clsarr[%d]=%d\n", i, clsarr[i]);
+  //for (i = 0; i < NP; i++)
+    //printf("clsarr[%d]=%d\n", i, clsarr[i]);
+  saveBakAscii("first.cnf");
   for (nc=0; nc < ncls; nc++)
     printf("cls dim[%d]=%d firstofcls=%d\n", nc, clsdim[nc], firstofcls[nc]);
-  //exit(-1);
+  printf("ncls=%d\n", ncls);
+  exit(-1);
 #endif
   //printf("ncls=%d\n", ncls);
   if (check_perc)
@@ -4736,7 +4738,7 @@ void move_box_cluster_xyz(int *ierr)
 #endif
   build_clusters(&ncls, &percolating, 1);
   numOfClusters = ncls;
-
+  
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
 #if 1
@@ -4842,6 +4844,11 @@ void move_box_cluster_xyz(int *ierr)
 	  printf("percolating=%d\n", percolating);
 	  exit(-1);
 	}
+	if (np_in_cls!=clsdim[nc])
+	  {
+	    printf("boh...\n");
+	    exit(-1);
+	  }
 #endif
     }
 #ifdef MC_STORE_ALL_COORDS
@@ -5066,6 +5073,7 @@ void move_box_cluster_xyz(int *ierr)
 	  overestimate_of_displ[i] += nn*delv; 
 	}
     }
+  //exit(-1);
 }
 #endif
 #ifdef MC_CLUSTER_NPT
@@ -10594,6 +10602,10 @@ void move(void)
 	ran = 0;
       else
 	ran = ntot*ranf();
+#if 0
+      /* FOR DEBUG */
+      ran = Oparams.parnum;
+#endif
 #ifdef MC_NVE
       if (OprogStatus.ensembleMC == 4)
 	{
