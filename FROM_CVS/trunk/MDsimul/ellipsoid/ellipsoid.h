@@ -966,6 +966,9 @@ struct progStatus
   double dthetaMC;
   double deltaMC;
   int ensembleMC;
+#ifdef MC_ALMARZA
+  double almarza_thr;
+#endif
   double vmax;
   int outMC;
   int adjstepsMC;
@@ -1447,6 +1450,9 @@ struct pascii opro_ascii[] =
   {"targetAccept", &OS(targetAccept),                        1, 1, "%.15G"},
   {"targetAcceptvol", &OS(targetAcceptVol),                  1, 1, "%.15G"},
   {"ensembleMC",   &OS(ensembleMC),                        1,  1, "%d"},
+#ifdef MC_ALMARZA
+  {"almarza_thr",        &OS(almarza_thr),                1,  1, "%.12G"},        
+#endif
   {"dthetaMC",     &OS(dthetaMC),                            1,  1, "%.12G"},
   {"deltaMC" ,     &OS(deltaMC),                             1,  1, "%.12G"},
   {"vmax",        &OS(vmax),                                1,  1, "%.12G"},        
@@ -1639,6 +1645,9 @@ struct singlePar OsinglePar[] = {
   {"deltaMC",   &OprogStatus.deltaMC,         CT},
   {"dthetaMC",  &OprogStatus.dthetaMC,        CT},
   {"ensembleMC",&OprogStatus.ensembleMC,      INT},
+#ifdef MC_ALMARZA
+  {"almarza_thr", &OprogStatus.almarza_thr,    CT},
+#endif
   {"vmax",      &OprogStatus.vmax,            CT},
   {"resetaccept",  &OprogStatus.resetaccept,    INT},
   {"resetacceptVol", &OprogStatus.resetacceptVol, INT},

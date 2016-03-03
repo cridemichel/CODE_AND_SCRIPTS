@@ -2029,6 +2029,9 @@ void usrInitBef(void)
     OprogStatus.dthetaMC=0.1;
     OprogStatus.deltaMC=0.1;
     OprogStatus.ensembleMC=0; /* 0 = NVT 1=NPT */
+#ifdef MC_ALMARZA
+    OprogStatus.almarza_thr = 0.5;
+#endif
     OprogStatus.vmax=0.01;
     OprogStatus.resetaccept=10;
     OprogStatus.resetacceptVol=100;
