@@ -4684,24 +4684,25 @@ double calc_almarza_prob(void)
 {
   int i, k;
   long long int jj, jj2, aa, bb; 
-  double prod=1.0, thr;
+  double totprod=1.0, prod=1.0, thr;
 
   thr = OprogStatus.almarza_thr;
   for (i=0; i < Oparams.parnum; i++)
     {
-      for (k=0; k < numbonds[i]; k++)
+      prod=1.0;
+      for (k=0; k < numbondsMC[i]; k++)
 	{
 	  jj = bondsMC[i][k] / (NANA);
 	  jj2 = bondsMC[i][k] & (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
 	  if (color[i] != color[jj])
-	    prod *= 1.0/(1.0-thr);
+	    {
+	      //printf("qui 1-thr=%f prod=%f i=%d\n", 1.0-thr, prod, i);
+  	      prod *= 1.0/(1.0-thr);
+	    }
 	}
-    }
-  /* costruisce i cluster della trial configuration */
-  for (i=0; i < Oparams.parnum; i++)
-    {
+      /* costruisce i cluster della trial configuration */
       for (k=0; k < numbonds[i]; k++)
 	{
 	  jj = bonds[i][k] / (NANA);
@@ -4711,8 +4712,13 @@ double calc_almarza_prob(void)
 	  if (color[i]!=color[jj])
 	    prod *= (1.0-thr);
 	}
+      totprod *= prod;
     }
-  return prod;
+#if 0
+  if (totprod!=1.0)
+    printf("totprod=%f\n", totprod);
+#endif
+  return totprod;
 }
 
 void assign_bonds_almarza(void)
@@ -5116,6 +5122,10 @@ void move_box_cluster_xyz(int *ierr)
 #endif
 #ifdef MC_ALMARZA
   omegaratio=calc_almarza_prob();
+#if 0
+  if (omegaratio < 1.)
+    printf("omegaratio:%G\n", omegaratio);
+#endif
 #endif
   /* enn < eno means that a new bonds form, actually we have to reject such move */
   if (
@@ -10362,6 +10372,10 @@ int cluster_move(void)
   int iold, k, i, np, ip, dorej, movetype, err, in0, in1, np_in_cls, i0, ret;
   double enn, eno;
   double lastrx, lastry, lastrz;
+#ifdef MC_ALMARZA
+  double omegaratio;
+  assign_bonds_almarza();
+#endif
   build_clusters(&ncls, &percolating, 0);
   /* pick randomly a cluster */
   nc = ranf()*ncls;
@@ -10521,7 +10535,9 @@ for (np=0; np < clsdim[nc]; np++)
       for (i=0; i < Oparams.parnum; i++)
 	numbonds[i] = 0;
 #else
+#ifndef MC_ALMARZA
       clsNPT=1;
+#endif
 #endif
       /* NOTA: nel caso di GAPDNA la seguente routine calcola 
 	 i bond per tutte le particelle che appartengono al cluster,
@@ -10544,6 +10560,7 @@ for (np=0; np < clsdim[nc]; np++)
 	}
       restore_bonds_mc(-1);
 #else
+#ifndef MC_ALMARZA
       if (clsNPT==2)
 	enn=eno-1;
       else
@@ -10553,6 +10570,17 @@ for (np=0; np < clsdim[nc]; np++)
 	{
 	  dorej=1;
 	}
+#else
+      omegaratio=calc_almarza_prob();
+      if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno))*omegaratio)
+	{
+	  dorej=0;
+	}
+      else
+	{
+	  dorej=2;
+	}
+#endif
 #endif
     }
   if (dorej != 0)
