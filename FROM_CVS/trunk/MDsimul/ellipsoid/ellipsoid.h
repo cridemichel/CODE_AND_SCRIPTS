@@ -11,7 +11,11 @@
 //#define MC_RESTR_MATRIX
 //#define MD_DGEBA_NMAX
 #define MC_NEW_PERC
+#ifndef MC_ALMARZA
 #define MC_OPT_CLSNPT
+#else
+#undef MC_OPT_CLSNPT
+#endif
 #undef MC_STORELL
 #define MC_STOREBONDS
 #define MC_STORE_ALL_COORDS

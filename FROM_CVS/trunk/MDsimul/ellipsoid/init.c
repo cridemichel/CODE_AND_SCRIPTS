@@ -234,6 +234,9 @@ extern double *vector(int n);
 int poolSize;
 int parnumA, parnumB;
 #ifdef MD_PATCHY_HE
+#ifdef MC_ALMARZA
+int **bondsYN, **bondsPYN;
+#endif
 #ifdef MD_LL_BONDS
 long long int *bondscache, **bonds;
 int *numbonds;
@@ -5324,6 +5327,11 @@ void usrInitAft(void)
 
 #ifdef EDHE_FLEX
   //printf("maxbonds=%d\n", OprogStatus.maxbonds);
+#ifdef MC_ALMARZA
+  //printf("BOHHHHHHHHHH\n");
+  bondsYN = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  bondsPYN= AllocMatI(Oparams.parnum*8, OprogStatus.maxbonds);
+#endif
   if (Oparams.maxbondsSaved==-1)
     {
 #ifdef MD_LL_BONDS

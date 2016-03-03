@@ -55,6 +55,9 @@ int *numbondsMC, **bondsMC;
 #if defined(MC_CLUSTER_NPT) || defined(MC_CLUSTER_MOVE) || defined(MC_NPT_XYZ)
 extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls, numOfClusters;  
 extern double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
+#ifdef MC_ALMARZA
+extern int **bondsYN, **bondsPYN;
+#endif
 #ifdef MC_NEW_PERC
 #ifdef MD_LL_BONDS
 extern long long int **bondsP;
@@ -556,6 +559,12 @@ int is_percolating(int ncls)
 	  numimg_jj = get_image((dix+djx)%2, (diy+djy)%2, (diz+djz)%2);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
+#ifdef MC_ALMARZA
+	  if (aa > 1 && bb > 1)
+	    bondsPYN[i][k]=1;
+	  else
+	    bondsPYN[i][k]=0;
+#endif
 #ifdef MD_LL_BONDS
 	  bondsP[i][k] = (jj+numimg_jj*Oparams.parnum)*(((long long int)NA)*NA)+aa*((long long int)NA)+bb;
 #else
@@ -716,6 +725,10 @@ int is_percolating(int ncls)
       //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
       for (j=0; j < numbondsP[i]; j++)
 	{
+#ifdef MC_ALMARZA
+	  if (bondsPYN[i][j]==0)
+	    continue;
+#endif
 	  jj = bondsP[i][j] / (NANA);
 	  //printf("i=%d jj=%d\n", i, jj);
 	  if (colorP[jj] == -1)
@@ -4508,7 +4521,9 @@ void store_bonds_mc(int ip)
 	{
 	  numbondsMC[i] = numbonds[i];
 	  for (k=0; k < numbonds[i]; k++)
-	    bondsMC[i][k] = bonds[i][k]; 
+	    {
+  	      bondsMC[i][k] = bonds[i][k]; 
+	    }
 	}
     }
 }
@@ -4657,17 +4672,53 @@ void restore_all_coords(void)
 #endif
 }
 #ifdef MC_ALMARZA
-void assign_bonds_almarza(void)
+double calc_almarza_prob(void)
 {
-  int i, k, yn;
-  long long int jj, jj2;
-  double thr;
-  thr = exp(-1.0/Oparams.T);
+  int i, k;
+  long long int jj, jj2, aa, bb; 
+  double prod=1.0, thr;
+
+  thr = 0.5;
   for (i=0; i < Oparams.parnum; i++)
     {
       for (k=0; k < numbonds[i]; k++)
 	{
-	  bondsYN[k] = -1;
+	  jj = bondsMC[i][k] / (NANA);
+	  jj2 = bondsMC[i][k] & (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (color[i] != color[jj])
+	    prod *= 1.0/(1.0-thr);
+	}
+    }
+  /* costruisce i cluster della trial configuration */
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (k=0; k < numbonds[i]; k++)
+	{
+	  jj = bonds[i][k] / (NANA);
+	  jj2 = bonds[i][k] & (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  if (color[i]!=color[jj])
+	    prod *= (1.0-thr);
+	}
+    }
+  return prod;
+}
+
+void assign_bonds_almarza(void)
+{
+  int i, k, yn, k2;
+  long long int jj, jj2, aa, bb;
+  double thr, xi;
+  thr = 0.5;//exp(-1.0/Oparams.T);// poi diventerà un parametro da settare in nel file .par tramite OprogStatus
+  //printf("bondsYN[0][0]=%d\n", bondsYN[0][0]);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (k=0; k < numbonds[i]; k++)
+	{
+	  bondsYN[i][k] = -1;
 	}
     }
   for (i=0; i < Oparams.parnum; i++)
@@ -4675,17 +4726,34 @@ void assign_bonds_almarza(void)
       for (k=0; k < numbonds[i]; k++)
 	{
 	  xi = ranf();
-	  if (bondsYN[i][k]==-1)
-	    { 
-	      jj = bonds[i][k] / (NANA);
-	      yn = (ranf() > thr)?1:0
-  	      bondsYN[jj2][k2] = yn;  
+	  jj = bonds[i][k] / (NANA);
+	  jj2 = bonds[i][k] & (NANA);
+	  aa = jj2 / NA;
+	  bb = jj2 % NA;
+	  
+	  if (bondsYN[i][k]==-1) 
+	    {
+	      if (aa == 2 && bb == 2)
+	      	{ 
+	  	  yn = (ranf() > thr)?1:0;
+		  bondsYN[i][k] = yn;  
+		  for (k2 = 0; k2 < numbonds[jj]; k2++)
+	  	    {
+	  	      jj2 = bonds[jj][k2] / (NANA); 
+	  	      if (jj2 == i)
+	  		bondsYN[jj2][k2] = yn;  
+	  	    }
+	    	}
+	    }
+	  else
+	    {
+	      bondsYN[jj2][k] = 1; /* for permanent bonds always yes! */
 	      for (k2 = 0; k2 < numbonds[jj]; k2++)
-		{
+    		{
 		  jj2 = bonds[jj][k2] / (NANA); 
 		  if (jj2 == i)
-		    bondsYN[jj2][k2] = yn;  
-	      	}
+		    bondsYN[jj2][k2] = 1;  
+		}
 	    }
 	}
     }
@@ -4698,6 +4766,7 @@ void move_box_cluster_xyz(int *ierr)
   double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
   int dir;
   double *rr[3], del[3];
+  double omegaratio;
 #ifdef MC_BOND_POS
   int k1, k2;
 #endif
@@ -5006,13 +5075,23 @@ void move_box_cluster_xyz(int *ierr)
     }
 #endif
   //printf("enn-eno/T=%f\n", (enn-eno)/Oparams.T);
+
 #ifdef MC_CLSNPT_LOG
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-(ncls+1.0)*log(vn/vo)*Oparams.T);
 #else
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-ncls*log(vn/vo)*Oparams.T);
 #endif
+#ifdef MC_ALMARZA
+  omegaratio=calc_almarza_prob();
+#endif
   /* enn < eno means that a new bonds form, actually we have to reject such move */
-  if (ranf() > exp(arg) || enn != eno)
+  if (
+#ifdef MC_ALMARZA
+      ranf() > exp(arg)*omegaratio 
+#else 
+      ranf() > exp(arg) || enn != eno
+#endif
+      )
     {
       /* move rejected restore old positions */
 #ifdef MC_STORE_ALL_COORDS
