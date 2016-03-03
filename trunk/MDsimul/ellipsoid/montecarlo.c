@@ -395,6 +395,7 @@ void clone_bonds(void)
 	  jj2 = bonds[i%Oparams.parnum][k] % (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
+
 #ifdef MD_LL_BONDS
 	  bondsP[i][k] = (jj+numimg*Oparams.parnum)*(((long long int)NA)*NA)+aa*((long long int)NA)+bb;
 #else
@@ -1168,6 +1169,13 @@ void build_clusters(int *Ncls, int *percolating, int check_perc)
 	{
 	  jj = bonds[i][j] / (NANA);
 #ifdef MC_ALMARZA
+#if 0
+	  if (bondsYN[i][j]==-1)
+	    {
+	      printf("bond -1 nooooo!\n");
+	      exit(-1);
+	    }
+#endif
 	  if (bondsYN[i][j]==0)
 	    continue;	    
 #endif
@@ -4678,7 +4686,7 @@ double calc_almarza_prob(void)
   long long int jj, jj2, aa, bb; 
   double prod=1.0, thr;
 
-  thr = 0.5;
+  thr = OprogStatus.almarza_thr;
   for (i=0; i < Oparams.parnum; i++)
     {
       for (k=0; k < numbonds[i]; k++)
@@ -4710,9 +4718,9 @@ double calc_almarza_prob(void)
 void assign_bonds_almarza(void)
 {
   int i, k, yn, k2;
-  long long int jj, jj2, aa, bb;
+  long long int jj, jj2, jj3, aa, bb, aa3, bb3;
   double thr, xi;
-  thr = 0.5;//exp(-1.0/Oparams.T);// poi diventerà un parametro da settare in nel file .par tramite OprogStatus
+  thr = OprogStatus.almarza_thr;//exp(-1.0/Oparams.T);// poi diventerà un parametro da settare in nel file .par tramite OprogStatus
   //printf("bondsYN[0][0]=%d\n", bondsYN[0][0]);
   for (i=0; i < Oparams.parnum; i++)
     {
@@ -4727,10 +4735,9 @@ void assign_bonds_almarza(void)
 	{
 	  xi = ranf();
 	  jj = bonds[i][k] / (NANA);
-	  jj2 = bonds[i][k] & (NANA);
+	  jj2 = bonds[i][k] % (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
-	  
 	  if (bondsYN[i][k]==-1) 
 	    {
 	      if (aa == 2 && bb == 2)
@@ -4740,23 +4747,49 @@ void assign_bonds_almarza(void)
 		  for (k2 = 0; k2 < numbonds[jj]; k2++)
 	  	    {
 	  	      jj2 = bonds[jj][k2] / (NANA); 
-	  	      if (jj2 == i)
-	  		bondsYN[jj2][k2] = yn;  
-	  	    }
+		      jj3 = bonds[jj][k2] % (NANA);
+		      aa3 = jj3 / NA;
+		      bb3 = jj3 % NA;
+		      if (jj2 == i && aa3==2 && bb3==2)
+			{
+			  bondsYN[jj][k2] = yn;  
+			}
+		    }
 	    	}
-	    }
-	  else
-	    {
-	      bondsYN[jj2][k] = 1; /* for permanent bonds always yes! */
-	      for (k2 = 0; k2 < numbonds[jj]; k2++)
-    		{
-		  jj2 = bonds[jj][k2] / (NANA); 
-		  if (jj2 == i)
-		    bondsYN[jj2][k2] = 1;  
+	      else if (aa == 1 && bb == 1)
+		{
+		  //printf("1!!! jj2=%lld aa=%lld bb==%lld i=%d k=%d\n",jj2, aa, bb, i, k); 
+		  bondsYN[i][k] = 1; /* for permanent bonds always yes! */
+		  for (k2 = 0; k2 < numbonds[jj]; k2++)
+		    {
+		      jj2 = bonds[jj][k2] / (NANA); 
+		      jj3 = bonds[jj][k2] % (NANA);
+		      aa3 = jj3 / NA;
+		      bb3 = jj3 % NA;
+	  	      if (jj2 == i && aa3==1 && bb3==1)
+			bondsYN[jj][k2] = 1;  
+		    }
+		}
+	      else
+		{ printf("aa=%lld bb=%lld BOH\n", aa, bb); 
+		  exit(-1);
 		}
 	    }
 	}
     }
+#if 0
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      for (k=0; k < numbonds[i]; k++)
+	{
+	  if (bondsYN[i][k] == -1)
+	    {
+	      printf("i=%d k=%d numbonds[%d]=%d\n", i, k, i, numbonds[i]);
+	      exit(-1);
+	    }
+	}
+    }
+#endif
 }
 #endif
 void move_box_cluster_xyz(int *ierr)
@@ -5189,6 +5222,9 @@ void move_box_cluster(int *ierr)
     delv = (Lfact - 1.0); /* FINISH HERE */
   //printf("Lfact=%.15G vmax=%f vn=%f vo=%f\n", Lfact, OprogStatus.vmax, vn, vo); 
   // Lfact=1;
+#ifdef MC_ALMARZA
+  assign_bonds_almarza();
+#endif
   build_clusters(&ncls, &percolating, 1);
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
@@ -5476,8 +5512,18 @@ void move_box_cluster(int *ierr)
 #else
   arg = -(1.0/Oparams.T)*((enn-eno)+Oparams.P*(vn-vo)-ncls*log(vn/vo)*Oparams.T);
 #endif
+#ifdef MC_ALMARZA
+  omegaratio=calc_almarza_prob();
+#endif
+
   /* enn < eno means that a new bonds form, actually we have to reject such move */
-  if (ranf() > exp(arg) || enn != eno)
+  if (
+#ifdef MC_ALMARZA
+      ranf() > exp(arg)*omegaratio 
+#else 
+      ranf() > exp(arg) || enn != eno
+#endif
+      )
     {
       /* move rejected restore old positions */
 #ifdef MC_STORE_ALL_COORDS
@@ -6259,6 +6305,7 @@ void update_bonds_MC(int ip)
       jj2 = bondscache2[kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
+      //printf("========>aa=%lld bb=%lld\n", aa, bb);
       if (checkMoveKF==1)
 	{
 	  /* 04/12/14 BUG FIX: all spots but first two are kern frenkel ones! */
