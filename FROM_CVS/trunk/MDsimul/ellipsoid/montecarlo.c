@@ -16,8 +16,10 @@ extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 extern int totspotsBS;
 #ifdef MC_OPT_CHECK_BS
 extern int *numcheckBS, **checkBS;
+#ifdef MC_OPT_ALMARZA
 extern int *numcheckBS_MC, **checkBS_MC;
 extern int *numcheckBS_P, **checkBS_P;
+#endif
 #else
 extern int *checkBS;
 #endif
@@ -63,7 +65,7 @@ extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls, numOfClust
 extern double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #ifdef MC_ALMARZA
 extern int **bondsYN, **bondsPYN;
-#ifdef MC_OPT_CHECK_BS
+#ifdef MC_OPT_ALMARZA
 extern int **bondsYN_BS;
 #endif
 #endif
@@ -880,7 +882,7 @@ int is_cls_percolating(int nc)
 	  bondsP[i][k] = (jj+numimg_jj*Oparams.parnum)*(NANA)+aa*NA+bb;
 #endif
 	}
-#ifdef MC_OPT_CHECK_BS
+#ifdef MC_OPT_ALMARZA
       numcheckBS_P[i] = numcheckBS[i];
       for (k=0; k < numcheckBS[i%Oparams.parnum]; k++)
 	{
@@ -1098,7 +1100,7 @@ int is_cls_percolating(int nc)
 		}
 	    }
 	}
-#if defined(MC_ALMARZA) && defined(MC_OPT_CHECK_BS)
+#if defined(MC_ALMARZA) && defined(MC_OPT_ALMARZA)
 
       //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
       for (j=0; j < numcheckBS_P[i]; j++)
@@ -1274,7 +1276,7 @@ void build_clusters(int *Ncls, int *percolating, int check_perc)
 		}
 	    }
 	}
-#if defined(MC_ALMARZA) && defined(MC_OPT_CHECK_BS)
+#if defined(MC_ALMARZA) && defined(MC_OPT_ALMARZA)
       if (!inside_cluster_move)
 	{
 	  for (j=0; j < numcheckBS[i]; j++)
@@ -4851,7 +4853,7 @@ double calc_almarza_prob(void)
 	    prod *= (1.0-thr);
 
 	}
-#ifdef MC_OPT_CHECK_BS
+#ifdef MC_OPT_ALMARZA
       for (k=0; k < numcheckBS_MC[i]; k++)
 	{
 	  if (color[i] != color[checkBS_MC[i][k]] && i < checkBS_MC[i][k])
@@ -4933,7 +4935,7 @@ void assign_bonds_almarza(void)
 		}
 	    }
 	}
-#ifdef MC_OPT_CHECK_BS
+#ifdef MC_OPT_ALMARZA
       for (k = 0; k < numcheckBS[i]; k++)
 	{
 	  if (bondsYN_BS[i][k] == -1)
@@ -5010,7 +5012,7 @@ void move_box_cluster_xyz(int *ierr)
   // Lfact=1;
   
 #ifdef MC_ALMARZA
-#ifdef MC_OPT_CHECK_BS
+#ifdef MC_OPT_ALMARZA
   for (i=0; i < Oparams.parnum; i++)
     find_part_with_BS(i);
   for (i=0; i < Oparams.parnum; i++)
