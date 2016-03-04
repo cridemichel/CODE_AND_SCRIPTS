@@ -4696,7 +4696,7 @@ double calc_almarza_prob(void)
 	  jj2 = bondsMC[i][k] & (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
-	  if (color[i] != color[jj])
+	  if (color[i] != color[jj] && i < jj)
 	    {
 	      //printf("qui 1-thr=%f prod=%f i=%d\n", 1.0-thr, prod, i);
   	      prod *= 1.0/(1.0-thr);
@@ -4709,7 +4709,7 @@ double calc_almarza_prob(void)
 	  jj2 = bonds[i][k] & (NANA);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
-	  if (color[i]!=color[jj])
+	  if (color[i]!=color[jj] && i < jj)
 	    prod *= (1.0-thr);
 	}
       totprod *= prod;
@@ -5123,8 +5123,8 @@ void move_box_cluster_xyz(int *ierr)
 #ifdef MC_ALMARZA
   omegaratio=calc_almarza_prob();
 #if 0
-  if (omegaratio < 1.)
-    printf("omegaratio:%G\n", omegaratio);
+  if (omegaratio != 1.)
+    printf("omegaratio:%G enn-eno=%f\n", omegaratio, enn-eno);
 #endif
 #endif
   /* enn < eno means that a new bonds form, actually we have to reject such move */
