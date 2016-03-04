@@ -537,7 +537,6 @@ int is_percolating(int ncls)
   //printf("check:%d\n", check);
   if (!check)
     return 0;
-
   //store_bonds_mc(-1);
   torefind=0; 
   for (i=0; i < Oparams.parnum*8; i++)
@@ -585,6 +584,31 @@ int is_percolating(int ncls)
 	  bondsP[i][k] = (jj+numimg_jj*Oparams.parnum)*(NANA)+aa*NA+bb;
 #endif
 	}
+#ifdef MC_OPT_ALMARZA
+      numcheckBS_P[i] = numcheckBS[i];
+      for (k=0; k < numcheckBS[i%Oparams.parnum]; k++)
+	{
+	  jj = checkBS[i%Oparams.parnum][k] / (NANA);
+	  Drx = L[0]*rint((rx[i%Oparams.parnum]-rx[jj])/L[0]);
+	  Dry = L[1]*rint((ry[i%Oparams.parnum]-ry[jj])/L[1]);
+	  Drz = L[2]*rint((rz[i%Oparams.parnum]-rz[jj])/L[2]); 
+	  if (fabs(Drx) > L[0]*0.5)
+	    djx = 1;
+	  else
+	    djx = 0;
+	  if (fabs(Dry) > L[1]*0.5)
+	    djy = 1;
+	  else
+	    djy = 0;
+	  if (fabs(Drz) > L[2]*0.5)
+	    djz = 1;
+	  else 
+	    djz = 0;
+	  choose_image(numimg_i, &dix, &diy, &diz);
+	  numimg_jj = get_image((dix+djx)%2, (diy+djy)%2, (diz+djz)%2);
+	  checkBS_P[i][k] = jj+numimg_jj*Oparams.parnum;
+	}	
+#endif
     }
 
 
@@ -744,7 +768,6 @@ int is_percolating(int ncls)
 #if 1
 	  if (bondsYN[i%Oparams.parnum][jj%Oparams.parnum]==0)
 	    continue;
-
 #else
 	  if (bondsPYN[i][j]==0)
 	    continue;
@@ -778,11 +801,8 @@ int is_percolating(int ncls)
       for (j=0; j < numcheckBS_P[i]; j++)
 	{
 	  jj = checkBS_P[i][j];
-#ifdef MC_ALMARZA
-	  /*SISTEMARE*/
 	  if (bondsYN_BS[i%Oparams.parnum][jj%Oparams.parnum]==0)
 	    continue;
-#endif
 	  //printf("i=%d jj=%d\n", i, jj);
 	  if (colorP[jj] == -1)
 	    colorP[jj] = colorP[i];
@@ -867,6 +887,8 @@ int is_percolating(int ncls)
 
 int is_cls_percolating(int nc)
 {
+  /* NOTA: nel caso della cluster move non si usano le BS (come nel caso dell'algoritmo clusterNPT)
+   * ma solo i bond dovuti alle patch */
   /* nel caso di catene rigide: cluster di lunghezza l 
      è percolante se e solo se il numero totale di bond è pari a 2*l */
 #ifdef MD_LL_BONDS
@@ -924,31 +946,6 @@ int is_cls_percolating(int nc)
 	  bondsP[i][k] = (jj+numimg_jj*Oparams.parnum)*(NANA)+aa*NA+bb;
 #endif
 	}
-#ifdef MC_OPT_ALMARZA
-      numcheckBS_P[i] = numcheckBS[i];
-      for (k=0; k < numcheckBS[i%Oparams.parnum]; k++)
-	{
-	  jj = checkBS[i%Oparams.parnum][k] / (NANA);
-	  Drx = L[0]*rint((rx[i%Oparams.parnum]-rx[jj])/L[0]);
-	  Dry = L[1]*rint((ry[i%Oparams.parnum]-ry[jj])/L[1]);
-	  Drz = L[2]*rint((rz[i%Oparams.parnum]-rz[jj])/L[2]); 
-	  if (fabs(Drx) > L[0]*0.5)
-	    djx = 1;
-	  else
-	    djx = 0;
-	  if (fabs(Dry) > L[1]*0.5)
-	    djy = 1;
-	  else
-	    djy = 0;
-	  if (fabs(Drz) > L[2]*0.5)
-	    djz = 1;
-	  else 
-	    djz = 0;
-	  choose_image(numimg_i, &dix, &diy, &diz);
-	  numimg_jj = get_image((dix+djx)%2, (diy+djy)%2, (diz+djz)%2);
-	  checkBS_P[i][k] = jj+numimg_jj*Oparams.parnum;
-	}	
-#endif
     }
 
 #if 0
@@ -1115,7 +1112,6 @@ int is_cls_percolating(int nc)
 	{
 	  jj = bondsP[i][j] / (NANA);
 #ifdef MC_ALMARZA
-	  /*SISTEMARE*/
 	  if (bondsYN[i%Oparams.parnum][jj%Oparams.parnum]==0)
 	    continue;
 #endif
@@ -1289,7 +1285,7 @@ void build_clusters(int *Ncls, int *percolating, int check_perc)
 	  for (j=0; j < numcheckBS[i]; j++)
 	    {
 	      jj = checkBS[i][j];
-	      if (bondsYN_BS[i][j]==0 || color[i] == color[jj])
+	      if (bondsYN_BS[i][j]==0 || (color[i]!=-1 && color[i] == color[jj]))
 		continue;	    
 	      //printf("i=%d jj=%d\n", i, jj);
 	      if (color[jj] == -1)
@@ -5422,6 +5418,18 @@ void move_box_cluster(int *ierr)
   //printf("Lfact=%.15G vmax=%f vn=%f vo=%f\n", Lfact, OprogStatus.vmax, vn, vo); 
   // Lfact=1;
 #ifdef MC_ALMARZA
+#ifdef MC_OPT_ALMARZA
+  for (i=0; i < Oparams.parnum; i++)
+    find_part_with_BS(i);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numcheckBS_MC[i] = numcheckBS[i];
+      for (k=0; k < numcheckBS[i]; k++)
+	{
+	  checkBS_MC[i][k] = checkBS[i][k];
+	}
+    }
+#endif 
   assign_bonds_almarza();
 #endif
   build_clusters(&ncls, &percolating, 1);
@@ -5688,7 +5696,7 @@ void move_box_cluster(int *ierr)
 #else
   enn = calcpotene();
 #endif
-#if 1
+#if 0
   if (enn > eno)
     {
       int *clsarr_bak, NP;
