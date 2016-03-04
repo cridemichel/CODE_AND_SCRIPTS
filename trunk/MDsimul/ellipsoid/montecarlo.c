@@ -571,11 +571,13 @@ int is_percolating(int ncls)
 	  numimg_jj = get_image((dix+djx)%2, (diy+djy)%2, (diz+djz)%2);
 	  aa = jj2 / NA;
 	  bb = jj2 % NA;
+#if 0
 #ifdef MC_ALMARZA
 	  if (aa > 1 && bb > 1)
 	    bondsPYN[i][k]=1;
 	  else
 	    bondsPYN[i][k]=0;
+#endif
 #endif
 #ifdef MD_LL_BONDS
 	  bondsP[i][k] = (jj+numimg_jj*Oparams.parnum)*(((long long int)NA)*NA)+aa*((long long int)NA)+bb;
@@ -737,11 +739,17 @@ int is_percolating(int ncls)
       //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
       for (j=0; j < numbondsP[i]; j++)
 	{
+	  jj = bondsP[i][j] / (NANA);
 #ifdef MC_ALMARZA
+#if 1
+	  if (bondsYN[i%Oparams.parnum][jj%Oparams.parnum]==0)
+	    continue;
+
+#else
 	  if (bondsPYN[i][j]==0)
 	    continue;
 #endif
-	  jj = bondsP[i][j] / (NANA);
+#endif
 	  //printf("i=%d jj=%d\n", i, jj);
 	  if (colorP[jj] == -1)
 	    colorP[jj] = colorP[i];
@@ -765,6 +773,40 @@ int is_percolating(int ncls)
 		}
 	    }
 	}
+#if defined(MC_ALMARZA) && defined(MC_OPT_ALMARZA)
+      //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
+      for (j=0; j < numcheckBS_P[i]; j++)
+	{
+	  jj = checkBS_P[i][j];
+#ifdef MC_ALMARZA
+	  /*SISTEMARE*/
+	  if (bondsYN_BS[i%Oparams.parnum][jj%Oparams.parnum]==0)
+	    continue;
+#endif
+	  //printf("i=%d jj=%d\n", i, jj);
+	  if (colorP[jj] == -1)
+	    colorP[jj] = colorP[i];
+	  else
+	    {
+	      if (colorP[i] < colorP[jj])
+		{
+		  //printf("1) color[%d]=%d to color[%d]=%d\n", jj, color[jj], i, color[i]);
+		  //printf("push 1) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], jj, fcstack.idx, color[jj]);
+		  //push_freecolor(&fcstack, color[jj]);
+		  change_all_colors(NP, colorP, colorP[jj], colorP[i]);
+		  numcolors--;
+		}	
+	      else if (colorP[i] > colorP[jj])
+		{
+		  //printf("2) color[%d]=%d to color[%d]=%d\n", i, color[i], jj, color[jj]);
+		 // printf("push 2) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], fcstack.idx, jj, color[jj]);
+		  //push_freecolor(&fcstack, color[i]);
+		  change_all_colors(NP, colorP, colorP[i], colorP[jj]);
+		  numcolors--;
+		}
+	    }
+	}
+#endif
 
       curcolor = findmaxColor(NP, colorP)+1;
       //printf("curcolor=%d\n", curcolor);
@@ -1100,41 +1142,6 @@ int is_cls_percolating(int nc)
 		}
 	    }
 	}
-#if defined(MC_ALMARZA) && defined(MC_OPT_ALMARZA)
-
-      //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
-      for (j=0; j < numcheckBS_P[i]; j++)
-	{
-	  jj = checkBS_P[i][j];
-#ifdef MC_ALMARZA
-	  /*SISTEMARE*/
-	  if (bondsYN_BS[i%Oparams.parnum][jj%Oparams.parnum]==0)
-	    continue;
-#endif
-	  //printf("i=%d jj=%d\n", i, jj);
-	  if (colorP[jj] == -1)
-	    colorP[jj] = colorP[i];
-	  else
-	    {
-	      if (colorP[i] < colorP[jj])
-		{
-		  //printf("1) color[%d]=%d to color[%d]=%d\n", jj, color[jj], i, color[i]);
-		  //printf("push 1) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], jj, fcstack.idx, color[jj]);
-		  //push_freecolor(&fcstack, color[jj]);
-		  change_all_colors(NP, colorP, colorP[jj], colorP[i]);
-		  numcolors--;
-		}	
-	      else if (colorP[i] > colorP[jj])
-		{
-		  //printf("2) color[%d]=%d to color[%d]=%d\n", i, color[i], jj, color[jj]);
-		 // printf("push 2) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], fcstack.idx, jj, color[jj]);
-		  //push_freecolor(&fcstack, color[i]);
-		  change_all_colors(NP, colorP, colorP[i], colorP[jj]);
-		  numcolors--;
-		}
-	    }
-	}
-#endif
       curcolor = findmaxColor(NP, colorP)+1;
       //printf("curcolor=%d\n", curcolor);
     }
