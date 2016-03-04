@@ -585,10 +585,10 @@ int is_percolating(int ncls)
 #endif
 	}
 #ifdef MC_OPT_ALMARZA
-      numcheckBS_P[i] = numcheckBS[i];
+      numcheckBS_P[i] = numcheckBS[i%Oparams.parnum];
       for (k=0; k < numcheckBS[i%Oparams.parnum]; k++)
 	{
-	  jj = checkBS[i%Oparams.parnum][k] / (NANA);
+	  jj = checkBS[i%Oparams.parnum][k];
 	  Drx = L[0]*rint((rx[i%Oparams.parnum]-rx[jj])/L[0]);
 	  Dry = L[1]*rint((ry[i%Oparams.parnum]-ry[jj])/L[1]);
 	  Drz = L[2]*rint((rz[i%Oparams.parnum]-rz[jj])/L[2]); 
