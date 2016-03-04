@@ -31,6 +31,9 @@ int totspots;
 int totspotsBS;
 #ifdef MC_OPT_CHECK_BS
 int **checkBS, *numcheckBS;
+int **checkBS_MC, *numcheckBS_MC;
+int **bondsYN_BS;
+int **checkBS_P, *numcheckBS_P;
 #else
 int *checkBS;
 #endif
@@ -5711,6 +5714,11 @@ void usrInitAft(void)
 #ifdef MC_OPT_CHECK_BS
   checkBS = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   numcheckBS = (int *) malloc(Oparams.parnum*sizeof(int));
+  checkBS_P = AllocMatI(Oparams.parnum*8, OprogStatus.maxbonds);
+  numcheckBS_P = (int *) malloc(Oparams.parnum*8*sizeof(int));
+  checkBS_MC = AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
+  numcheckBS_MC = (int *) malloc(Oparams.parnum*sizeof(int));
+  bondsYN_BS= AllocMatI(Oparams.parnum, OprogStatus.maxbonds);
   for (i=0; i < Oparams.parnum; i++)
     numcheckBS[i] = 0;
 #else

@@ -16,6 +16,8 @@ extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 extern int totspotsBS;
 #ifdef MC_OPT_CHECK_BS
 extern int *numcheckBS, **checkBS;
+extern int *numcheckBS_MC, **checkBS_MC;
+extern int *numcheckBS_P, **checkBS_P;
 #else
 extern int *checkBS;
 #endif
@@ -61,6 +63,9 @@ extern int *color, *color_dup, *clsdim, *nbcls, *clsarr, *firstofcls, numOfClust
 extern double *Dxpar, *Dypar, *Dzpar, *Dxcls, *Dycls, *Dzcls, *clsCoM[3];
 #ifdef MC_ALMARZA
 extern int **bondsYN, **bondsPYN;
+#ifdef MC_OPT_CHECK_BS
+extern int **bondsYN_BS;
+#endif
 #endif
 #ifdef MC_NEW_PERC
 #ifdef MD_LL_BONDS
@@ -875,6 +880,31 @@ int is_cls_percolating(int nc)
 	  bondsP[i][k] = (jj+numimg_jj*Oparams.parnum)*(NANA)+aa*NA+bb;
 #endif
 	}
+#ifdef MC_OPT_CHECK_BS
+      numcheckBS_P[i] = numcheckBS[i];
+      for (k=0; k < numcheckBS[i%Oparams.parnum]; k++)
+	{
+	  jj = checkBS[i%Oparams.parnum][k] / (NANA);
+	  Drx = L[0]*rint((rx[i%Oparams.parnum]-rx[jj])/L[0]);
+	  Dry = L[1]*rint((ry[i%Oparams.parnum]-ry[jj])/L[1]);
+	  Drz = L[2]*rint((rz[i%Oparams.parnum]-rz[jj])/L[2]); 
+	  if (fabs(Drx) > L[0]*0.5)
+	    djx = 1;
+	  else
+	    djx = 0;
+	  if (fabs(Dry) > L[1]*0.5)
+	    djy = 1;
+	  else
+	    djy = 0;
+	  if (fabs(Drz) > L[2]*0.5)
+	    djz = 1;
+	  else 
+	    djz = 0;
+	  choose_image(numimg_i, &dix, &diy, &diz);
+	  numimg_jj = get_image((dix+djx)%2, (diy+djy)%2, (diz+djz)%2);
+	  checkBS_P[i][k] = jj+numimg_jj*Oparams.parnum;
+	}	
+#endif
     }
 
 #if 0
@@ -1040,6 +1070,11 @@ int is_cls_percolating(int nc)
       for (j=0; j < numbondsP[i]; j++)
 	{
 	  jj = bondsP[i][j] / (NANA);
+#ifdef MC_ALMARZA
+	  /*SISTEMARE*/
+	  if (bondsYN[i%Oparams.parnum][jj%Oparams.parnum]==0)
+	    continue;
+#endif
 	  //printf("i=%d jj=%d\n", i, jj);
 	  if (colorP[jj] == -1)
 	    colorP[jj] = colorP[i];
@@ -1063,7 +1098,41 @@ int is_cls_percolating(int nc)
 		}
 	    }
 	}
+#if defined(MC_ALMARZA) && defined(MC_OPT_CHECK_BS)
 
+      //printf("numbonds[%d]=%d\n", i, numbonds[i]);	      
+      for (j=0; j < numcheckBS_P[i]; j++)
+	{
+	  jj = checkBS_P[i][j];
+#ifdef MC_ALMARZA
+	  /*SISTEMARE*/
+	  if (bondsYN_BS[i%Oparams.parnum][jj%Oparams.parnum]==0)
+	    continue;
+#endif
+	  //printf("i=%d jj=%d\n", i, jj);
+	  if (colorP[jj] == -1)
+	    colorP[jj] = colorP[i];
+	  else
+	    {
+	      if (colorP[i] < colorP[jj])
+		{
+		  //printf("1) color[%d]=%d to color[%d]=%d\n", jj, color[jj], i, color[i]);
+		  //printf("push 1) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], jj, fcstack.idx, color[jj]);
+		  //push_freecolor(&fcstack, color[jj]);
+		  change_all_colors(NP, colorP, colorP[jj], colorP[i]);
+		  numcolors--;
+		}	
+	      else if (colorP[i] > colorP[jj])
+		{
+		  //printf("2) color[%d]=%d to color[%d]=%d\n", i, color[i], jj, color[jj]);
+		 // printf("push 2) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], fcstack.idx, jj, color[jj]);
+		  //push_freecolor(&fcstack, color[i]);
+		  change_all_colors(NP, colorP, colorP[i], colorP[jj]);
+		  numcolors--;
+		}
+	    }
+	}
+#endif
       curcolor = findmaxColor(NP, colorP)+1;
       //printf("curcolor=%d\n", curcolor);
     }
@@ -1141,6 +1210,7 @@ int is_percolating(int ncls)
   return 0;
 }
 #endif
+extern int inside_cluster_move;
 void build_clusters(int *Ncls, int *percolating, int check_perc)
 {
   int NP, i, j, ncls, nc, a, curcolor, maxc=-1;
@@ -1204,7 +1274,37 @@ void build_clusters(int *Ncls, int *percolating, int check_perc)
 		}
 	    }
 	}
-
+#if defined(MC_ALMARZA) && defined(MC_OPT_CHECK_BS)
+      if (!inside_cluster_move)
+	{
+	  for (j=0; j < numcheckBS[i]; j++)
+	    {
+	      jj = checkBS[i][j];
+	      if (bondsYN_BS[i][j]==0 || color[i] == color[jj])
+		continue;	    
+	      //printf("i=%d jj=%d\n", i, jj);
+	      if (color[jj] == -1)
+		color[jj] = color[i];
+	      else
+		{
+		  if (color[i] < color[jj])
+		    {
+		      //printf("1) color[%d]=%d to color[%d]=%d\n", jj, color[jj], i, color[i]);
+		      //printf("push 1) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], jj, fcstack.idx, color[jj]);
+		      //push_freecolor(&fcstack, color[jj]);
+		      change_all_colors(NP, color, color[jj], color[i]);
+		    }	
+		  else if (color[i] > color[jj])
+		    {
+		      //printf("2) color[%d]=%d to color[%d]=%d\n", i, color[i], jj, color[jj]);
+		      // printf("push 2) color[%d]=%d idx=%d col[jj=%d]=%d\n", i, color[i], fcstack.idx, jj, color[jj]);
+		      //push_freecolor(&fcstack, color[i]);
+		      change_all_colors(NP, color, color[i], color[jj]);
+		    }
+		}
+	    }
+	}
+#endif
       curcolor = findmaxColor(NP, color)+1;
       //printf("curcolor=%d\n", curcolor);
     }
@@ -4749,9 +4849,22 @@ double calc_almarza_prob(void)
 	  bb = jj2 % NA;
 	  if (color[i]!=color[jj] && i < jj)
 	    prod *= (1.0-thr);
+
 	}
+#ifdef MC_OPT_CHECK_BS
+      for (k=0; k < numcheckBS_MC[i]; k++)
+	{
+	  if (color[i] != color[checkBS_MC[i][k]] && i < checkBS_MC[i][k])
+	    prod *= 1.0/(1.0-thr);
+	}
+      for (k=0; k < numcheckBS[i]; k++)
+	{
+	  if (color[i] != color[checkBS[i][k]] && i < checkBS[i][k])
+	    prod *= (1.0-thr);
+	}
+#endif
       totprod *= prod;
-    }
+   }
 #if 0
   if (totprod!=1.0)
     printf("totprod=%f\n", totprod);
@@ -4820,6 +4933,22 @@ void assign_bonds_almarza(void)
 		}
 	    }
 	}
+#ifdef MC_OPT_CHECK_BS
+      for (k = 0; k < numcheckBS[i]; k++)
+	{
+	  if (bondsYN_BS[i][k] == -1)
+	    {
+	      yn = (ranf() > thr)?1:0;
+	      bondsYN_BS[i][k] = yn;  
+	    }
+	  jj2 = checkBS[i][k];
+	  for (k2=0; k2 < numcheckBS[jj2]; k2++)
+	    {
+	      if (checkBS[jj2][k2] == i)
+		bondsYN_BS[jj2][k2] = yn;
+	    }
+	}
+#endif
     }
 #if 0
   for (i=0; i < Oparams.parnum; i++)
@@ -4879,7 +5008,20 @@ void move_box_cluster_xyz(int *ierr)
     delv = (Lfact - 1.0); /* FINISH HERE */
   //printf("Lfact=%.15G vmax=%f vn=%f vo=%f\n", Lfact, OprogStatus.vmax, vn, vo); 
   // Lfact=1;
+  
 #ifdef MC_ALMARZA
+#ifdef MC_OPT_CHECK_BS
+  for (i=0; i < Oparams.parnum; i++)
+    find_part_with_BS(i);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numcheckBS_MC[i] = numcheckBS[i];
+      for (k=0; k < numcheckBS[i]; k++)
+	{
+	  checkBS_MC[i][k] = checkBS[i][k];
+	}
+    }
+#endif
   assign_bonds_almarza();
 #endif
   build_clusters(&ncls, &percolating, 1);
@@ -10404,6 +10546,7 @@ int cluster_is_not_a_dimer(int nc)
 #ifdef MC_GAPDNA
 int cls_move_bonds=0;
 #endif
+int inside_cluster_move=0;
 int cluster_move(void)
 {
   int ncls, percolating, nc, totbonds;
@@ -10414,7 +10557,9 @@ int cluster_move(void)
   double omegaratio;
   assign_bonds_almarza();
 #endif
+  inside_cluster_move=1;
   build_clusters(&ncls, &percolating, 0);
+  inside_cluster_move=0;
   /* pick randomly a cluster */
   nc = ranf()*ncls;
   /* discard move if the cluster is percolating */ 
