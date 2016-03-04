@@ -14,7 +14,11 @@ extern int totspots;
 #ifdef MC_BOUNDING_SPHERES
 extern int *inCellBS[3], *cellListBS, cellsxBS, cellsyBS, cellszBS;
 extern int totspotsBS;
+#ifdef MC_OPT_CHECK_BS
+extern int *numcheckBS, **checkBS;
+#else
 extern int *checkBS;
+#endif
 #endif
 #endif
 #ifdef MC_BOND_POS
@@ -2659,6 +2663,18 @@ int overlapMC_NNL(int na, int *err)
 int clsNPT=0;
 #endif
 #ifdef MC_BOUNDING_SPHERES
+#ifdef MC_OPT_CHECK_BS
+int func_checkBS(int i, int j)
+{
+  int kk;
+  for (kk=0; kk < numcheckBS[i]; kk++)
+    {
+      if (checkBS[i][kk] == j)
+       	return 1;
+    }
+  return 0;
+}
+#endif
 void find_part_with_BS(int i)
 {
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na, ns, ns2, j;
@@ -2668,7 +2684,13 @@ void find_part_with_BS(int i)
   
   nb=-1;
   for (j=0; j < Oparams.parnum; j++)
-    checkBS[j] = 0;
+    {
+#ifdef MC_OPT_CHECK_BS
+      numcheckBS[j] = 0;
+#else
+      checkBS[j] = 0;
+#endif
+    }
   for (ns = typesArr[typeOfPart[i]].nspots; ns < typesArr[typeOfPart[i]].nspotsBS + typesArr[typeOfPart[i]].nspots; ns++)
     {
       na = sp2n_map[i][ns] - totspots;
@@ -2756,8 +2778,13 @@ void find_part_with_BS(int i)
 			{
 			  //assign_bond_mapping(i,j);
 			  j = n2sp_map[n+totspots].i;
+#ifdef MC_OPT_CHECK_BS
+			  if (func_checkBS(i,j))
+			    continue;
+#else
 			  if (checkBS[j])
 			    continue;
+#endif
 			  ns2 = n2sp_map[n+totspots].ns;
 #if 0
 			  if (ns2 < 2)
@@ -2787,7 +2814,12 @@ void find_part_with_BS(int i)
 #endif	
 			  if (distSq <= Sqr(sigmabs))
 			    {
+#if MC_OPT_CHECK_BS
+			      checkBS[i][numcheckBS[i]]=j;
+			      numcheckBS[i]++;
+#else
 			      checkBS[j] = 1; 
+#endif
 			    }
 			}
 		    } 
@@ -2890,7 +2922,13 @@ int overlapMC_LL(int ip, int *err)
 		    {
 #ifdef MC_BOUNDING_SPHERES
 #if 1
-		      if (!checkBS[n])
+		      if (
+#ifdef MC_OPT_CHECK_BS
+			  !func_checkBS(na, n)
+#else
+			  !checkBS[n]
+#endif
+			 )
 			{
 #if 0
 			  if (check_overlap(na, n, shift, err)<0.0)
