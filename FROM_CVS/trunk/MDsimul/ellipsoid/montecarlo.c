@@ -4904,7 +4904,7 @@ void assign_bonds_almarza(void)
 	    {
 	      if (aa == 2 && bb == 2)
 	      	{ 
-	  	  yn = (ranf() > thr)?1:0;
+	  	  yn = (ranf() > thr)?0:1;
 		  bondsYN[i][k] = yn;  
 		  for (k2 = 0; k2 < numbonds[jj]; k2++)
 	  	    {
@@ -4943,7 +4943,7 @@ void assign_bonds_almarza(void)
 	{
 	  if (bondsYN_BS[i][k] == -1)
 	    {
-	      yn = (ranf() > thr)?1:0;
+	      yn = (ranf() > thr)?0:1;
 	      bondsYN_BS[i][k] = yn;  
 	    }
 	  jj2 = checkBS[i][k];
