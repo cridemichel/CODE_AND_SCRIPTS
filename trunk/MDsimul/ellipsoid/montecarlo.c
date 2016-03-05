@@ -4857,15 +4857,18 @@ double calc_almarza_prob(void)
 
 	}
 #ifdef MC_OPT_ALMARZA
-      for (k=0; k < numcheckBS_MC[i]; k++)
+      if (!inside_cluster_move)
 	{
-	  if (color[i] != color[checkBS_MC[i][k]] && i < checkBS_MC[i][k])
-	    prod *= 1.0/(1.0-thr);
-	}
-      for (k=0; k < numcheckBS[i]; k++)
-	{
-	  if (color[i] != color[checkBS[i][k]] && i < checkBS[i][k])
-	    prod *= (1.0-thr);
+	  for (k=0; k < numcheckBS_MC[i]; k++)
+	    {
+	      if (color[i] != color[checkBS_MC[i][k]] && i < checkBS_MC[i][k])
+		prod *= 1.0/(1.0-thr);
+	    }
+	  for (k=0; k < numcheckBS[i]; k++)
+	    {
+	      if (color[i] != color[checkBS[i][k]] && i < checkBS[i][k])
+		prod *= (1.0-thr);
+	    }
 	}
 #endif
       totprod *= prod;
@@ -10771,7 +10774,9 @@ for (np=0; np < clsdim[nc]; np++)
 	  dorej=1;
 	}
 #else
+      inside_cluster_move = 1;
       omegaratio=calc_almarza_prob();
+      inside_cluster_move = 0;
       if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno))*omegaratio)
 	{
 	  dorej=0;
