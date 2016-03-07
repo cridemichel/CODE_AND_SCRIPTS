@@ -3,11 +3,25 @@
 #include<math.h>
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
-double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, wx, wy, wz;
+double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz;
 double *Rc[3][3], *Ri[3][3];
 int full, ibeg, numpoly, *top;
 #define maxpolylen 10000;
 double R0[3][3];
+struct onepart {
+   double rx; 
+   double ry;
+   double rz;
+   double R[3][3];
+   double vx;
+   double vy;
+   double vz;
+   double wx;
+   double wy;
+   double wz;
+   int t;	
+};
+struct onepart *allpart;
 double ranf(void)
 {
   /*  Returns a uniform random variate in the range 0 to 1.         
@@ -15,6 +29,22 @@ double ranf(void)
       please use the one recommended for your machine. */
   return drand48();
 }
+int compare_func (const void *aa, const void *bb)
+{
+  struct onepart *a, *b;
+  int temp;
+  a = (struct onepart*) aa;
+  b = (struct onepart*) bb;
+  temp = b->t - a->t;
+  if (temp < 0)
+    return 1;
+  else if (temp > 0)
+    return -1;
+  else
+    return 0;
+}
+
+
 /* ============================= >>> gauss <<< ============================= */
 double gauss(void)
 {
@@ -176,6 +206,12 @@ int main(int argc, char **argv)
   vx = malloc(sizeof(double)*parnum);
   vy = malloc(sizeof(double)*parnum);
   vz = malloc(sizeof(double)*parnum);
+  wx = malloc(sizeof(double)*parnum);
+  wy = malloc(sizeof(double)*parnum);
+  wz = malloc(sizeof(double)*parnum);
+ 	
+  allpart = malloc(sizeof(struct onepart)*parnum);
+
   for (a=0; a < 3; a++)
     {
       for (b=0; b < 3; b++)
@@ -464,7 +500,10 @@ int main(int argc, char **argv)
 	  rz[idx] = rzCM[i] + rzc[j];
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
-	      Ri[a][b][idx] = Rc[a][b][j];
+	      {
+		Ri[a][b][idx] = Rc[a][b][j];
+              	allpart[i].R[a][b] = Rc[a][b][j];
+	      }
 	  //printf("qui idx=%d\n", idx);
 	}
     }
@@ -513,9 +552,8 @@ int main(int argc, char **argv)
 	    }
 	}
       top[i] = typeP;
-
-      fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f %d\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i], typeP);
-      //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
+      allpart[i].t = top[i];
+        //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
       //printf("qui2\n");
     }
 #endif	
@@ -527,7 +565,9 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-
+      allpart[i].rx = rx[i];
+      allpart[i].ry = ry[i];
+      allpart[i].rz = rz[i];
       if (parnumE==1 && parnumC == 0.0)
 	{
 	  if (i < parnumE)
@@ -582,9 +622,12 @@ int main(int argc, char **argv)
       vx[i] -= vxCM/mCM;
       vy[i] -= vyCM/mCM;
       vz[i] -= vzCM/mCM;
+      allpart[i].vx = vx[i];
+      allpart[i].vy = vy[i];
+      allpart[i].vz = vz[i];
 #if 1
       if (LenE==DiamE && LenS==DiamS && LenC==DiamC)
-	wx=wy=wz=0;
+	wx[i]=wy[i]=wz[i]=0;
       else
 	{
 	  if (i < parnumE)
@@ -593,16 +636,34 @@ int main(int argc, char **argv)
 	    mean = sqrt(temp / MoI1);
 	  else 
 	    mean = sqrt(temp / MoI1);
-	  wx = mean*gauss();
-	  wy = mean*gauss();
-	  wz = mean*gauss();
+	  wx[i] = mean*gauss();
+	  wy[i] = mean*gauss();
+	  wz[i] = mean*gauss();
 	}
 #else
-      wx=wy=wz=0;
+      wx[i]=wy[i]=wz[i]=0;
 #endif
-      fprintf(f, "%f %f %f %f %f %f\n", vx[i], vy[i], vz[i], wx, wy, wz);
-    }  
+      allpart[i].wx = wx[i];
+      allpart[i].wy = wy[i];
+      allpart[i].wz = wz[i];
+     }  
+   /* sort particles here (enzyme first!) */
+   qsort(allpart, parnum, sizeof(struct onepart), compare_func);
+   for (i=0; i < parnum; i++)
+     {
+       fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f %d\n", allpart[i].rx, allpart[i].ry, allpart[i].rz, 
+	allpart[i].R[0][0], allpart[i].R[0][1], allpart[i].R[0][2], allpart[i].R[1][0], 
+	allpart[i].R[1][1], allpart[i].R[1][2], 
+	allpart[i].R[2][0], allpart[i].R[2][1], allpart[i].R[2][2], allpart[i].t);
+     }
+   for (i=0; i < parnum; i++)
+     {
+ 
+      fprintf(f, "%f %f %f %f %f %f\n", allpart[i].vx, allpart[i].vy, allpart[i].vz, 
+	allpart[i].wx, allpart[i].wy, allpart[i].wz);
+     }
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
+
   printf("phi=%f\n", (parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]));
   fclose(f);
   return 1;
