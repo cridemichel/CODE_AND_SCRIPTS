@@ -7283,14 +7283,36 @@ void hslToRgb(double h, double s, double l, double *r, double *g, double *b)
       *r = hue2rgb(p, q, h + 1./3.);
       *g = hue2rgb(p, q, h);
       *b = hue2rgb(p, q, h - 1./3.);
-      //printf("h=%f rgb=%f %f %f p=%f q=%f\n", h, *r, *g, *b, p, q);
     }
+  //printf("=>>h=%d s=%f l=%f\n", (int)(h*360.0),s,l);
+  //printf("h=%f rgb=%d %d %d p=%f q=%f\n", h, (int)(*r*256), (int)(*g*256), (int)(*b*256), p, q);
 }
 
 char *par2rgb(int i, double rgb[3])
 {
+  /* jl has to be between 0 and 1 */
+  int il, kk;
+  double jl, ncx, ncy, ncz, inC[3];
   static char str[128];
-  hslToRgb(((double)i)/(Oparams.parnum/2.0),0.6,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
+#if 1 
+  if (i % 2 == 1) 
+    il = i-1;
+  else 
+    il = i;
+  ncx = ncy = ncz = 200;
+  for (kk=0; kk < 3; kk++)
+    L2[kk] = L[kk]*0.5;
+  inC[0] =  (rx[il] + L2[0]) * ncx / L[0];
+  inC[1] =  (ry[il] + L2[1]) * ncy / L[1];
+  inC[2] =  (rz[il] + L2[2]) * ncz / L[2];
+
+  jl = ((inC[2]*ncy + inC[1])*ncx + 
+	inC[0])/((double)(ncx*ncy*ncz));
+#else
+  h = i/OprogStatus.polylen/(Oparams.parnum/2.0);
+#endif	
+  printf("il=%d jl=%f\n", il, jl);
+  hslToRgb(jl,0.8,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
   sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 }
 /* ========================== >>> writeAllCor <<< ========================== */
@@ -7298,7 +7320,8 @@ void writeAllCor(FILE* fs, int saveAll)
 {
 #ifdef MC_GAPDNA
   char colrgb[256];
-  double rgb[3];
+  double rgb[3], jl;
+  int il;
 #endif
   int i;
   int nn;
@@ -7517,7 +7540,8 @@ void writeAllCor(FILE* fs, int saveAll)
 		  2.0*typesArr[typeOfPart[i]].sax[0], "cyan1");
     	  }
 #else
-	par2rgb(i/OprogStatus.polylen, rgb);
+
+	par2rgb(i, rgb);
 	sprintf(colrgb, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 	fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
 	      	2.0*typesArr[typeOfPart[i]].sax[0], colrgb);
@@ -7606,7 +7630,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	   }
 #else
 #ifdef MC_GAPDNA
-	par2rgb(i/OprogStatus.polylen, rgb);
+	par2rgb(i, rgb);
 	sprintf(colrgb, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 
 	 for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
