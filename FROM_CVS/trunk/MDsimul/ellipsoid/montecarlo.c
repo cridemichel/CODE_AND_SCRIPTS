@@ -5034,7 +5034,7 @@ void move_box_cluster_xyz(int *ierr)
 #endif
   build_clusters(&ncls, &percolating, 1);
   numOfClusters = ncls;
-  
+
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
 #if 1
