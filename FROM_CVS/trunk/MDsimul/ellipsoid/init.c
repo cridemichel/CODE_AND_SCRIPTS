@@ -7292,22 +7292,35 @@ char *par2rgb(int i, double rgb[3])
 {
   /* jl has to be between 0 and 1 */
   int il, kk;
-  double jl, ncx, ncy, ncz, inC[3];
+  double jl, ncx, ncy, ncz, inC[3], Dx, Dy, Dz;
   static char str[128];
 #if 1 
   if (i % 2 == 1) 
-    il = i-1;
+    {
+      il = i-1;
+      Dx = (rx[i]-rx[il]);
+      Dx = L[0]*rint(Dx/L[0]);
+      Dy = (ry[i]-ry[il]);
+      Dy = L[1]*rint(Dy/L[1]);
+      Dz = (rz[i]-rz[il]);
+      Dz = L[2]*rint(Dz/L[2]);
+      rx[i] -= Dx;
+      ry[i] -= Dy;
+      rz[i] -= Dz;
+    }
   else 
-    il = i;
-  ncx = ncy = ncz = 200;
+    {
+      il = i;
+    }
+  ncx = ncy = ncz = 800;
   for (kk=0; kk < 3; kk++)
     L2[kk] = L[kk]*0.5;
   inC[0] =  (rx[il] + L2[0]) * ncx / L[0];
   inC[1] =  (ry[il] + L2[1]) * ncy / L[1];
   inC[2] =  (rz[il] + L2[2]) * ncz / L[2];
 
-  jl = ((inC[2]*ncy + inC[1])*ncx + 
-	inC[0])/((double)(ncx*ncy*ncz));
+  jl = ((int)((inC[2]*ncy + inC[1])*ncx + 
+	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5);// /((double)(ncx*ncy*ncz));
 #else
   h = i/OprogStatus.polylen/(Oparams.parnum/2.0);
 #endif	
