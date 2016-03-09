@@ -3,7 +3,7 @@
 #include<math.h>
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
-double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz;
+double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz, uinner, uouter;
 double *Rc[3][3], *Ri[3][3];
 int full, ibeg, numpoly, *top;
 #define maxpolylen 10000;
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   if (argc == 1)
    {
-     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# enzymes> <# substrates> \n"); 
+     printf("create_SUBENZ_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# enzymes> <# substrates> <uinner> <uouter>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -186,6 +186,13 @@ int main(int argc, char **argv)
     parnumE = atoi(argv[12]);
   if (argc > 13)
     parnumS = atoi(argv[13]);
+
+  uinner=10.0;
+  uouter=5.0;
+  if (argc > 14)
+    uinner = atof(argv[14]);
+  if (argc > 15)
+    uouter = atof(argv[15]);
 
   Len=max3(LenE,LenS,LenC);
   Diam=max3(DiamE,DiamS,DiamC);
@@ -296,7 +303,7 @@ int main(int argc, char **argv)
     }
 #endif
   fprintf(f, "parnum: %d\n", parnum);
-  fprintf(f, "ninters: 0\n");
+  fprintf(f, "ninters: 2\n");
   fprintf(f, "nintersIJ: 0\n");
   /* #Enzymes #Substrates #Products at t=0 */
   if (parnumS > 0 && parnumS < parnum-parnumE)
@@ -332,6 +339,9 @@ int main(int argc, char **argv)
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
+  fprintf(f,"2 0\n");
+  fprintf(f, "0 0 0 %f\n", DiamE*1.1);
+  fprintf(f, "0 0 0 %f\n", DiamE+0.001);
   fprintf(f,"%f %f %f\n", LenS/2.0, DiamS/2.0, DiamS/2.0);
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of spheres */
@@ -340,6 +350,9 @@ int main(int argc, char **argv)
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"0 0\n");
+  fprintf(f,"2 0\n");
+  fprintf(f, "0 0 0 %f\n", DiamS*1.1);
+  fprintf(f, "0 0 0 %f\n", DiamS+0.001);
   fprintf(f,"%f %f %f\n", LenP/2.0, DiamP/2.0, DiamP/2.0); 
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of spheres */
@@ -367,6 +380,8 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 0 1 0 0 1\n");
   fprintf(f,"0 1 0 1 1 0 0 100000\n");
 #endif 
+  fprintf(f, "0 0 1 0 0 %f 0 1\n", uinner);
+  fprintf(f, "0 1 1 1 %f 0 0 1\n", uouter);
   fprintf(f, "@@@\n");
   nx=ny=nz=0;
   full=0;
@@ -560,9 +575,9 @@ int main(int argc, char **argv)
   /* velocities */
   for (i=0; i < parnum; i++)
     {
-      rx[i] -= L[0]*0.5;
-      ry[i] -= L[1]*0.5;
-      rz[i] -= L[2]*0.5;
+      //rx[i] -= L[0]*0.5;
+      //ry[i] -= L[1]*0.5;
+      //rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
       allpart[i].rx = rx[i];
