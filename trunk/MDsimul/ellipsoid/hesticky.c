@@ -574,7 +574,8 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
     vc += vAB[a]*rAB[a];
   denom = invmi + invmj;
   mredl = 1.0/denom;
- 
+
+  printf("here i=%d[t=%d] j=%d[t=%d]\n", i, typeOfPart[i], j, typeOfPart[j]); 
   get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
   switch (bt)
     {
@@ -4973,7 +4974,7 @@ double calc_maxddotSP(int i, int j, double *maxddoti)
   return maxddot;
 }
 #endif
-#ifdef MD_OPTIMIZE_NSPHSPOT
+#if defined(MD_OPTIMIZE_NSPHSPOT) || defined(MD_SUBENZYME)
 int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, double t2, double *evtime, int* ata, int *atb, int *collCode)
 {
   double dr[NDIM], dv[NDIM], b, d, t=0.0, tInt, vv;
@@ -5445,6 +5446,12 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
      tuttavia quella quello che veramente bumpSPHS() richiede è che 
      le particelle abbiano un solo spot quindi la soluzione
      attuale è più corretta */
+#ifdef MD_SUBENZYME
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j]) // && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
+    {
+      return locate_contact_HSSP_multispot(i, j, shift, t1, t2, evtime, ata, atb, collCode);
+    }
+#else
 #ifdef MD_OPTIMIZE_NSPHSPOT
   if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j]) // && typesArr[typeOfPart[i]].nspots==1 && typesArr[typeOfPart[j]].nspots==1) 
     {
@@ -5457,9 +5464,11 @@ int locate_contactSP(int i, int j, double shift[3], double t1, double t2,
       tt=*evtime;
       cc=*collCode;
 #endif
+
       return locate_contact_HSSP(i, j, shift, t1, t2, evtime, ata, atb, collCode);
       //printf("HSSP evtime=%.15G\n", tt);
     }
+#endif
 #endif
 #endif
 #endif
