@@ -7287,7 +7287,7 @@ void hslToRgb(double h, double s, double l, double *r, double *g, double *b)
   //printf("=>>h=%d s=%f l=%f\n", (int)(h*360.0),s,l);
   //printf("h=%f rgb=%d %d %d p=%f q=%f\n", h, (int)(*r*256), (int)(*g*256), (int)(*b*256), p, q);
 }
-
+#ifdef MC_GAPDNA
 char *par2rgb(int i, double rgb[3])
 {
   /* jl has to be between 0 and 1 */
@@ -7328,6 +7328,7 @@ char *par2rgb(int i, double rgb[3])
   hslToRgb(jl,0.8,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
   sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 }
+#endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
