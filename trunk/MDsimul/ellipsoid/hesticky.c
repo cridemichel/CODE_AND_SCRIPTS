@@ -508,6 +508,253 @@ extern int sphWall, sphWallOuter;
 #ifdef MD_HANDLE_INFMASS
 void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
 #endif
+#ifdef MD_SUBENZYME
+void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
+{
+  double rAB[3], vAB[3], nrAB, rA[3], rB[3], invmi, invmj, vc, delpx, delpy, delpz;
+  double bhin=-1, bhout=-1, bheight=-1, factor=0, mredl, Dr, denom;
+  int a, kk, typei, typej, nmax=-1;
+#ifdef MD_HANDLE_INFMASS
+  int infMass_i=0, infMass_j=0;
+#endif
+  numcoll++;
+  rA[0] = rx[i];
+  rA[1] = ry[i];
+  rA[2] = rz[i];
+  rB[0] = rx[j];
+  rB[1] = ry[j];
+  rB[2] = rz[j];
+  for (a=0; a < 3; a++)
+    {
+      Dr = rA[a]-rB[a];
+#ifdef MD_EDHEFLEX_WALL
+      if (a==2 && OprogStatus.hardwall)
+	continue;
+#endif
+#ifdef MD_LXYZ
+      if (fabs(Dr) > L2[a])
+	{
+	  rB[a] += SignR(L[a], Dr);
+	}
+#else
+      if (fabs(Dr) > L2)
+	{
+	  rB[a] += SignR(L, Dr);
+	}
+#endif
+    }
+  for (kk = 0; kk < 3; kk++)
+    {
+      rAB[kk] = rA[kk] - rB[kk];
+    }
+  vAB[0] = vx[i] - vx[j];
+  vAB[1] = vy[i] - vy[j];
+  vAB[2] = vz[i] - vz[j];
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+#ifdef MD_HANDLE_INFMASS
+  check_inf_mass(typei, typej, &infMass_i, &infMass_j);
+  if (infMass_i)
+    invmi = 0.0;
+  else
+    invmi = 1.0/typesArr[typei].m;
+  if (infMass_j)
+    invmj = 0.0;
+  else
+    invmj = 1.0/typesArr[typej].m; 
+#else
+  invmi = 1.0/typesArr[typei].m;
+  invmj = 1.0/typesArr[typej].m; 
+#endif
+  nrAB = calc_norm(rAB);
+  for (a=0; a < 3; a++)
+   rAB[a] /= nrAB;  
+  vc = 0;
+  for (a=0; a < 3; a++)
+    vc += vAB[a]*rAB[a];
+  denom = invmi + invmj;
+  mredl = 1.0/denom;
+ 
+  get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
+  switch (bt)
+    {
+      /* N.B.
+       * Notare che Oparams.bheight è la profondità della buca ed 
+       * è una quantità positiva!!*/
+      /* b = vc*r ma ora b -> vc riscrivere correttamente le seguenti equazioni!! */
+    case MD_CORE_BARRIER:
+      factor = -2.0*vc;
+      factor *= mredl;
+      break;
+    case MD_INOUT_BARRIER:
+      if (bheight < 0)
+       	{
+ 	  if (bhout >=0.0 && Sqr(vc) < 2.0*bhout/mredl)
+ 	    {
+ 	      factor = -2.0*vc;
+ 	    }
+ 	  else
+ 	    {
+ 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+ 	      MD_DEBUG40(printf("[MD_INOUT_BARRIER] qui factor=%.15G\n", factor));
+ 	      remove_bond(i, j, ata, atb);
+ 	      remove_bond(j, i, ata, atb);
+ 	    }	      
+  	}
+      else
+    	{
+ 	  if (Sqr(vc) < 2.0*(bheight+bhout)/mredl)
+ 	    {
+ 	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+    				Oparams.time, vc,  bt,
+	       			sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      //printf("qui3 bhout=%.15G i=%d j=%d\n", bhout, i, j);
+	      factor = -2.0*vc;
+	    }
+	  else
+	    {
+	      //printf("qui2\n");
+	      //printf("INOUT qui i=%d j=%d\n", i, j);
+	      MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
+				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
+	      remove_bond(i, j, ata, atb);
+	      remove_bond(j, i, ata, atb);
+	    }
+	}
+      factor *= mredl;
+#if 0
+      if (j==3128 && i==sphWallOuter)
+	printf("urto con parete\n");
+#endif
+      break;
+    case MD_OUTIN_BARRIER:
+      if (bheight < 0)
+	{
+	  if (one_is_bonded(i, ata, j, atb, nmax) || Sqr(vc) < 2.0*(-bheight+bhin)/mredl)
+	    {
+	      factor = -2.0*vc;
+	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER REP] qui factor=%.15G\n", factor));
+	    }
+	  else 
+	    {
+	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+	      add_bond(i, j, ata, atb);
+	      add_bond(j, i, ata, atb);
+	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER IN] qui factor=%.15G\n", factor));
+	    }
+	}
+      else 
+	{
+	  if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+	    {
+	      //printf("qui1\n");
+	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
+			    Oparams.time, vc,  bt,
+			    sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
+	      factor = -2.0*vc;
+	    }
+	  else
+	    {
+	      /* substrate particle (S) should become a product (P) */
+	      /* type = 0 Enzyme (S) 
+		 type = 1 Substrate in state S
+		 type = 2 Substrate in state P (product) */ 
+#ifdef MD_MULTIPLE_LL
+    	      if (OprogStatus.multipleLL)
+    		{
+    		  remove_part_from_cell_MLL(i);
+    		  remove_part_from_cell_MLL(j);
+    		}
+#endif
+	      if (typeOfPart[i]==1)
+		typeOfPart[i] = 2;
+	      else
+		typeOfPart[j] = 2;
+	      typeNP[2]+=1;
+	      typeNP[1]-=1;
+
+#ifdef MD_MULTIPLE_LL
+    	      if (OprogStatus.multipleLL)
+    		{
+    		  insert_part_in_cell_MLL(i);
+    		  insert_part_in_cell_MLL(j);
+    		}
+#endif
+	      //printf("OUTIN qui i=%d j=%d\n", i, j);
+	      /* NOTA: nessun bond si deve formare ma 
+	       * la particella S deve diventare P e ci deve essere un urto elastico
+	       * */
+#if 0
+	      add_bond(i, j, ata, atb);
+	      add_bond(j, i, ata, atb);
+	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+#endif
+	      factor = -2.0*vc; /* urto elastico */
+	    }
+	  MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
+		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
+	}	  
+      factor *= mredl;
+      break;
+    }
+  delpx = factor * rAB[0];
+  delpy = factor * rAB[1];
+  delpz = factor * rAB[2];
+#ifdef MD_HSVISCO
+  DTxy = delpx*delpy*invmi + vx[i]*delpy + delpx*vy[i];
+  DTxy += delpx*delpy*invmj - vx[j]*delpy - delpx*vy[j]; 
+  DTyz = delpy*delpz*invmi + vy[i]*delpz + delpy*vz[i];
+  DTyz += delpy*delpz*invmj - vy[j]*delpz - delpy*vz[j];
+  DTzx = delpz*delpx*invmi + vz[i]*delpx + delpz*vx[i];
+  DTzx += delpz*delpx*invmj - vz[j]*delpx - delpz*vx[j];
+
+  DTxx = delpx*delpx*invmi + vx[i]*delpx + delpx*vx[i];
+  DTxx += delpx*delpx*invmj - vx[j]*delpx - delpx*vx[j]; 
+  DTyy = delpy*delpy*invmi + vy[i]*delpy + delpy*vy[i];
+  DTyy += delpy*delpy*invmj - vy[j]*delpy - delpy*vy[j];
+  DTzz = delpz*delpz*invmi + vz[i]*delpz + delpz*vz[i];
+  DTzz += delpz*delpz*invmj - vz[j]*delpz - delpz*vz[j];
+#endif
+  vx[i] = vx[i] + delpx*invmi;
+  vx[j] = vx[j] - delpx*invmj;
+  vy[i] = vy[i] + delpy*invmi;
+  vy[j] = vy[j] - delpy*invmj;
+  vz[i] = vz[i] + delpz*invmi;
+  vz[j] = vz[j] - delpz*invmj;
+  update_MSDrot(i);
+  update_MSDrot(j);
+#ifdef MD_HSVISCO 
+  if (OprogStatus.lastcoll!=-1)
+    {
+      taus = Oparams.time - OprogStatus.lastcoll;
+      OprogStatus.DQTxy += OprogStatus.Txy*taus; 
+      OprogStatus.DQTyz += OprogStatus.Tyz*taus;
+      OprogStatus.DQTzx += OprogStatus.Tzx*taus;
+
+      OprogStatus.DQTxx += OprogStatus.Txx*taus; 
+      OprogStatus.DQTyy += OprogStatus.Tyy*taus;
+      OprogStatus.DQTzz += OprogStatus.Tzz*taus;
+      OprogStatus.DQWxy += (rA[0]-rB[0])*delpy;
+      OprogStatus.DQWyz += (rA[1]-rB[1])*delpz;
+      OprogStatus.DQWzx += (rA[2]-rB[2])*delpx;
+      OprogStatus.DQWxx += (rA[0]-rB[0])*delpx;
+      OprogStatus.DQWyy += (rA[1]-rB[1])*delpy;
+      OprogStatus.DQWzz += (rA[2]-rB[2])*delpz;
+      OprogStatus.DQWxxST += (rA[0]-rB[0])*delpx;
+      OprogStatus.DQWyyST += (rA[1]-rB[1])*delpy;
+      OprogStatus.DQWzzST += (rA[2]-rB[2])*delpz;
+    }
+  OprogStatus.Txy += DTxy; 
+  OprogStatus.Tyz += DTyz;
+  OprogStatus.Tzx += DTzx;
+  OprogStatus.Txx += DTxx; 
+  OprogStatus.Tyy += DTyy;
+  OprogStatus.Tzz += DTzz;
+#endif
+
+}
+#endif
 void bumpSPHS(int i, int j, double *W, int bt)
 {
   double rAB[3], vAB[3], nrAB, rA[3], rB[3], invmi, invmj, vc, delpx, delpy, delpz;
@@ -2105,6 +2352,15 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
     }
 #endif
 #endif
+
+#ifdef MD_SUBENZYME
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
+    {
+      bumpSPHS_SUBENZ(i, j, ata, atb, W, bt);
+      return;
+    }
+#endif
+
 #if 0
   /* NOTA 28/10/08: la condizione precedente era:
      is_a_sphere_NNL[i] && is_a_sphere_NNL[j] && nbondsFlex==1 
