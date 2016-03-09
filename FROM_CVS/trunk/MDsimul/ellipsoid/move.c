@@ -10516,7 +10516,7 @@ void ProcessCollision(void)
   MD_DEBUG(store_bump(evIdA, evIdB));
   //ENDSIM=1;
   /*printf("qui time: %.15f\n", Oparams.time);*/
-#ifdef MD_SUBENZYME
+#if 0 && defined(MD_SUBENZYME)
   /* type = 0 Enzyme (S) 
      type = 1 Substrate in state S
      type = 2 Substrate in state P (product) */ 
@@ -10584,6 +10584,7 @@ void ProcessCollision(void)
 	}
     }
 #endif
+
 #ifdef MD_SURV_PROB
   rebuilt_cal=0;
   if (!sp_equilib)  
