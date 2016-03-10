@@ -509,6 +509,8 @@ extern int sphWall, sphWallOuter;
 void check_inf_mass(int typei, int typej, int *infMass_i, int *infMass_j);
 #endif
 #ifdef MD_SUBENZYME
+void insert_part_in_cell_MLL(int evIdA);
+void remove_part_from_cell_MLL(int evIdA);
 void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 {
   double rAB[3], vAB[3], nrAB, rA[3], rB[3], invmi, invmj, vc, delpx, delpy, delpz;
@@ -5022,6 +5024,10 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
   int sptocheck[2];
   int last, first, k;
 
+#ifdef MD_SUBENZYME
+  if (OprogStatus.SEreaction==0)
+    return 0;
+#endif
   nbonds = nbondsFlex;
   if (nbonds==0)
     return 0;
