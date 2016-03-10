@@ -193,7 +193,7 @@ int main(int argc, char **argv)
     uinner = atof(argv[14]);
   if (argc > 15)
     uouter = atof(argv[15]);
-
+  printf("uinner=%f uouter=%f\n", uinner, uouter);	
   Len=max3(LenE,LenS,LenC);
   Diam=max3(DiamE,DiamS,DiamC);
 
