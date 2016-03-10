@@ -339,8 +339,8 @@ int main(int argc, char **argv)
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"2 0\n");
-  fprintf(f, "0 0 0 %f\n", DiamE*1.1);
   fprintf(f, "0 0 0 %f\n", DiamE+0.001);
+  fprintf(f, "0 0 0 %f\n", DiamE*1.1);
   fprintf(f,"%f %f %f\n", LenS/2.0, DiamS/2.0, DiamS/2.0);
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of spheres */
@@ -349,8 +349,8 @@ int main(int argc, char **argv)
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"2 0\n");
-  fprintf(f, "0 0 0 %f\n", DiamS*1.1);
   fprintf(f, "0 0 0 %f\n", DiamS+0.001);
+  fprintf(f, "0 0 0 %f\n", DiamS*1.1);
   fprintf(f,"%f %f %f\n", LenP/2.0, DiamP/2.0, DiamP/2.0); 
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of spheres */
