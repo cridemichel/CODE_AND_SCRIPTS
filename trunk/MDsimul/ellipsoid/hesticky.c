@@ -575,7 +575,7 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
   denom = invmi + invmj;
   mredl = 1.0/denom;
 
-  printf("here i=%d[t=%d] j=%d[t=%d]\n", i, typeOfPart[i], j, typeOfPart[j]); 
+ // printf("here i=%d[t=%d] j=%d[t=%d]\n", i, typeOfPart[i], j, typeOfPart[j]); 
   get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
   switch (bt)
     {
@@ -614,7 +614,11 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	    }
 	  else
 	    {
-	      //printf("qui2\n");
+#if 1
+	      if (i==6 || j==6)
+		{printf("Rotto legame dell'enzima #6 con il substrato #%d\n", (i!=6)?i:j);}
+#endif
+	     //printf("qui2\n");
 	      //printf("INOUT qui i=%d j=%d\n", i, j);
 	      MD_DEBUG31(printf("_MD_INOUT_BARRIER (%d-%d)-(%d,%d) t=%.15G vc=%.15G ESCAPING collType: %d d=%.15G\n", i, ata, j, atb, Oparams.time, vc, bt,
 				sqrt(Sqr(ratA[0]-ratB[0])+Sqr(ratA[1]-ratB[1])+Sqr(ratA[2]-ratB[2]))));
@@ -649,6 +653,16 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	{
 	  if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
 	    {
+#if 0
+	      if (i==6 || j==6)
+		{
+		  printf("Ensyme #6 is already bonded!\n");
+		}
+#endif		
+#if 0
+	      if (i==148 || j==148)
+		printf("questo enzima (148) non converte più ata=%d atb=%d!\n", ata, atb);
+#endif
 	      //printf("qui1\n");
 	      MD_DEBUG31(printf("MD_INOUT_BARRIER (%d,%d)-(%d,%d) t=%.15G vc=%.15G NOT ESCAPEING collType: %d d=%.15G\n",  i, ata, j, atb, 
 			    Oparams.time, vc,  bt,
@@ -657,41 +671,62 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	    }
 	  else
 	    {
+#if 0
+	      if (i==6 || j==6)
+		{
+		  if (ata==1 && atb==1)
+		    printf("L'enzima #6 ha convertito il substrato #%d!\n", (i!=6)?i:j);
+		  else
+		    printf("Si e' formato un legame tra l'enzima 6 e %d\n", (i!=6)?i:j);
+		}
+#endif
 	      /* substrate particle (S) should become a product (P) */
 	      /* type = 0 Enzyme (S) 
 		 type = 1 Substrate in state S
 		 type = 2 Substrate in state P (product) */ 
+	      if (ata==1 && atb==1)
+		{
 #ifdef MD_MULTIPLE_LL
-    	      if (OprogStatus.multipleLL)
-    		{
-    		  remove_part_from_cell_MLL(i);
-    		  remove_part_from_cell_MLL(j);
-    		}
+		  if (OprogStatus.multipleLL)
+		    {
+		      remove_part_from_cell_MLL(i);
+		      remove_part_from_cell_MLL(j);
+		    }
 #endif
-	      if (typeOfPart[i]==1)
-		typeOfPart[i] = 2;
-	      else
-		typeOfPart[j] = 2;
-	      typeNP[2]+=1;
-	      typeNP[1]-=1;
+		  if (typeOfPart[i]==1)
+		    typeOfPart[i] = 2;
+		  else
+		    typeOfPart[j] = 2;
+		  typeNP[2]+=1;
+		  typeNP[1]-=1;
 
+		  /* remove the bond of outer patches */
+    		  remove_bond(i, j, 2, 2);
+    		  remove_bond(j, i, 2, 2);
+	
+		  //printf("1-type[%d]=%d numbonds=%d\n", i, typeOfPart[i], numbonds[i]);
+		  //printf("2-type[%d]=%d numbonds=%d\n", j, typeOfPart[j], numbonds[j]);
 #ifdef MD_MULTIPLE_LL
-    	      if (OprogStatus.multipleLL)
-    		{
-    		  insert_part_in_cell_MLL(i);
-    		  insert_part_in_cell_MLL(j);
-    		}
+		  if (OprogStatus.multipleLL)
+		    {
+		      insert_part_in_cell_MLL(i);
+		      insert_part_in_cell_MLL(j);
+		    }
 #endif
+		  factor = -2.0*vc; /* urto elastico */
+		}
+	      else
+		{
 	      //printf("OUTIN qui i=%d j=%d\n", i, j);
 	      /* NOTA: nessun bond si deve formare ma 
 	       * la particella S deve diventare P e ci deve essere un urto elastico
 	       * */
 #if 0
-	      add_bond(i, j, ata, atb);
-	      add_bond(j, i, ata, atb);
-	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
+    		  add_bond(i, j, ata, atb);
+    		  add_bond(j, i, ata, atb);
+    		  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 #endif
-	      factor = -2.0*vc; /* urto elastico */
+		}
 	    }
 	  MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
 		      i, ata, j, atb, Sqr(vc) + 2.0*bheight/mredl, bheight, mredl));
@@ -5060,7 +5095,6 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
 #endif
       sigSq = Sqr(mapSigmaFlex[nb]);
       collCodeL = MD_EVENT_NONE;
-      /* per ora tale ottimizzazione assume un solo spot per particella */ 
       if (!bound(na, n, mapbondsa[nb], mapbondsb[nb]))
 	{
 	  if ( b < 0.0 ) 
