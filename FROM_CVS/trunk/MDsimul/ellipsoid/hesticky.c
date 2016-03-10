@@ -614,7 +614,7 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	    }
 	  else
 	    {
-#if 1
+#if 0
 	      if (i==6 || j==6)
 		{printf("Rotto legame dell'enzima #6 con il substrato #%d\n", (i!=6)?i:j);}
 #endif
@@ -721,11 +721,9 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	      /* NOTA: nessun bond si deve formare ma 
 	       * la particella S deve diventare P e ci deve essere un urto elastico
 	       * */
-#if 0
     		  add_bond(i, j, ata, atb);
     		  add_bond(j, i, ata, atb);
     		  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
-#endif
 		}
 	    }
 	  MD_DEBUG31(printf("[MD_OUTIN_BARRIER] (%d,%d)-(%d,%d)  delta= %f height: %f mredl=%f\n", 
