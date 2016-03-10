@@ -575,7 +575,7 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
   denom = invmi + invmj;
   mredl = 1.0/denom;
 
- // printf("here i=%d[t=%d] j=%d[t=%d]\n", i, typeOfPart[i], j, typeOfPart[j]); 
+  //printf("here i=%d[t=%d] j=%d[t=%d]\n", i, typeOfPart[i], j, typeOfPart[j]); 
   get_inter_bheights(i, j, ata, atb, &bheight, &bhin, &bhout, &nmax);
   switch (bt)
     {
@@ -703,7 +703,13 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 		  /* remove the bond of outer patches */
     		  remove_bond(i, j, 2, 2);
     		  remove_bond(j, i, 2, 2);
-	
+#if 0
+		  if (numbonds[i]>0 || numbonds[j]>0)
+		    {
+		      printf("We have a problem\n");
+		      exit(-1);
+		    }
+#endif
 		  //printf("1-type[%d]=%d numbonds=%d\n", i, typeOfPart[i], numbonds[i]);
 		  //printf("2-type[%d]=%d numbonds=%d\n", j, typeOfPart[j], numbonds[j]);
 #ifdef MD_MULTIPLE_LL
