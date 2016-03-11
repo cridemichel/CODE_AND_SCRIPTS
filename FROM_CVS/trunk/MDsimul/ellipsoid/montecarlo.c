@@ -4773,9 +4773,7 @@ void update_spot_pos(int i, double dx, double dy, double dz)
     }
 }
 #endif
-
-#ifdef MC_NPT_XYZ
-#define MC_CLSNPT_LOG
+#ifdef MC_STORE_ALL_COORDS
 void store_all_coords(void)
 {
   int i, k1, k2;
@@ -4822,6 +4820,10 @@ void restore_all_coords(void)
     }
 #endif
 }
+#endif
+#if defined(MC_NPT_XYZ) 
+#define MC_CLSNPT_LOG
+
 #ifdef MC_ALMARZA
 double calc_almarza_prob(void)
 {
@@ -5392,6 +5394,7 @@ void move_box_cluster(int *ierr)
 {
   int i0, i, ii, k, nc, ncls=0, percolating=0, np_in_cls, np, in0, in1, iold, kk;
   double nn, distance, lnvn;
+  double del[3];
   double vo, vn, Lfact, enn, eno, arg, delv=0.0, lastrx=0, lastry=0, lastrz=0, Dx, Dy, Dz;
 #ifdef MC_STORE_ALL_COORDS
 #ifdef MD_LXYZ
