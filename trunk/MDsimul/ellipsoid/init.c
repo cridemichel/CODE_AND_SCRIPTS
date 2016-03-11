@@ -7319,13 +7319,13 @@ char *par2rgb(int i, double rgb[3])
   inC[1] =  (ry[il] + L2[1]) * ncy / L[1];
   inC[2] =  (rz[il] + L2[2]) * ncz / L[2];
 
-  jl = ((int)((inC[2]*ncy + inC[1])*ncx + 
-	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5);// /((double)(ncx*ncy*ncz));
+  jl = (((int)((inC[2]*ncy + inC[1])*ncx + 
+	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5)*170.0 + 88.)/360.;// /((double)(ncx*ncy*ncz));
 #else
   h = i/OprogStatus.polylen/(Oparams.parnum/2.0);
 #endif	
   printf("il=%d jl=%f\n", il, jl);
-  hslToRgb(jl,0.8,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
+  hslToRgb(jl,0.6,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
   sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 }
 #endif
