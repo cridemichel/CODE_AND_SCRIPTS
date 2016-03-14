@@ -404,6 +404,18 @@ double calc_average_relative_orient(void)
 }
 #endif
 #define MAX_CLS_SIZE 10
+#ifdef MD_SUBENZYME
+int calc_subenz_compl(void)
+{
+  int i, totnb=0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      if (typeOfPart[i]==0)
+	totnb += numbonds[i];
+    }
+  return totnb;
+}
+#endif
 void calcV(void)
 {
 #ifdef MC_GAPDNA
@@ -479,7 +491,8 @@ void calcV(void)
 #endif
 #ifdef MD_SUBENZYME
   mf = fopenMPI(absMisHD("SP-popul.dat"),"a");
-  fprintf(mf, "%G %d %d\n", Oparams.time + OprogStatus.refTime, typeNP[1], typeNP[2]);
+  numcompl=calc_subenz_compl();
+  fprintf(mf, "%G %d %d %d\n", Oparams.time + OprogStatus.refTime, typeNP[1], typeNP[2], numcompl);
   fclose(mf); 
 #endif
 #ifdef MD_RABBIT
