@@ -10216,7 +10216,7 @@ int is_cls_percolating(int nc)
 #endif
 void rot_cls_move(int nc, int flip)
 {
-#ifdef MC_BOUNDING_SPHERES
+#ifdef MC_BOND_POS
   int extraspots; 
 #endif
    double theta, thetaSq, sinw, cosw;
@@ -10395,7 +10395,7 @@ void find_clsbonds_MC(int nc)
 
 void store_cls_coord(int nc)
 {
-#ifdef MC_BOUNDING_SPHERES
+#ifdef MC_BOND_POS
   int extraspots;
 #endif
   int np, ip, k1, k2;
@@ -10422,7 +10422,7 @@ void store_cls_coord(int nc)
 }
 void restore_cls_coord(int nc)
 {
-#ifdef MC_BOUNDING_SPHERES
+#ifdef MC_BOND_POS
   int extraspots;
 #endif
   int np, ip, k1, k2;
