@@ -2476,6 +2476,7 @@ void check_all_bonds_MLL(void)
 }
 #endif
 #ifdef EDHE_FLEX
+extern void remove_bond(int na, int n, int a, int b);
 int check_bonds_ij(int i, int j, double shift[3])
 {
   int nn, warn, amin, bmin, nbonds;
