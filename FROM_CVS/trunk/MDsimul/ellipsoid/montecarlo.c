@@ -4150,6 +4150,7 @@ void calc_ax(void)
       axc[i] = typesArr[typeOfPart[i]].sax[2];
     }
 }
+extern void find_spheres_NNL(void);
 int insert_particle_GC(void)
 {
 #ifdef MC_BOND_POS
@@ -10217,7 +10218,7 @@ int is_cls_percolating(int nc)
 void rot_cls_move(int nc, int flip)
 {
 #ifdef MC_BOND_POS
-  int extraspots; 
+  int extraspots=0; 
 #endif
    double theta, thetaSq, sinw, cosw;
   double ox, oy, oz, OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
@@ -10396,7 +10397,7 @@ void find_clsbonds_MC(int nc)
 void store_cls_coord(int nc)
 {
 #ifdef MC_BOND_POS
-  int extraspots;
+  int extraspots=0;
 #endif
   int np, ip, k1, k2;
   for (np = 0; np < clsdim[nc]; np++)
@@ -10423,7 +10424,7 @@ void store_cls_coord(int nc)
 void restore_cls_coord(int nc)
 {
 #ifdef MC_BOND_POS
-  int extraspots;
+  int extraspots=0;
 #endif
   int np, ip, k1, k2;
 
