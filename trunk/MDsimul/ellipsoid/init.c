@@ -3239,8 +3239,10 @@ void find_bonds_flex_all(void)
 #ifdef MC_BOND_POS
       //find_bonds_one(i);
       find_bonds_one_BP(i);
+#if defined(MC_GAPDNA) || defined(MC_KERN_FRENKEL)
       if (checkMoveKF && rejectMove)
 	return;
+#endif
 #else
       find_bonds_one(i);
 #endif
