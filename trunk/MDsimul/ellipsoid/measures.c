@@ -418,6 +418,9 @@ int calc_subenz_compl(void)
 #endif
 void calcV(void)
 {
+#ifdef MD_SUBENZYME
+  int numcompl;
+#endif
 #ifdef MC_GAPDNA
   int numdimers;
   double avorient;
