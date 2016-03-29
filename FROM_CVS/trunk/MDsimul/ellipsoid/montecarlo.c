@@ -2934,6 +2934,73 @@ void find_part_with_BS(int i)
     }
 }
 #endif
+#ifdef MC_NEW_NNL_CHECK
+int mc_check_NNL_escape(int ip)
+{
+  int ns, kk;
+  /* ux[0,1] sono i versori associati alle due facce del parallelepipedo perpendicolare all'asse x
+   * stesso discorso per uy e uz 
+   * px[0,1] sono due punti che giacciono sui suddetti piani rispettivamente */
+  double dpos[3], ux[2][3], uy[2][3], uz[2][3], px[2][3], py[2][3], pz[2][3], dist, sigmah;
+
+  for (kk=0; kk < 3; kk++)
+    {
+      ux[0][kk] = nebrTab[ip].R[0][kk];
+      ux[1][kk] = -nebrTab[ip].R[0][kk];
+      uy[0][kk] = nebrTab[ip].R[1][kk];
+      uy[1][kk] = -nebrTab[ip].R[1][kk];
+      uz[0][kk] = nebrTab[ip].R[2][kk];
+      uz[1][kk] = -nebrTab[ip].R[2][kk];
+      px[0][kk] = nebrTab[ip].r[kk] + ux[0][kk]*nebrTab[ip].axa;
+      px[1][kk] = nebrTab[ip].r[kk] + ux[1][kk]*nebrTab[ip].axa;
+      py[0][kk] = nebrTab[ip].r[kk] + uy[0][kk]*nebrTab[ip].axb;
+      py[1][kk] = nebrTab[ip].r[kk] + uy[1][kk]*nebrTab[ip].axb;
+      pz[0][kk] = nebrTab[ip].r[kk] + uz[0][kk]*nebrTab[ip].axc;
+      pz[1][kk] = nebrTab[ip].r[kk] + uz[1][kk]*nebrTab[ip].axc;
+    }	
+  //printf("px[0]=%f %f %f nebrTab=%f %f %f sax=%f %f %f\n", px[0][0], px[0][1], px[0][2], nebrTab[ip].r[0],
+  //	 nebrTab[ip].r[1], nebrTab[ip].r[2], nebrTab[ip].axa, nebrTab[ip].axb, nebrTab[ip].axc);
+  for (ns=typesArr[typeOfPart[ip]].nspots; ns < typesArr[typeOfPart[ip]].nspotsBS + typesArr[typeOfPart[ip]].nspots; ns++)
+    {
+      //printf("ns=%d r=%f %f %f\n", ns, bpos[0][ip][ns],bpos[1][ip][ns],bpos[2][ip][ns]);
+      sigmah = 0.5*typesArr[typeOfPart[ip]].spots[ns].sigma;
+      /* check all 6 faces of the parallelepiped if distance
+       * between any of these faces and the bounding spheres is less than 0 then
+       * rebuild NNL! */
+      for (kk=0; kk < 3; kk++)
+	dpos[kk] = bpos[kk][ip][ns] - px[0][kk];
+      dist=-scalProd(dpos, ux[0])-sigmah;
+      if (dist < 0.0)
+	return 1;
+      for (kk=0; kk < 3; kk++)
+	dpos[kk] = bpos[kk][ip][ns] - px[1][kk];
+      dist=-scalProd(dpos, ux[1])-sigmah;
+      if (dist < 0.0)
+	return 1;
+      for (kk=0; kk < 3; kk++)
+	dpos[kk] = bpos[kk][ip][ns] - py[0][kk];
+      dist=-scalProd(dpos, uy[0])-sigmah;
+      if (dist < 0.0)
+	return 1;
+      for (kk=0; kk < 3; kk++)
+	dpos[kk] = bpos[kk][ip][ns] - py[1][kk];
+      dist=-scalProd(dpos, uy[1])-sigmah;
+      if (dist < 0.0)
+	return 1;
+      for (kk=0; kk < 3; kk++)
+	dpos[kk] = bpos[kk][ip][ns] - pz[0][kk];
+      dist=-scalProd(dpos, uz[0])-sigmah;
+      if (dist < 0.0)
+	return 1;
+      for (kk=0; kk < 3; kk++)
+	dpos[kk] = bpos[kk][ip][ns] - pz[1][kk];
+      dist=-scalProd(dpos, uz[1])-sigmah;
+      if (dist < 0.0)
+	return 1;
+    }
+  return 0;
+}
+#endif
 int overlapMC_LL(int ip, int *err)
 {
   int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
@@ -3327,6 +3394,12 @@ void pbc(int ip)
   rx[ip] -= Dx;
   ry[ip] -= Dy;
   rz[ip] -= Dz;
+  if (OprogStatus.useNNL)
+    {
+      nebrTab[ip].r[0] -=  Dx; 
+      nebrTab[ip].r[1] -=  Dy; 
+      nebrTab[ip].r[2] -=  Dz;
+    }
 #ifdef MC_BOUNDING_SPHERES
   extraspots = typesArr[typeOfPart[ip]].nspotsBS;
 #endif
@@ -3340,6 +3413,12 @@ void pbc(int ip)
   rx[ip] -= L[0]*rint(rx[ip]/L[0]); 
   ry[ip] -= L[1]*rint(ry[ip]/L[1]);
   rz[ip] -= L[2]*rint(rz[ip]/L[2]);
+  if (OprogStatus.useNNL)
+    {
+      nebrTab[ip].r[0] -=  L[0]*rint(rx[ip]/L[0]); 
+      nebrTab[ip].r[1] -=  L[1]*rint(rx[ip]/L[1]); 
+      nebrTab[ip].r[2] -=  L[2]*rint(rx[ip]/L[2]);
+    }
 #endif
 }
 #else
@@ -9967,6 +10046,14 @@ int mcmotion(void)
 #endif
   store_coord(ip);
   movetype=random_move(ip);
+
+#ifdef MC_NEW_NNL_CHECK
+  if (OprogStatus.useNNL && mc_check_NNL_escape(ip))
+    {
+      //printf("step # %d rebuilding NNL\n", Oparams.curStep);
+      rebuildNNL();
+    }
+#endif
   pbc(ip);
   update_LL(ip);
  
@@ -10906,6 +10993,7 @@ void move(void)
     }
 #endif
 
+#ifndef MC_NEW_NNL_CHECK
   if (OprogStatus.useNNL && do_nnl_rebuild())
     {
       //printf("Step #%d Rebuilding NNL\n", Oparams.curStep);
@@ -10914,6 +11002,7 @@ void move(void)
       rebuildNNL();
       OprogStatus.lastNNLrebuildMC = Oparams.curStep;
     }
+#endif
 #endif
   set_ini_numcells();
   if (OprogStatus.nvbbias > 0)

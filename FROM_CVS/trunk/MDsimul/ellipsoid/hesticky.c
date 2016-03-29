@@ -653,7 +653,7 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	}
       else 
 	{
-	  if (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl))
+	  if (OprogStatus.SEreaction==0 || (one_is_bonded(i, ata, j, atb, nmax) || (bhin >= 0.0 && Sqr(vc) < 2.0*bhin/mredl)))
 	    {
 #if 0
 	      if (i==6 || j==6)
@@ -703,8 +703,8 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 		  typeNP[1]-=1;
 
 		  /* remove the bond of outer patches */
-    		  remove_bond(i, j, 2, 2);
-    		  remove_bond(j, i, 2, 2);
+		  remove_bond(i, j, 2, 2);
+		  remove_bond(j, i, 2, 2);
 #if 0
 		  if (numbonds[i]>0 || numbonds[j]>0)
 		    {
@@ -5024,9 +5024,11 @@ int locate_contact_HSSP_multispot(int na, int n, double shift[3], double t1, dou
   int sptocheck[2];
   int last, first, k;
 
+#if 0
 #ifdef MD_SUBENZYME
   if (OprogStatus.SEreaction==0)
     return 0;
+#endif
 #endif
   nbonds = nbondsFlex;
   if (nbonds==0)
