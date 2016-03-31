@@ -7322,18 +7322,21 @@ char *par2rgb(int i, double rgb[3])
   inC[2] =  (rz[il] + L2[2]) * ncz / L[2];
 
   jl = (((int)((inC[2]*ncy + inC[1])*ncx + 
-	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5)*170.0 + 88.)/360.;// /((double)(ncx*ncy*ncz));
+	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5)*160.0 + 20.)/360.;// /((double)(ncx*ncy*ncz));
 #else
   h = i/OprogStatus.polylen/(Oparams.parnum/2.0);
 #endif	
   printf("il=%d jl=%f\n", il, jl);
-  hslToRgb(jl,0.6,0.5,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
+  hslToRgb(jl,1.0,0.4,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
   sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
 }
 #endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
+#ifdef POVRAY
+  double cp[3], bp[3];
+#endif
 #ifdef MC_GAPDNA
   char colrgb[256];
   double rgb[3], jl;
@@ -7486,10 +7489,69 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
   if (mgl_mode)
     {
+#ifdef POVRAY
+      /* povray preamble */
+      fprintf(fs, "#declare RAD = off;\n");
+      fprintf(fs, "#declare DIFF=0.475;\n");
+      fprintf(fs, "#declare AMB=0.475;\n");
+      fprintf(fs, "#declare REFL=0.025;\n");
+      fprintf(fs, "#declare TRAN=0.0;\n");
+      fprintf(fs, "#declare ROUGH=0.001;\n");
+      fprintf(fs,"#declare SPEC=0.0;\n");
+      fprintf(fs,"#declare PHONG=1;\n");
+      fprintf(fs,"#declare PHONG_SIZE=10;\n");
+      fprintf(fs,"#include \"colors.inc\"\n");
+      fprintf(fs,"#include \"textures.inc\"\n");
+      fprintf(fs,"#include \"stones.inc\"\n");
+      fprintf(fs,"#include \"golds.inc\"\n");
+      fprintf(fs,"global_settings {\n");
+      fprintf(fs,"#if (RAD)\n");
+      fprintf(fs,"radiosity {\n");
+      fprintf(fs,"pretrace_start 0.08\n");
+      fprintf(fs,"pretrace_end 0.01\n");
+      fprintf(fs,"count 500\n");
+      fprintf(fs,"nearest_count 10\n");
+      fprintf(fs,"error_bound 0.02\n");
+      fprintf(fs,"recursion_limit 1\n");
+      fprintf(fs,"low_error_factor 0.2\n");
+      fprintf(fs,"gray_threshold 0.0\n");	
+      fprintf(fs,"minimum_reuse 0.015\n");
+      fprintf(fs, "brightness 1\n");
+      fprintf(fs, "adc_bailout 0.01/2\n");
+      fprintf(fs, "}\n");
+      fprintf(fs, "#end\n");
+      fprintf(fs, "}\n");
+      fprintf(fs, "background{White}\n");
+      fprintf(fs, "camera {\n");	
+      fprintf(fs, "angle 45\n");
+      fprintf(fs, "location <%f,%f,%f>\n", 1.5*L[0], 1.5*L[1], -3.0*L[2]);
+      fprintf(fs, "look_at <0,0,0>\n");
+      fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
+      fprintf(fs, "//aperture 0.4\n");
+      fprintf(fs, "//blur_samples 20\n");
+      fprintf(fs, "}\n");
+      fprintf(fs, "#if(1)\n");
+      fprintf(fs, "// spotloght light source\n");
+      fprintf(fs, "light_source {\n");
+      fprintf(fs, "//<0, 10, -3>\n");
+      fprintf(fs, "<%f, %f, %f>\n", 10.0*L[0], 10.0*L[1], -10.0*L[2]);
+      fprintf(fs, "color White\n");
+      fprintf(fs, "spotlight\n");
+      fprintf(fs, "radius 15\n");
+      fprintf(fs, "falloff 20\n");
+      fprintf(fs, "tightness 10\n");
+      fprintf(fs, "point_at <0, 0, 0>\n");
+      fprintf(fs, "}\n");
+      fprintf(fs, "#else\n");
+      fprintf(fs, "//point light source\n");
+      fprintf(fs, "light_source { <10, 20, -10> color White }\n");
+      fprintf(fs, "#end\n");	
+#else
 #ifdef MD_LXYZ
       fprintf(fs, ".Vol: %f\n", L[0]*L[1]*L[2]);
 #else
       fprintf(fs, ".Vol: %f\n", L*L*L);
+#endif
 #endif
       for (i = 0; i < Oparams.parnum; i++)
 	{
@@ -7559,8 +7621,25 @@ void writeAllCor(FILE* fs, int saveAll)
 
 	par2rgb(i, rgb);
 	sprintf(colrgb, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
+#ifdef POVRAY
+	/* cylinder... */
+	fprintf(fs, "cylinder\n {\n");
+	bp[0] = rx[i] - uxx[i]*typesArr[typeOfPart[i]].sax[0];
+	bp[1] = ry[i] - uxy[i]*typesArr[typeOfPart[i]].sax[0];
+	bp[2] = rz[i] - uxz[i]*typesArr[typeOfPart[i]].sax[0];
+	cp[0] = rx[i] + uxx[i]*typesArr[typeOfPart[i]].sax[0];
+	cp[1] = ry[i] + uxy[i]*typesArr[typeOfPart[i]].sax[0];
+	cp[2] = rz[i] + uxz[i]*typesArr[typeOfPart[i]].sax[0];
+	fprintf(fs, "<%f,%f,%f>, <%f,%f,%f>, %f\n", bp[0], bp[1], bp[2], cp[0], cp[1], cp[2],
+		typesArr[typeOfPart[i]].sax[1]);
+	fprintf(fs, "rotate <0,0,90>\n");
+	fprintf(fs, "pigment { color rgb <%f, %f, %f>}\n", rgb[0], rgb[1], rgb[2]);
+	fprintf(fs, "}\n");
+
+#else
 	fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
 	      	2.0*typesArr[typeOfPart[i]].sax[0], colrgb);
+#endif
 #endif
 #else
 	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
@@ -7651,9 +7730,18 @@ void writeAllCor(FILE* fs, int saveAll)
 
 	 for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
  	   {
+#ifdef POVRAY
+	     /* ...and its patches */
+	     fprintf(fs, "sphere \n{\n");
+	     fprintf(fs, "<%f,%f,%f>, %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+	     fprintf(fs, "rotate <0,0,90>\n");
+	     fprintf(fs, "pigment { color rgb <%f,%f,%f>}\n", rgb[0], rgb[1], rgb[2]);
+	     fprintf(fs, "}\n");
+#else
 	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
 		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5,
 		   colrgb);
+#endif
 	   }
 #if 0
 	   if (i%OprogStatus.polylen==0)	   

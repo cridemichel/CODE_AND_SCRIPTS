@@ -935,10 +935,17 @@ void saveCorAscii(void)
   sync();
   if (mgl_mode==2)
     { 
+#ifdef POVRAY
+      if (!strcmp(inifile_for_mgl,"*"))
+	sprintf(fn ,"initconf.pov");
+      else		
+	sprintf(fn ,"%s.pov", inifile_for_mgl);
+#else
       if (!strcmp(inifile_for_mgl,"*"))
 	sprintf(fn ,"initconf.mgl");
       else		
 	sprintf(fn ,"%s.mgl", inifile_for_mgl);
+#endif
     }
   else
     {
@@ -1085,10 +1092,18 @@ void saveBakAscii(char *fn)
   
   if (mgl_mode==2)
     {
+#ifdef POVRAY
+      if (!strcmp(inifile_for_mgl,"*"))
+	sprintf(fileop2 ,"initconf.pov");
+      else		
+	sprintf(fileop2 ,"%s.pov", inifile_for_mgl);
+
+#else
       if (!strcmp(inifile_for_mgl,"*"))
 	sprintf(fileop2 ,"initconf.mgl");
       else		
 	sprintf(fileop2 ,"%s.mgl", inifile_for_mgl);
+#endif
     }
   else
     {
