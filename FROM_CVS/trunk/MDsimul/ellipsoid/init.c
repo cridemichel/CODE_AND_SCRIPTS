@@ -7516,7 +7516,7 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs,"low_error_factor 0.2\n");
       fprintf(fs,"gray_threshold 0.0\n");	
       fprintf(fs,"minimum_reuse 0.015\n");
-      fprintf(fs, "brightness 1\n");
+      fprintf(fs, "brightness 0.7\n");
       fprintf(fs, "adc_bailout 0.01/2\n");
       fprintf(fs, "}\n");
       fprintf(fs, "#end\n");
@@ -7539,7 +7539,7 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs, "spotlight\n");
       fprintf(fs, "radius 15\n");
       fprintf(fs, "falloff 20\n");
-      fprintf(fs, "tightness 10\n");
+      printf(fs, "tightness 10\n");
       fprintf(fs, "point_at <0, 0, 0>\n");
       fprintf(fs, "}\n");
       fprintf(fs, "#else\n");
