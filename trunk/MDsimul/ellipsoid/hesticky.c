@@ -627,6 +627,10 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, ata, atb);
+	      /* rateSE[1]-> k_{-D} ossia C -> S + E */  
+	      if ( (ata==2 && atb==2) && ((typeOfPart[i]==0 && typeOfPart[j]==1) ||
+		   (typeOfPart[i]==1 && typeOfPart[j]==0)) )
+		OprogStatus.rateSE[1] += 1.0;
 	    }
 	}
       factor *= mredl;
@@ -695,6 +699,8 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 		      remove_part_from_cell_MLL(j);
 		    }
 #endif
+		  /* rateSE[0]->k* ossia S+E -> P */
+		  OprogStatus.rateSE[0] += 1.0;
 		  if (typeOfPart[i]==1)
 		    typeOfPart[i] = 2;
 		  else
@@ -729,6 +735,11 @@ void bumpSPHS_SUBENZ(int i, int j, int ata, int atb, double *W, int bt)
 	      /* NOTA: nessun bond si deve formare ma 
 	       * la particella S deve diventare P e ci deve essere un urto elastico
 	       * */
+		  if (ata == 2 && atb == 2)
+		    {
+		      /* rate[2] -> k_D ossia S+E -> C */
+		      OprogStatus.rateSE[2] += 1.0;
+		    }
     		  add_bond(i, j, ata, atb);
     		  add_bond(j, i, ata, atb);
     		  factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);

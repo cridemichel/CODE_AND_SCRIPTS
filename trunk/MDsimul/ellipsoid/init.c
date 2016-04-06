@@ -1986,6 +1986,10 @@ void usrInitBef(void)
        See: cond-mat/00001311, Ruocco et al. */
     for (i = 0; i < PE_POINTS; i++)
       OprogStatus.PE[i] = 0;
+#ifdef MD_SUBENZYME
+    for (i=0; i < 10; i++)
+      OprogStatus.rateSE[i] = 0;
+#endif
     /* ======================================================================= */
 #ifdef MD_EDHEFLEX_WALL
     OprogStatus.epsdPlane=-1.0;
@@ -6020,6 +6024,10 @@ void usrInitAft(void)
       f = fopenMPI(absMisHD("rates.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("rhoz.dat"), "w+");
+      fclose(f);
+#endif
+#ifdef MD_SUBENZYME
+      f = fopenMPI(absMisHD("ratesSE.dat"), "w+");
       fclose(f);
 #endif
 #ifdef MD_ABSORPTION

@@ -898,6 +898,7 @@ struct progStatus
   double xi; /* rate di riduzione durante il quench per il folding */
 #endif
 #ifdef MD_SUBENZYME
+  double rateSE[10];
   int SEreaction;
   double SEp;
 #endif
@@ -1400,6 +1401,9 @@ struct pascii opro_ascii[] =
   {"first_time",           &OS(first_time),                1, 1,             "%.15G"},
   {"rhozBinSize",          &OS(rhozBinSize),               1, 1,             "%.15G"},
   {"rate",                 &OS(rate),                      10, 1,            "%f"},
+#endif
+#ifdef MD_SUBENZYME
+  {"rateSE",               &OS(rateSE),                    10, 1,            "%f"},
 #endif
 #ifdef MD_PROTEIN_DESIGN
   {"nativeConf",           &OS(nativeConf),                  1, NAME_LENGTH, "%s"},
