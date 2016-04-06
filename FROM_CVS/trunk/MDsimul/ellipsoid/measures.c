@@ -433,6 +433,10 @@ void calcV(void)
 #ifdef MD_PROTEIN_DESIGN
   double ordp;	
 #endif
+#ifdef MD_SUBENZYME
+  double ti;
+  int k; 
+#endif
 #ifdef MD_RABBIT
   double ti;
   int bulk, mono, bi, k, i;
@@ -497,6 +501,20 @@ void calcV(void)
   numcompl=calc_subenz_compl();
   fprintf(mf, "%G %d %d %d\n", Oparams.time + OprogStatus.refTime, typeNP[1], typeNP[2], numcompl);
   fclose(mf); 
+#endif
+#ifdef MD_SUBENZYME
+  mf = fopenMPI(absMisHD("ratesSE.dat"),"a");
+  ti = Oparams.time;
+#ifdef MD_BIG_DT
+  ti += OprogStatus.refTime;
+#endif
+  fprintf(mf, "%G ", ti);
+  for (k = 0; k < 3; k++)
+    {
+      fprintf(mf, "%G %G ", ti, OprogStatus.rateSE[k]/ti);
+    } 
+  fprintf(mf, "\n");
+  fclose(mf);
 #endif
 #ifdef MD_RABBIT
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
