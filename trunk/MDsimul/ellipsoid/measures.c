@@ -511,7 +511,7 @@ void calcV(void)
   fprintf(mf, "%G ", ti);
   for (k = 0; k < 3; k++)
     {
-      fprintf(mf, "%G %G ", ti, OprogStatus.rateSE[k]/ti);
+      fprintf(mf, "%G ", ti, OprogStatus.rateSE[k]/ti);
     } 
   fprintf(mf, "\n");
   fclose(mf);
