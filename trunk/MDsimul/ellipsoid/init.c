@@ -7330,7 +7330,7 @@ char *par2rgb(int i, double rgb[3])
   inC[2] =  (rz[il] + L2[2]) * ncz / L[2];
 
   jl = (((int)((inC[2]*ncy + inC[1])*ncx + 
-	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5)*160.0 + 20.)/360.;// /((double)(ncx*ncy*ncz));
+	inC[0]) % (Oparams.parnum/2))/ ((double)Oparams.parnum*0.5)*150.0 + 100.)/360.;// /((double)(ncx*ncy*ncz));
 #else
   h = i/OprogStatus.polylen/(Oparams.parnum/2.0);
 #endif	
@@ -7524,15 +7524,15 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs,"low_error_factor 0.2\n");
       fprintf(fs,"gray_threshold 0.0\n");	
       fprintf(fs,"minimum_reuse 0.015\n");
-      fprintf(fs, "brightness 0.7\n");
+      fprintf(fs, "brightness 0.6\n");
       fprintf(fs, "adc_bailout 0.01/2\n");
       fprintf(fs, "}\n");
       fprintf(fs, "#end\n");
       fprintf(fs, "}\n");
       fprintf(fs, "background{White}\n");
       fprintf(fs, "camera {\n");	
-      fprintf(fs, "angle 45\n");
-      fprintf(fs, "location <%f,%f,%f>\n", 1.5*L[0], 1.5*L[1], -3.0*L[2]);
+      fprintf(fs, "angle 22.5\n");
+      fprintf(fs, "location <%f,%f,%f>\n", 2.5*L[0], 2.0*L[1], -5.2*L[2]);
       fprintf(fs, "look_at <0,0,0>\n");
       fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
       fprintf(fs, "//aperture 0.4\n");
