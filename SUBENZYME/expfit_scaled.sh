@@ -19,6 +19,7 @@ SMIN=`cat $1 | LANG=C gawk -F _ 'BEGIN {MIN=-1;}{if (MIN==-1 || $2 < MIN) MIN=$2
 SMAX=`cat $1 | LANG=C gawk -F _ 'BEGIN {MAX=-1;}{if (MAX==-1 || $2 > MAX) MAX=$2;} END {print MAX}'`
 echo "SMIN= " $SMIN " SMAX= " $SMAX
 echo "TMIN= " $TMIN " TMAX= " $TMAX
+TMMAX="$5"
 fi
 for f in `cat $1` 
 do
@@ -37,7 +38,7 @@ NRI=`wc -l SP-popul.dat | LANG=C gawk '{printf("%d",2*$1/3)}'`
 CAVG=`cat SP-popul.dat | LANG=C gawk -v nrI=$NRI '{if (NR > nrI) {sum+=$4; NP+=1;}} END {print (sum/NP)}'`
 STA=`echo $TMAX $TMIN $CMAX $CMIN| LANG=C gawk -v s=$CAVG -v tmin=$TMIN -v tmax=$TMAX '{print tmin-(tmin-tmax)*(s-$3)/($4-$3)}'`
 #STB=`echo $STA 1.5 | awk '{print $1*$2}'`
-STB="200000"
+STB="$TMMAX"
 fi
 echo "CAVG= " $CAVG
 #echo "STA= " $STA " STB=" $STB
@@ -53,8 +54,8 @@ TF=`tail -1 $FN | awk '{print $1}'`
 STA=`echo ${STAF} $TF | LANG=C gawk '{print $1*$2}'` #0.001
 STA="1000"
 fi
-L=`tail -n 1 startEQ.cnf| awk '{print $1}'`
-PN=`cat startEQ.cnf | grep parnum | LANG=C gawk -F : '{print $2}'`
+L=`tail -n 1 startGR.cnf| awk '{print $1}'`
+PN=`cat startGR.cnf | grep parnum | LANG=C gawk -F : '{print $2}'`
 echo "L=" $L " PN=" $PN
 if [ "$MINMAX" == "0" ]
 then
@@ -74,7 +75,8 @@ E0=`echo $NE $L | LANG=C gawk '{print $1/$2/$2/$2}'`
 #echo "a=$A1; b=$B1; fit [${STA}:${STB}] a*exp(-(x/b)) \"$FN\" via a,b;" > fit.tmp
 #echo "a=$A1; b=$B1; fit [${STA}:${STB}] a-b*x \"$FN\" u 1:(log(\$2)) via a,b;" > fit.tmp
 #echo "a=$A1; fit [${STA}:${STB}] a*x \"$FN\" u 1:3 via a;" > fit.tmp
-echo "a=$A1; fit [${STA}:${STB}] ${NS}*(1.0-exp(-x/a)) \"$FN\" u 1:3 via a;" > fit.tmp
+###echo "a=$A1; fit [${STA}:${STB}] ${NS}*(1.0-exp(-x/a)) \"$FN\" u 1:3 via a;" > fit.tmp
+echo "a=$A1; fit [${STA}:${STB}] x/a \"$FN\" u 1:(-log(-(\$3/${NS}-1.0))) via a;" > fit.tmp
 echo "Exp Fit"
 gnuplot fit.tmp > gpout.tmp 2>&1 
 #A1=`tail -n 12 gpout.tmp | awk '{if ($1=="a" && $2=="=" ) printf("%G",$3)}'`
@@ -87,6 +89,7 @@ RR=`echo "4.5 1.0 2.0" | LANG=C gawk '{printf("%f", ($1+$2)/$3)}'`
 #echo "5000.0 $L"|awk '{print($1/($2*$2*$2))}*$2*$2'
 RHO=`echo "5000.0 ${L} ${L} ${L}"| LANG=C gawk '{printf("%G", ($1/($2*$2*$2)))}'`
 KKR=`echo ${B1} ${S0} ${E0} |LANG=C gawk '{print $2/$1/$3}'`
+###KKR=`echo ${B1} ${S0} ${E0} |LANG=C gawk '{print $2/$1/$3}'`
 #KKR=`echo ${B1} ${S0} ${E0} |LANG=C gawk '{print $1/$3}'`
 #KKR=`echo ${B1} ${MS}|awk '{print $2/$1}'` # così uso la concentrazione molare di S (MS) e non S0 (number density)
 KK=`echo "${B1} ${PP} ${RR} ${DS} ${RHO}" | LANG=C gawk '{printf("%G",$1/(4.0*3.14159*$2*$3*$4*1.0))}'`
