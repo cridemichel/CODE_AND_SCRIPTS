@@ -24,7 +24,8 @@ for f in `cat $1`
 do
 cd $f
 #echo "f=" $f " pwd=" `pwd`
-CMAX=`cat startEQ.cnf| LANG=C gawk '{if (NR==7) print $1}'` 
+CMAX=`cat startGR.cnf| LANG=C gawk 'BEGIN {at=0}; {if ($0=="@@@" && at==0) {at=1; nra=NR+1;} if (at==1 && NR==nra) print $1;}'` # awk '{if (NR==N+2) print $2; if ($1=="@@@") N=NR;}'`
+#CMAX=`cat startEQ.cnf| LANG=C gawk '{if (NR==7) print $1}'` 
 CMIN="0"
 echo "CMAX= " $CMAX
 PP="$2"
@@ -64,8 +65,10 @@ echo "===> STA=" $STA " STB=" $STB
 A1="100000.0"
 B1=100.0
 C1=100.0
-NS=`cat startGR.cnf| LANG=C gawk '{if (NR==7) print $2}'` # awk '{if (NR==N+2) print $2; if ($1=="@@@") N=NR;}'`
-NE=`cat startGR.cnf| LANG=C gawk '{if (NR==7) print $1}'` 
+NS=`cat startGR.cnf| LANG=C gawk 'BEGIN {at=0}; {if ($0=="@@@" && at==0) {at=1; nra=NR+1;} if (at==1 && NR==nra) print $2;}'` # awk '{if (NR==N+2) print $2; if ($1=="@@@") N=NR;}'`
+#NS=`cat startGR.cnf| LANG=C gawk '{if (NR==7) print $2}'` 
+NE=`cat startGR.cnf| LANG=C gawk 'BEGIN {at=0}; {if ($0=="@@@" && at==0) {at=1; nra=NR+1;} if (at==1 && NR==nra) print $1;}'` # awk '{if (NR==N+2) print $2; if ($1=="@@@") N=NR;}'`
+#NE=`cat startGR.cnf| LANG=C gawk '{if (NR==7) print $1}'` 
 S0=`echo $NS $L | LANG=C gawk '{print $1/$2/$2/$2}'`
 E0=`echo $NE $L | LANG=C gawk '{print $1/$2/$2/$2}'`
 #echo "a=$A1; b=$B1; fit [${STA}:${STB}] a*exp(-(x/b)) \"$FN\" via a,b;" > fit.tmp
