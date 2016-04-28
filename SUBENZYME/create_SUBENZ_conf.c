@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 	 del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, volE, volS, volC;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
-  double phi, targetphi=0.25, xtrafact;
+  double phi, targetphi=0.25, xtrafact, LBOX=-1.0;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b, parnumE=0, parnumS=0, typeP, parnumC=0;
   int nx, ny, nz, nxmax, nymax, nzmax, idx, nE, nS, nC, done, xi;
   del=0.5;
@@ -144,6 +144,9 @@ int main(int argc, char **argv)
 
   if (argc > 5)
     targetphi = atof(argv[5]);
+  
+  if (targetphi > 1.0)
+    LBOX=targetphi;
 
   DiamE=DiamS=DiamP=DiamC=1.0;
   if (argc > 6)
@@ -439,9 +442,18 @@ int main(int argc, char **argv)
   volC = M_PI*4.0*(DiamC/2.)*(DiamC/2.)*(LenC/2.)/3.0;
   printf("Diam=%f Len=%f\n", Diam, Len);
   if (parnumC == 0)
-    phi=(parnumE*volE+parnumS*volS)/(L[0]*L[1]*L[2]);
+    {
+      if (LBOX > 0.0)
+	targetphi=(parnumE*volE+parnumS*volS)/(LBOX*LBOX*LBOX);
+      phi=(parnumE*volE+parnumS*volS)/(L[0]*L[1]*L[2]);
+    }
   else
-    phi=(parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]);
+    {
+      if (LBOX > 0.0)
+	targetphi=(parnumE*volE+parnumS*volS+parnumC*volC)/(LBOX*LBOX*LBOX);
+      phi=(parnumE*volE+parnumS*volS+parnumC*volC)/(L[0]*L[1]*L[2]);
+    }
+  printf("LBOX=%f targetphi=%f\n", LBOX, targetphi);
   xtrafact = pow(phi/targetphi, 1.0/3.0);
   printf("volE=%f volS=%f volC=%f targetphi=%f phi=%f xtrafact=%f\n", volE, volS, volC, targetphi, phi, xtrafact);
 
