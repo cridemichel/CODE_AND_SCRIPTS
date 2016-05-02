@@ -11,7 +11,6 @@ at=at+1;if (at==1) ATA=NR;}}'`
 NC=`cat $SC | gawk 'BEGIN {at=0;} {if (at==1 && NR==ATA+1) {print $4; exit;}; if ($0=="@@@"){\
 at=at+1;if (at==1) ATA=NR;}}'` 
 echo "NI= " $NI " NE= " $NE " NC=" $NC
-exit
 DNS="500"
 DNS2="100"
 SIGE="4.5"
