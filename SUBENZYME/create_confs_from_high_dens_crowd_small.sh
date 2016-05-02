@@ -1,7 +1,17 @@
 SC="$1"
-NI="12548"
-NE="56"
-NC="26700"
+#NI="12548"
+#NI="15042"
+NI=`cat $SC | gawk 'BEGIN {at=0;} {if (at==1 && NR==ATA+1) {print $2; exit;}; if ($0=="@@@"){\
+at=at+1;if (at==1) ATA=NR;}}'` 
+#NE="56"
+NE=`cat $SC | gawk 'BEGIN {at=0;} {if (at==1 && NR==ATA+1) {print $1; exit;}; if ($0=="@@@"){\
+at=at+1;if (at==1) ATA=NR;}}'` 
+#NC="26700"
+#NC="44221"
+NC=`cat $SC | gawk 'BEGIN {at=0;} {if (at==1 && NR==ATA+1) {print $4; exit;}; if ($0=="@@@"){\
+at=at+1;if (at==1) ATA=NR;}}'` 
+echo "NI= " $NI " NE= " $NE " NC=" $NC
+exit
 DNS="500"
 DNS2="100"
 SIGE="4.5"
