@@ -1,6 +1,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<math.h>
+#include<string.h>
 #define MD_INF_ITENS 1E199
 #define MD_INF_MASS  1E199
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
@@ -8,8 +9,11 @@ double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz, uinner, uouter;
 double *Rc[3][3], *Ri[3][3];
-int full, ibeg, numpoly, *top, nspots, DiamSpot;
+int full, ibeg, numpoly, *top, nspots, nlines;
+double DiamSpot=10.0;
+char spotfile[1024], line[4096];
 #define maxpolylen 10000;
+#define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 double R0[3][3];
 struct onepart {
    double rx; 
@@ -24,6 +28,14 @@ struct onepart {
    double wz;
    int t;	
 };
+struct onespot
+{
+  double rx; 
+  double ry;
+  double rz;
+  double sig;
+};
+struct onespot *allspots;
 struct onepart *allpart;
 double ranf(void)
 {
@@ -107,7 +119,7 @@ double max2(double a, double b)
 
 int main(int argc, char **argv)
 {
-  FILE *f;
+  FILE *f, *sf;
   double MoI1, MoI2, mass, massE, massS, massP, massC, rTemp, temp=1.0;
   double vxCM, vyCM, vzCM, mCM=0, mean;
   double orient, theta0, theta0rad, Diam, DiamE, DiamS, DiamP, DiamC, LenE, LenS, LenP, LenC,
@@ -122,7 +134,7 @@ int main(int argc, char **argv)
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   if (argc == 1)
    {
-     printf("create_SURFANTIG_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# spots> <# substrates> <diamspots\n"); 
+     printf("create_SURFANTIG_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# spots> <# substrates> <diamspots> <spot file>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -193,15 +205,35 @@ int main(int argc, char **argv)
   if (argc > 13)
     parnumS = atoi(argv[13]);
 
-  uinner=10.0;
-  uouter=5.0;
+  uinner=1.0;
+  uouter=1.0;
   if (argc > 14)
     DiamSpot = atof(argv[14]);
   if (argc > 15)
-    uouter = atof(argv[15]);
+    strcpy(spotfile, argv[15]);
+  else 
+    strcpy(spotfile, "spots.xyz");
+
+  sf = fopen(spotfile, "r");
+  nlines=0;
+  while (!feof(sf))
+    {
+      fscanf(sf, "%[!\n]\n", line);
+      nlines++;
+    }
+  fclose(sf);
+  nspots = nlines;
+  allspots = malloc(sizeof(struct onespot)*nspots);
+  sf = fopen(spotfile, "r");
+  for (i=0; i < nspots; i++)
+    {
+      fscanf(sf, "%lf %lf %lf\n", &(allspots[i].rx), &(allspots[i].ry), &(allspots[i].rz));
+      allspots[i].sig = DiamSpot;
+    }
+  fclose(sf);
   printf("uinner=%f uouter=%f\n", uinner, uouter);	
-  Len=max3(LenS,LenC);
-  Diam=max3(DiamS,DiamC);
+  Len=max2(LenS,LenC);
+  Diam=max2(DiamS,DiamC);
 
   printf("Len=%f Diam=%f LenE=%f DiamE=%f LenC=%f DiamC=%f LenS=%f DiamS=%f\n", Len, Diam, LenE, DiamE, LenC, DiamC, LenS, DiamS);
   parnum = polylen*nxmax*nymax*nzmax;
