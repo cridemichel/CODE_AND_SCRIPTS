@@ -4,7 +4,8 @@
 #define MD_INF_ITENS 1E199
 #define MD_INF_MASS  1E199
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
-double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
+//double *rxc, *ryc, *rzc; 
+double rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz, uinner, uouter;
 double *Rc[3][3], *Ri[3][3];
 int full, ibeg, numpoly, *top, nspots, DiamSpot;
@@ -212,9 +213,9 @@ int main(int argc, char **argv)
   rxCM = malloc(sizeof(double)*numpoly);
   ryCM = malloc(sizeof(double)*numpoly);
   rzCM = malloc(sizeof(double)*numpoly);
-  rxc =malloc(sizeof(double)*polylen);
-  ryc =malloc(sizeof(double)*polylen);
-  rzc =malloc(sizeof(double)*polylen);
+  //rxc =malloc(sizeof(double)*polylen);
+  //ryc =malloc(sizeof(double)*polylen);
+  //rzc =malloc(sizeof(double)*polylen);
   vx = malloc(sizeof(double)*parnum);
   vy = malloc(sizeof(double)*parnum);
   vz = malloc(sizeof(double)*parnum);
@@ -247,9 +248,11 @@ int main(int argc, char **argv)
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
   delta = 0.01;
   /* building the dimer... */
+#if 0
   rxc[0] = 0.0;
   ryc[0] = 0.0;
   rzc[0] = 0.0;
+#endif
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
@@ -531,25 +534,27 @@ int main(int argc, char **argv)
 	allpart[i].R[a][b] = Ri[a][b][0];
       }
 	 
-  for (i=0; i < numpoly; i++)
+  idx = 1;
+  while (idx < parnum)
     {
-      for (j=0; j < polylen; j++)
+      i = (int) (numpoly*ranf());
+      /* l'enzima gigante è in (0, 0, 0) */
+      if (Sqr(rxCM[i])+Sqr(ryCM[i])+Sqr(rzCM[i]) > Sqr((DiamE + DiamS)*0.5) )
 	{
-	  idx = i*polylen + j + 1;
 	  //printf("idx=%d i=%d\n", idx, i);
-	  rx[idx] = rxCM[i] + rxc[j];
-	  ry[idx] = ryCM[i] + ryc[j];
-	  rz[idx] = rzCM[i] + rzc[j];
+	  rx[idx] = rxCM[i];
+	  ry[idx] = ryCM[i];
+	  rz[idx] = rzCM[i];
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      {
-		Ri[a][b][idx] = Rc[a][b][j];
-              	allpart[i].R[a][b] = Rc[a][b][j];
+		Ri[a][b][idx] = Rc[a][b][0];
+		allpart[idx].R[a][b] = Rc[a][b][0];
 	      }
-	  //printf("qui idx=%d\n", idx);
-	}
+	  idx++;
+	} 
+      //printf("qui idx=%d\n", idx);
     }
-
   nE = nS = nC = 0;
   top[0] = 0;
   allpart[0].t = 0;
@@ -561,7 +566,7 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-      if (parnumC == 0.0 && parnumE==1)
+      if (parnumC == 0 && parnumE==1)
 	{
 	  if (i < parnumE)
 	    typeP = 0;
