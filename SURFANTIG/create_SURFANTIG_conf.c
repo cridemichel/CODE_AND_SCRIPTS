@@ -522,11 +522,20 @@ int main(int argc, char **argv)
   //  if (full)
   //   exit(-1);
 #if 1
+  /* immobile particle */
+  rx[0] = ry[0] = rz[0] = 0.0;
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Ri[a][b][0] = (a==b)?1.0:0.0;
+	allpart[i].R[a][b] = Ri[a][b][0];
+      }
+	 
   for (i=0; i < numpoly; i++)
     {
       for (j=0; j < polylen; j++)
 	{
-	  idx = i*polylen + j;
+	  idx = i*polylen + j + 1;
 	  //printf("idx=%d i=%d\n", idx, i);
 	  rx[idx] = rxCM[i] + rxc[j];
 	  ry[idx] = ryCM[i] + ryc[j];
@@ -542,7 +551,10 @@ int main(int argc, char **argv)
     }
 
   nE = nS = nC = 0;
-  for (i=0; i < parnum; i++)
+  top[0] = 0;
+  allpart[0].t = 0;
+       
+  for (i=1; i < parnum; i++)
     {
       rx[i] -= L[0]*0.5;
       ry[i] -= L[1]*0.5;
