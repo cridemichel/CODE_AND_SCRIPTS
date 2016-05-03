@@ -397,8 +397,8 @@ int main(int argc, char **argv)
   MoI1 = 1.0;
   MoI2 = 1.0;
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
-  fprintf(f,"2 0\n");
-  fprintf(f, "0 0 0 %f\n", DiamS+0.001);
+  fprintf(f,"1 0\n");
+  //fprintf(f, "0 0 0 %f\n", DiamS+0.001);
   fprintf(f, "0 0 0 %f\n", DiamS*1.1);
 
   if (parnumC > 0)
