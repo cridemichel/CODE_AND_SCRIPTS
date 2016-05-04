@@ -9,7 +9,7 @@ double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz, uinner, uouter;
 double *Rc[3][3], *Ri[3][3], dummydbl1, dummydbl2;
-int full, ibeg, numpoly, *top, nspots, nlines;
+int full, ibeg, numpoly, *top, nspots, nlines, *usata;
 double DiamSpot=10.0;
 char spotfile[1024], line[4096];
 #define maxpolylen 10000;
@@ -248,6 +248,7 @@ int main(int argc, char **argv)
   ry = malloc(sizeof(double)*parnum);
   rz = malloc(sizeof(double)*parnum);
   top = malloc(sizeof(int)*parnum);
+  usata = malloc(sizeof(int)*numpoly);
   rxCM = malloc(sizeof(double)*numpoly);
   ryCM = malloc(sizeof(double)*numpoly);
   rzCM = malloc(sizeof(double)*numpoly);
@@ -349,7 +350,7 @@ int main(int argc, char **argv)
     }
 #endif
   fprintf(f, "parnum: %d\n", parnum);
-  fprintf(f, "ninters: 2\n");
+  fprintf(f, "ninters: %d\n", nspots);
   fprintf(f, "nintersIJ: 0\n");
   /* #Enzymes #Substrates #Products at t=0 */
   if (parnumS > 0 && parnumS < parnum-parnumE)
@@ -380,9 +381,9 @@ int main(int argc, char **argv)
   fprintf(f,"%f %f %f\n", LenE/2.0, DiamE/2.0, DiamE/2.0); 
   fprintf(f,"2 2 2\n");
   /* set here moment of inertia of a uniaxial ellipsoid */
-  mass = massE = MD_INF_MASS;// 1.0*pow(DiamE/DiamS,3.0);
-  MoI1 = MD_INF_ITENS;
-  MoI2 = MD_INF_ITENS;
+  mass = massE = 1.1*MD_INF_MASS;// 1.0*pow(DiamE/DiamS,3.0);
+  MoI1 = 1.1*MD_INF_ITENS;
+  MoI2 = 1.1*MD_INF_ITENS;
   fprintf(f, "%G %G %G %G 1 0\n", mass, MoI1, MoI2, MoI2);
 // spots of giant sphere
   fprintf(f, "%d 0\n", nspots);
@@ -573,12 +574,18 @@ int main(int argc, char **argv)
       }
 	 
   idx = 1;
+  for (i=0; i < numpoly; i++)
+    usata[i] = 0;
   while (idx < parnum)
     {
+      /* per ora qui assume che non si inseriscano crowders */
       i = (int) (numpoly*ranf());
+      if (usata[i]==1)
+	continue;
       /* l'enzima gigante è in (0, 0, 0) */
-      if (Sqr(rxCM[i])+Sqr(ryCM[i])+Sqr(rzCM[i]) > Sqr((DiamE + DiamS)*0.5) )
+      if (Sqr(rxCM[i]-L[0]*0.5)+Sqr(ryCM[i]-L[1]*0.5)+Sqr(rzCM[i]-L[2]*0.5) > Sqr((DiamE + DiamS)*0.5) )
 	{
+	  usata[i] = 1;
 	  //printf("idx=%d i=%d\n", idx, i);
 	  rx[idx] = rxCM[i];
 	  ry[idx] = ryCM[i];
