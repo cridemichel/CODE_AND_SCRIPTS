@@ -8,7 +8,7 @@ double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 //double *rxc, *ryc, *rzc; 
 double rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM, *vx, *vy, *vz, *wx, *wy, *wz, uinner, uouter;
-double *Rc[3][3], *Ri[3][3];
+double *Rc[3][3], *Ri[3][3], dummydbl1, dummydbl2;
 int full, ibeg, numpoly, *top, nspots, nlines;
 double DiamSpot=10.0;
 char spotfile[1024], line[4096];
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   if (argc == 1)
    {
-     printf("create_SURFANTIG_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <# spots> <# substrates> <diamspots> <spot file>\n"); 
+     printf("create_SURFANTIG_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diamE> <diamS> <diamC> <LenE> <LenS> <LenC> <#substrates> <#crowders> <diamspots> <spot file>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 
   if (argc > 7)
     DiamS = atof(argv[7]);
-
+ 
 #if 0
   if (argc > 8)
     DiamP = atof(argv[8]);
@@ -201,34 +201,40 @@ int main(int argc, char **argv)
   //DiamP = DiamS;
   parnumE=1;
   if (argc > 12)
-    nspots = atoi(argv[12]);
+    parnumS = atoi(argv[12]);
+
   if (argc > 13)
-    parnumS = atoi(argv[13]);
+    parnumC = atoi(argv[13]);
 
   uinner=1.0;
   uouter=1.0;
   if (argc > 14)
     DiamSpot = atof(argv[14]);
+
   if (argc > 15)
     strcpy(spotfile, argv[15]);
   else 
     strcpy(spotfile, "spots.xyz");
 
+  printf("argc=%d\n", argc);
+  printf("Opening spot file: %s\n...\n", spotfile);
   sf = fopen(spotfile, "r");
   nlines=0;
   while (!feof(sf))
     {
-      fscanf(sf, "%[!\n]\n", line);
+      fscanf(sf, "%[^\n]\n", line);
       nlines++;
     }
+  nlines--;
+  printf("qui\n");
   fclose(sf);
   nspots = nlines;
   allspots = malloc(sizeof(struct onespot)*nspots);
   sf = fopen(spotfile, "r");
   for (i=0; i < nspots; i++)
     {
-      fscanf(sf, "%lf %lf %lf\n", &(allspots[i].rx), &(allspots[i].ry), &(allspots[i].rz));
-      allspots[i].sig = DiamSpot;
+      fscanf(sf, "%lf %lf %lf %lf %lf\n", &(allspots[i].rx), &(allspots[i].ry), &(allspots[i].rz), &dummydbl1, &(allspots[i].sig));
+      allspots[i].sig *= 2.0;
     }
   fclose(sf);
   printf("uinner=%f uouter=%f\n", uinner, uouter);	
@@ -236,7 +242,7 @@ int main(int argc, char **argv)
   Diam=max2(DiamS,DiamC);
 
   printf("Len=%f Diam=%f LenE=%f DiamE=%f LenC=%f DiamC=%f LenS=%f DiamS=%f\n", Len, Diam, LenE, DiamE, LenC, DiamC, LenS, DiamS);
-  parnum = polylen*nxmax*nymax*nzmax;
+  parnum = parnumS+parnumC+1;// polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
@@ -377,7 +383,7 @@ int main(int argc, char **argv)
   mass = massE = MD_INF_MASS;// 1.0*pow(DiamE/DiamS,3.0);
   MoI1 = MD_INF_ITENS;
   MoI2 = MD_INF_ITENS;
-  fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
+  fprintf(f, "%G %G %G %G 1 0\n", mass, MoI1, MoI2, MoI2);
 // spots of giant sphere
   fprintf(f, "%d 0\n", nspots);
   for (i=0; i < nspots; i++)
@@ -399,7 +405,7 @@ int main(int argc, char **argv)
   fprintf(f, "%f %f %f %f 1 0\n", mass, MoI1, MoI2, MoI2);
   fprintf(f,"1 0\n");
   //fprintf(f, "0 0 0 %f\n", DiamS+0.001);
-  fprintf(f, "0 0 0 %f\n", DiamS*1.1);
+  fprintf(f, "0 0 0 %f\n", DiamS);
 
   if (parnumC > 0)
     {
