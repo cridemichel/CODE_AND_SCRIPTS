@@ -99,12 +99,8 @@ int main(int argc, char **argv)
     for(i=1; i<(NxL-1); i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-
-    /* absorption boundary condition (out->in), i.e.
-     * all particles fall into the well coming from outward*/
-    n[NxL+1][0] = n[NxL][0];
    
-    for(i=NxL+2; i<(Nx-1); i++)                
+    for(i=NxL+1; i<(Nx-1); i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
 
