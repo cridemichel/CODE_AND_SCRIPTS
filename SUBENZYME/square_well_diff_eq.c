@@ -33,27 +33,29 @@
 #endif
 #define width 100       /* larghezza della distribuzione iniziale */
 
+#define maxNx 1000000
 double betauI=10.0,  betauO=10.0; 
 double wI, wO;
 double D=1.0;
 int Nt = 10000, Nx=1000, NxL;
 double dx=1.0, dt = 0.5, L, Dx;
+double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <uO> <D> <Dx> <L> <Nx> <dx> <Nt> <dt>\n");
+  printf("square_well_diff_eq <uI> <uO> <D> <Dx> <L> <Nx> <Nt> <dt>\n");
+  exit(-1);	
 }
 
 int main(int argc, char **argv)
 { 
   int i,j;
   double cost;     // costante di integrazione
-  double n[Nx][2]; // distribuzione al tempo t e t+dt
   FILE *uscita;
 
   /* apri il file di uscita */
   uscita=fopen("conc_profile.dat","w");
 
-  if (argc < 9)
+  if (argc < 8)
     print_usage();
 
   betauI = atof(argv[1]);
@@ -62,10 +64,16 @@ int main(int argc, char **argv)
   Dx = atof(argv[4]);
   L = atof(argv[5]);
   Nx = atoi(argv[6]);
-  dx = atof(argv[7]);
-  Nt = atoi(argv[8]);
-  dt = atof(argv[9]);
+  if (Nx > maxNx)
+    {
+      printf("Troppi punti (maxNx=%d)!\n", maxNx);
+      exit(-1);
+    }
+  //dx = atof(argv[7]);
+  Nt = atoi(argv[7]);
+  dt = atof(argv[8]);
 
+  dx = L / Nx;
   NxL = L / dx;
   wI=exp(-betauI);
   wO=exp(-betauO);
