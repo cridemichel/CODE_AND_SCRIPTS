@@ -77,6 +77,7 @@ int main(int argc, char **argv)
   NxL = L / dx;
   wI=exp(-betauI);
   wO=exp(-betauO);
+  printf("dx=%G wI=%G wI=%G\n", dx, wI, wO);
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
