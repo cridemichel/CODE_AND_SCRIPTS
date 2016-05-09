@@ -23,7 +23,7 @@
 
 #include <stdlib.h> 
 #include <stdio.h>
-
+#include <math.h>
 #if 0
 #define dx 1.	     /* passo spaziale */
 #define Nx 1000      /* numero di punti spaziali (PARI) */
@@ -34,10 +34,10 @@
 #define width 100       /* larghezza della distribuzione iniziale */
 
 double betauI=10.0,  betauO=10.0; 
-double wI, wO, j0, jDx, jL;
+double wI, wO;
 double D=1.0;
-int Nt = 10000, Nx=1000;
-double dx=1.0, dt = 0.5, L, Dx, NxL;
+int Nt = 10000, Nx=1000, NxL;
+double dx=1.0, dt = 0.5, L, Dx;
 void print_usage(void)
 {
   printf("square_well_diff_eq <uI> <uO> <D> <Dx> <L> <Nx> <dx> <Nt> <dt>\n");
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
   L = atof(argv[5]);
   Nx = atoi(argv[6]);
   dx = atof(argv[7]);
-  Nt = atoi(argv[8])
+  Nt = atoi(argv[8]);
   dt = atof(argv[9]);
 
   NxL = L / dx;
