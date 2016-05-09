@@ -4,7 +4,7 @@ MINMAX="1"
 else
 MINMAX="0"
 fi
-FNT="kD_vs_S.dat"
+FNT="rates_vs_S.dat"
 echo -n "" > $FNT
 if [ "$1" == "" ]
 then 
@@ -91,10 +91,9 @@ echo "AVGE= " $AVGE " AVGR=" $AVGR
 ###KKR=`echo ${B1} ${S0} ${E0} |LANG=C gawk '{print $2/$1/$3}'`
 #KKR=`echo ${B1} ${S0} ${E0} |LANG=C gawk '{print $1/$3}'`
 #KKR=`echo ${B1} ${MS}|awk '{print $2/$1}'` # così uso la concentrazione molare di S (MS) e non S0 (number density)
-KD=`echo $AVGR $AVGE $AVGS | LANG=C gawk '{print $1/$2/$3}'`
-KS=`echo $AVGR $AVGES | LANG=C gawk '{print $1/$2}'`
-KMD=`echo $AVGR $AVGES | LANG=C gawk '{print $1/$2}'`
-
+KD=`echo $AVGR $AVGE $AVGS $L| LANG=C gawk '{print $4^6*$1/$2/$3}'`
+KS=`echo $AVGKS $AVGES $L | LANG=C gawk '{print $3^3*$1/$2}'`
+KMD=`echo $AVGKMD $AVGES $L | LANG=C gawk '{print $3^3*$1/$2}'`
 echo "PP=" $PP " L=" $L " RR=" $RR  " DS=" $DS  " NS= " $NS " S0=" $S0  " E0=" $E0 " CMIN= "$CMIN " CMAX=" $CMAX
 #KK=`echo "($PN/$L/$L/$L)/${B1}" | bc -l`
 #KK=`echo "100000/${B1}/${SIG}/($PN/$L/$L/$L)" | bc -l`
