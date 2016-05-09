@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     n[NxL][0] = n[NxL-1][0]/(dx*wO/D+1);
    
     //n[0][1] = n[1][1]*(dx*wI+D);  
-    for(i=1; i<(NxL-1); i++)                
+    for(i=1; i < NxL; i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
    
