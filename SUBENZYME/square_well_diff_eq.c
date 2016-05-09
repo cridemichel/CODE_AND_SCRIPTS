@@ -77,7 +77,6 @@ int main(int argc, char **argv)
   NxL = L / dx;
   wI=exp(-betauI);
   wO=exp(-betauO);
-  printf("dx=%G wI=%G wI=%G\n", dx, wI, wO);
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
@@ -89,6 +88,8 @@ int main(int argc, char **argv)
    * integrazione deve essere << 1*/
   cost=D*dt/dx/dx;
   
+  printf("cost=%G dx=%G wI=%G wI=%G L=%f NxL=%d\n", cost, dx, wI, wO, L, NxL);
+  
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
@@ -97,12 +98,12 @@ int main(int argc, char **argv)
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     
     /* radiation boundary condition */
-    n[0][0] = n[1][0]*(dx*wI/D+1);
+    n[0][0] = n[1][0]*(dx*wI/D+1.);
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
     /* radiation boundary condition (in->out)*/
-    n[NxL][0] = n[NxL-1][0]/(dx*wO/D+1);
+    n[NxL][0] = n[NxL-1][0]/(dx*wO/D+1.);
    
     //n[0][1] = n[1][1]*(dx*wI+D);  
     for(i=1; i < NxL; i++)                
