@@ -37,12 +37,12 @@
 double betauI=10.0,  betauO=10.0; 
 double wI, wO;
 double D=1.0;
-int Nt = 10000, Nx=1000, NxL;
-double dx=1.0, dt = 0.5, L, Dx;
+int Nt = 10000, Nx=1000, NxL, stpout=1000;
+double dx=1.0, dt = 0.5, L, Dx, nbuf=0.0, nbuf1=0.0;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <uO> <D> <Dx> <L> <Nx> <Nt> <dt>\n");
+  printf("square_well_diff_eq <uI> <uO> <D> <Dx> <L> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
 
@@ -50,11 +50,11 @@ int main(int argc, char **argv)
 { 
   int i,j;
   double cost;     // costante di integrazione
-  FILE *uscita;
+  FILE *uscita, *equilib;
 
   /* apri il file di uscita */
-  uscita=fopen("conc_profile.dat","w");
-
+  uscita=fopen("conc_profile.dat","w+");
+  equilib=fopen("n_vs_t.dat", "w+");
   if (argc < 8)
     print_usage();
 
@@ -72,9 +72,11 @@ int main(int argc, char **argv)
   //dx = atof(argv[7]);
   Nt = atoi(argv[7]);
   dt = atof(argv[8]);
+  if (argc == 10)
+    stpout = atoi(argv[9]);
 
   dx = L / Nx;
-  NxL = L / dx;
+  NxL = Dx / dx;
   wI=exp(-betauI);
   wO=exp(-betauO);
   /* la condizione iniziale e` uno scalino centrato in
@@ -98,28 +100,40 @@ int main(int argc, char **argv)
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     
     /* radiation boundary condition */
-    n[0][0] = n[1][0]*(dx*wI/D+1.);
+    n[0][0] = n[1][0]*(1.0-dx*wI/D);
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
     /* radiation boundary condition (in->out)*/
-    n[NxL][0] = n[NxL-1][0]/(dx*wO/D+1.);
+    //ntmp = n[NxL][0];
+    nbuf = n[NxL][0];
+    nbuf1 = n[NxL+1][0];
+    n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D);
    
     //n[0][1] = n[1][1]*(dx*wI+D);  
     for(i=1; i < NxL; i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-   
+    n[NxL-1][1] += nbuf1*D/dx;
+    n[NxL][0] = 0.0;
     for(i=NxL+1; i<(Nx-1); i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-
-    if((j%1000==0) || (j==0)){ // salva ogni 10000 passi 
-      for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
-	fprintf(uscita, "%f\n", n[i][1]);  
-      fprintf(uscita, "\n"); // linea vuota per gnuplot 
-    }
-
+    n[NxL+1][1] += nbuf*wO;
+    if((j%stpout==0) || (j==0))
+      { // salva ogni 10000 passi 
+  	  {
+  	    for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
+  	      fprintf(uscita, "%f %f\n", (((double)i)+0.5)*dx, n[i][1]);  
+#ifdef GNUPLOT
+  	    fprintf(uscita, "\n"); // linea vuota per gnuplot 
+#else
+  	    fprintf(uscita, "&\n"); // linea vuota per gnuplot 
+#endif
+  	    fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
+  	  }
+      }
+    n[Nx-2][1]+=1.0;
     /* copia la soluzione al tempo t+dt in n[x][0] */
     for(i=1; i<(Nx-1); i++) n[i][0]=n[i][1];   
 
@@ -127,6 +141,7 @@ int main(int argc, char **argv)
 
   fprintf(stderr,"Dati in conc_profile.dat\n");
   fclose(uscita);
+  fclose(equilib);
 
   return 0;
 }
