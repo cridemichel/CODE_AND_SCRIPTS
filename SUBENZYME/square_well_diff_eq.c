@@ -36,7 +36,7 @@
 #define maxNx 1000000
 double betauI=10.0,  betauO=10.0; 
 double wI, wO, concSE, concS;
-double D=1.0;
+double D1=1.0, D2=1.0;
 int Nt = 10000, Nx=1000, NxL, stpout=1000;
 double dx=1.0, dt = 0.5, L, Dx, nbuf=0.0, nbuf1=0.0;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
@@ -49,7 +49,7 @@ void print_usage(void)
 int main(int argc, char **argv)
 { 
   int i,j, k;
-  double cost;     // costante di integrazione
+  double cost1, cost2;     // costante di integrazione
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -61,20 +61,21 @@ int main(int argc, char **argv)
 
   betauI = atof(argv[1]);
   betauO = atof(argv[2]);
-  D = atof(argv[3]);
-  Dx = atof(argv[4]);
-  L = atof(argv[5]);
-  Nx = atoi(argv[6]);
+  D1 = atof(argv[3]);
+  D2 = atof(argv[4]);
+  Dx = atof(argv[5]);
+  L = atof(argv[6]);
+  Nx = atoi(argv[7]);
   if (Nx > maxNx)
     {
       printf("Troppi punti (maxNx=%d)!\n", maxNx);
       exit(-1);
     }
   //dx = atof(argv[7]);
-  Nt = atoi(argv[7]);
-  dt = atof(argv[8]);
-  if (argc == 10)
-    stpout = atoi(argv[9]);
+  Nt = atoi(argv[8]);
+  dt = atof(argv[9]);
+  if (argc == 11)
+    stpout = atoi(argv[10]);
 
   dx = L / Nx;
   NxL = Dx / dx;
@@ -83,15 +84,16 @@ int main(int argc, char **argv)
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=1.0;
+  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=10.0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
-  cost=D*dt/dx/dx;
-  
-  printf("cost=%G dx=%G wI=%G wI=%G L=%f NxL=%d\n", cost, dx, wI, wO, L, NxL);
+  cost1=D1*dt/dx/dx;
+  cost2=D2*dt/dx/dx;
+
+  printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L, NxL);
   
   for(j=0; j<=Nt; j++){  // loop temporale 
 
@@ -101,24 +103,24 @@ int main(int argc, char **argv)
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     
     /* radiation boundary condition */
-    n[0][0] = n[1][0]*(1.0-dx*wI/D);
+    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
     /* radiation boundary condition (in->out)*/
     //ntmp = n[NxL][0];
     nbuf1 = n[NxL+1][0];
-    n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D);
+    n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D1);
     nbuf = n[NxL][0];
     //n[0][1] = n[1][1]*(dx*wI+D);  
     for(i=1; i < NxL; i++)                
       n[i][1] = n[i][0] 
-	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-    n[NxL-1][1] += dt*nbuf1*D/dx;
+	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
+    n[NxL-1][1] += dt*nbuf1*D2/dx;
     n[NxL][0] = 0.0;
     for(i=NxL+1; i<(Nx-1); i++)                
       n[i][1] = n[i][0] 
-	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
+	+ cost2*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
     n[NxL+1][1] += dt*nbuf*wO;
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
@@ -138,13 +140,13 @@ int main(int argc, char **argv)
 	      }
 	    concSE /= NxL;
 	    concS = 0.0;
-	    for (k=1; k < NxL-1; k++)
+	    for (k=NxL+1; k < Nx; k++)
 	      {
 		concS += n[k][0];
 	      }
 	    concS /= Nx - NxL;
 	    if (concS!=0 && concSE !=0)
-	      fprintf(kD, "%G %G %G %G\n", dt*j, nbuf*wO/concSE, n[1][0]*wI/concSE, nbuf1*D/dx/concS);
+	      fprintf(kD, "%G %G %G %G\n", dt*j, n[1][0]*wI/concSE, nbuf*wO/concSE, nbuf1*D2/dx/concS);
 	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
