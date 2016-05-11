@@ -35,7 +35,7 @@
 
 #define maxNx 1000000
 double betauI=10.0,  betauO=10.0; 
-double wI, wO;
+double wI, wO, concSE, concS;
 double D=1.0;
 int Nt = 10000, Nx=1000, NxL, stpout=1000;
 double dx=1.0, dt = 0.5, L, Dx, nbuf=0.0, nbuf1=0.0;
@@ -48,13 +48,14 @@ void print_usage(void)
 
 int main(int argc, char **argv)
 { 
-  int i,j;
+  int i,j, k;
   double cost;     // costante di integrazione
-  FILE *uscita, *equilib;
+  FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
   uscita=fopen("conc_profile.dat","w+");
   equilib=fopen("n_vs_t.dat", "w+");
+  kD = fopen("kD_vs_t.dat", "w+");
   if (argc < 8)
     print_usage();
 
@@ -77,12 +78,12 @@ int main(int argc, char **argv)
 
   dx = L / Nx;
   NxL = Dx / dx;
-  wI=exp(-betauI);
-  wO=exp(-betauO);
+  wI=exp(-betauI)*dx/dt;
+  wO=exp(-betauO)*dx/dt;
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=1.;
+  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=1.0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
@@ -106,20 +107,19 @@ int main(int argc, char **argv)
 
     /* radiation boundary condition (in->out)*/
     //ntmp = n[NxL][0];
-    nbuf = n[NxL][0];
     nbuf1 = n[NxL+1][0];
     n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D);
-   
+    nbuf = n[NxL][0];
     //n[0][1] = n[1][1]*(dx*wI+D);  
     for(i=1; i < NxL; i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-    n[NxL-1][1] += nbuf1*D/dx;
+    n[NxL-1][1] += dt*nbuf1*D/dx;
     n[NxL][0] = 0.0;
     for(i=NxL+1; i<(Nx-1); i++)                
       n[i][1] = n[i][0] 
 	+ cost*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-    n[NxL+1][1] += nbuf*wO;
+    n[NxL+1][1] += dt*nbuf*wO;
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
   	  {
@@ -131,17 +131,36 @@ int main(int argc, char **argv)
   	    fprintf(uscita, "&\n"); // linea vuota per gnuplot 
 #endif
   	    fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
+	    concSE = 0.0;
+	    for (k=1; k < NxL-1; k++)
+	      {
+		concSE += n[k][0];
+	      }
+	    concSE /= NxL;
+	    concS = 0.0;
+	    for (k=1; k < NxL-1; k++)
+	      {
+		concS += n[k][0];
+	      }
+	    concS /= Nx - NxL;
+	    if (concS!=0 && concSE !=0)
+	      fprintf(kD, "%G %G %G %G\n", dt*j, nbuf*wO/concSE, n[1][0]*wI/concSE, nbuf1*D/dx/concS);
+	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
-    n[Nx-2][1]+=1.0;
+    /* termine di sorgente legato a particelle che rientrano nel dominio */
+    //n[Nx-2][1]+=1.0;
     /* copia la soluzione al tempo t+dt in n[x][0] */
     for(i=1; i<(Nx-1); i++) n[i][0]=n[i][1];   
-
   } 
 
   fprintf(stderr,"Dati in conc_profile.dat\n");
   fclose(uscita);
   fclose(equilib);
-
+  fclose(kD);
+  uscita=fopen("last_profile.dat", "w+");
+  for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
+    fprintf(uscita, "%f %f\n", (((double)i)+0.5)*dx, n[i][1]);  
+  fclose(uscita);
   return 0;
 }
