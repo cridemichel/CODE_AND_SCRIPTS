@@ -24,6 +24,7 @@
 #include <stdlib.h> 
 #include <stdio.h>
 #include <math.h>
+#define Sqr(x) ((x)*(x))
 #if 0
 #define dx 1.	     /* passo spaziale */
 #define Nx 1000      /* numero di punti spaziali (PARI) */
@@ -96,8 +97,8 @@ int main(int argc, char **argv)
   cost1 = D1*dt/dx/dx;
   cost2 = D2*dt/dx/dx;
 #ifndef UNIDIM
-  cost1b = dt*D1/dx;
-  cost2b = dt*D2/dx;
+  cost1b = dt*D1/dx/dx;
+  cost2b = dt*D2/dx/dx;
 #endif
   printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L, NxL);
   
@@ -127,9 +128,13 @@ int main(int argc, char **argv)
     for(i=1; i < NxL; i++)                
       n[i][1] = n[i][0] 
 	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost1b*(n[i+1][0]-n[i-1][0]);
+	+ cost1b*(n[i+1][0]-n[i-1][0])/((double)i);
 #endif
+#ifdef UNIDIM
     n[NxL-1][1] += dt*nbuf1*D2/dx;
+#else
+    n[NxL-1][1] += dx*Sqr((double)i)*dt*nbuf1*D2;
+#endif
     n[NxL][0] = 0.0;
 #ifdef UNIDIM
     for(i=NxL+1; i<(Nx-1); i++)                
@@ -139,9 +144,13 @@ int main(int argc, char **argv)
     for(i=NxL+1; i<(Nx-1); i++)                
       n[i][1] = n[i][0] 
 	+ cost2*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost2b*(n[i+1][0]-n[i-1][0]);
+	+ cost2b*(n[i+1][0]-n[i-1][0])/((double)i);
 #endif
+#ifdef UNIDIM
     n[NxL+1][1] += dt*nbuf*wO;
+#else
+    n[NxL+1][1] += Sqr(dx*i)*dt*nbuf*wO;
+#endif
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
   	  {
@@ -171,7 +180,7 @@ int main(int argc, char **argv)
   	  }
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
-    n[Nx-2][1]+=1.0;
+    //n[Nx-2][1]+=1.0;
     /* copia la soluzione al tempo t+dt in n[x][0] */
     for(i=1; i<(Nx-1); i++) n[i][0]=n[i][1];   
   } 
