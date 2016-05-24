@@ -43,7 +43,7 @@ double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <uO> <D1> <D2> <Dx> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <D1> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
 
@@ -64,28 +64,28 @@ int main(int argc, char **argv)
     print_usage();
 
   betauI = atof(argv[1]);
-  betauO = atof(argv[2]);
-  D1 = atof(argv[3]);
-  D2 = atof(argv[4]);
-  Dx = atof(argv[5]);
-  L1 = atof(argv[6]);
-  L2 = atof(argv[7]);
-  Nx = atoi(argv[8]);
+//  betauO = atof(argv[2]);
+  D1 = atof(argv[2]);
+//  D2 = atof(argv[4]);
+//  Dx = atof(argv[5]);
+  L1 = atof(argv[3]);
+  L2 = atof(argv[4]);
+  Nx = atoi(argv[5]);
   if (Nx > maxNx)
     {
       printf("Troppi punti (maxNx=%d)!\n", maxNx);
       exit(-1);
     }
   //dx = atof(argv[7]);
-  Nt = atoi(argv[9]);
-  dt = atof(argv[10]);
-  if (argc == 12)
-    stpout = atoi(argv[11]);
+  Nt = atoi(argv[6]);
+  dt = atof(argv[7]);
+  if (argc == 8)
+    stpout = atoi(argv[8]);
 
   dx = (L2-L1) / Nx;
-  NxL = Dx / dx;
+  NxL = L1 / dx;
   wI=exp(-betauI)*dx/dt;
-  wO=exp(-betauO)*dx/dt;
+ // wO=exp(-betauO)*dx/dt;
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
@@ -96,12 +96,12 @@ int main(int argc, char **argv)
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
   cost1 = D1*dt/dx/dx;
-  cost2 = D2*dt/dx/dx;
+  //cost2 = D2*dt/dx/dx;
 #ifndef UNIDIM
   cost1b = dt*D1/dx;
-  cost2b = dt*D2/dx;
+  //cost2b = dt*D2/dx;
 #endif
-  printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L1, L2, NxL);
+  printf("cost1=%G x=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, dx, wI, L1, L2, NxL);
   
   
   for(j=0; j<=Nt; j++){  // loop temporale 
@@ -111,17 +111,21 @@ int main(int argc, char **argv)
      * il loop implementa la discretizzazione di
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     
+#if 0
 #if UNIDIM
     /* radiation boundary condition */
     n[0][0] = n[1][0]*(1.0-dx*wI/D1);
 #else
     n[0][0] = n[1][0]*(1.0-dx*wI/D1);
 #endif
+#endif
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
     /* radiation boundary condition (in->out)*/
     //ntmp = n[NxL][0];
+    
+#if 0
     nbuf1 = n[NxL+1][0];
     n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D1);
     nbuf = n[NxL][0];
@@ -141,21 +145,29 @@ int main(int argc, char **argv)
 #else
     n[NxL-1][1] += dt*nbuf1*D2/dx/dx;
 #endif
-    n[NxL][0] = 0.0;
-#ifdef UNIDIM
-    for(i=NxL+1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] 
-	+ cost2*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
+#endif
+#ifdef INNER_REFLECTION
+    /* adsorbing boundary condition */
+    n[0][0] = 0.0;
 #else
-    for(i=NxL+1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] 
-	+ cost2*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost2b*(n[i+1][0]-n[i-1][0])/(((double)i)*dx+L1);
+    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
 #endif
 #ifdef UNIDIM
+    for(i=1; i<(Nx-1); i++)                
+      n[i][1] = n[i][0] 
+	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
+#else
+    for(i=1; i<(Nx-1); i++)                
+      n[i][1] = n[i][0] 
+	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
+	+ cost1b*(n[i+1][0]-n[i-1][0])/(((double)i)*dx+L1);
+#endif
+#if 0
+#ifdef UNIDIM
     n[NxL+1][1] += dt*nbuf*wO;
 #else
     n[NxL+1][1] += dt*nbuf*wO;
+#endif
 #endif
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
@@ -168,20 +180,32 @@ int main(int argc, char **argv)
   	    fprintf(uscita, "&\n"); // linea vuota per gnuplot 
 #endif
   	    fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
+#if 0
 	    concSE = 0.0;
 	    for (k=1; k < NxL-1; k++)
 	      {
 		concSE += n[k][0];
 	      }
 	    concSE /= NxL;
+#endif
 	    concS = 0.0;
-	    for (k=NxL+1; k < Nx; k++)
+	    for (k=1; k < Nx; k++)
 	      {
+#ifdef UNIDIM
 		concS += n[k][0];
+#else
+		concS += 4.0*M_PI*n[k][0]*Sqr(k*dx+L1);
+#endif
 	      }
-	    concS /= Nx - NxL;
-	    if (concS!=0 && concSE !=0)
-	      fprintf(kD, "%G %G %G %G\n", dt*j, n[1][0]*wI/concSE, nbuf*wO/concSE, nbuf1*D2/dx/concS);
+#ifdef UNIDIM
+	    concS /= Nx;
+	    if (concS!=0)
+	      fprintf(kD, "%G %G\n", dt*j, n[1][0]*wI/concS);
+#else
+	    concS /= 4.0*M_PI*(L2*Sqr(L2)-L1*Sqr(L1))/3.0;
+	    if (concS!=0)
+	      fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI/concS);
+#endif
 	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
