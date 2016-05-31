@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 #endif	
 
 	     fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI, 
-		    -D*4.0*M_PI*Sqr(rf)*(n[rfI+1][0]-n[rfI-1][0])/2.0/dx);
+		    -D*4.0*M_PI*Sqr(rf)*((n[rfI+1][0]-n[rfI-1][0])/2.0/dx + dU(rf, L1, Dx, delta)*n[rfI][0]));
 	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
