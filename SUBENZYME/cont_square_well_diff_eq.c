@@ -117,7 +117,7 @@ int main(int argc, char **argv)
   pos = Dx;
   rfI = pos/dx;
   rf = L1 + pos;
-  printf("out fllux calculated at r=%f\n", rf);
+  printf("out flux calculated at r=%f\n", rf);
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
