@@ -76,7 +76,7 @@ double ddU(double r, double L1, double delta)
 int main(int argc, char **argv)
 { 
   int i,j, k;
-  double cost1, cost2, cost3;     // costante di integrazione
+  double cost0, cost1, cost2;     // costante di integrazione
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     print_usage();
 
   betauI = atof(argv[1]);
-  VO = atof(argv[2]);
+  V0 = atof(argv[2]);
   D = atof(argv[3]);
   delta = atof(argv[4]);
   Dx = atof(argv[5]);
@@ -131,15 +131,15 @@ int main(int argc, char **argv)
      * il loop implementa la discretizzazione di
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     /* radiation boundary conditions */
-    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
+    n[0][0] = n[1][0]*(1.0-dx*wI/D);
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
     r = ((double)i)*dx+L1;
     for(i=1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r)*2.0/r+ddU(r)) +  
+      n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, L1, delta)*2.0/r+ddU(r, L1, delta)) +  
 	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
-	+ cost2*(dU(r)+2.0/r)*(n[i+1][0]-n[i-1][0]);
+	+ cost2*(dU(r, L1, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
   	  {
