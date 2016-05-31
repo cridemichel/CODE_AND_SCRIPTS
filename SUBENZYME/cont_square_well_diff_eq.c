@@ -48,30 +48,20 @@ void print_usage(void)
 }
 double U(double r, double L1, double Dx, double delta)
 {
-  if (r > L1+Dx+delta)
-    return V0;
-  else if (r < L1+Dx)
-    return 0.0;
-  else
-    return Sqr(r-L1)*V0/Sqr(delta);
+  return V0*(0.5+0.5*tanh(r-(L1+Dx)/delta));
 }
 double dU(double r, double L1, double Dx, double delta)
 {
-  if (r > L1+Dx+delta)
-    return 0.0;
-  else if (r < L1+Dx)
-    return 0.0;
-  else
-    return 2.0*(r-L1)*V0/Sqr(delta);
+  double sh;
+  sh = 1.0/cosh((r-(L1+Dx))/delta);
+  return V0*0.5*Sqr(sh)/delta;
 }
 double ddU(double r, double L1, double Dx, double delta)
 {
-  if (r > L1+Dx+delta)
-    return 0.0;
-  else if (r < L1+Dx)
-    return 0.0;
-  else
-    return 2.0*V0/Sqr(delta);
+  double a, sh;
+  a = L1+Dx;
+  sh = 1.0/cosh((r-a)/delta);
+  return -V0*Sqr(sh)*tanh((r-a)/delta)/Sqr(delta);
 }
 int main(int argc, char **argv)
 { 
@@ -113,7 +103,7 @@ int main(int argc, char **argv)
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=10.0;
+  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=1.0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
@@ -123,7 +113,7 @@ int main(int argc, char **argv)
   cost1 = D*dt/dx/dx;
   cost2 = D*dt/dx/2.0;
   printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L1, L2, NxL);
-
+  printf("delta=%f Dx=%f V0=%f\n", delta, Dx, V0);
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
