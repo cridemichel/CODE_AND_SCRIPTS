@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 
   if (Nx > maxNx)
     {
-      printf("Troppi punti (maxNx=%d)!\n", maxNx);
+      printf("Nx=%d Troppi punti (maxNx=%d)!\n", Nx, maxNx);
       exit(-1);
     }
   //dx = atof(argv[7]);
@@ -135,11 +135,13 @@ int main(int argc, char **argv)
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
-    r = ((double)i)*dx+L1;
     for(i=1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, L1, delta)*2.0/r+ddU(r, L1, delta)) +  
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
-	+ cost2*(dU(r, L1, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
+      {
+	r = ((double)i)*dx+L1;
+	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, L1, delta)*2.0/r+ddU(r, L1, delta)) +  
+	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
+	  + cost2*(dU(r, L1, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
+      }
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
   	  {
