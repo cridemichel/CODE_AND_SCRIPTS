@@ -46,29 +46,29 @@ void print_usage(void)
   printf("square_well_diff_eq <uI> <uO> <D> <delta> <Dx> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
-double U(double r, double L1, double delta)
+double U(double r, double L1, double Dx, double delta)
 {
-  if (r > L1+delta)
+  if (r > L1+Dx+delta)
     return V0;
-  else if (r < L1)
+  else if (r < L1+Dx)
     return 0.0;
   else
     return Sqr(r-L1)*V0/Sqr(delta);
 }
-double dU(double r, double L1, double delta)
+double dU(double r, double L1, double Dx, double delta)
 {
-  if (r > L1+delta)
+  if (r > L1+Dx+delta)
     return 0.0;
-  else if (r < L1)
+  else if (r < L1+Dx)
     return 0.0;
   else
     return 2.0*(r-L1)*V0/Sqr(delta);
 }
-double ddU(double r, double L1, double delta)
+double ddU(double r, double L1, double Dx, double delta)
 {
-  if (r > L1+delta)
+  if (r > L1+Dx+delta)
     return 0.0;
-  else if (r < L1)
+  else if (r < L1+Dx)
     return 0.0;
   else
     return 2.0*V0/Sqr(delta);
@@ -138,9 +138,9 @@ int main(int argc, char **argv)
     for(i=1; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
-	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, L1, delta)*2.0/r+ddU(r, L1, delta)) +  
+	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, L1, Dx, delta)*2.0/r+ddU(r, L1, Dx, delta)) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
-	  + cost2*(dU(r, L1, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
+	  + cost2*(dU(r, L1, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
       }
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
