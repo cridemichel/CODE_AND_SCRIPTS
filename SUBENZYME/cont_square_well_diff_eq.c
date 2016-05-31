@@ -65,8 +65,8 @@ double ddU(double r, double L1, double Dx, double delta)
 }
 int main(int argc, char **argv)
 { 
-  int i,j, k;
-  double cost0, cost1, cost2;     // costante di integrazione
+  int i,j, k, rfI;
+  double pos, rf, cost0, cost1, cost2;     // costante di integrazione
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -114,6 +114,10 @@ int main(int argc, char **argv)
   cost2 = D*dt/dx/2.0;
   printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L1, L2, NxL);
   printf("delta=%f Dx=%f V0=%f\n", delta, Dx, V0);
+  pos = Dx;
+  rfI = pos/dx;
+  rf = L1 + pos;
+  printf("out fllux calculated at r=%f\n", rf);
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
@@ -158,7 +162,9 @@ int main(int argc, char **argv)
 	    concS /= Nx - NxL;
 
 #endif	
-	    fprintf(kD, "%G %G\n", dt*j, n[1][0]*wI);
+
+	     fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI, 
+		    -D*4.0*M_PI*Sqr(rf)*(n[rfI+1][0]-n[rfI-1][0])/2.0/dx);
 	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
