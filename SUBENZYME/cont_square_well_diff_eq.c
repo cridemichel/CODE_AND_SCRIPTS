@@ -36,24 +36,47 @@
 
 #define maxNx 1000000
 double betauI=10.0,  betauO=10.0; 
-double wI, wO, concSE, concS;
-double D1=1.0, D2=1.0;
+double wI, wO, concSE, concS, V0=1.0, delta=0.1;
+double D=1.0;
 int Nt = 10000, Nx=1000, NxL, stpout=1000;
-double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0;
+double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <uO> <D1> <D2> <Dx> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <uO> <D> <delta> <Dx> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
-
+double U(double r, double L1, double delta)
+{
+  if (r > L1+delta)
+    return V0;
+  else if (r < L1)
+    return 0.0;
+  else
+    return Sqr(r-L1)*V0/Sqr(delta);
+}
+double dU(double r, double L1, double delta)
+{
+  if (r > L1+delta)
+    return 0.0;
+  else if (r < L1)
+    return 0.0;
+  else
+    return 2.0*(r-L1)*V0/Sqr(delta);
+}
+double ddU(double r, double L1, double delta)
+{
+  if (r > L1+delta)
+    return 0.0;
+  else if (r < L1)
+    return 0.0;
+  else
+    return 2.0*V0/Sqr(delta);
+}
 int main(int argc, char **argv)
 { 
   int i,j, k;
-  double cost1, cost2;     // costante di integrazione
-#ifndef UNIDIM
-  double cost1b, cost2b;
-#endif
+  double cost1, cost2, cost3;     // costante di integrazione
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -64,13 +87,14 @@ int main(int argc, char **argv)
     print_usage();
 
   betauI = atof(argv[1]);
-  betauO = atof(argv[2]);
-  D1 = atof(argv[3]);
-  D2 = atof(argv[4]);
+  VO = atof(argv[2]);
+  D = atof(argv[3]);
+  delta = atof(argv[4]);
   Dx = atof(argv[5]);
   L1 = atof(argv[6]);
   L2 = atof(argv[7]);
   Nx = atoi(argv[8]);
+
   if (Nx > maxNx)
     {
       printf("Troppi punti (maxNx=%d)!\n", maxNx);
@@ -95,68 +119,27 @@ int main(int argc, char **argv)
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
-  cost1 = D1*dt/dx/dx;
-  cost2 = D2*dt/dx/dx;
-#ifndef UNIDIM
-  cost1b = dt*D1/dx;
-  cost2b = dt*D2/dx;
-#endif
+  cost0 = D*dt;
+  cost1 = D*dt/dx/dx;
+  cost2 = D*dt/dx/2.0;
   printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L1, L2, NxL);
-  
-  
+
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
      * n[i][1] conterra` la distribuzione al tempo t + dt 
      * il loop implementa la discretizzazione di
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
-    
-#if UNIDIM
-    /* radiation boundary condition */
+    /* radiation boundary conditions */
     n[0][0] = n[1][0]*(1.0-dx*wI/D1);
-#else
-    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
-#endif
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
-    /* radiation boundary condition (in->out)*/
-    //ntmp = n[NxL][0];
-    nbuf1 = n[NxL+1][0];
-    n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D1);
-    nbuf = n[NxL][0];
-    //n[0][1] = n[1][1]*(dx*wI+D);  
-#ifdef UNIDIM
-    for(i=1; i < NxL; i++)                
-      n[i][1] = n[i][0] 
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-#else
-    for(i=1; i < NxL; i++)                
-      n[i][1] = n[i][0] 
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost1b*(n[i+1][0]-n[i-1][0])/(((double)i)*dx+L1);
-#endif
-#ifdef UNIDIM
-    n[NxL-1][1] += dt*nbuf1*D2/dx/dx;
-#else
-    n[NxL-1][1] += dt*nbuf1*D2/dx/dx;
-#endif
-    n[NxL][0] = 0.0;
-#ifdef UNIDIM
-    for(i=NxL+1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] 
-	+ cost2*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-#else
-    for(i=NxL+1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] 
-	+ cost2*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost2b*(n[i+1][0]-n[i-1][0])/(((double)i)*dx+L1);
-#endif
-#ifdef UNIDIM
-    n[NxL+1][1] += dt*nbuf*wO;
-#else
-    n[NxL+1][1] += dt*nbuf*wO;
-#endif
+    r = ((double)i)*dx+L1;
+    for(i=1; i<(Nx-1); i++)                
+      n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r)*2.0/r+ddU(r)) +  
+	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
+	+ cost2*(dU(r)+2.0/r)*(n[i+1][0]-n[i-1][0]);
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
   	  {
@@ -168,6 +151,7 @@ int main(int argc, char **argv)
   	    fprintf(uscita, "&\n"); // linea vuota per gnuplot 
 #endif
   	    fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
+#if 0
 	    concSE = 0.0;
 	    for (k=1; k < NxL-1; k++)
 	      {
@@ -180,8 +164,9 @@ int main(int argc, char **argv)
 		concS += n[k][0];
 	      }
 	    concS /= Nx - NxL;
-	    if (concS!=0 && concSE !=0)
-	      fprintf(kD, "%G %G %G %G\n", dt*j, n[1][0]*wI/concSE, nbuf*wO/concSE, nbuf1*D2/dx/concS);
+
+#endif	
+	    fprintf(kD, "%G %G\n", dt*j, n[1][0]*wI);
 	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
