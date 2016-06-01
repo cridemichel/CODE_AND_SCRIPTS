@@ -38,7 +38,7 @@
 double betauI=10.0,  betauO=10.0; 
 double wI, wO, concSE, concS, V0=1.0, delta=0.1;
 double D=1.0;
-int Nt = 10000, Nx=1000, NxL, stpout=1000;
+int Nt = 10000, Nx=1000, NxL, stpout=1000, stpout2=50000;
 double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
@@ -78,6 +78,9 @@ int main(int argc, char **argv)
   dt = atof(argv[8]);
   if (argc == 10)
     stpout = atoi(argv[9]);
+  if (argc == 11)
+    stpout2 = atoi(argv[10]);
+
 
   dx = (L2-L1) / Nx;
   wI=exp(-betauI);
@@ -134,7 +137,11 @@ int main(int argc, char **argv)
 	  + cost2*(2.0/r)*(n[i+1][0]-n[i-1][0]);
       }
     M[1] = M[0] + dt*M[0]*D*Sd*dndr2R;
-    if((j%stpout==0) || (j==0))
+    if((j%stpout2==0) || (j==0))
+      {
+	printf("j=%d Rt=%f\n", j, Rt);
+      }
+     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
 	//printf("j=%d Rt=%f\n", j, Rt);
 #if 0
