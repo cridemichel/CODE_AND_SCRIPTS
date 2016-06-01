@@ -137,7 +137,7 @@ int main(int argc, char **argv)
       { // salva ogni 10000 passi 
 	printf("j=%d Rt=%f\n", j, Rt);
 	for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
-	  fprintf(uscita, "%f %f\n", L1+(((double)i)+0.5)*dx, M[1]*n[i][1]/M0/n0);  
+	  fprintf(uscita, "%f %f\n", (L1+(((double)i)+0.5)*dx)/(2.0*Rt), M[1]*n[i][1]/M0/n0);  
 #ifdef GNUPLOT
 	fprintf(uscita, "\n"); // linea vuota per gnuplot 
 #else
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
   fclose(kD);
   uscita=fopen("last_profile.dat", "w+");
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
-    fprintf(uscita, "%f %f\n", L1+(((double)i)+0.5)*dx, M[1]*n[i][1]/M0/n0);  
+    fprintf(uscita, "%f %f\n", (L1+(((double)i)+0.5)*dx)/(2.0*Rt), M[1]*n[i][1]/M0/n0);  
   fclose(uscita);
   return 0;
 }
