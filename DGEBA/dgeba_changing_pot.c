@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     cost1 = D*dt/dx/dx;
     cost2 = D*dt/dx/2.0;
 
-    Rt = (0.5*L1*1.01)*pow(M[0]/M0,1.0/Df);
+    Rt = (0.5*L1)*pow(M[0]/M0,1.0/Df);
     i2R = 1+(2.0*Rt - L1)/dx;
     if (i2R > Nx-1)
       {
