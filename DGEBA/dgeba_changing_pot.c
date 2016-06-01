@@ -43,12 +43,12 @@ double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <D0> <n0> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <D0> <n0> <delta> <Dx> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
 double U(double r, double L1, double Dx, double delta)
 {
-  return V0*(0.5-0.5*tanh(r-(L1+Dx)/delta));
+  return V0*(0.5-0.5*tanh((r-(L1+Dx))/delta));
 }
 double dU(double r, double L1, double Dx, double delta)
 {
@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 
 
   dx = (L2-L1) / Nx;
+  V0 = betauI;
   wI=exp(-betauI);
   //wO=exp(-betauO)*dx/dt;
   /* la condizione iniziale e` uno scalino centrato in
@@ -116,7 +117,7 @@ int main(int argc, char **argv)
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
   printf("dx=%G wI=%G L1=%f L2=%f NxL=%d\n", dx, wI, L1, L2, NxL);
-  printf("D0=%f Df=%f\n", D0, Df);
+  printf("D0=%f Df=%f delta=%f Dx=%f\n", D0, Df, delta, Dx);
   //Df = 1.9; /* dimensione frattale dei cluster */
   //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
@@ -137,8 +138,8 @@ int main(int argc, char **argv)
     cost1 = D*dt/dx/dx;
     cost2 = D*dt/dx/2.0;
 
-    Rt = L1*pow(M[0]/M0,1.0/Df);
-    i2R = (2.0*Rt - L1)/dx;
+    Rt = (0.5*L1*1.01)*pow(M[0]/M0,1.0/Df);
+    i2R = 1+(2.0*Rt - L1)/dx;
     if (i2R > Nx-1)
       {
 	printf("Rt=%f M[0]=%f i2R=%d\n", Rt, M[0], i2R);
@@ -153,19 +154,21 @@ int main(int argc, char **argv)
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
     Sd=4.0*M_PI*Sqr(2.0*Rt);
     Dx = 2.0*delta;
-    for(i=i2R; i<(Nx-1); i++)                
+    for(i=1; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
-	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, Rt, Dx, delta)*2.0/r+ddU(r, Rt, Dx, delta)) +  
+	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
-	  + cost2*(dU(r, Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]) - cost0*n[i][0]*(Sd*dndr2R);
+	  + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]) - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]);
 #if 0
 	n[i][1] = n[i][0] - cost0*n[i][0]*(Sd*dndr2R) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(2.0/r)*(n[i+1][0]-n[i-1][0]);
 #endif
       }
-    M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, L1, Dx, delta)*n[i2R][0]);
+    //printf("dU=%f dndr2R=%f i2R=%d n0=%f\n", dU(2.0*Rt, 2.0*Rt, Dx, delta), dndr2R, i2R, n[0][0]);
+
+    M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]);
     if((j%stpout2==0) || (j==0))
       {
 	printf("j=%d Rt=%f\n", j, Rt);
@@ -199,7 +202,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, L1, Dx, delta)*n[i2R][0]), Rt);
+	fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
