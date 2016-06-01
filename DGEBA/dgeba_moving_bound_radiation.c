@@ -86,7 +86,8 @@ int main(int argc, char **argv)
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=1.0;
+  n0=10.0;
+  for(i=0; i<Nx; i++) n[i][0]=n0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
@@ -101,7 +102,6 @@ int main(int argc, char **argv)
   //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
   M[0] = M0;
-  n0=1.0;
   gamma = 1.0/3.0;
   for(j=0; j<=Nt; j++){  // loop temporale 
 
@@ -126,10 +126,11 @@ int main(int argc, char **argv)
 	printf("[j=%d] cluster too big, increase L2!\n", j);
 	exit(-1);
       }
-    n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
-    dndr2R = (n[i2R+1]-n[i2R-1])/dx/2.0;
+    //n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
+    n[i2R-1][0] = 0;
+    dndr2R = (n[i2R+1][0]-n[i2R-1][0])/dx/2.0;
     Sd=4.0*M_PI*Sqr(Rt);
-    for(i=1; i<(Nx-1); i++)                
+    for(i=i2R; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
 	n[i][1] = n[i][0] - cost0*n[i][0]*(M[0]*Sd*dndr2R) +  
@@ -140,7 +141,7 @@ int main(int argc, char **argv)
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
 	printf("j=%d Rt=%f\n", j, Rt);
-	for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
+	for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
 	  fprintf(uscita, "%f %f\n", L1+(((double)i)+0.5)*dx, n[i][1]);  
 #ifdef GNUPLOT
 	fprintf(uscita, "\n"); // linea vuota per gnuplot 
@@ -164,7 +165,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI);
+	fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[i2R][0]*wI);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
@@ -179,7 +180,7 @@ int main(int argc, char **argv)
   fclose(equilib);
   fclose(kD);
   uscita=fopen("last_profile.dat", "w+");
-  for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
+  for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
     fprintf(uscita, "%f %f\n", L1+(((double)i)+0.5)*dx, n[i][1]);  
   fclose(uscita);
   return 0;
