@@ -146,14 +146,10 @@ int main(int argc, char **argv)
 	printf("[j=%d] cluster too big, increase L2!\n", j);
 	exit(-1);
       }
-#ifdef ABSORB
     n[i2R-1][0] = 0;
-#else
-    //n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
-#endif
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
     Sd=4.0*M_PI*Sqr(2.0*Rt);
-    Dx = 2.0*delta;
+    //Dx = 2.0*delta;
     for(i=1; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
