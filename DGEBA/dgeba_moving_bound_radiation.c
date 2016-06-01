@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     stpout = atoi(argv[9]);
 
   dx = (L2-L1) / Nx;
-  wI=exp(-betauI)*dx/dt;
+  wI=exp(-betauI);
   //wO=exp(-betauO)*dx/dt;
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
@@ -137,12 +137,14 @@ int main(int argc, char **argv)
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
 	//printf("j=%d Rt=%f\n", j, Rt);
+#if 0
 	for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
 	  fprintf(uscita, "%f %f\n", (L1+(((double)i)+0.5)*dx)/(2.0*Rt), M[1]*n[i][1]/M0/n0);  
 #ifdef GNUPLOT
 	fprintf(uscita, "\n"); // linea vuota per gnuplot 
 #else
 	fprintf(uscita, "&\n"); // linea vuota per gnuplot 
+#endif
 #endif
 	fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
 #if 0
