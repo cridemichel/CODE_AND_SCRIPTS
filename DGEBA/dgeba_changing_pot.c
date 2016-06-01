@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
     Sd=4.0*M_PI*Sqr(2.0*Rt);
     //Dx = 2.0*delta;
-    for(i=1; i<(Nx-1); i++)                
+    for(i=i2R; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
 	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
