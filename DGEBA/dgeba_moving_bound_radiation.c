@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 { 
   int i,j, k, rfI, i2R;
   double pos, rf, cost0, cost1, cost2;     // costante di integrazione
-  double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt;	
+  double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0;	
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -92,14 +92,16 @@ int main(int argc, char **argv)
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
-  printf("cost1=%G cost2=%G dx=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, cost2, dx, wI, L1, L2, NxL);
+  printf("dx=%G wI=%G L1=%f L2=%f NxL=%d\n", dx, wI, L1, L2, NxL);
   printf("Dx=%f\n", Dx);
   pos = Dx;
   rfI = pos/dx;
   rf = L1 + pos;
   Df = 3.0; /* dimensione frattale dei cluster */
-  printf("out flux calculated at r=%f\n", rf);
+  //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
+  M[0] = M0;
+  n0=1.0;
   gamma = 1.0/3.0;
   for(j=0; j<=Nt; j++){  // loop temporale 
 
@@ -109,21 +111,24 @@ int main(int argc, char **argv)
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     /* radiation boundary conditions */
     /* reflection boundary condition */
-    n[Nx-1][0] = n[Nx-2][0];
+    n[Nx-1][0] = n0*M0/M[0];
 
     D = 2.0*D0/pow(M[0],gamma);
     cost0 = D*dt;
     cost1 = D*dt/dx/dx;
     cost2 = D*dt/dx/2.0;
 
-    i2R = (Rt - L1)/dx;
+    Rt = L1*pow(M[0]/M0,1.0/Df);
+    i2R = (2.0*Rt - L1)/dx;
     if (i2R > Nx-1)
       {
-	printf("cluster too big, increase L2!\n");
+	printf("Rt=%f M[0]=%f i2R=%d\n", Rt, M[0], i2R);
+	printf("[j=%d] cluster too big, increase L2!\n", j);
 	exit(-1);
       }
     n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
     dndr2R = (n[i2R+1]-n[i2R-1])/dx/2.0;
+    Sd=4.0*M_PI*Sqr(Rt);
     for(i=1; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
@@ -131,39 +136,36 @@ int main(int argc, char **argv)
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(2.0/r)*(n[i+1][0]-n[i-1][0]);
       }
-    Rt = L1*pow(M[0]/M0,1.0/Df);
-    Sd=4.0*M_PI*Sqr(Rt);
-    M[1] = M[0] + dt*D*Sd*dndr2R;
+    M[1] = M[0] + dt*M[0]*D*Sd*dndr2R;
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
-  	  {
-  	    for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
-  	      fprintf(uscita, "%f %f\n", L1+(((double)i)+0.5)*dx, n[i][1]);  
+	printf("j=%d Rt=%f\n", j, Rt);
+	for(i=0 ; i<Nx; i++) // formato 3D per gnuplot 
+	  fprintf(uscita, "%f %f\n", L1+(((double)i)+0.5)*dx, n[i][1]);  
 #ifdef GNUPLOT
-  	    fprintf(uscita, "\n"); // linea vuota per gnuplot 
+	fprintf(uscita, "\n"); // linea vuota per gnuplot 
 #else
-  	    fprintf(uscita, "&\n"); // linea vuota per gnuplot 
+	fprintf(uscita, "&\n"); // linea vuota per gnuplot 
 #endif
-  	    fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
+	fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
 #if 0
-	    concSE = 0.0;
-	    for (k=1; k < NxL-1; k++)
-	      {
-		concSE += n[k][0];
-	      }
-	    concSE /= NxL;
-	    concS = 0.0;
-	    for (k=NxL+1; k < Nx; k++)
-	      {
-		concS += n[k][0];
-	      }
-	    concS /= Nx - NxL;
+	concSE = 0.0;
+	for (k=1; k < NxL-1; k++)
+	  {
+	    concSE += n[k][0];
+	  }
+	concSE /= NxL;
+	concS = 0.0;
+	for (k=NxL+1; k < Nx; k++)
+	  {
+	    concS += n[k][0];
+	  }
+	concS /= Nx - NxL;
 
 #endif	
 
-	     fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI);
-	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
-  	  }
+	fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI);
+	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
     //n[Nx-2][1]+=1.0;
