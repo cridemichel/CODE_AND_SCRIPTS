@@ -43,7 +43,7 @@ double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <D0> <n0> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <D0> <n0> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
 int main(int argc, char **argv)
@@ -64,9 +64,10 @@ int main(int argc, char **argv)
   //V0 = atof(argv[2]);
   D0 = atof(argv[2]);
   n0 = atof(argv[3]); 
-  L1 = atof(argv[4]);
-  L2 = atof(argv[5]);
-  Nx = atoi(argv[6]);
+  Df = atof(argv[4]);
+  L1 = atof(argv[5]);
+  L2 = atof(argv[6]);
+  Nx = atoi(argv[7]);
 
   if (Nx > maxNx)
     {
@@ -74,12 +75,12 @@ int main(int argc, char **argv)
       exit(-1);
     }
   //dx = atof(argv[7]);
-  Nt = atoi(argv[7]);
-  dt = atof(argv[8]);
-  if (argc == 10)
-    stpout = atoi(argv[9]);
+  Nt = atoi(argv[8]);
+  dt = atof(argv[9]);
   if (argc == 11)
-    stpout2 = atoi(argv[10]);
+    stpout = atoi(argv[10]);
+  if (argc == 12)
+    stpout2 = atoi(argv[11]);
 
 
   dx = (L2-L1) / Nx;
@@ -97,7 +98,7 @@ int main(int argc, char **argv)
    * integrazione deve essere << 1*/
   printf("dx=%G wI=%G L1=%f L2=%f NxL=%d\n", dx, wI, L1, L2, NxL);
   printf("D0=%f\n", D0);
-  Df = 1.9; /* dimensione frattale dei cluster */
+  //Df = 1.9; /* dimensione frattale dei cluster */
   //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
   M[0] = M0;
