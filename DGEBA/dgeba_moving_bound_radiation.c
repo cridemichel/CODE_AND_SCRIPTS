@@ -97,7 +97,7 @@ int main(int argc, char **argv)
    * integrazione deve essere << 1*/
   printf("dx=%G wI=%G L1=%f L2=%f NxL=%d\n", dx, wI, L1, L2, NxL);
   printf("D0=%f\n", D0);
-  Df = 3.0; /* dimensione frattale dei cluster */
+  Df = 1.9; /* dimensione frattale dei cluster */
   //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
   M[0] = M0;
