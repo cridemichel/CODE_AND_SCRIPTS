@@ -36,24 +36,37 @@
 
 #define maxNx 1000000
 double betauI=10.0,  betauO=10.0; 
-double wI, wO, concSE, concS;
-double D1=1.0, D2=1.0;
+double wI, wO, concSE, concS, V0=1.0, delta=0.1;
+double D=1.0;
 int Nt = 10000, Nx=1000, NxL, stpout=1000;
-double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0;
+double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <D1> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <uO> <D> <delta> <Dx> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
-
+double U(double r, double L1, double Dx, double delta)
+{
+  return V0*(0.5+0.5*tanh(r-(L1+Dx)/delta));
+}
+double dU(double r, double L1, double Dx, double delta)
+{
+  double sh;
+  sh = 1.0/cosh((r-(L1+Dx))/delta);
+  return V0*0.5*Sqr(sh)/delta;
+}
+double ddU(double r, double L1, double Dx, double delta)
+{
+  double a, sh;
+  a = L1+Dx;
+  sh = 1.0/cosh((r-a)/delta);
+  return -V0*Sqr(sh)*tanh((r-a)/delta)/Sqr(delta);
+}
 int main(int argc, char **argv)
 { 
-  int i,j, k;
-  double cost1, cost2;     // costante di integrazione
-#ifndef UNIDIM
-  double cost1b, cost2b;
-#endif
+  int i,j, k, rfI;
+  double pos, rf, cost0, cost1, cost2;     // costante di integrazione
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -64,111 +77,65 @@ int main(int argc, char **argv)
     print_usage();
 
   betauI = atof(argv[1]);
-//  betauO = atof(argv[2]);
-  D1 = atof(argv[2]);
-//  D2 = atof(argv[4]);
-//  Dx = atof(argv[5]);
-  L1 = atof(argv[3]);
-  L2 = atof(argv[4]);
-  Nx = atoi(argv[5]);
+  V0 = atof(argv[2]);
+  D = atof(argv[3]);
+  delta = atof(argv[4]);
+  Dx = atof(argv[5]);
+  L1 = atof(argv[6]);
+  L2 = atof(argv[7]);
+  Nx = atoi(argv[8]);
+
   if (Nx > maxNx)
     {
-      printf("Troppi punti (maxNx=%d)!\n", maxNx);
+      printf("Nx=%d Troppi punti (maxNx=%d)!\n", Nx, maxNx);
       exit(-1);
     }
   //dx = atof(argv[7]);
-  Nt = atoi(argv[6]);
-  dt = atof(argv[7]);
-  if (argc == 8)
-    stpout = atoi(argv[8]);
+  Nt = atoi(argv[9]);
+  dt = atof(argv[10]);
+  if (argc == 12)
+    stpout = atoi(argv[11]);
 
   dx = (L2-L1) / Nx;
-  NxL = L1 / dx;
+  NxL = Dx / dx;
   wI=exp(-betauI)*dx/dt;
- // wO=exp(-betauO)*dx/dt;
+  wO=exp(-betauO)*dx/dt;
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=10.0;
+  for(i=Nx/2-width; i<=Nx/2+width; i++) n[i][0]=1.0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
-  cost1 = D1*dt/dx/dx;
-  //cost2 = D2*dt/dx/dx;
-#ifndef UNIDIM
-  cost1b = dt*D1/dx;
-  //cost2b = dt*D2/dx;
-#endif
-  printf("cost1=%G x=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, dx, wI, L1, L2, NxL);
-  
-  
+  cost0 = D*dt;
+  cost1 = D*dt/dx/dx;
+  cost2 = D*dt/dx/2.0;
+  printf("cost1=%G cost2=%G dx=%G wI=%G wI=%G L1=%f L2=%f NxL=%d\n", cost1, cost2, dx, wI, wO, L1, L2, NxL);
+  printf("delta=%f Dx=%f V0=%f\n", delta, Dx, V0);
+  pos = Dx;
+  rfI = pos/dx;
+  rf = L1 + pos;
+  printf("out flux calculated at r=%f\n", rf);
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
      * n[i][1] conterra` la distribuzione al tempo t + dt 
      * il loop implementa la discretizzazione di
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
-    
-#if 0
-#if UNIDIM
-    /* radiation boundary condition */
-    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
-#else
-    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
-#endif
-#endif
+    /* radiation boundary conditions */
+    n[0][0] = n[1][0]*(1.0-dx*wI/D);
     /* reflection boundary condition */
     n[Nx-1][0] = n[Nx-2][0];
 
-    /* radiation boundary condition (in->out)*/
-    //ntmp = n[NxL][0];
-    
-#if 0
-    nbuf1 = n[NxL+1][0];
-    n[NxL][0] = n[NxL-1][0]*(1.0-dx*wO/D1);
-    nbuf = n[NxL][0];
-    //n[0][1] = n[1][1]*(dx*wI+D);  
-#ifdef UNIDIM
-    for(i=1; i < NxL; i++)                
-      n[i][1] = ni][0] 
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-#else
-    for(i=1; i < NxL; i++)                
-      n[i][1] = n[i][0] 
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost1b*(n[i+1][0]-n[i-1][0])/(((double)i)*dx+L1);
-#endif
-#ifdef UNIDIM
-    n[NxL-1][1] += dt*nbuf1*D2/dx/dx;
-#else
-    n[NxL-1][1] += dt*nbuf1*D2/dx/dx;
-#endif
-#endif
-#ifdef INNER_REFLECTION
-    /* adsorbing boundary condition */
-    n[0][0] = 0.0;
-#else
-    n[0][0] = n[1][0]*(1.0-dx*wI/D1);
-#endif
-#ifdef UNIDIM
     for(i=1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] 
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]);
-#else
-    for(i=1; i<(Nx-1); i++)                
-      n[i][1] = n[i][0] 
-	+ cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0])
-	+ cost1b*(n[i+1][0]-n[i-1][0])/(((double)i)*dx+L1);
-#endif
-#if 0
-#ifdef UNIDIM
-    n[NxL+1][1] += dt*nbuf*wO;
-#else
-    n[NxL+1][1] += dt*nbuf*wO;
-#endif
-#endif
+      {
+	r = ((double)i)*dx+L1;
+	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, L1, Dx, delta)*2.0/r+ddU(r, L1, Dx, delta)) +  
+	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
+	  + cost2*(dU(r, L1, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
+      }
     if((j%stpout==0) || (j==0))
       { // salva ogni 10000 passi 
   	  {
@@ -187,25 +154,17 @@ int main(int argc, char **argv)
 		concSE += n[k][0];
 	      }
 	    concSE /= NxL;
-#endif
 	    concS = 0.0;
-	    for (k=1; k < Nx; k++)
+	    for (k=NxL+1; k < Nx; k++)
 	      {
-#ifdef UNIDIM
 		concS += n[k][0];
-#else
-		concS += 4.0*M_PI*n[k][0]*Sqr(k*dx+L1);
-#endif
 	      }
-#ifdef UNIDIM
-	    concS /= Nx;
-	    if (concS!=0)
-	      fprintf(kD, "%G %G\n", dt*j, n[1][0]*wI/concS);
-#else
-	    concS /= 4.0*M_PI*(L2*Sqr(L2)-L1*Sqr(L1))/3.0;
-	    if (concS!=0)
-	      fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI/concS);
-#endif
+	    concS /= Nx - NxL;
+
+#endif	
+
+	     fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(L1)*n[1][0]*wI, 
+		    -D*4.0*M_PI*Sqr(rf)*((n[rfI+1][0]-n[rfI-1][0])/2.0/dx + dU(rf, L1, Dx, delta)*n[rfI][0]));
 	    //printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
   	  }
       }
