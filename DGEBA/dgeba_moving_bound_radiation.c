@@ -122,10 +122,10 @@ int main(int argc, char **argv)
 	printf("[j=%d] cluster too big, increase L2!\n", j);
 	exit(-1);
       }
-    n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
-    //n[i2R-1][0] = 0;
+    //n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
+    n[i2R-1][0] = 0;
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
-    Sd=4.0*M_PI*Sqr(Rt);
+    Sd=4.0*M_PI*Sqr(2.0*Rt);
     for(i=i2R; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(Rt)*n[i2R][0]*wI);
+	fprintf(kD, "%G %G\n", dt*j, 4.0*M_PI*Sqr(2.0*Rt)*n[i2R][0]*wI);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
