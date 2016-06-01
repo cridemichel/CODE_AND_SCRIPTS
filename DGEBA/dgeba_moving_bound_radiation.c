@@ -43,13 +43,13 @@ double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <D0> <Dx> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <D0> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
 int main(int argc, char **argv)
 { 
-  int i,j, k, rfI, i2R;
-  double pos, rf, cost0, cost1, cost2;     // costante di integrazione
+  int i,j, k, i2R;
+  double pos, cost0, cost1, cost2;     // costante di integrazione
   double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0;	
   FILE *uscita, *equilib, *kD;
 
@@ -57,16 +57,15 @@ int main(int argc, char **argv)
   uscita=fopen("conc_profile.dat","w+");
   equilib=fopen("n_vs_t.dat", "w+");
   kD = fopen("kD_vs_t.dat", "w+");
-  if (argc < 7)
+  if (argc < 6)
     print_usage();
 
   betauI = atof(argv[1]);
   //V0 = atof(argv[2]);
   D0 = atof(argv[2]);
-  Dx = atof(argv[3]);
-  L1 = atof(argv[4]);
-  L2 = atof(argv[5]);
-  Nx = atoi(argv[6]);
+  L1 = atof(argv[3]);
+  L2 = atof(argv[4]);
+  Nx = atoi(argv[5]);
 
   if (Nx > maxNx)
     {
@@ -74,19 +73,18 @@ int main(int argc, char **argv)
       exit(-1);
     }
   //dx = atof(argv[7]);
-  Nt = atoi(argv[7]);
-  dt = atof(argv[8]);
-  if (argc == 10)
-    stpout = atoi(argv[9]);
+  Nt = atoi(argv[6]);
+  dt = atof(argv[7]);
+  if (argc == 9)
+    stpout = atoi(argv[8]);
 
   dx = (L2-L1) / Nx;
-  NxL = Dx / dx;
   wI=exp(-betauI)*dx/dt;
   //wO=exp(-betauO)*dx/dt;
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  n0=10.0;
+  n0=0.01;
   for(i=0; i<Nx; i++) n[i][0]=n0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
@@ -94,10 +92,7 @@ int main(int argc, char **argv)
  /* per la stabilita` dell'algoritmo, la costante di 
    * integrazione deve essere << 1*/
   printf("dx=%G wI=%G L1=%f L2=%f NxL=%d\n", dx, wI, L1, L2, NxL);
-  printf("Dx=%f\n", Dx);
-  pos = Dx;
-  rfI = pos/dx;
-  rf = L1 + pos;
+  printf("D0=%f\n", D0);
   Df = 3.0; /* dimensione frattale dei cluster */
   //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
@@ -128,12 +123,12 @@ int main(int argc, char **argv)
       }
     //n[i2R-1][0] = n[i2R][0]*(1.0-dx*wI/D);
     n[i2R-1][0] = 0;
-    dndr2R = (n[i2R+1][0]-n[i2R-1][0])/dx/2.0;
+    dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
     Sd=4.0*M_PI*Sqr(Rt);
     for(i=i2R; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
-	n[i][1] = n[i][0] - cost0*n[i][0]*(M[0]*Sd*dndr2R) +  
+	n[i][1] = n[i][0] - cost0*n[i][0]*(Sd*dndr2R) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(2.0/r)*(n[i+1][0]-n[i-1][0]);
       }
