@@ -43,7 +43,7 @@ double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <D0> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <D0> <n0> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
 int main(int argc, char **argv)
@@ -63,9 +63,10 @@ int main(int argc, char **argv)
   betauI = atof(argv[1]);
   //V0 = atof(argv[2]);
   D0 = atof(argv[2]);
-  L1 = atof(argv[3]);
-  L2 = atof(argv[4]);
-  Nx = atoi(argv[5]);
+  n0 = atof(argv[3]); 
+  L1 = atof(argv[4]);
+  L2 = atof(argv[5]);
+  Nx = atoi(argv[6]);
 
   if (Nx > maxNx)
     {
@@ -73,10 +74,10 @@ int main(int argc, char **argv)
       exit(-1);
     }
   //dx = atof(argv[7]);
-  Nt = atoi(argv[6]);
-  dt = atof(argv[7]);
-  if (argc == 9)
-    stpout = atoi(argv[8]);
+  Nt = atoi(argv[7]);
+  dt = atof(argv[8]);
+  if (argc == 10)
+    stpout = atoi(argv[9]);
 
   dx = (L2-L1) / Nx;
   wI=exp(-betauI)*dx/dt;
@@ -84,7 +85,7 @@ int main(int argc, char **argv)
   /* la condizione iniziale e` uno scalino centrato in
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
-  n0=0.01;
+  //n0=0.01;
   for(i=0; i<Nx; i++) n[i][0]=n0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
