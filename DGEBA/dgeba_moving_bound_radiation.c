@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(2.0*Rt)*n[i2R][0]*wI, Rt);
+	fprintf(kD, "%G %G %G %G\n", dt*j, 4.0*M_PI*Sqr(2.0*Rt)*n[i2R][0]*wI, Rt, M[1]);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
