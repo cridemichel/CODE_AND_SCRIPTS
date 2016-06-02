@@ -133,7 +133,6 @@ int main(int argc, char **argv)
     /* radiation boundary conditions */
     /* reflection boundary condition */
     n[Nx-1][0] = n0*M0/M[0];
-
     D = 2.0*D0/pow(M[0],gamma);
     cost0 = D*dt;
     cost1 = D*dt/dx/dx;
@@ -154,9 +153,15 @@ int main(int argc, char **argv)
     for(i=i2R; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
+#ifdef NO_MOVING_BOUNDARY
+	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
+	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
+	  + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
+#else
 	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]) - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]);
+#endif
 #if 0
 	n[i][1] = n[i][0] - cost0*n[i][0]*(Sd*dndr2R) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
@@ -164,8 +169,11 @@ int main(int argc, char **argv)
 #endif
       }
     //printf("dU=%f dndr2R=%f i2R=%d n0=%f\n", dU(2.0*Rt, 2.0*Rt, Dx, delta), dndr2R, i2R, n[0][0]);
-
+#ifdef NO_MOVING_BOUNDARY
+    M[1] = M[0];
+#else
     M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]);
+#endif
     if((j%stpout2==0) || (j==0))
       {
 	printf("j=%d Rt=%f\n", j, Rt);
@@ -199,7 +207,8 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt);
+	fprintf(kD, "%G %G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt,
+		n0*M0/M[0]);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
