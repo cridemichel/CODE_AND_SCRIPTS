@@ -118,8 +118,8 @@ int main(int argc, char **argv)
     cost1 = D*dt/dx/dx;
     cost2 = D*dt/dx/2.0;
 
-    Rt = L1*pow(M[0]/M0,1.0/Df);
-    i2R = (2.0*Rt - L1)/dx;
+    Rt = 0.5*L1*pow(M[0]/M0,1.0/Df);
+    i2R = 1+(2.0*Rt - L1)/dx;
     if (i2R > Nx-1)
       {
 	printf("Rt=%f M[0]=%f i2R=%d\n", Rt, M[0], i2R);
@@ -136,11 +136,21 @@ int main(int argc, char **argv)
     for(i=i2R; i<(Nx-1); i++)                
       {
 	r = ((double)i)*dx+L1;
+#ifdef NO_MOBILE_BOUNDARY
+	n[i][1] = n[i][0] +  
+	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
+	  + cost2*(2.0/r)*(n[i+1][0]-n[i-1][0]);
+#else
 	n[i][1] = n[i][0] - cost0*n[i][0]*(Sd*dndr2R) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(2.0/r)*(n[i+1][0]-n[i-1][0]);
+#endif
       }
+#ifdef NO_MOBILE_BOUNDARY
+    M[1] = M[0];
+#else
     M[1] = M[0] + dt*M[0]*D*Sd*dndr2R;
+#endif    
     if((j%stpout2==0) || (j==0))
       {
 	printf("j=%d Rt=%f\n", j, Rt);
