@@ -110,7 +110,8 @@ int main(int argc, char **argv)
    * Nx/2 e di larghezza 2 width */
   for(i=0; i<Nx; i++) n[i][0]=0.;  
   //n0=0.01;
-  for(i=0; i<Nx; i++) n[i][0]=n0;
+
+  for(i=(Dx+3.0*delta)/dx; i<Nx; i++) n[i][0]=n0;
 
   /* in 0 le condizioni al bordo sono di tipo "radiation" */
   //for(j=0; j<2; j++) n[0][j] = n[Nx-1][j] = 0.; 
@@ -198,7 +199,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G %G\n", dt*j, 4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt);
+	fprintf(kD, "%G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
