@@ -36,6 +36,7 @@
 #define width 100       /* larghezza della distribuzione iniziale */
 
 #define maxNx 1000000
+const double Mthr = 5.0;
 double betauI=10.0,  betauO=10.0; 
 double wI, wO, concSE, concS, V0=1.0, delta=0.1;
 double D=1.0;
@@ -146,7 +147,8 @@ int main(int argc, char **argv)
     cost2 = D*dt/dx/2.0;
 
     Rt = (0.5*L1)*pow(M[0]/M0,1.0/Df);
-    if (2.0*Rt - L1 > (L2 - L1)*0.5)
+    //if (2.0*Rt - L1 > (L2 - L1)*0.5)
+    if (M[1]*M0 > Mthr)
       {
 	break;
       }
@@ -243,7 +245,7 @@ int main(int argc, char **argv)
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
     {
       rr = (L1+(((double)i)+0.5)*dx);
-      fprintf(uscita, "%G %G %G\n", rr, n[i][1], exp(-U(rr, L1, Dx, delta)));  
+      fprintf(uscita, "%G %G %G\n", rr, n[i][1], n0*exp(-U(rr, L1, Dx, delta)));  
     }
 #else
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
