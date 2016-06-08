@@ -24,6 +24,7 @@
 #include <stdlib.h> 
 #include <stdio.h>
 #include <math.h>
+#include <unistd.h>
 #define Sqr(x) ((x)*(x))
 #if 0
 #define dx 1.	     /* passo spaziale */
@@ -46,6 +47,7 @@ void print_usage(void)
   printf("square_well_diff_eq <uI> <D0> <n0> <delta> <Dx> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
+
 double U(double r, double L1, double Dx, double delta)
 {
   return V0*(0.5-0.5*tanh((r-(L1+Dx))/delta));
@@ -63,11 +65,12 @@ double ddU(double r, double L1, double Dx, double delta)
   sh = 1.0/cosh((r-a)/delta);
   return V0*Sqr(sh)*tanh((r-a)/delta)/Sqr(delta);
 }
+
 int main(int argc, char **argv)
 { 
   int i,j, k, i2R;
   double pos, cost0, cost1, cost2;     // costante di integrazione
-  double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0;	
+  double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0, rr;	
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -132,13 +135,21 @@ int main(int argc, char **argv)
      * n(x,t+dt) = n(x,t) + D grad^2 n(x,t) dt             */
     /* radiation boundary conditions */
     /* reflection boundary condition */
+#ifdef REFLECT
+    n[Nx-1][0] = n[Nx-2][0];
+#else
     n[Nx-1][0] = n0*M0/M[0];
+#endif
     D = 2.0*D0/pow(M[0],gamma);
     cost0 = D*dt;
     cost1 = D*dt/dx/dx;
     cost2 = D*dt/dx/2.0;
 
     Rt = (0.5*L1)*pow(M[0]/M0,1.0/Df);
+    if (2.0*Rt - L1 > (L2 - L1)*0.5)
+      {
+	break;
+      }
     i2R = 1+(2.0*Rt - L1)/dx;
     if (i2R > Nx-1)
       {
@@ -146,7 +157,11 @@ int main(int argc, char **argv)
 	printf("[j=%d] cluster too big, increase L2!\n", j);
 	exit(-1);
       }
+#ifdef REFLECT
+    n[i2R-1][0] = n[i2R][0]; /* reflecting boundary condition */
+#else
     n[i2R-1][0] = 0;
+#endif
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
     Sd=4.0*M_PI*Sqr(2.0*Rt);
     //Dx = 2.0*delta;
@@ -190,7 +205,7 @@ int main(int argc, char **argv)
 	fprintf(uscita, "&\n"); // linea vuota per gnuplot 
 #endif
 #endif
-	fprintf(equilib, "%f %f\n", dt*j, n[NxL-5][1]);
+	fprintf(equilib, "%f %f\n", dt*j, n[Nx-5][1]);
 #if 0
 	concSE = 0.0;
 	for (k=1; k < NxL-1; k++)
@@ -210,6 +225,7 @@ int main(int argc, char **argv)
 	fprintf(kD, "%G %G %G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt,
 		n0*M0/M[0], M[1]);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
+	
       }
     /* termine di sorgente legato a particelle che rientrano nel dominio */
     //n[Nx-2][1]+=1.0;
@@ -223,8 +239,16 @@ int main(int argc, char **argv)
   fclose(equilib);
   fclose(kD);
   uscita=fopen("last_profile.dat", "w+");
+#ifdef NO_MOVING_BOUNDARY
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
-    fprintf(uscita, "%f %f\n", (L1+(((double)i)+0.5)*dx)/(2.0*Rt), M[1]*n[i][1]/M0/n0);  
+    {
+      rr = (L1+(((double)i)+0.5)*dx);
+      fprintf(uscita, "%G %G %G\n", rr, n[i][1], exp(-U(rr, L1, Dx, delta)));  
+    }
+#else
+  for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
+    fprintf(uscita, "%G %G\n", (L1+(((double)i)+0.5)*dx)/(2.0*Rt), M[1]*n[i][1]/M0/n0);  
+#endif
   fclose(uscita);
   return 0;
 }
