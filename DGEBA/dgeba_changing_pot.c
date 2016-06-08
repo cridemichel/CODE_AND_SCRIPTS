@@ -49,6 +49,21 @@ void print_usage(void)
   exit(-1);	
 }
 
+#ifdef HARMONIC
+double U(double r, double L1, double Dx, double delta)
+{
+  return 0.5*V0*r*r;
+}
+double dU(double r, double L1, double Dx, double delta)
+{
+  return V0*r;
+}
+double ddU(double r, double L1, double Dx, double delta)
+{
+  double a, sh;
+  return V0;
+}
+#else
 double U(double r, double L1, double Dx, double delta)
 {
   return V0*(0.5-0.5*tanh((r-(L1+Dx))/delta));
@@ -66,7 +81,7 @@ double ddU(double r, double L1, double Dx, double delta)
   sh = 1.0/cosh((r-a)/delta);
   return V0*Sqr(sh)*tanh((r-a)/delta)/Sqr(delta);
 }
-
+#endif
 int main(int argc, char **argv)
 { 
   int i,j, k, i2R;
