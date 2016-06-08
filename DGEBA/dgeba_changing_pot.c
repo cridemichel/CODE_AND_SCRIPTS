@@ -214,6 +214,21 @@ int main(int argc, char **argv)
       { // salva ogni 10000 passi 
 	//printf("j=%d Rt=%f\n", j, Rt);
 #if 0
+      	ntot = 0.0;
+	ptot = 0.0;
+	for(i=i2R ; i<Nx; i++) 
+	  {
+	    rr = (L1+(((double)i)+0.5)*dx);
+	    ntot += 4.0*M_PI*Sqr(rr)*n[i][1];
+	    ptot +=  4.0*M_PI*Sqr(rr)*exp(-U(rr, L1, Dx, delta));
+	  }
+	for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
+	  {
+	    rr = (L1+(((double)i)+0.5)*dx);
+	    fprintf(uscita, "%G %G %G\n", rr, n[i][1]/ntot, exp(-U(rr, L1, Dx, delta))/ptot);  
+	  }
+#endif
+#if 0
 	for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
 	  fprintf(uscita, "%f %f\n", (L1+(((double)i)+0.5)*dx)/(2.0*Rt), M[1]*n[i][1]/M0/n0);  
 #ifdef GNUPLOT
