@@ -262,7 +262,7 @@ int main(int argc, char **argv)
   for(i=i2R ; i<Nx; i++) 
     {
       rr = (L1+(((double)i)+0.5)*dx);
-      ntot += 4.0*M_PI*Sqr(rr)*n[i2R][1];
+      ntot += 4.0*M_PI*Sqr(rr)*n[i][1];
       ptot +=  4.0*M_PI*Sqr(rr)*exp(-U(rr, L1, Dx, delta));
     }
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
