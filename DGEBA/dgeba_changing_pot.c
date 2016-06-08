@@ -85,7 +85,7 @@ double ddU(double r, double L1, double Dx, double delta)
 int main(int argc, char **argv)
 { 
   int i,j, k, i2R;
-  double pos, cost0, cost1, cost2;     // costante di integrazione
+  double pos, cost0, cost1, cost2, ptot, ntot;     // costante di integrazione
   double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0, rr;	
   FILE *uscita, *equilib, *kD;
 
@@ -257,10 +257,18 @@ int main(int argc, char **argv)
   fclose(kD);
   uscita=fopen("last_profile.dat", "w+");
 #ifdef NO_MOVING_BOUNDARY
+  ntot = 0.0;
+  ptot = 0.0;
+  for(i=i2R ; i<Nx; i++) 
+    {
+      rr = (L1+(((double)i)+0.5)*dx);
+      ntot += 4.0*M_PI*Sqr(rr)*n[i2R][1];
+      ptot +=  4.0*M_PI*Sqr(rr)*exp(-U(rr, L1, Dx, delta));
+    }
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
     {
       rr = (L1+(((double)i)+0.5)*dx);
-      fprintf(uscita, "%G %G %G\n", rr, n[i][1], n0*exp(-U(rr, L1, Dx, delta)));  
+      fprintf(uscita, "%G %G %G\n", rr, n[i][1]/ntot, exp(-U(rr, L1, Dx, delta))/ptot);  
     }
 #else
   for(i=i2R ; i<Nx; i++) // formato 3D per gnuplot 
