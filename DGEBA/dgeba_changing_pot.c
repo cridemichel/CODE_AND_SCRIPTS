@@ -48,11 +48,24 @@ void print_usage(void)
   printf("square_well_diff_eq <uI> <D0> <n0> <delta> <Dx> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
   exit(-1);	
 }
-
-#ifdef HARMONIC
+#ifdef SINUSOIDAL
 double U(double r, double L1, double Dx, double delta)
 {
-  return 0.5*V0*r*r;
+  /* delta is the period here */
+  return V0*sin(2.0*M_PI*r/delta);
+}
+double dU(double r, double L1, double Dx, double delta)
+{
+  return 2.0*M_PI*V0*cos(2.0*M_PI*r/delta)/delta;
+}
+double ddU(double r, double L1, double Dx, double delta)
+{
+  return -Sqr(2.0*M_PI/delta)*V0*sin(2.0*M_PI*r/delta);
+}
+#elif defined(HARMONIC)
+double U(double r, double L1, double Dx, double delta)
+{
+  return 0.5*V0*Sqr(r);
 }
 double dU(double r, double L1, double Dx, double delta)
 {
@@ -60,7 +73,6 @@ double dU(double r, double L1, double Dx, double delta)
 }
 double ddU(double r, double L1, double Dx, double delta)
 {
-  double a, sh;
   return V0;
 }
 #else
@@ -152,7 +164,8 @@ int main(int argc, char **argv)
     /* radiation boundary conditions */
     /* reflection boundary condition */
 #ifdef REFLECT
-    n[Nx-1][0] = n[Nx-2][0];
+    //n[Nx-1][0] = n[Nx][0];
+    n[Nx-1][0] = -2.0*dU(L1, 2.0*Rt, Dx, delta)*dx*n[Nx-2][0] + n[Nx-3][0];
 #else
     n[Nx-1][0] = n0*M0/M[0];
 #endif
@@ -175,7 +188,8 @@ int main(int argc, char **argv)
 	exit(-1);
       }
 #ifdef REFLECT
-    n[i2R-1][0] = n[i2R][0]; /* reflecting boundary condition */
+    //n[i2R-1][0] = n[i2R][0]; /* reflecting boundary condition */
+    n[i2R-1][0] = 2.0*dU(L1, 2.0*Rt, Dx, delta)*dx*n[i2R][0] + n[i2R+1][0];
 #else
     n[i2R-1][0] = 0;
 #endif
@@ -237,7 +251,7 @@ int main(int argc, char **argv)
 	fprintf(uscita, "&\n"); // linea vuota per gnuplot 
 #endif
 #endif
-	fprintf(equilib, "%f %f\n", dt*j, n[Nx-5][1]);
+	fprintf(equilib, "%f %f\n", dt*j, n[Nx/2][1]);
 #if 0
 	concSE = 0.0;
 	for (k=1; k < NxL-1; k++)
