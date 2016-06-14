@@ -99,6 +99,10 @@ int main(int argc, char **argv)
   int i,j, k, i2R;
   double pos, cost0, cost1, cost2, ptot, ntot;     // costante di integrazione
   double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0, rr;	
+#ifdef CRANK_MB
+  double p, cmp1 cmp2, cX, dn2dr2, dndr,nr2R;
+  int m;
+#endif
   FILE *uscita, *equilib, *kD;
 
   /* apri il file di uscita */
@@ -172,8 +176,11 @@ int main(int argc, char **argv)
     D = 2.0*D0/pow(M[0],gamma);
     cost0 = D*dt;
     cost1 = D*dt/dx/dx;
+#ifdef CRANK_MB
+    cost2 = D*dt/dx;
+#else
     cost2 = D*dt/dx/2.0;
-
+#endif
     Rt = (0.5*L1)*pow(M[0]/M0,1.0/Df);
     //if (2.0*Rt - L1 > (L2 - L1)*0.5)
     if (M[1]*M0 > Mthr)
@@ -192,21 +199,50 @@ int main(int argc, char **argv)
     n[i2R-1][0] = 2.0*dU(L1, 2.0*Rt, Dx, delta)*dx*n[i2R][0] + n[i2R+1][0];
 #else
     n[i2R-1][0] = 0;
+    cX = 0.0; /* value at boundary */
 #endif
+#ifndef CRANK_MB
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
+#endif
     Sd=4.0*M_PI*Sqr(2.0*Rt);
     //Dx = 2.0*delta;
-    for(i=i2R; i<(Nx-1); i++)                
+#ifdef CRANK_MB
+    m=i2R-1;
+    p =(2.0*Rt - L1)/dx;
+    p = p-((int)p);
+    cmp1 = n[m+1][0];
+    cmp2 = n[m+2][0];
+    nr2R = cX;
+    dndr2R = (1.0/dx)*(cX*(2.0*p-3.0)/(1.0-p)/(2.0-p) + cmp1*(2.0-p)/(1.0-p) + cmp2*(1.0-p)/(2.0-p));	
+#endif
+    for(i=i2R; i<(Nx-1); i++)              
       {
 	r = ((double)i)*dx+L1;
+#else
 #ifdef NO_MOVING_BOUNDARY
 	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]);
 #else
+#ifdef CRANK_MB
+	if (i==i2R)
+	  {
+ 	    dn2dr2 = 2.0*(cX*(2.0*p-3.0)/((1.0-p)*(2.0-p)) + (2.0-p)/(1.0-p)*cmp1 - (1.0-p)/(2.0-p)*cmp2);
+	    dndr = -cX/(1.0-p)/(2.0-p)+cmp1*p/(1.0-p)+cmp2*(1.0-p)/(2.0-p);
+	    n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
+	      + cost1*dn2dr2 + 
+	      + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*dndr - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);}
+       else
+	 {
+	   n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
+	     + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
+	     + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]) - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);
+	 }	 
+#else
 	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
 	  + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]) - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]);
+#endif
 #endif
 #if 0
 	n[i][1] = n[i][0] - cost0*n[i][0]*(Sd*dndr2R) +  
@@ -218,7 +254,11 @@ int main(int argc, char **argv)
 #ifdef NO_MOVING_BOUNDARY
     M[1] = M[0];
 #else
-    M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]);
+#ifdef CRANK_MB
+    M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);
+#else
+    M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R-1][0]);
+#endif
 #endif
     if((j%stpout2==0) || (j==0))
       {
@@ -268,7 +308,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G %G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R][0]), Rt,
+	fprintf(kD, "%G %G %G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R-1][0]), Rt,
 		n0*M0/M[0], M[1]);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
 	
