@@ -100,7 +100,7 @@ int main(int argc, char **argv)
   double pos, cost0, cost1, cost2, ptot, ntot;     // costante di integrazione
   double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0, rr;	
 #ifdef CRANK_MB
-  double p, cmp1 cmp2, cX, dn2dr2, dndr,nr2R;
+  double p, cmp1, cmp2, cX, dn2dr2, dndr, nr2R;
   int m;
 #endif
   FILE *uscita, *equilib, *kD;
@@ -199,7 +199,9 @@ int main(int argc, char **argv)
     n[i2R-1][0] = 2.0*dU(L1, 2.0*Rt, Dx, delta)*dx*n[i2R][0] + n[i2R+1][0];
 #else
     n[i2R-1][0] = 0;
+#ifdef CRANK_MB
     cX = 0.0; /* value at boundary */
+#endif
 #endif
 #ifndef CRANK_MB
     dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
@@ -210,6 +212,7 @@ int main(int argc, char **argv)
     m=i2R-1;
     p =(2.0*Rt - L1)/dx;
     p = p-((int)p);
+    //printf("p=%G\n", p);
     cmp1 = n[m+1][0];
     cmp2 = n[m+2][0];
     nr2R = cX;
@@ -218,7 +221,6 @@ int main(int argc, char **argv)
     for(i=i2R; i<(Nx-1); i++)              
       {
 	r = ((double)i)*dx+L1;
-#else
 #ifdef NO_MOVING_BOUNDARY
 	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	  + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
