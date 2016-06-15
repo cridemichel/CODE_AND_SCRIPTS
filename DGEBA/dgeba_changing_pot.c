@@ -36,7 +36,7 @@
 #define width 100       /* larghezza della distribuzione iniziale */
 
 #define maxNx 1000000
-const double Mthr = 5.0;
+double Mthr = 5.0;
 double betauI=10.0,  betauO=10.0; 
 double wI, wO, concSE, concS, V0=1.0, delta=0.1;
 double D=1.0;
@@ -45,7 +45,7 @@ double dx=1.0, dt = 0.5, L1, L2, Dx, nbuf=0.0, nbuf1=0.0, r;
 double n[maxNx][2]; // distribuzione al tempo t e t+dt
 void print_usage(void)
 {
-  printf("square_well_diff_eq <uI> <D0> <n0> <delta> <Dx> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ]\n");
+  printf("square_well_diff_eq <uI> <D0> <n0> <delta> <Dx> <Df> <L1> <L2> <Nx> <Nt> <dt> [ <stpout> ] <Mmax>\n");
   exit(-1);	
 }
 #ifdef SINUSOIDAL
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
   double pos, cost0, cost1, cost2, ptot, ntot;     // costante di integrazione
   double M0, Sd, Df, M[2], D0, gamma, dndr2R, Rt, n0, rr;	
 #ifdef CRANK_MB
-  double p, cmp1, cmp2, cX, dn2dr2, dndr, nr2R;
+  double p, cmp1, cmp2, cmp3, cX, dn2dr2, dndr, nr2R;
   int m;
 #endif
   FILE *uscita, *equilib, *kD;
@@ -131,12 +131,13 @@ int main(int argc, char **argv)
   //dx = atof(argv[7]);
   Nt = atoi(argv[10]);
   dt = atof(argv[11]);
-  if (argc == 12)
-    stpout = atoi(argv[11]);
-  if (argc == 13)
-    stpout2 = atoi(argv[12]);
-
-
+  if (argc >= 13)
+    stpout = atoi(argv[12]);
+  if (argc >= 14)
+    stpout2 = atoi(argv[13]);
+  if (argc >= 15)
+    Mthr = atof(argv[14]);
+  printf("stpout=%d stpout2=%d Mthr=%f\n", stpout, stpout2, Mthr);
   dx = (L2-L1) / Nx;
   V0 = betauI;
   wI=exp(-betauI);
@@ -187,7 +188,7 @@ int main(int argc, char **argv)
       {
 	break;
       }
-    i2R = 1+(2.0*Rt - L1)/dx;
+    i2R = 1+((int)((2.0*Rt - L1)/dx));
     if (i2R > Nx-1)
       {
 	printf("Rt=%f M[0]=%f i2R=%d\n", Rt, M[0], i2R);
@@ -210,13 +211,22 @@ int main(int argc, char **argv)
     //Dx = 2.0*delta;
 #ifdef CRANK_MB
     m=i2R-1;
-    p =(2.0*Rt - L1)/dx;
-    p = p-((int)p);
+    if (2.0*Rt==L1)
+      p=0;
+    else
+      {
+	p =(2.0*Rt - L1)/dx;
+	p = p-((int)p);
+      }
     //printf("p=%G\n", p);
     cmp1 = n[m+1][0];
     cmp2 = n[m+2][0];
+    cmp3 = n[m+3][0];
     nr2R = cX;
-    dndr2R = (1.0/dx)*(cX*(2.0*p-3.0)/(1.0-p)/(2.0-p) + cmp1*(2.0-p)/(1.0-p) + cmp2*(1.0-p)/(2.0-p));	
+    //dndr2R = (1.0/dx)*(cX*(2.0*p-3.0)/(1.0-p)/(2.0-p) + cmp1*(2.0-p)/(1.0-p) - cmp2*(1.0-p)/(2.0-p));	
+    //dndr2R = (1.0/dx)*(-3.0*cmp1/2.0 + 2.0*cmp2 - cmp3/2.0);
+    dndr2R = (n[i2R+2][0]-n[i2R][0])/dx/2.0;
+   //printf("")
 #endif
     for(i=i2R; i<(Nx-1); i++)              
       {
@@ -229,16 +239,23 @@ int main(int argc, char **argv)
 #ifdef CRANK_MB
 	if (i==i2R)
 	  {
- 	    dn2dr2 = 2.0*(cX*(2.0*p-3.0)/((1.0-p)*(2.0-p)) + (2.0-p)/(1.0-p)*cmp1 - (1.0-p)/(2.0-p)*cmp2);
+ 	    dn2dr2 = 2.0*(cX/((1.0-p)*(2.0-p)) - cmp1/(1.0-p) + cmp2/(2.0-p));
 	    dndr = -cX/(1.0-p)/(2.0-p)+cmp1*p/(1.0-p)+cmp2*(1.0-p)/(2.0-p);
-	    n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
+#if 0
+	    printf("i2R=%d dndr=%G p=%G cmp1=%G cmp2=%G dn2dr2old=%G Rt=%G rmp1=%G rm=%G cmp1/(1-p)=%.15G cmp2/(2-p)=%.15G\n",
+		   i2R, dn2dr2, p, cmp1, cmp2,
+	    	    (n[i2R+1][0]+n[i2R-1][0]-2.0*n[i2R][0]), 2.0*Rt, r,  ((double)i-1)*dx+L1,
+		    cmp1/(1.0-p), cmp2/(2.0-p));
+#endif
+    	    n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	      + cost1*dn2dr2 + 
-	      + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*dndr - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);}
+	      + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*dndr - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);
+	  }
        else
 	 {
 	   n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
 	     + cost1*(n[i+1][0]+n[i-1][0]-2.0*n[i][0]) + 
-	     + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0]) - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);
+	     + cost2*(dU(r, 2.0*Rt, Dx, delta)+2.0/r)*(n[i+1][0]-n[i-1][0])/2.0 - cost0*n[i][0]*Sd*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);
 	 }	 
 #else
 	n[i][1] = n[i][0] + cost0*n[i][0]*(dU(r, 2.0*Rt, Dx, delta)*2.0/r+ddU(r, 2.0*Rt, Dx, delta)) +  
@@ -256,6 +273,7 @@ int main(int argc, char **argv)
 #ifdef NO_MOVING_BOUNDARY
     M[1] = M[0];
 #else
+    //printf("nr2R=%G dndr2R=%G\n", nr2R, dndr2R);
 #ifdef CRANK_MB
     M[1] = M[0] + dt*M[0]*D*Sd*(dndr2R + dU(2.0*Rt, 2.0*Rt, Dx, delta)*nr2R);
 #else
