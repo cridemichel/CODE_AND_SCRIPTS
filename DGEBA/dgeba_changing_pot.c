@@ -20,7 +20,7 @@
 * 
 *               
 ***********************************************************************/
-
+#define DIFF_COR
 #include <stdlib.h> 
 #include <stdio.h>
 #include <math.h>
@@ -36,6 +36,9 @@
 #define width 100       /* larghezza della distribuzione iniziale */
 
 #define maxNx 1000000
+#ifdef DIFF_COR
+double p0;
+#endif
 double Mthr = 5.0;
 double betauI=10.0,  betauO=10.0; 
 double wI, wO, concSE, concS, V0=1.0, delta=0.1;
@@ -93,6 +96,14 @@ double ddU(double r, double L1, double Dx, double delta)
   sh = 1.0/cosh((r-a)/delta);
   return V0*Sqr(sh)*tanh((r-a)/delta)/Sqr(delta);
 }
+#endif
+#if 0
+#ifdef DIFF_COR
+double Mwerth(double p)
+{
+  return -4.0*Sqr(p)*p/(1.0-fabs(2.0*p-1.0)+2.0*p*(p-1.0)*(3.0+3.0*(p-1.0)*p-2.0*fabs(2.0*p-1.0)));
+}
+#endif
 #endif
 int main(int argc, char **argv)
 { 
@@ -159,7 +170,13 @@ int main(int argc, char **argv)
   //printf("out flux calculated at r=%f\n", rf);
   M0=1.0;
   M[0] = M0;
+#ifdef DIFF_COR
+  //D0=1.0;
+  p0 = 0.902;
+  gamma = 1.75;
+#else
   gamma = 1.0/3.0;
+#endif
   for(j=0; j<=Nt; j++){  // loop temporale 
 
     /* n[i][0] contiene la distribuzione al tempo t, 
@@ -174,7 +191,11 @@ int main(int argc, char **argv)
 #else
     n[Nx-1][0] = n0*M0/M[0];
 #endif
+#ifdef DIFF_COR
     D = 2.0*D0/pow(M[0],gamma);
+#else
+    D = 2.0*D0/pow(M[0],gamma);
+#endif
     cost0 = D*dt;
     cost1 = D*dt/dx/dx;
 #ifdef CRANK_MB
@@ -328,7 +349,7 @@ int main(int argc, char **argv)
 
 #endif	
 
-	fprintf(kD, "%G %G %G %G %G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R-1][0]), Rt,
+	fprintf(kD, "%.15G %.15G %.15G %.15G %.15G\n", dt*j, D*4.0*M_PI*Sqr(2.0*Rt)*(dndr2R+dU(2.0*Rt, 2.0*Rt, Dx, delta)*n[i2R-1][0]), Rt,
 		n0*M0/M[0], M[1]);
 	//printf("n[NxL]=%G n[NxL-1]=%G\n", nbuf, n[NxL-1][0]);
 	
