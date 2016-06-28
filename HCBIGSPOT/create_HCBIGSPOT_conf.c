@@ -15,18 +15,19 @@ int main(int argc, char **argv)
   double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
-  double phi, targetphi=0.25, xtrafact;
-  int k1, k2, numpoly, parnum=1000, i, j, polylen=4, a, b;
+  double phi, targetphi=0.25, xtrafact, sigmapatch;
+  int k1, k2, numpoly, parnum=1000, i, j, polylen=1, a, b;
   int nx, ny, nz, nxmax, nymax, nzmax, idx;
   del=0.5;
   /* permanent spots diameter */
-  permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
+  //permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
+  sigmapatch=4.0;
   //permdiam=0.5;
   Len=16.0; /* 48 bp equal roughly to 16 nm */
   if (argc == 1)
    {
 
-     printf("create_GDNA_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam>\n"); 
+     printf("create_HCBIGSPOT_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam> <sigma_patch>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -56,7 +57,11 @@ int main(int argc, char **argv)
   if (argc > 6)
     Diam = atof(argv[6]);
 
-  parnum = 4*nxmax*nymax*nzmax;
+  if (argc > 7)
+    sigmapatch = atof(argv[7]);
+
+
+  parnum = polylen*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
@@ -98,7 +103,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][0] = R0[a][b];
       }
-
+#if 0
   rxc[1] = Len/2.0+delta;
   ryc[1] = Diam/2.0+delta;
   rzc[1] = 0.0;
@@ -126,9 +131,9 @@ int main(int argc, char **argv)
 	Rc[a][b][3] = R0[a][b];
       }
   Rc[0][0][3] = -Rc[0][0][3];
-
-  bs[0] = 2.0*Len+2.0*delta;
-  bs[1] = 2.0*Diam+2.0*delta;
+#endif
+  bs[0] = 1.0*Len+2.0*delta;
+  bs[1] = 1.0*Diam+2.0*delta;
   bs[2] = Diam;
 #if 0
   for (i=0; i < polylen; i++)
@@ -149,8 +154,8 @@ int main(int argc, char **argv)
 #endif
     }
 #endif
-  fprintf(f, "parnum: %d\n", parnum);
-  fprintf(f,"ninters: 2\n");
+  fprintf(f,"parnum: %d\n", parnum);
+  fprintf(f,"ninters: 3\n");
   fprintf(f,"nintersIJ: 0\n");
   fprintf(f,"ntypes: 1\n");
   fprintf(f,"saveBonds: 0\n");
@@ -160,10 +165,11 @@ int main(int argc, char **argv)
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"2 0\n");
-  fprintf(f,"%f 0 0 %f\n", permdiam*0.5+Len/2.0, permdiam);/* 0: along x axis (permanent) 0.05 means lp=20 */
-  fprintf(f,"%f 0 0 %f\n", -Len/2.0-0.15, 0.5);
-  fprintf(f,"0 0 0 0 1 0 0 1\n");
-  fprintf(f,"0 1 0 1 1 0 0 100000\n");
+  fprintf(f,"%f 0 0 %f\n", sigmapatch*0.5+Len/2.0, sigmapatch);/* 0: along x axis (permanent) 0.05 means lp=20 */
+  fprintf(f,"%f 0 0 %f\n", -Len/2.0-sigmapatch*0.5, sigmapatch);
+  fprintf(f,"0 0 0 0 1 0 0 10000\n");
+  fprintf(f,"0 1 0 1 1 0 0 10000\n");
+  fprintf(f,"0 0 0 1 1 0 0 10000\n");
   fprintf(f, "@@@\n");
   nx=ny=nz=0;
   full=0;
