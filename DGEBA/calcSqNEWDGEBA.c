@@ -178,7 +178,7 @@ int main(int argc, char** argv)
 	     fscanf(f,"%[^\n]\n",line);
           while (strcmp(line,"@@@"));
 #if 1
-	  for (i=0; i < N; i++)
+	  for (i=0; i < 2*N; i++)
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	    }	
@@ -265,10 +265,13 @@ int main(int argc, char** argv)
 	       //printf("boh\n");
 	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 	     }
-	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
+	   //printf("i=%d r=(%.15G,%.15G,%.15G)\n", i, r[0][i], r[1][i], r[2][i]);
 	}
-      if (NA == -1)
-	NA = N;
+      //if (NA == -1)
+	//NA = N;
+      //N=1680;
+      printf("N= %d L=%f\n", N, L);
+      NA=480;
       //NA = N;//force monodisperse
       scalFact = twopi * invL;
       if (first)
