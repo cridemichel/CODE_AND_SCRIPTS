@@ -931,6 +931,9 @@ struct progStatus
   double delTclsMC;
   double delRclsMC;
 #endif
+#ifdef MC_BIGROT_MOVE
+  double bigrotmov;
+#endif
   int restrmove; /* 0=no restriction (default) 1=fixed rot */
 #ifdef MC_GRANDCAN
   double zetaMC;
@@ -1421,6 +1424,9 @@ struct pascii opro_ascii[] =
   {"delTclsMC",       &OS(delTclsMC),                   1, 1, "%.12G"},
   {"delRclsMC",       &OS(delRclsMC),                   1, 1, "%.12G"},
 #endif
+#ifdef MC_BIGROT_MOVE
+  {"bigrotmov",       &OS(bigrotmov),                   1, 1, "%.12G"},
+#endif
 #ifdef MC_GRANDCAN
   {"zetaMC",     &OS(zetaMC),                            1,  1, "%.12G"},
   {"npav" ,     &OS(npav),                             1,  1, "%d"},
@@ -1616,6 +1622,9 @@ struct singlePar OsinglePar[] = {
   {"clsmovprob", &OprogStatus.clsmovprob,   CT},
   {"delTclsMC",  &OprogStatus.delTclsMC,    CT},
   {"delRclsMC",  &OprogStatus.delRclsMC,    CT},
+#endif
+#ifdef MC_BIGROT_MOVE
+  {"bigrotmov", &OprogStatus.bigrotmov, CT},
 #endif
 #ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
