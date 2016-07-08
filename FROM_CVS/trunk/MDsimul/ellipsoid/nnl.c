@@ -6332,7 +6332,9 @@ int may_interact_core(int i, int j)
 }
 #ifdef EDHE_FLEX
 extern int *nbondsFlexS;
+#ifdef MD_MULTIPLE_LL
 extern int get_linked_list_type(int type1, int type2);
+#endif
 #endif
 int may_interact_spots(int i, int j)
 {
@@ -6342,12 +6344,14 @@ int may_interact_spots(int i, int j)
   if (typesArr[type1].nspots == 0 || typesArr[type2].nspots == 0)
     return 0;
 #ifdef EDHE_FLEX
+#ifdef MD_MULTIPLE_LL
   if (OprogStatus.optbm)
     {
       nl = get_linked_list_type(type1, type2);
       if (nbondsFlexS[nl] > 0)
 	return 1;
     }
+#endif
 #endif
   for (ni = 0; ni < Oparams.ninters; ni++)
     {
