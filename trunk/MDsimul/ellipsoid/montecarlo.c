@@ -5910,6 +5910,8 @@ void move_box_xyz(int *ierr)
 #else
   int nb, jj, jj2, kk, aa, bb;
 #endif  
+#else
+  int kk;
 #endif
   int i, ii, dir;
   double nn;
@@ -10915,6 +10917,51 @@ for (np=0; np < clsdim[nc]; np++)
   return movetype;
 }
 #endif
+#ifdef MC_BIGROT_MOVE
+int bigrot_move(void)
+{
+  int np, kk, k1, k2;
+  double ox, oy, oz, dist;
+  double rc[3], Rl[3][3];
+  double *spXYZ=NULL;
+  /* first pick a particle randomly */
+  np = ranf()*Oparams.parnum;
+  /* now set center of rotation */
+#ifdef MC_BOND_POS
+  for (kk=0; kk < 3; kk++)
+    {
+      rc[kk] = bpos[kk][np][0];
+      ratA[1][kk] = rc[kk];
+    }
+#else
+  rA[0] = rx[ip];
+  rA[1] = ry[ip];
+  rA[2] = rz[ip];
+  BuildAtomPos(np, rA, R[np], ratA);
+  for (kk=0; kk < 3; kk++)
+    {
+      rc[kk] = ratA[1][kk];
+    }
+#endif
+  orient(&ox,&oy,&oz);
+  spXYZ = typesArr[typeOfPart[np]].spots[0].x;
+  dist=calc_norm(spXYZ);
+  rx[np] = rc[0] + ox*dist;
+  ry[np] = rc[1] + oy*dist;
+  rz[np] = rc[2] + oz*dist;
+ 
+  ox = -ox;
+  oy = -oy;
+  oz = -oz;
+  versor_to_R(ox, oy, oz, Rl);
+  for (k1 = 0; k1 < 3; k1++)
+   for (k2 = 0; k2 < 3; k2++)
+     {
+       R[np][k1][k2] = Rl[k1][k2];
+     }
+  return 3;
+}
+#endif
 void set_ini_numcells(void)
 {
   cxini=cellsx;
@@ -11042,6 +11089,13 @@ void move(void)
   //check_all_bonds();
   for (i=0; i < ntot; i++)
     {
+#ifdef MC_BIGROT_MOVE
+      if (OprogStatus.bigrotmov > 0.0 && ranf() < OprogStatus.bigrotmov)
+	{
+	  movtype = bigrot_move();
+	  continue;
+	}
+#endif
 #ifdef MC_CLUSTER_MOVE
       if (OprogStatus.clsmovprob > 0.0 && ranf() < OprogStatus.clsmovprob)
 	{
