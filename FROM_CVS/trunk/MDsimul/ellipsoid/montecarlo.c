@@ -11092,7 +11092,7 @@ void move(void)
 #ifdef MC_BIGROT_MOVE
       if (OprogStatus.bigrotmov > 0.0 && ranf() < OprogStatus.bigrotmov)
 	{
-	  movtype = bigrot_move();
+	  movetype = bigrot_move();
 	  continue;
 	}
 #endif
