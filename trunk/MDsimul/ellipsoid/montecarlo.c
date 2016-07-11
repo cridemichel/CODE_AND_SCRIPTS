@@ -1769,6 +1769,9 @@ double displMC;
 #ifdef MC_CLUSTER_MOVE
 long long int totclsrejMC=0, totclsmovesMC=0, rotclsmoveMC=0, traclsmoveMC=0, rotclsrejMC=0, traclsrejMC=0;
 #endif
+#ifdef MC_BIGROT_MOVE
+long long int totbigrotmovMC=0, totbigrotmovrejMC=0;
+#endif
 void tra_move(int ip)
 {
   double dx, dy, dz;
@@ -10925,6 +10928,7 @@ int bigrot_move(void)
   double rc[3], Rl[3][3];
   double *spXYZ=NULL;
   /* first pick a particle randomly */
+  totbigrotmovMC++;
   if (Oparams.parnum==0)
     return 0;
   np = ranf()*Oparams.parnum;
@@ -11149,6 +11153,7 @@ int bigrot_move(void)
 #endif
   if (dorej != 0)
     {
+      totbigrotmovrejMC++;
       /* move rejected */
 #if 0
       totrejMC++;
@@ -11186,6 +11191,7 @@ int bigrot_move(void)
     {
       overestimate_of_displ[np] += displMC; 
     }
+  //printf("accettata!\n");
   return 3;
 }
 #endif
@@ -11462,6 +11468,7 @@ void move(void)
 	  /*NOTA: questo credo che si possa eliminare */
 	  if (OprogStatus.useNNL)
 	    calc_all_maxsteps();
+
 #ifdef MC_CLUSTER_MOVE
 	  acceptance=((double)(totclsmovesMC-totclsrejMC))/totclsmovesMC;
 	  traaccept = ((double)(traclsmoveMC-traclsrejMC))/traclsmoveMC;
@@ -11564,6 +11571,17 @@ void move(void)
 	  printf("Cluster move acceptance: %.15G (tra=%.15G rot=%.15G) delTcls=%.12G delRcls=%.12G\n", acceptance, traaccept, rotaccept, OprogStatus.delTclsMC, OprogStatus.delRclsMC);
 	}
 #endif
+#ifdef MC_BIGROT_MOVE
+      if (OprogStatus.bigrotmov > 0.0)
+	{
+	  if (totbigrotmovMC > 0)
+	    acceptance = ((double)(totbigrotmovMC - totbigrotmovrejMC))/totbigrotmovMC;
+	  else
+	    acceptance = 0;
+	  printf("Bigrotmov move acceptance: %.15G (accettate=%lld)\n", acceptance, totbigrotmovMC - totbigrotmovrejMC);
+	}
+
+#endif
 #if defined(MC_HC) && !defined(MC_HELIX)
       printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
 #endif
@@ -11586,6 +11604,9 @@ void move(void)
     	  totclsmovesMC = totclsrejMC = 0;
 	  traclsmoveMC = traclsrejMC = 0;
 	  rotclsmoveMC = rotclsrejMC = 0;
+#endif
+#ifdef MC_BIGROT_MOVE
+	  totbigrotmovMC=totbigrotmovrejMC=0;
 #endif
  	  totmovesMC=totrejMC=0;
 	  tramoveMC=trarejMC=0;
