@@ -3433,7 +3433,6 @@ void find_bonds(void)
 #endif
 #endif
 	assign_bond_mapping(i, j);
-
 	dist = calcDistNegSP(Oparams.time, 0.0, i, j, shift, &amin, &bmin, dists, -1);
 	NPB = get_num_pbonds(i, j);
 #if 0
@@ -3461,6 +3460,7 @@ void find_bonds(void)
       }
 
   //printf("FINE CERCO BOND\n");
+  //exit(-1);	
 }
 #endif
 #ifdef EDHE_FLEX
@@ -5148,6 +5148,7 @@ void build_linked_list_bp(void)
     }
 }
 #endif
+double calcDistNegHC(int i, int j, double shift[3], int* retchk);
 void usrInitAft(void)
 {
   long long int maxp;
@@ -7188,6 +7189,33 @@ void usrInitAft(void)
 #endif
   build_parallelepipeds();
 #endif
+#if 0
+    {
+      double ov, drx, dry, drz, shift[3];
+  printf("qui\n");
+  for (i=0; i < 3100; i++)
+    for (j=0; j < 3100; j++)
+      {
+	if (i >= j)
+	  continue;
+       	drx=rx[i]-rx[j];
+	dry=ry[i]-ry[j];
+	drz=rz[i]-rz[j];
+
+	shift[0] = L[0]*rint(drx/L[0]);
+	shift[1] = L[1]*rint(dry/L[1]);
+	shift[2] = L[2]*rint(drz/L[2]);
+
+	ov=calcDistNegHC(i, j, shift, &amin);
+	if (ov < 0.0)
+	  {
+	    printf("ov=%f overlap between %d, %d\n", ov, i, j);
+	  }
+      }
+    }
+#endif
+
+
 #ifdef MC_RESTR_MATRIX
   get_restr_matrix();
 #endif
