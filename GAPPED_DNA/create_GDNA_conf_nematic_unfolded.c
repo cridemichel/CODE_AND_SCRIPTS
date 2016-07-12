@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     for (k2=0; k2 < 3; k2++)
       R0[k1][k2]=0.0;
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
-  deltax = 0.5;
+  deltax = 0.1;
   deltay = 0.1;
   /* building the dimer... */
   rxc[0] = Len/2.0+deltax;
