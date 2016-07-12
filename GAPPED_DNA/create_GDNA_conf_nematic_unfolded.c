@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   FILE *f;
   double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
-  double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
+  double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay;
   double phi, targetphi=0.25, xtrafact;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=4, a, b;
   int nx, ny, nz, nxmax, nymax, nzmax, idx;
@@ -88,10 +88,11 @@ int main(int argc, char **argv)
     for (k2=0; k2 < 3; k2++)
       R0[k1][k2]=0.0;
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
-  delta = 0.1;
+  deltax = 0.5;
+  deltay = 0.1;
   /* building the dimer... */
-  rxc[0] = Len/2.0+delta;
-  ryc[0] = -Diam/2.0-delta;
+  rxc[0] = Len/2.0+deltax;
+  ryc[0] = -Diam/2.0-deltay;
   rzc[0] = 0.0;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
@@ -99,38 +100,38 @@ int main(int argc, char **argv)
 	Rc[a][b][0] = R0[a][b];
       }
 
-  rxc[1] = -Len/2.0+delta;
-  ryc[1] = -Diam/2.0+delta;
+  Rc[0][0][0] = -Rc[0][0][0];
+  rxc[1] = -Len/2.0-deltax;
+  ryc[1] = -Diam/2.0-deltay;
   rzc[1] = 0.0;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][1] = R0[a][b];
       }
-  Rc[0][0][1] = -Rc[0][0][1];
 
-  rxc[2] = -Len/2.0-delta;
-  ryc[2] = Diam/2.0-delta;
+  rxc[2] = -Len/2.0-deltax;
+  ryc[2] = Diam/2.0+deltay;
   rzc[2] = 0.0;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][2] = R0[a][b];
       }
-  Rc[0][0][2] = -Rc[0][0][2];
 
-  rxc[3] = Len/2.0-delta;
-  ryc[3] = Diam/2.0+delta;
+  rxc[3] = Len/2.0+deltax;
+  ryc[3] = Diam/2.0+deltay;
   rzc[3] = 0.0;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][3] = R0[a][b];
       }
+  Rc[0][0][3] = -Rc[0][0][3];
   //Rc[0][0][3] = -Rc[0][0][3];
 
-  bs[0] = 2.0*Len+2.0*delta;
-  bs[1] = 2.0*Diam+2.0*delta;
+  bs[0] = 2.0*Len+2.0*deltax;
+  bs[1] = 2.0*Diam+2.0*deltay;
   bs[2] = Diam;
 #if 0
   for (i=0; i < polylen; i++)
