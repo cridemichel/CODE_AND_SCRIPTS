@@ -9687,10 +9687,10 @@ void calc_cov_additive(void)
 	  if (tt!=0)
 	    {
 #ifdef MD_LXYZ
-	      cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+	      cov = (totene/((double)tt))*(L[1]*L[2]);
 	    
 #else
-	      cov = (totene/((double)tt))*(L*L*L);
+	      cov = (totene/((double)tt))*(L*L);
 #endif
 	      if (type==0)
 		f=fopen("covolume-sm-unfold.dat", "a");
@@ -9760,15 +9760,15 @@ void calc_cov_additive(void)
 	  if (i==size1)
 	    {
 #ifdef MD_LXYZ
-	      rx[i] = L[0]*(ranf_vb()-0.5);
+	      /* since it is smectic we put second particle onto plane x=0 */
+	      rx[i] = 0.0;//L[0]*(ranf_vb()-0.5);//L[0]*(ranf_vb()-0.5);
 	      ry[i] = L[1]*(ranf_vb()-0.5); 
-	      /* since it is smectic we put second particle onto plane z=0 */
-	      rz[i] = 0.0;//L[2]*(ranf_vb()-0.5); 
+	      rz[i] = L[2]*(ranf_vb()-0.5); 
 #else
-    	      rx[i] = L*(ranf_vb()-0.5);
+	      /* since it is smectic we put second particle onto plane x=0 */
+    	      rx[i] = 0.0;//L*(ranf_vb()-0.5);
     	      ry[i] = L*(ranf_vb()-0.5); 
-	      /* since it is smectic we put second particle onto plane z=0 */
-    	      rz[i] = 0.0;//L*(ranf_vb()-0.5); 
+    	      rz[i] = L*(ranf_vb()-0.5); 
 #endif
 	      orient_onsager(&ox, &oy, &oz, alpha);
     	      versor_to_R(ox, oy, oz, Rl);
@@ -9910,11 +9910,11 @@ void calc_cov_additive(void)
 
   //fclose(f);	
 #ifdef MD_LXYZ
-  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2]), totene);
-  printf("%.15G\n",(totene/((double)tt))*(L[0]*L[1]*L[2]));
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L[1]*L[2]), totene);
+  printf("%.15G\n",(totene/((double)tt))*(L[1]*L[2]));
 #else 
-  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L), totene);
-  printf("%.15G\n",(totene/((double)tt))*(L*L*L));
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L), totene);
+  printf("%.15G\n",(totene/((double)tt))*(L*L));
 #endif
   exit(-1);
 }
