@@ -9596,6 +9596,330 @@ void addRestrMatrix(double Rl[3][3])
       Rl[k1][k2] = Rll[k1][k2];
 }
 #endif
+#ifdef MC_SMECTIC_VEXCL
+void calc_cov_additive(void)
+{
+  FILE *fi, *f=NULL;
+  double cov, Lb, totene = 0.0, alpha, shift[3];
+  int bt=0, merr=0, i, j=-1, selfoverlap=0, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
+  long long int maxtrials, tt;
+  double ox, oy, oz, Rl[3][3];
+
+  fi = fopen("covmc.conf", "r");
+  fscanf(fi, "%lld %d %d %d ", &maxtrials, &type, &size1, &outits);
+
+  printf("type=%d\n", type);
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numbonds[i]=0;
+    }
+  
+  printf("ene iniziale=%f\n", calcpotene());
+  fscanf(fi, " %lf ", &alpha);
+  printf("type=%d alpha=%.15G\n", type, alpha);
+    
+  /* if it is a restart put info initial values here */
+  covrestart = 0;
+  if (!feof(fi))
+    {
+      covrestart=1;
+      fscanf(fi, "%lf %lld ", &toteneini, &ttini);
+    }
+  /* type = 0 -> covolume smectic unfolded 
+     type = 1 -> covolume smectic folded
+   */
+  const int n=1000;
+  distro=malloc(sizeof(double)*n);
+  for (i=0; i < n; i++)
+    distro[i] = 0.0;
+  
+  if (size1 >= Oparams.parnum)
+    {
+      printf("size1=%d must be less than parnum=%d\n", size1, Oparams.parnum);
+      exit(-1);
+    } 
+  fclose(fi);
+  init_rng(-1, 0, -1);
+  OprogStatus.optnnl = 0;
+  tt = ttini;
+  totene = toteneini;
+  size2 = Oparams.parnum-size1;
+  /* first particle is always in the center of the box with the same orientation */
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+
+  if (type==0)
+    f = fopen("covolume-sm-unfold.dat","w+");
+  else if (type==1)
+    f = fopen("covolume-sm-fold.dat","w+");
+  fclose(f);
+    
+  while (tt < maxtrials) 
+    {
+      merr=ierr=0;
+      selfoverlap=0;
+
+      /* first particle is always in the center of the box with the same orientation */
+      rx[0] = 0;
+      ry[0] = 0;
+      rz[0] = 0;
+      orient_onsager(&ox, &oy, &oz, alpha); 
+      //ox = 0; oy=0; oz=1;
+      //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
+      versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+      addRestrMatrix(Rl);
+#endif
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    R[0][k1][k2] = Rl[k1][k2];
+	  }
+      /* place first cluster */
+      if (tt%outits==0)
+	{
+	  if (tt!=0)
+	    {
+#ifdef MD_LXYZ
+	      cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+	    
+#else
+	      cov = (totene/((double)tt))*(L*L*L);
+#endif
+	      if (type==0)
+		f=fopen("covolume-sm-unfold.dat", "a");
+	      else
+		f=fopen("covolume-sm-fold.dat", "a");
+	      printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+	      fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
+	      fclose(f);
+	      sync();
+	    }
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
+      for (i=1; i < size1; i++)
+	{
+	  bt = 0;
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*i);
+#if 1
+	      if (bt > Oparams.parnum*1000)
+		{
+		  printf("insertion cluster #1: maximum number of iteration reached\n");
+    		  if (fabs(calcpotene()+i*2.0) < 1E-10)
+		    {
+		      save_conf_mc(0, 0);
+		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+		      exit(-1);
+		    }
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	      bt++;
+	    }
+	  mcin(i, j, nb, type, alpha, &merr, 0);
+	  if (merr!=0)
+	    {
+	      save_conf_mc(0, 0);
+	      printf("[mcin covolume] attempt to add a bonded particle failed!\n");
+	      break;
+	    }
+	  if (check_self_overlap(0, i))
+	    {
+	      selfoverlap = 1;
+	      break;
+	    }
+	  /* N.B. per ora non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
+	}
+
+      if (selfoverlap)
+	{
+	  tt++;
+	  continue;
+	}
+      /* place second cluster */
+      overlap=0;
+      for (i=size1; i < Oparams.parnum; i++)
+	{
+	  if (i==size1)
+	    {
+#ifdef MD_LXYZ
+	      rx[i] = L[0]*(ranf_vb()-0.5);
+	      ry[i] = L[1]*(ranf_vb()-0.5); 
+	      /* since it is smectic we put second particle onto plane z=0 */
+	      rz[i] = 0.0;//L[2]*(ranf_vb()-0.5); 
+#else
+    	      rx[i] = L*(ranf_vb()-0.5);
+    	      ry[i] = L*(ranf_vb()-0.5); 
+	      /* since it is smectic we put second particle onto plane z=0 */
+    	      rz[i] = 0.0;//L*(ranf_vb()-0.5); 
+#endif
+	      orient_onsager(&ox, &oy, &oz, alpha);
+    	      versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+    	      addRestrMatrix(Rl);
+#endif
+	      for (k1=0; k1 < 3; k1++)
+    		for (k2=0; k2 < 3; k2++)
+    		  R[i][k1][k2] = Rl[k1][k2];
+	    }
+	  else
+	    {
+	      bt = 0;
+	      while (1)
+		{
+		  nb = (int)(ranf_vb()*2.0);
+		  j = ((int) (ranf_vb()*(i-size1)))+size1;
+		  //printf("i=%d j=%d size1=%d\n", i, j, size1);
+
+#if 1
+	    	  if (bt > Oparams.parnum*1000)
+	    	    {
+		      printf("insertion cluster #2: maximum number of iteration reached\n");
+		      if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
+			{
+			  save_conf_mc(0, 0);
+			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+			  exit(-1);
+			}
+	    	    }
+#endif
+		  if (is_bonded_mc(j, nb))
+		    continue;
+		  else
+		    break;
+		  bt++;
+		}
+	      /* mette la particella i legata a j con posizione ed orientazione a caso */
+	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+	      mcin(i, j, nb, type, alpha, &merr, 0);
+	      if (merr!=0)
+		{
+		  save_conf_mc(0, 0);
+		  printf("[mcin] attempt to add a bonded particle failed!\n");
+		  break;
+		}
+	      if (check_self_overlap(size1, i))
+		{
+#if 0
+		  printf("BOH i=%d j=%d\n", i, j);
+		  save_conf_mc(tt, 0); 
+#endif
+		  selfoverlap = 1;
+		  break;
+		}
+
+	      /* N.B. per ora non controlla il self-overlap della catena 
+		 e la formazione dopo mcin di legami multipli poiché
+		 si presuppone che al massimo stiamo considerando dimeri */
+	    }
+	  if (selfoverlap||merr)
+	    {
+	      break;
+	      //tt++;
+	      //continue;
+	    }
+	  overlap = 0;
+	  for (j=0; j < size1; j++)
+	    {
+#ifdef MD_LXYZ
+	      shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	      shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	      shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	      shift[0] = L*rint((rx[i]-rx[j])/L);
+	      shift[1] = L*rint((ry[i]-ry[j])/L);
+	      shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	      ierr=0;
+	      if (check_overlap(i, j, shift, &ierr)<0.0)
+		{
+		  overlap=1;
+		  //printf("i=%d j=%d overlap!\n", i, j);
+		  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+		  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+		  break;
+		}
+	    }
+	  if (overlap)
+	    break;
+	}
+
+      if (selfoverlap||merr)
+	{
+	  tt++;
+#if 0	  
+	  save_conf_mc(tt, 0); 
+#endif
+	  continue;
+	}
+      if (overlap)// && ierr==0)
+	totene += 1.0;
+#if 0
+      if (tt!=0 && tt%outits==0)
+	save_conf_mc(tt, 0); 
+#endif
+
+      if (ierr!=0)
+	{
+	  printf("COV main loop NR failure\n");
+	  printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
+	  store_bump(i,j);
+	}
+      tt++;
+   }
+  if (type==1||type==0)
+    {
+      double norm, dtheta, pi;
+      FILE *F;
+      pi=2.0*acos(0.0);
+      norm=0.0;
+      dtheta = pi/nfons;
+      for (i=0; i < nfons; i++)
+	norm += distro[i]*2*pi*dtheta;
+      for (i=0; i < nfons; i++)
+	distro[i]/= norm;
+
+      F=fopen("fons.dat", "w");  
+      for (i=0; i < nfons; i++)
+	fprintf(F, "%.15G %.15G\n",(i+0.5)*dtheta,distro[i]); 
+      fclose(F);
+
+      dtheta=pi/1000;
+      F=fopen("fonsExact.dat", "w");  
+      for (i=0; i < 1000; i++)
+	fprintf(F, "%.15G %.15G\n",i*dtheta,sin(i*dtheta)*fons(i*dtheta,alpha)); 
+      fclose(F);
+    }
+
+  //fclose(f);	
+#ifdef MD_LXYZ
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2]), totene);
+  printf("%.15G\n",(totene/((double)tt))*(L[0]*L[1]*L[2]));
+#else 
+  printf("co-volume=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L), totene);
+  printf("%.15G\n",(totene/((double)tt))*(L*L*L));
+#endif
+  exit(-1);
+}
+
+#else
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
@@ -9983,6 +10307,7 @@ void calc_cov_additive(void)
 #endif
   exit(-1);
 }
+#endif
 #endif
 #if 0
 double calcfLab(int i, double *x, double *rA, double **Ri);
