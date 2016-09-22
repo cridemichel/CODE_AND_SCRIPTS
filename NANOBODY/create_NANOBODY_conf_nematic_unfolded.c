@@ -26,9 +26,9 @@ int main(int argc, char **argv)
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
   double Rcmx, Rcmy, Rcmz, rxa, rya, rza;
-  double phi, targetphi=0.25, xtrafact;
+  double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3;
-  int nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
+  int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
   del=0.5;
   /* nanobody (Fab) permanent spots diameter */
   permdiam=0.8; 
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
   //permdiam=0.5;
   if (argc == 1)
    {
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <sigmaAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <sigmaAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -67,22 +67,28 @@ int main(int argc, char **argv)
     nzmax = atoi(argv[4]);
 
   if (argc > 5)
-    targetphi = atof(argv[5]);
+    Lx = atof(argv[5]);
 
   if (argc > 6)
-    sigmaAntigens = atof(argv[6]);
+    Ly = atof(argv[6]);
 
   if (argc > 7)
-    numSpheres = atoi(argv[7]);
+    Lz = atof(argv[7]);
 
   if (argc > 8)
-    permdiam = atof(argv[8]);
+    sigmaAntigens = atof(argv[8]);
 
   if (argc > 9)
-    sigSph = atof(argv[9]);
+    numSpheres = atoi(argv[9]);
+
+  if (argc > 10)
+    permdiam = atof(argv[10]);
+
+  if (argc > 11)
+    sigSph = atof(argv[11]);
   
-  if (argc > 9)
-    DiamAntigen = atof(argv[9]);
+  if (argc > 12)
+    DiamAntigen = atof(argv[12]);
 
   polylen = numSpheres + 2;
   parnum = polylen*nxmax*nymax*nzmax;
@@ -237,19 +243,21 @@ int main(int argc, char **argv)
   for (a=0; a < 3; a++)
     L[a] *= factor[a];
   printf("step #2 [factor] L=%f %f %f\n", L[0], L[1], L[2]);
-  vol = acos(0.0)*2.0*(Diam/2)*(Diam/2)*Len;
-  phi=parnum*vol/(L[0]*L[1]*L[2]);
-  xtrafact = pow(phi/targetphi, 1.0/3.0);
-  printf("vol=%f targetphi=%f phi=%f xtrafact=%f\n", vol, targetphi, phi, xtrafact);
+  //vol = acos(0.0)*2.0*(Diam/2)*(Diam/2)*Len;
+  //phi=parnum*vol/(L[0]*L[1]*L[2]);
+  //xtrafact = pow(phi/targetphi, 1.0/3.0);
+
+  //printf("vol=%f targetphi=%f xtrafact=%f\n", vol, targetphi);
 
   for (i=0; i < numpoly; i++)
     {
-      rxCM[i] *= xtrafact;
-      ryCM[i] *= xtrafact;
-      rzCM[i] *= xtrafact;
+      rxCM[i] *= Lx/L[0];
+      ryCM[i] *= Ly/L[1];
+      rzCM[i] *= Lz/L[2];
     } 
-  for (a=0; a < 3; a++)
-    L[a] *= xtrafact;
+  L[0] = Lx;
+  L[1] = Ly;
+  L[2] = Lz;
   /* gli antigeni vengono messi nel piano xy (cioè z = -L[2]*0.5) */	
   numantigens = ((int)(sigmaAntigens*(L[0]*L[1]))); 
   printf("parnum=%d nx=%d ny=%d nz=%d argc=%d L=%f %f %f\n", parnum, nxmax, nymax, nzmax, argc, L[0], L[1], L[2]);
@@ -276,7 +284,7 @@ int main(int argc, char **argv)
   fprintf(f,"ntypes: 4\n");
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
-  fprintf(f, "%d %d %d %d\n", numpoly, numpoly, polylen*numpoly, numantigens);
+  fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
   /* first Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
@@ -328,7 +336,14 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-      fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f 0\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i]);
+      kk = i % polylen;
+      if (kk==0) 
+	type = 0;
+      else if (kk==polylen-1) 
+	type = 1;
+      else
+	type = 2;
+      fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f %d\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i], type);
       //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
       //printf("qui2\n");
     }
@@ -356,7 +371,7 @@ int main(int argc, char **argv)
       rx[i+parnum] = rxa;
       ry[i+parnum] = rya;
       rz[i+parnum] = rza;
-      fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3", rxa, rya, rza); 
+      fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
     } 
   /* velocities */
   for (i=0; i < parnum; i++)
@@ -368,7 +383,8 @@ int main(int argc, char **argv)
       fprintf(f, "0 0 0 0 0 0\n");
     }
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
-  printf("phi=%f\n", parnum*vol/(L[0]*L[1]*L[2]));
+  printf("Number of Nanobodies=%d - Number of Antigens=%d\n", numpoly, numantigens);
+  //printf("phi=%f\n", parnum*vol/(L[0]*L[1]*L[2]));
   fclose(f);
   return 1;
 } 
