@@ -260,12 +260,11 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
 #endif
 #elif defined(MD_NANOBODY)
 #ifdef MD_IGG_EDBD
-	  ts.type2 = 2+OprogStatus.numhinges;
+	  ts.type2 = 3;
 #else
-	  ts.type2 = 3+OprogStatus.numhinges;
+	  ts.type2 = 4;
 #endif
 #endif
-
 	  ts.spot1 = 1;
 	  ts.spot2 = 0; 
 	  if (ti==0)

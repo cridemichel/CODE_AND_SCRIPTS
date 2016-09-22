@@ -406,12 +406,12 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
 #endif
 #ifdef MD_NANOBODY
 #ifdef MD_IGG_EDBD 
-  if ((type1==2+OprogStatus.numhinges && (type2==0 || type2==1) && numbonds[i]==1)||
-      (type2==2+OprogStatus.numhinges && (type1==0 || type1==1) && numbonds[j]==1))
+  if ((type1==3 && (type2==0 || type2==1) && numbonds[i]==1)||
+      (type2==3 && (type1==0 || type1==1) && numbonds[j]==1))
     return 1;
 #else
-  if ((type1==3+OprogStatus.numhinges && (type2==0 || type2==1) && numbonds[i]==1)||
-      (type2==3+OprogStatus.numhinges && (type1==0 || type1==1) && numbonds[j]==1))
+  if ((type1==4 && (type2==0 || type2==1) && numbonds[i]==1)||
+      (type2==4 && (type1==0 || type1==1) && numbonds[j]==1))
     return 1;
 #endif
 #endif
@@ -2121,9 +2121,9 @@ int get_nanobody_bonds(int ifebA, int tA, int ifebB, int tB)
   interStruct ts;
   ts.type1 = tA;
 #ifdef MD_IGG_EDBD
-  ts.type2 = 2+OprogStatus.numhinges;
+  ts.type2 = 3;
 #else
-  ts.type2 = 3+OprogStatus.numhinges;
+  ts.type2 = 4;
 #endif
   ts.spot1 = 1;
   ts.spot2 = 0; 
@@ -2140,9 +2140,9 @@ void update_rates(int i, int j, int ata, int atb, double inc)
   typej = typeOfPart[j];
 
 #ifdef MD_IGG_EDBD
-  antigene_type=2+OprogStatus.numhinges;
+  antigene_type=3;
 #else
-  antigene_type=3+OprogStatus.numhinges;
+  antigene_type=4;
 #endif
   if (typei == 0 && typej == antigene_type)
     nb = get_nanobody_bonds(i, 0, i+1, 1);
