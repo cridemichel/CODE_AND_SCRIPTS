@@ -349,6 +349,9 @@ int main(int argc, char **argv)
     }
 #endif	
   /* place antigens */
+  rx = realloc(rx,sizeof(double)*(parnum+numantigens));
+  ry = realloc(ry,sizeof(double)*(parnum+numantigens));
+  rz = realloc(rz,sizeof(double)*(parnum+numantigens));
   for (i=0; i < numantigens; i++)
     {
       overlap = 1;
@@ -368,7 +371,7 @@ int main(int argc, char **argv)
 		}
 	    }	  
 	}
-      rx[i+parnum] = rxa;
+      //rx[i+parnum] = rxa;
       ry[i+parnum] = rya;
       rz[i+parnum] = rza;
       fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
