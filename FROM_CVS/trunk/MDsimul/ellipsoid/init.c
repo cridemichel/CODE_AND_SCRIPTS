@@ -1893,10 +1893,13 @@ void usrInitBef(void)
 #ifdef MD_GHOST_IGG
     Oparams.ghostsim = 0; /* 0 = no ghost IgG when they are bound, 1 = ghost */
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
     OprogStatus.time_limit = 100000000000.0;
     OprogStatus.first_time = 0.0;
     OprogStatus.rhozBinSize = 0.79/2.0+4.0+0.9+0.4+0.112+0.25;
+#endif
+#ifdef MD_NANOBODY
+    OprogStatus.numhinges=1;
 #endif
 #ifdef MD_BIG_DT
     OprogStatus.bigDt = -1.0;
@@ -6079,7 +6082,7 @@ void usrInitAft(void)
       f = fopenMPI(absMisHD("SP-popul.dat"), "w+");
       fclose(f);
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
       f = fopenMPI(absMisHD("bi-mono-bonds.dat"), "w+");
       fclose(f);
       f = fopenMPI(absMisHD("rates.dat"), "w+");

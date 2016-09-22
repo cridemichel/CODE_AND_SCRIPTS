@@ -11151,7 +11151,7 @@ void timeshift_calendar(void)
 extern int getnumbonds(int np, interStruct *ts, int inverted);
 int first=1;
 #endif
-#if defined(EDHE_FLEX) && defined(MD_RABBIT)
+#if defined(EDHE_FLEX) && (defined(MD_RABBIT) || defined(MD_NANOBODY))
 int termination(void)
 {
   int nb;
@@ -11159,6 +11159,7 @@ int termination(void)
 #if 1
   return 0;
 #endif
+  /* NOTA: per ora è disabilitata questa funzione quindi non l'ho modificata per gli antibody */
   ts.type1 = 0;
 #ifdef MD_IGG_EDBD
   ts.type2 = 4;
@@ -11302,7 +11303,7 @@ void move(void)
   /* get next event */
   while (!ENDSIM)
     {
-#if defined(EDHE_FLEX) && defined(MD_RABBIT) 
+#if defined(EDHE_FLEX) && (defined(MD_RABBIT)|| defined(MD_NANOBODY)) 
       if (termination())
 	{
 	  ENDSIM=1;
