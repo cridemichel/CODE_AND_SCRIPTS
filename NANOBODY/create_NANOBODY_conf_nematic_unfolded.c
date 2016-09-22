@@ -155,7 +155,7 @@ int main(int argc, char **argv)
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
-	Rc[a][b][polylen+1] = R0[a][b];
+	Rc[a][b][polylen-1] = R0[a][b];
       }
   /* center the nanobody */
   Rcmz=0.0;
@@ -273,7 +273,7 @@ int main(int argc, char **argv)
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      Ri[a][b][idx] = Rc[a][b][j];
-	  //printf("qui idx=%d\n", idx);
+	  //printf("qui idx=%d R[0][0]=%f\n", idx, Ri[0][0][idx]);
 	}
     }
 
