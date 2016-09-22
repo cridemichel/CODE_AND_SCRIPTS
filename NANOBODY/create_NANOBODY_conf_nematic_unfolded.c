@@ -37,7 +37,7 @@ int main(int argc, char **argv)
   //permdiam=0.5;
   if (argc == 1)
    {
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <sigmaAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
