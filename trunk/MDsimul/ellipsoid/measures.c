@@ -236,7 +236,7 @@ double calcpotene(void)
  return 0.5*Epot;
 }
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
 extern int getnumbonds(int np, interStruct *ts, int inverted);
 void get_bimono_bonds(int *bulk, int *mono, int *bi)
 {
@@ -252,11 +252,20 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
       if (ti==0 || ti==1)
 	{
 	  ts.type1 = ti;
+#if defined(MD_RABBIT)
 #ifdef MD_IGG_EDBD
 	  ts.type2 = 4;
 #else
 	  ts.type2 = 5;
 #endif
+#elif defined(MD_NANOBODY)
+#ifdef MD_IGG_EDBD
+	  ts.type2 = 2+OprogStatus.numhinges;
+#else
+	  ts.type2 = 3+OprogStatus.numhinges;
+#endif
+#endif
+
 	  ts.spot1 = 1;
 	  ts.spot2 = 0; 
 	  if (ti==0)
@@ -437,7 +446,7 @@ void calcV(void)
   double ti;
   int k; 
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
   double ti;
   int bulk, mono, bi, k, i;
 #endif
@@ -516,7 +525,7 @@ void calcV(void)
   fprintf(mf, "\n");
   fclose(mf);
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
   get_bimono_bonds(&bulk, &mono, &bi);
 #ifdef MD_BIG_DT

@@ -404,6 +404,17 @@ int one_is_bonded(int i, int a, int j, int b, int nmax)
     return 1;
 #endif
 #endif
+#ifdef MD_NANOBODY
+#ifdef MD_IGG_EDBD 
+  if ((type1==2+OprogStatus.numhinges && (type2==0 || type2==1) && numbonds[i]==1)||
+      (type2==2+OprogStatus.numhinges && (type1==0 || type1==1) && numbonds[j]==1))
+    return 1;
+#else
+  if ((type1==3+OprogStatus.numhinges && (type2==0 || type2==1) && numbonds[i]==1)||
+      (type2==3+OprogStatus.numhinges && (type1==0 || type1==1) && numbonds[j]==1))
+    return 1;
+#endif
+#endif
  
 #if 1
   ts.type1 = type1;
@@ -2100,6 +2111,74 @@ void update_rates(int i, int j, int ata, int atb, double inc)
     }
 }
 #endif
+#ifdef MD_NANOBODY
+int get_nanobody_bonds(int ifebA, int tA, int ifebB, int tB)
+{
+  /* NOTA: ogni nanobody è composto da 2 Fab (ellissoidi prolati particelle 0 e 1)
+   * e da n hinges modellizzati come sferete con due patch, quindi gli antigeni (nel caso della EDBD)
+   * sono le particelle il cui tipo è 2+OprogStatus.numhinges */
+  int nb;
+  interStruct ts;
+  ts.type1 = tA;
+#ifdef MD_IGG_EDBD
+  ts.type2 = 2+OprogStatus.numhinges;
+#else
+  ts.type2 = 3+OprogStatus.numhinges;
+#endif
+  ts.spot1 = 1;
+  ts.spot2 = 0; 
+  nb = getnumbonds(ifebA, &ts, 0);
+  ts.type1 = tB;
+  nb += getnumbonds(ifebB, &ts, 0);
+  return nb;
+}
+
+void update_rates(int i, int j, int ata, int atb, double inc)
+{
+  int typei, typej, nb, antigene_type;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+#ifdef MD_IGG_EDBD
+  antigene_type=2+OprogStatus.numhinges;
+#else
+  antigene_type=3+OprogStatus.numhinges;
+#endif
+  if (typei == 0 && typej == antigene_type)
+    nb = get_nanobody_bonds(i, 0, i+1, 1);
+  else if (typei == 1 && typej == antigene_type)
+    nb = get_nanobody_bonds(i-1, 0, i, 1);
+  else if (typej == 0 && typei == antigene_type)
+    nb = get_nanobody_bonds(j, 0, j+1, 1);
+  else if (typej == 1 && typei == antigene_type)
+    nb = get_nanobody_bonds(j-1, 0, j, 1);
+  else
+    return;
+  //printf("antigene_type=%d nb=%d rate[1]=%d rate[2]=$d ", antigene_type, nb);
+  if (inc > 0.0)
+    {
+      /* inc = +1 new bond
+         inc = -1 bond broken */
+      /* B = antibody, L = ligand/antigene */
+      if (nb == 1)
+	/* k1: B + L -> BL */
+	OprogStatus.rate[0] += 1.0;
+      else if (nb == 2)
+	/* k2: BL + L -> BL2 */	
+	OprogStatus.rate[1] += 1.0;
+    }
+  else
+    {
+      if (nb == 1)
+	/* k3: BL2 -> BL */
+	OprogStatus.rate[2] += 1.0;
+      else if (nb == 0)
+	/* k5: BL -> B + L */
+	OprogStatus.rate[3] += 1.0;
+    }
+}
+#endif
+
 #ifdef MD_SWDUMBBELL
 int swdbs_are_bonded(int i, int j, int ata, int atb)
 {
@@ -2842,9 +2921,10 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      //printf("BOND BROKEN bump i=%d j=%d ata=%d atb=%d\n", i, j, ata, atb);
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, atb, ata);
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
 	      update_rates(i, j, ata, atb, -1.0);
 #endif
+
 	    }
 	}
       else
@@ -2865,7 +2945,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      factor = -vc + sqrt(Sqr(vc) - 2.0*bheight/mredl);
 	      remove_bond(i, j, ata, atb);
 	      remove_bond(j, i, atb, ata);
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
 	      update_rates(i, j, ata, atb, -1.0);
 #endif
 	    }
@@ -2890,7 +2970,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
 	      add_bond(i, j, ata, atb);
 	      add_bond(j, i, atb, ata);
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
 	      update_rates(i, j, ata, atb, +1.0);
 #endif
 	      MD_DEBUG40(printf("[MD_OUTIN_BARRIER IN] qui factor=%.15G\n", factor));
@@ -2911,7 +2991,7 @@ void bumpSP(int i, int j, int ata, int atb, double* W, int bt)
 	      add_bond(i, j, ata, atb);
 	      add_bond(j, i, atb, ata);
 	      factor = -vc - sqrt(Sqr(vc) + 2.0*bheight/mredl);
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
 	      //printf("updating rates!\n");
 	      update_rates(i, j, ata, atb, +1.0);
 #endif
