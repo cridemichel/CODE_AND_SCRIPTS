@@ -905,11 +905,14 @@ struct progStatus
 #ifdef MD_EDHEFLEX_OPTNNL
   int optnnl;
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
   double first_time;
   double time_limit;
   double rate[10];
   double rhozBinSize;
+#endif
+#ifdef MD_NANOBODY
+  int numhinges;
 #endif
 #ifdef MD_PROTEIN_DESIGN
   char nativeConf[NAME_LENGTH];
@@ -1399,11 +1402,14 @@ struct pascii opro_ascii[] =
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",       &OS(optnnl),            1, 1,              "%d"},
 #endif
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
   {"time_limit",           &OS(time_limit),                1, 1,             "%.15G"},
   {"first_time",           &OS(first_time),                1, 1,             "%.15G"},
   {"rhozBinSize",          &OS(rhozBinSize),               1, 1,             "%.15G"},
   {"rate",                 &OS(rate),                      10, 1,            "%f"},
+#endif
+#ifdef MD_NANOBODY
+  {"numhinges",           &OS(numhinges),                1, 1,             "%d"},
 #endif
 #ifdef MD_SUBENZYME
   {"rateSE",               &OS(rateSE),                    10, 1,            "%f"},
@@ -1960,9 +1966,12 @@ struct singlePar OsinglePar[] = {
   {"ENmin",      &OprogStatus.ENmin,        CT},
   {"ENmax",      &OprogStatus.ENmax,        CT},
   {"nRun",       &OprogStatus.nRun,         STR},
-#ifdef MD_RABBIT
+#if defined(MD_RABBIT) || defined(MD_NANOBODY)
   {"time_limit",  &OprogStatus.time_limit,   CT},
   {"rhozBinSize", &OprogStatus.rhozBinSize,  CT},
+#endif
+#ifdef MD_NANOBODY
+  {"numhinges",   &OprogStatus.numhinges,   INT},
 #endif
   {"maxcoll",     &maxcoll,                 INT},
 #ifdef MD_SURV_PROB
