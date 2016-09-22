@@ -151,7 +151,7 @@ int main(int argc, char **argv)
   /* ellipsoid */
   rxc[polylen-1] = 0.0;
   ryc[polylen-1] = 0.0;
-  rzc[polylen-1] = (Len+deltaz)+(DiamSph+deltaz)*polylen;
+  rzc[polylen-1] = (Len+deltaz)+(DiamSph+deltaz)*numSpheres;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
     {
       Rcmz += rzc[k];
     }
-  Rcmz /= 6.0;
+  Rcmz /= (2.0+numSpheres);
   for (k=0; k < polylen; k++)
     {
       rzc[k]-=Rcmz;
