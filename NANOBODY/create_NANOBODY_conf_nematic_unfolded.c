@@ -483,12 +483,20 @@ int main(int argc, char **argv)
 
   /* HEADER */
   fprintf(f, "parnum: %d\n", parnum + numantigens);
+#ifdef MULTIARM
+  fprintf(f,"ninters: %d\n", 9+numarms*2);
+#else
   fprintf(f,"ninters: 9\n");
+#endif
   fprintf(f,"nintersIJ: 0\n");
   fprintf(f,"ntypes: 4\n");
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
+#ifdef MULTIARM
+  fprintf(f, "%d %d %d 1 %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+#else
   fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+#endif
   /* first Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
@@ -505,13 +513,26 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", (Len/2.0-0.5), 0.612); /* 1: along z axis patch which will form bonds with antigens */
 
-  /* sphere */
+  /* bi-sphere */
   fprintf(f,"%f %f %f\n", DiamSph/2.0, DiamSph/2.0, DiamSph/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
   fprintf(f, "1 1 1 1 1 0\n");
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", DiamSph/2.0, sigSph);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", -DiamSph/2.0, sigSph); /* 1: along z axis patch which will form bonds with antigens */
+
+#ifdef MULTIARM
+  /* branching sphere */
+  fprintf(f,"%f %f %f\n", DiamSph/2.0, DiamSph/2.0, DiamSph/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
+  fprintf(f,"1 1 1\n");
+  fprintf(f, "1 1 1 1 1 0\n");
+  fprintf(f,"%d 0\n", numarms);
+  for (k1=0; k1 < numarms; k1++)
+    {
+      fprintf(f,"%f %f %f %f\n", patchGeom[k1][0]*(DiamSph/2.0), patchGeom[k1][1]*(DiamSph/2.0),
+	      patchGeom[k1][2]*(DiamSph/2.0), sigSph);/* 0: along z axis (permanent) 0 */
+    }
+#endif
 
   /* antigen */
   fprintf(f,"%f %f %f\n", DiamAntigen/2.0, DiamAntigen/2.0, DiamAntigen/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
@@ -521,15 +542,25 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 %f\n", DiamAntigen);
 
   /* interactions */
-  fprintf(f,"0 0 2 0 1 1000000 100000 1\n");
-  fprintf(f,"1 0 2 0 1 1000000 100000 1\n");
-  fprintf(f,"0 0 2 1 1 1000000 100000 1\n");
-  fprintf(f,"1 0 2 1 1 1000000 100000 1\n");
-  fprintf(f,"2 0 2 0 1 1000000 100000 1\n");
-  fprintf(f,"2 0 2 1 1 1000000 100000 1\n");
-  fprintf(f,"2 1 2 1 1 1000000 100000 1\n");
+  fprintf(f,"0 0 2 0 1 1000000 1000000 1\n");
+  fprintf(f,"1 0 2 0 1 1000000 1000000 1\n");
+  fprintf(f,"0 0 2 1 1 1000000 1000000 1\n");
+  fprintf(f,"1 0 2 1 1 1000000 1000000 1\n");
+  fprintf(f,"2 0 2 0 1 1000000 1000000 1\n");
+  fprintf(f,"2 0 2 1 1 1000000 1000000 1\n");
+  fprintf(f,"2 1 2 1 1 1000000 1000000 1\n");
+#ifdef MULTIARM
+  for (k1 = 0; k1 < numarms; k1++)
+    {
+      fprint(f, "2 0 3 %d 1 1000000 1000000 1\n", k1);
+      fprint(f, "2 1 3 %d 1 1000000 1000000 1\n", k1);
+    }
+  fprintf(f,"0 1 4 0 1 0 0 1\n");
+  fprintf(f,"1 1 4 0 1 0 0 1\n");
+#else
   fprintf(f,"0 1 3 0 1 0 0 1\n");
   fprintf(f,"1 1 3 0 1 0 0 1\n");
+#endif
   fprintf(f, "@@@\n");
 
   /* place nanobodies */
