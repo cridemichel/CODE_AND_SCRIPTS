@@ -279,7 +279,7 @@ int main(int argc, char **argv)
       ryc[idx] = dist*patchGeom[k1][1];
       rzc[idx] = dist*patchGeom[k1][2];
       /* il meno ci vuole poiché solo una della due patch del nanobody è irreversibile */
-      versor_to_R(patchGeom[k1][0], patchGeom[k1][1], patchGeom[k1][2], R1);
+      versor_to_R(-patchGeom[k1][0], -patchGeom[k1][1], -patchGeom[k1][2], R1);
       for (a=0; a < 3; a++)
 	for (b=0; b < 3; b++)
 	  {
