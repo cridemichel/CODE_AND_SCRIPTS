@@ -771,7 +771,7 @@ int main(int argc, char **argv)
 
       	  if (calcDistBox(rA, rB, saA, saB, R0, R0) < 1.0)
 	    {
-	      printf("i=%d qui\n", i);
+	      //printf("i=%d qui\n", i);
 	      ignorepoly[i] = 1;
 	      numpolyignored++;
 	    }
@@ -792,6 +792,7 @@ int main(int argc, char **argv)
 	}
     }
 
+  printf("# polymers ignored:%d\n", numpolyignored);
   /* HEADER */
   if (bigAntigenSurfDiam > 0.0)
     fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens + 1);
