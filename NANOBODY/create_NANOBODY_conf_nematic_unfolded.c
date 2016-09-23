@@ -702,9 +702,9 @@ int main(int argc, char **argv)
   del0x = 0.01;
   del0y=del0z=Diam*0.1;
 #endif
-  drx = bs[1]; //0.500000000001;
-  dry = bs[1];
-  drz = bs[1];
+  drx = 1.0;//bs[1]; //0.500000000001;
+  dry = 1.0;//bs[1];
+  drz = 1.0;//bs[1];
 #if 0
   if (parnum%polylen != 0)
     {
@@ -728,9 +728,9 @@ int main(int argc, char **argv)
 
   printf("step #1 L=%f %f %f\n", L[0], L[1], L[2]);
   /* expand system according to tetramer size bs[3] */
-  factor[0] = 1.0001*(bs[0]/bs[1]);
-  factor[1] = 1.0001;
-  factor[2] = 1.0001*(bs[2]/bs[1]);
+  factor[0] = 1.0001*bs[0];
+  factor[1] = 1.0001*bs[1];
+  factor[2] = 1.0001*bs[2];
   for (i=0; i < numpoly; i++)
     {
       rxCM[i] *= factor[0];
@@ -745,6 +745,13 @@ int main(int argc, char **argv)
   //xtrafact = pow(phi/targetphi, 1.0/3.0);
 
   //printf("vol=%f targetphi=%f xtrafact=%f\n", vol, targetphi);
+
+  if (L[0] > Lx || L[1] > Ly || L[2] > Lz)
+    {
+      printf("Box size supplied is too small it must bigger than Lx=%f Ly=%f Lz=%f\n",
+	     L[0], L[1], L[2]);
+      exit(-1);
+    }
 
   for (i=0; i < numpoly; i++)
     {
