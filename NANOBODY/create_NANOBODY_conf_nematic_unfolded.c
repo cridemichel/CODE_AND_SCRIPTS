@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   double sigChain, DiamSph, orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
-  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch, bigAntigenSurfDiam;
+  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch, bigAntigenSurfDiam=0.0;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam, rsp1[3], rsp2[3];
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3, idx1, idx2;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
@@ -198,8 +198,6 @@ int main(int argc, char **argv)
       printf("Compile without -DMULTI_ARM flag to generate bi-bodies\n");
       exit(-1);
     }
-
-   
 #endif
 
 #ifdef MULTIARM
@@ -544,7 +542,10 @@ int main(int argc, char **argv)
     }
 
   /* HEADER */
-  fprintf(f, "parnum: %d\n", parnum + numantigens);
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "parnum: %d\n", parnum + numantigens + 1);
+  else
+    fprintf(f, "parnum: %d\n", parnum + numantigens);
 #ifdef MULTIARM
   fprintf(f,"ninters: %d\n", 6+numarms*2);
 #else
@@ -552,16 +553,28 @@ int main(int argc, char **argv)
 #endif
   fprintf(f,"nintersIJ: 0\n");
 #ifdef MULTIARM
-  fprintf(f,"ntypes: 4\n");
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "ntypes: 5\n");
+  else
+    fprintf(f, "ntypes: 4\n");
 #else
-  fprintf(f,"ntypes: 4\n");
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "ntypes: 5\n");
+  else
+    fprintf(f, "ntypes: 4\n");
 #endif
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
 #ifdef MULTIARM
-  fprintf(f, "%d %d %d %d\n", numpoly*numarms, numarms*numSpheres*numpoly, numpoly, numantigens);
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "%d %d %d %d 1\n", numpoly*numarms, numarms*numSpheres*numpoly, numpoly, numantigens);
+  else
+    fprintf(f, "%d %d %d %d\n", numpoly*numarms, numarms*numSpheres*numpoly, numpoly, numantigens);
 #else
-  fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "%d %d %d %d 1\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+  else
+    fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
 #endif
   /* first Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
@@ -609,6 +622,14 @@ int main(int argc, char **argv)
   fprintf(f,"1 0\n");
   fprintf(f,"0 0 0 %f\n", DiamAntigen);
 
+  /* big sphere */
+  if (bigAntigenSurfDiam > 0.0)
+    {
+      fprintf(f,"%f %f %f\n", bigAntigenSurfDiam/2.0, bigAntigenSurfDiam/2.0, bigAntigenSurfDiam/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
+      fprintf(f,"1 1 1\n");
+      fprintf(f, "1e+200 1 1 1 0 0\n");
+      fprintf(f,"0 0\n");
+    }
   /* interactions */
 #ifdef MULTIARM
   fprintf(f,"0 0 1 0 1 1000000 1000000 1\n");
@@ -691,6 +712,9 @@ int main(int argc, char **argv)
       rz[i+parnum] = rza;
       fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
     } 
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "0 0 0 1 0 0 0 1 0 0 0 1 4\n"); 
+
 #endif
   /* velocities */
   for (i=0; i < parnum; i++)
@@ -701,6 +725,9 @@ int main(int argc, char **argv)
     {
       fprintf(f, "0 0 0 0 0 0\n");
     }
+  if (bigAntigenSurfDiam > 0.0)
+    fprintf(f, "0 0 0 0 0 0\n");
+
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
   printf("Number of Nanobodies=%d - Number of Antigens=%d\n", numpoly, numantigens);
   printf("polylen=%d\n", polylen);
