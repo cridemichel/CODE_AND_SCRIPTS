@@ -399,7 +399,7 @@ int main(int argc, char **argv)
   /* se bigAntigenSurfDiam = 0 allora mette gli antigeni sulla faccia in basso */
   if (argc > 18 && atof(argv[18])!=-1)
     {
-      bigAntigenSurfDiam = atof(argv[19]);
+      bigAntigenSurfDiam = atof(argv[18]);
     }
   else
     bigAntigenSurfDiam = 120.0;
@@ -771,6 +771,7 @@ int main(int argc, char **argv)
 
       	  if (calcDistBox(rA, rB, saA, saB, R0, R0) < 1.0)
 	    {
+	      printf("i=%d qui\n", i);
 	      ignorepoly[i] = 1;
 	      numpolyignored++;
 	    }
@@ -915,9 +916,12 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-      k = parnum / polylen;
-      if (ignorepoly[k])
-	continue;
+      if (bigAntigenSurfDiam > 0.0)
+	{
+	  k = parnum / polylen;
+	  if (ignorepoly[k]==1)
+	    continue;
+	}
 #ifdef MULTIARM
       kk = i % polylen;
       type = typesnb[kk];
@@ -956,7 +960,7 @@ int main(int argc, char **argv)
 	      overlap = 0;
 	      for (k = 0; k < i-1; k++)
 		{
-		  if (Sqr(rx[parnum+i]-rxa) + Sqr(ry[parnum+i]-rya) < Sqr(DiamAntigen))
+		  if (Sqr(rx[parnum+i]-ox) + Sqr(ry[parnum+i]-oy) + Sqr(rz[parnum+i]-oz) < Sqr(DiamAntigen))
 		    {
 		      overlap=1;
 		      break;
