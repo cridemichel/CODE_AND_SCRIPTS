@@ -101,9 +101,9 @@ int main(int argc, char **argv)
   if (argc == 1)
     {
 #ifdef MULTIARM
-      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diamn-permpatch> <QFab-diam-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <numarms>\n"); 
+      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <numarms>\n"); 
 #else
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numarms> <numspheres> <QFab-diam> <QFab-len> <QFab-diamn-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene>\n"); 
 #endif
      exit(-1);
    }
@@ -116,13 +116,9 @@ int main(int argc, char **argv)
   /* diametro e lunghezza nanobody Fab (ellissoide prolato) */
   Diam=2.0;
   Len = 4.0;
-  distRevPatch = Len/2.0; 
   nanorevpatchDiam = 0.45; 
   /* diametro della sfera della catena */
   DiamSph=1.0; 
-
-  /* diametro delle patch delle sfere */
-  sigSph = 0.119*DiamSph;
 
   pi = acos(0.0)*2.0;
   nxmax = 5;
@@ -166,12 +162,16 @@ int main(int argc, char **argv)
 
   if (argc > 14 && atof(argv[14])!=-1)
     distRevPatch = atof(argv[14]);
+  else
+    distRevPatch = Len/2.0; 
 
   if (argc > 15 && atof(argv[15])!=-1)
     DiamSph = atof(argv[15]);
 
   if (argc > 16 && atof(argv[16])!=-1)
     sigSph = atof(argv[16]);
+  else
+    sigSph = 0.119*DiamSph;
 
   if (argc > 17 && atof(argv[17])!=-1)
     DiamAntigen = atof(argv[17]);
@@ -187,6 +187,7 @@ int main(int argc, char **argv)
     }
   if (numarms < 3)
     {
+      printf("argv[18]=%s\n", argv[17]);
       printf("Compile without -DMULTI_ARM flag to generate bi-bodies\n");
       exit(-1);
     }
