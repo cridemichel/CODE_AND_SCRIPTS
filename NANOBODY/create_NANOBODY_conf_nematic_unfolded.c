@@ -355,17 +355,22 @@ int main(int argc, char **argv)
     {
       for (k2 = k1+1; k2 < numarms; k2++)
 	{
-	  idx1 = 1 + (numSpheres+1)*k1; 
-	  idx2 = 1 + (numSpheres+1)*k2;
-	  for (k=0; k < 3; k++)
-	    {
-	      rsp1[k] = rxc[idx1] - distRevPatch*Rc[2][k][idx1];
-	      rsp2[k] = rxc[idx2] - distRevPatch*Rc[2][k][idx2];
-	    }
+	  idx1 = (numSpheres+1)*(k1+1); 
+	  idx2 = (numSpheres+1)*(k2+1);
+	  printf("type[%d]=%d type[%d]=%d\n", idx1, typesnb[idx1], idx2, typesnb[idx2]);
+      	  rsp1[0] = rxc[idx1] - distRevPatch*Rc[2][0][idx1];
+	  rsp2[0] = rxc[idx2] - distRevPatch*Rc[2][0][idx2];
+	  rsp1[1] = ryc[idx1] - distRevPatch*Rc[2][1][idx1];
+	  rsp2[1] = ryc[idx2] - distRevPatch*Rc[2][1][idx2];
+	  rsp1[2] = rzc[idx1] - distRevPatch*Rc[2][2][idx1];
+	  rsp2[2] = rzc[idx2] - distRevPatch*Rc[2][2][idx2];
+	 
+	  //printf("orient=%f %f %f  - %f %f %f\n", Rc[2][0][idx1], Rc[2][1][idx1], Rc[2][2][idx1],
+	    //  Rc[2][0][idx2], Rc[2][1][idx2], Rc[2][2][idx2]);
 	  dx = rsp1[0]-rsp2[0];
 	  dy = rsp1[1]-rsp2[1];
 	  dz = rsp1[2]-rsp2[2];
-
+	  printf("dy=%f\n", dy);
 	  if (k1==0 && k2 ==1)
 	    {
 	      dxMax = fabs(dx);
@@ -380,12 +385,17 @@ int main(int argc, char **argv)
 	    dzMax = fabs(dz);
 	}
     } 
-  dxMax += Len;
-  dyMax += Len;
-  dzMax += Len;
+  //dxMax += Len;
+  //dyMax += Len;
+  //dzMax += Len;
+
   bs[0] = dxMax;
-  bs[1] = dyMax;
-  bs[2] = dzMax;
+  if (numarms==3)
+    bs[1] = DiamSph;
+  else
+    bs[1] = dyMax;
+ 
+ bs[2] = dzMax;
   printf("calculated bs=%f %f %f\n", bs[0], bs[1], bs[2]);
 #else
   bs[0] = Diam>DiamSph?Diam:DiamSph;
