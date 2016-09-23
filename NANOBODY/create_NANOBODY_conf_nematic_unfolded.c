@@ -77,6 +77,190 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
     R[0][k] = u[k];
 }
 #endif
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+
+double calcDistBox(double rbi[3], double rbj[3], double saxi[3], double saxj[3], double Ri[3][3], double Rj[3][3])
+{
+  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
+  int k, k1, k2, existsParallelPair = 0;
+  /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
+   * maniera molto efficiente */ 
+  for (k=0; k < 3; k++)
+    {
+      rA[k] = rbi[k];
+      rB[k] = rbj[k];
+      EA[k] = saxi[k];
+      EB[k] = saxj[k];
+    }
+#if 0
+  /* riportare qua anche l'analogo routin per sfere se servirà */
+  if (is_a_sphere_NNL[i] && is_a_sphere_NNL[j])
+    return calcDistNegNNLoverlapPlaneHS(i, j, rA, rB);
+#endif
+  
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  AA[k1][k2] = Ri[k1][k2];
+	  BB[k1][k2] = Rj[k1][k2];
+	}
+    	DD[k1] = rA[k1] - rB[k1];
+    }
+  /* axis C0+s*A0 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[0][k1] =  scalProd(AA[0], BB[k1]);
+      fabscij[0][k1] = fabs(cij[0][k1]);
+      if ( fabscij[0][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[0] = scalProd(AA[0],DD);
+  RR = fabs(AD[0]);
+  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
+  R01 = EA[0] + R1;
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[1][k1] = scalProd(AA[1],BB[k1]);
+      fabscij[1][k1] = fabs(cij[1][k1]);
+      if ( fabscij[1][k1] == 1.0  )
+	existsParallelPair = 1;
+    }
+  AD[1] = scalProd(AA[1],DD);
+  RR = fabs(AD[1]);
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
+  R01 = EA[1] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  for (k1= 0; k1 < 3; k1++)
+    {
+      cij[2][k1] = scalProd(AA[2], BB[k1]);
+      fabscij[2][k1] = fabs(cij[2][k1]);
+      if ( fabscij[2][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[2] = scalProd(AA[2],DD);
+  RR = fabs(AD[2]);
+  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
+  R01 = EA[2] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*B0 */
+  RR = fabs(scalProd(BB[0],DD));
+  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
+  R01 = R0 + EB[0];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*B1 */
+  RR = fabs(scalProd(BB[1],DD));
+  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
+  R01 = R0 + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  
+  /* axis C0+s*B2 */
+  RR = fabs(scalProd(BB[2],DD));
+  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
+  R01 = R0 + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* At least one pair of box axes was parallel, therefore the separation is
+   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
+   * the separation of the boxes. 
+   */
+  if ( existsParallelPair )
+    return -1.0;
+
+  /* axis C0+s*A0xB0 */
+  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
+  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
+  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB1 */
+  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
+  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
+  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB2 */
+  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
+  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
+  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB0 */
+  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
+  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
+  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB1 */
+  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
+  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
+  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB2 */
+  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
+  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
+  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB0 */
+  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
+  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
+  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB1 */
+  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
+  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
+  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB2 */
+  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
+  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
+  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  return -1.0;
+}
+
+
 int main(int argc, char **argv)
 {
   FILE *f;
@@ -85,8 +269,10 @@ int main(int argc, char **argv)
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
   double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch, bigAntigenSurfDiam=0.0;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam, rsp1[3], rsp2[3];
+  double rA[3], rB[3], saA[3], saB[3];
+  int numpolyignored=0;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3, idx1, idx2;
-  int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
+  int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens, *ignorepoly, numpolyeff;
 #ifdef MULTIARM
   int numarms=2, *typesnb;
 #endif
@@ -210,6 +396,9 @@ int main(int argc, char **argv)
   parnum = polylen*nxmax*nymax*nzmax;
 #endif
   numpoly = nxmax*nymax*nzmax;
+  ignorepoly = malloc(sizeof(int)*numpoly);
+  for (i=0; i < numpoly; i++)
+    ignorepoly[i] = 0;
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
   rz = malloc(sizeof(double)*parnum);
@@ -528,13 +717,40 @@ int main(int argc, char **argv)
 #if 1
   for (i=0; i < numpoly; i++)
     {
+      if (bigAntigenSurfDiam > 0.0)
+	{
+	  /* roughly check whether the nanobody is inside
+	   * the big sphere */
+	  rA[0] = 0;
+	  rA[1] = 0;
+	  rA[2] = 0;
+	  saA[0] = bigAntigenSurfDiam*0.5;
+	  saA[1] = bigAntigenSurfDiam*0.5;
+	  saA[2] = bigAntigenSurfDiam*0.5;
+
+	  rB[0] = rxCM[i];
+	  rB[1] = ryCM[i];
+	  rB[2] = rzCM[i];
+	  saB[0] = bs[0]*0.5;
+	  saB[1] = bs[1]*0.5;
+	  saB[2] = bs[2]*0.5;
+
+      	  if (calcDistBox(rA, rB, saA, saB, R0, R0) < 1.0)
+	    {
+	      ignorepoly[i] = 1;
+	      numpolyignored++;
+	    }
+	  if (ignorepoly[i])
+	    continue;	
+	}
+
       for (j=0; j < polylen; j++)
 	{
 	  idx = i*polylen + j;
 	  rx[idx] = rxCM[i] + rxc[j];
 	  ry[idx] = ryCM[i] + ryc[j];
 	  rz[idx] = rzCM[i] + rzc[j];
-	  for (a=0; a < 3; a++)
+  	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      Ri[a][b][idx] = Rc[a][b][j];
 	  //printf("qui idx=%d R[0][0]=%f\n", idx, Ri[0][0][idx]);
@@ -543,9 +759,9 @@ int main(int argc, char **argv)
 
   /* HEADER */
   if (bigAntigenSurfDiam > 0.0)
-    fprintf(f, "parnum: %d\n", parnum + numantigens + 1);
+    fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens + 1);
   else
-    fprintf(f, "parnum: %d\n", parnum + numantigens);
+    fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens);
 #ifdef MULTIARM
   fprintf(f,"ninters: %d\n", 6+numarms*2);
 #else
@@ -566,15 +782,16 @@ int main(int argc, char **argv)
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
 #ifdef MULTIARM
+  numpolyeff = numpoly - numpolyignored;
   if (bigAntigenSurfDiam > 0.0)
-    fprintf(f, "%d %d %d %d 1\n", numpoly*numarms, numarms*numSpheres*numpoly, numpoly, numantigens);
+    fprintf(f, "%d %d %d %d 1\n", numpolyeff*numarms, numarms*numSpheres*numpolyeff, numpolyeff, numantigens);
   else
-    fprintf(f, "%d %d %d %d\n", numpoly*numarms, numarms*numSpheres*numpoly, numpoly, numantigens);
+    fprintf(f, "%d %d %d %d\n", numpolyeff*numarms, numarms*numSpheres*numpolyeff, numpolyeff, numantigens);
 #else
   if (bigAntigenSurfDiam > 0.0)
-    fprintf(f, "%d %d %d %d 1\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+    fprintf(f, "%d %d %d %d 1\n", numpolyeff, numpolyeff, numSpheres*numpolyeff, numantigens);
   else
-    fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+    fprintf(f, "%d %d %d %d\n", numpolyeff, numpolyeff, numSpheres*numpolyeff, numantigens);
 #endif
   /* first Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
@@ -582,7 +799,7 @@ int main(int argc, char **argv)
   fprintf(f, "1 1 1 1 1 0\n");
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", - distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", -distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 
 #ifndef MULTIARM
   /* second Fab */
@@ -664,6 +881,9 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
+      k = parnum / polylen;
+      if (ignorepoly[k])
+	continue;
 #ifdef MULTIARM
       kk = i % polylen;
       type = typesnb[kk];
