@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   double sigChain, DiamSph, orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
-  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist;
+  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
@@ -312,6 +312,24 @@ int main(int argc, char **argv)
       }
 #endif
   /* center the nanobody */
+#ifdef MULTIARM
+  Rcmx=Rcmy=Rcmz=0.0;
+  for (k=0; k < polylen; k++)
+    {
+      Rcmx += rxc[k];
+      Rcmy += ryc[k];
+      Rcmz += rzc[k];
+    }
+  Rcmx /= ((double) polylen);
+  Rcmy /= ((double) polylen);
+  Rcmz /= ((double) polylen);
+  for (k=0; k < polylen; k++)
+    {
+      rxc[k]-=Rcmx;
+      ryc[k]-=Rcmy;
+      rzc[k]-=Rcmz;
+    }
+#else
   Rcmz=0.0;
   for (k=0; k < polylen; k++)
     {
@@ -322,10 +340,42 @@ int main(int argc, char **argv)
     {
       rzc[k]-=Rcmz;
     }
+#endif
+#ifdef MULTIARM
+  /* calcola il box che racchiude il nanobody */
+  for (k1 = 0; k1 < polylen; k1++)
+    {
+      for (k2 = k1+1; k2 < polylen; k2++)
+	{
+	  dx = rxc[k2]-rxc[k1];
+	  dy = ryc[k2]-ryc[k1];
+	  dz = rzc[k2]-rzc[k1];
 
+	  if (k1==0 && k2 ==1)
+	    {
+	      dxMax = abs(dx);
+	      dyMax = abs(dy);
+	      dzMax = abs(dz);
+	    }
+	  if (abs(dx) > dxMax) 
+	    dxMax = abs(dx);
+	  if (abs(dy) > dyMax) 
+	    dyMax = abs(dy);
+	  if (abs(dz) > dzMax) 
+	    dzMax = abs(dz);
+	}
+    } 
+  dxMax += Len*0.5;
+  dyMax += Len*0.5;
+  dzMax += Len*0.5;
+  bs[0] = dxMax;
+  bs[1] = dyMax;
+  by[2] = dzMax;
+#else
   bs[0] = Diam>DiamSph?Diam:DiamSph;
   bs[1] = Diam>DiamSph?Diam:DiamSph; 
   bs[2] = 2.0*(Len+deltaz)+numSpheres*(DiamSph+deltaz);
+#endif
 #if 0
   for (i=0; i < polylen; i++)
     {
