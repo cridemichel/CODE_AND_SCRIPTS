@@ -257,7 +257,7 @@ int main(int argc, char **argv)
     {
       for (k2 = 0; k2 < numSpheres; k2++)
 	{
-	  dist = (DiamSph+deltaz)*k2;
+	  dist = (DiamSph+deltaz)*(k2+1);
        	  idx++;
 	  rxc[idx] = dist*patchGeom[k1][0];
 	  ryc[idx] = dist*patchGeom[k1][1];
