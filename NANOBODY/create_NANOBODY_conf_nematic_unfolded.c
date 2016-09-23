@@ -780,9 +780,9 @@ int main(int argc, char **argv)
 	  saA[1] = bigAntigenSurfDiam*0.5;
 	  saA[2] = bigAntigenSurfDiam*0.5;
 
-	  rB[0] = rxCM[i];
-	  rB[1] = ryCM[i];
-	  rB[2] = rzCM[i];
+	  rB[0] = rxCM[i]-L[0]*0.5;
+	  rB[1] = ryCM[i]-L[1]*0.5;
+	  rB[2] = rzCM[i]-L[2]*0.5;
 	  saB[0] = bs[0]*0.5;
 	  saB[1] = bs[1]*0.5;
 	  saB[2] = bs[2]*0.5;
