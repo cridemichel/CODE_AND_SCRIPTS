@@ -260,7 +260,7 @@ double calcDistBox(double rbi[3], double rbj[3], double saxi[3], double saxj[3],
   return -1.0;
 }
 
-void orient(double *omx, double *omy, double* omz)
+void genorient(double *omx, double *omy, double* omz)
 {
   int i;
   //double inert;                 /* momentum of inertia of the molecule */
@@ -272,8 +272,8 @@ void orient(double *omx, double *omy, double* omz)
 
   while (xisq >= 1.0)
     {
-      xi1  = ranf_vb() * 2.0 - 1.0;
-      xi2  = ranf_vb() * 2.0 - 1.0;
+      xi1  = ranf() * 2.0 - 1.0;
+      xi2  = ranf() * 2.0 - 1.0;
       xisq = xi1 * xi1 + xi2 * xi2;
     }
 
@@ -947,7 +947,7 @@ int main(int argc, char **argv)
 	  overlap=1;
 	  while (overlap)
 	    {
-	      orient(&ox, &oy, &oz);
+	      genorient(&ox, &oy, &oz);
 	      ox *= bigAntigenSurfDiam*0.5;
 	      oy *= bigAntigenSurfDiam*0.5;
 	      oz *= bigAntigenSurfDiam*0.5;
