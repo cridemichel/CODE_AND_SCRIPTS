@@ -919,7 +919,7 @@ int main(int argc, char **argv)
       //orient=(i%2==0)?1.0:-1.0;
       if (bigAntigenSurfDiam > 0.0)
 	{
-	  k = parnum / polylen;
+	  k = i / polylen;
 	  if (ignorepoly[k]==1)
 	    continue;
 	}
@@ -1005,6 +1005,12 @@ int main(int argc, char **argv)
   /* velocities */
   for (i=0; i < parnum; i++)
     {
+      if (bigAntigenSurfDiam > 0.0)
+	{
+	  k = i / polylen;
+	  if (ignorepoly[k]==1)
+	    continue;
+	}
       fprintf(f, "%f %f %f 0 0 0\n", ranf(), ranf(), ranf());
     }
   for (i=0; i < numantigens; i++)
