@@ -293,6 +293,16 @@ void genorient(double *omx, double *omy, double* omz)
   *omy = oy;
   *omz = oz; 
 }
+double min3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b < m)
+    m = b;
+  if (c < m)
+    m = c;
+  return m;
+}
 
 int main(int argc, char **argv)
 {
@@ -692,9 +702,9 @@ int main(int argc, char **argv)
   del0x = 0.01;
   del0y=del0z=Diam*0.1;
 #endif
-  drx = bs[0]; //0.500000000001;
-  dry = bs[0];
-  drz = bs[0];
+  drx = bs[1]; //0.500000000001;
+  dry = bs[1];
+  drz = bs[1];
 #if 0
   if (parnum%polylen != 0)
     {
@@ -718,9 +728,9 @@ int main(int argc, char **argv)
 
   printf("step #1 L=%f %f %f\n", L[0], L[1], L[2]);
   /* expand system according to tetramer size bs[3] */
-  factor[0] = 1.0001;
+  factor[0] = 1.0001*(bs[0]/bs[1]);
   factor[1] = 1.0001;
-  factor[2] = 1.0001*(bs[2]/bs[0]);
+  factor[2] = 1.0001*(bs[2]/bs[1]);
   for (i=0; i < numpoly; i++)
     {
       rxCM[i] *= factor[0];
@@ -755,6 +765,7 @@ int main(int argc, char **argv)
       numantigens = ((int)(sigmaAntigens*(L[0]*L[1]))); 
     }
   printf("parnum=%d nx=%d ny=%d nz=%d argc=%d L=%f %f %f\n", parnum, nxmax, nymax, nzmax, argc, L[0], L[1], L[2]);
+  
 #if 1
   for (i=0; i < numpoly; i++)
     {
@@ -776,7 +787,7 @@ int main(int argc, char **argv)
 	  saB[1] = bs[1]*0.5;
 	  saB[2] = bs[2]*0.5;
 
-      	  if (calcDistBox(rA, rB, saA, saB, R0, R0) < 1.0)
+      	  if (calcDistBox(rA, rB, saA, saB, R0, R0) < 0.0)
 	    {
 	      //printf("i=%d qui\n", i);
 	      ignorepoly[i] = 1;
