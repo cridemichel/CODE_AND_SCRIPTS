@@ -83,9 +83,9 @@ int main(int argc, char **argv)
   double sigChain, DiamSph, orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
-  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax;
-  double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam;
-  int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3;
+  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch;
+  double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam, rsp1[3], rsp2[3];
+  int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3, idx1, idx2;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
 #ifdef MULTIARM
   int numarms=2, *typesnb;
@@ -110,6 +110,7 @@ int main(int argc, char **argv)
   /* diametro e lunghezza nanobody Fab (ellissoide prolato) */
   Diam=2.0;
   Len = 4.0;
+  distRevPatch = Len/2.0; 
   nanorevpatchDiam = 0.45; 
   /* diametro della sfera della catena */
   DiamSph=1.0; 
@@ -349,14 +350,21 @@ int main(int argc, char **argv)
     }
 #endif
 #ifdef MULTIARM
-  /* calcola il box che racchiude il nanobody */
-  for (k1 = 0; k1 < polylen; k1++)
+  /* calcola il box che racchiude il nanobody usando solo i Fab */
+  for (k1 = 0; k1 < numarms; k1++)
     {
-      for (k2 = k1+1; k2 < polylen; k2++)
+      for (k2 = k1+1; k2 < numarms; k2++)
 	{
-	  dx = rxc[k2]-rxc[k1];
-	  dy = ryc[k2]-ryc[k1];
-	  dz = rzc[k2]-rzc[k1];
+	  idx1 = 1 + (numSpheres+1)*k1; 
+	  idx2 = 1 + (numSpheres+1)*k2;
+	  for (k=0; k < 3; k++)
+	    {
+	      rsp1[k] = rxc[idx1] - distRevPatch*Rc[2][k][idx1];
+	      rsp2[k] = rxc[idx2] - distRevPatch*Rc[2][k][idx2];
+	    }
+	  dx = rsp1[0]-rsp2[0];
+	  dy = rsp1[1]-rsp2[1];
+	  dz = rsp1[2]-rsp2[2];
 
 	  if (k1==0 && k2 ==1)
 	    {
@@ -515,7 +523,7 @@ int main(int argc, char **argv)
   fprintf(f, "1 1 1 1 1 0\n");
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", -Len/2.0, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", - distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 
 #ifndef MULTIARM
   /* second Fab */
