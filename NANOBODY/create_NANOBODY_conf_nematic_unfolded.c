@@ -99,8 +99,12 @@ int main(int argc, char **argv)
   
   //permdiam=0.5;
   if (argc == 1)
-   {
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene> <numarms>\n"); 
+    {
+#ifdef MULTIARM
+      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diamn-permpatch> <QFab-diam-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <numarms>\n"); 
+#else
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numarms> <numspheres> <QFab-diam> <QFab-len> <QFab-diamn-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene>\n"); 
+#endif
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -148,18 +152,33 @@ int main(int argc, char **argv)
   if (argc > 9)
     numSpheres = atoi(argv[9]);
 
-  if (argc > 10)
-    permdiam = atof(argv[10]);
+  if (argc > 10 && atof(argv[10])!=-1)
+    Diam = atof(argv[10]);
 
-  if (argc > 11)
-    sigSph = atof(argv[11]);
+  if (argc > 11 && atof(argv[11])!=-1)
+    Len = atof(argv[11]);
+
+  if (argc > 12 && atof(argv[12])!=-1)
+    permdiam = atof(argv[12]);
   
-  if (argc > 12)
-    DiamAntigen = atof(argv[12]);
-	
+  if (argc > 13 && atof(argv[13])!=-1)
+    nanorevpatchDiam = atof(argv[13]);
+
+  if (argc > 14 && atof(argv[14])!=-1)
+    distRevPatch = atof(argv[14]);
+
+  if (argc > 15 && atof(argv[15])!=-1)
+    DiamSph = atof(argv[15]);
+
+  if (argc > 16 && atof(argv[16])!=-1)
+    sigSph = atof(argv[16]);
+
+  if (argc > 17 && atof(argv[17])!=-1)
+    DiamAntigen = atof(argv[17]);
+
 #ifdef MULTIARM
-  if (argc > 13)
-    numarms = atoi(argv[13]);
+  if (argc > 18)
+    numarms = atoi(argv[18]);
 
   if (numarms > 5)
     {
