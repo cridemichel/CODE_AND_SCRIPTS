@@ -50,30 +50,31 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   int k1, k2;
 #endif
   /* first row vector */
-  R[0][0] = ox;
-  R[0][1] = oy;
-  R[0][2] = oz;
+  norm = sqrt(Sqr(ox)+Sqr(oy)+Sqr(oz));
+  R[2][0] = ox/norm;
+  R[2][1] = oy/norm;
+  R[2][2] = oz/norm;
   //printf("orient=%f %f %f\n", ox, oy, oz);
   u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
-  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+  if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
     {
       u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
     }
   /* second row vector */
   sp = 0;
   for (k=0; k < 3 ; k++)
-    sp+=u[k]*R[0][k];
+    sp+=u[k]*R[2][k];
   for (k=0; k < 3 ; k++)
-    u[k] -= sp*R[0][k];
+    u[k] -= sp*R[2][k];
   norm = calc_norm(u);
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
   /* third row vector */
-  vectProdVec(R[0], R[1], u);
+  vectProdVec(R[1], R[2], u);
  
   for (k=0; k < 3 ; k++)
-    R[2][k] = u[k];
+    R[0][k] = u[k];
 }
 #endif
 int main(int argc, char **argv)
@@ -263,16 +264,16 @@ int main(int argc, char **argv)
 	  ryc[idx] = dist*patchGeom[k1][1];
 	  rzc[idx] = dist*patchGeom[k1][2];
 	  typesnb[idx] = 1;
+	  versor_to_R(-patchGeom[k1][0], -patchGeom[k1][1], -patchGeom[k1][2], R1);
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      {
-		Rc[a][b][idx] = R0[a][b];
+		Rc[a][b][idx] = R1[a][b];
 	      }
-
-	}
+ 	}
       /* place nanobody at the end of the arm */
       idx++;
-      dist = (DiamSph+deltaz)*numSpheres + (Len+deltaz)*0.5;
+      dist = (DiamSph+deltaz)*numSpheres + (DiamSph+deltaz)*0.5 + (Len+deltaz)*0.5;
       typesnb[idx] = 0;
       rxc[idx] = dist*patchGeom[k1][0];
       ryc[idx] = dist*patchGeom[k1][1];
