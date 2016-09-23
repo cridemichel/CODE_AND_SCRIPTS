@@ -35,9 +35,9 @@ double ranf(void)
 /* a seconda del numero di braccia le patch vengono disposte in una maniera regolare opportuna,
  * ossia triangolo (n=3), tetraedro (n=4), triangolo + 2 patch sull'asse ad esso perpendicolare (n=5).
  * Notare che sono versori unitari. */
-double patchGeomN3[3][3] = {{0,0,-1},{0,0.866025,0.5},{0,-0.866025,0.5}};
+double patchGeomN3[3][3] = {{0,0,-1},{0.866025,0,0.5},{-0.866025,0,0.5}};
 double patchGeomN4[4][3] = {{0.816497, -1.1547, -0.333333},{-0.816497, -1.1547, -0.333333},{0., 2.3094, -0.333333},{1.,0,0}};
-double patchGeomN5[5][3] = {{0,0,-1},{0,0.866025,0.5},{0,-0.866025,0.5},{0,-1,0},{0,1,0}};
+double patchGeomN5[5][3] = {{0,0,-1},{0.866025,0.0,0.5},{-0.866025,0.0,0.5},{0,-1,0},{0,1,0}};
 double patchGeom[5][3];
 #endif
 #ifdef MULTIARM
