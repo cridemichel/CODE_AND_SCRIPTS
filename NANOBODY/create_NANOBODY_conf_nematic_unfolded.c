@@ -370,12 +370,13 @@ int main(int argc, char **argv)
 	    dzMax = fabs(dz);
 	}
     } 
-  dxMax += Len*0.5;
-  dyMax += Len*0.5;
-  dzMax += Len*0.5;
+  dxMax += Len;
+  dyMax += Len;
+  dzMax += Len;
   bs[0] = dxMax;
   bs[1] = dyMax;
   bs[2] = dzMax;
+  printf("calculated bs=%f %f %f\n", bs[0], bs[1], bs[2]);
 #else
   bs[0] = Diam>DiamSph?Diam:DiamSph;
   bs[1] = Diam>DiamSph?Diam:DiamSph; 
@@ -502,7 +503,7 @@ int main(int argc, char **argv)
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
 #ifdef MULTIARM
-  fprintf(f, "%d %d 1 %d\n", numpoly, numSpheres*numpoly, numantigens);
+  fprintf(f, "%d %d %d %d\n", numpoly*numarms, numarms*numSpheres*numpoly, numpoly, numantigens);
 #else
   fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
 #endif
@@ -646,6 +647,7 @@ int main(int argc, char **argv)
     }
   fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
   printf("Number of Nanobodies=%d - Number of Antigens=%d\n", numpoly, numantigens);
+  printf("polylen=%d\n", polylen);
   //printf("phi=%f\n", parnum*vol/(L[0]*L[1]*L[2]));
   fclose(f);
   return 1;
