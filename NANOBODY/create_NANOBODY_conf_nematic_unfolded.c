@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   double sigChain, DiamSph, orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
-  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch;
+  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch, bigAntigenSurfDiam;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam, rsp1[3], rsp2[3];
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3, idx1, idx2;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
@@ -101,9 +101,9 @@ int main(int argc, char **argv)
   if (argc == 1)
     {
 #ifdef MULTIARM
-      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <numarms>\n"); 
+      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam> <numarms>\n"); 
 #else
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam>\n"); 
 #endif
      exit(-1);
    }
@@ -176,9 +176,17 @@ int main(int argc, char **argv)
   if (argc > 17 && atof(argv[17])!=-1)
     DiamAntigen = atof(argv[17]);
 
+  /* se bigAntigenSurfDiam = 0 allora mette gli antigeni sulla faccia in basso */
+  if (argc > 18 && atof(argv[18])!=-1)
+    {
+      bigAntigenSurfDiam = atof(argv[19]);
+    }
+  else
+    bigAntigenSurfDiam = 120.0;
+   
 #ifdef MULTIARM
-  if (argc > 18)
-    numarms = atoi(argv[18]);
+  if (argc > 19)
+    numarms = atoi(argv[19]);
 
   if (numarms > 5)
     {
@@ -190,6 +198,8 @@ int main(int argc, char **argv)
       printf("Compile without -DMULTI_ARM flag to generate bi-bodies\n");
       exit(-1);
     }
+
+   
 #endif
 
 #ifdef MULTIARM
