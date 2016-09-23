@@ -118,7 +118,7 @@ int main(int argc, char **argv)
   DiamSph=1.0; 
 
   /* diametro delle patch delle sfere */
-  sigSph = 0.119*DiamSph;
+  sigSph = 1.5*0.119*DiamSph;
 
   pi = acos(0.0)*2.0;
   nxmax = 5;
