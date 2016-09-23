@@ -9,6 +9,20 @@ int full, ibeg, numpoly;
 #define maxpolylen 10000;
 double R0[3][3], R1[3][3];
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
 
 double ranf(void)
 {
@@ -55,19 +69,6 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
-  if (typesArr[0].nspots==3 && type==0)
-    {
-      for (k=0; k < 3 ; k++)
-	u[k] = R[1][k];
-      vectProdVec(R[0], u, up);
-      /* rotate randomly second axis */
-      angle=4.0*acos(0.0)*ranf_vb();
-      xx = cos(angle);
-      yy = sin(angle);
-      for (k=0; k < 3 ; k++)
-	R[1][k] = u[k]*xx + up[k]*yy;
-      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
-    }
   /* third row vector */
   vectProdVec(R[0], R[1], u);
  
@@ -216,7 +217,7 @@ int main(int argc, char **argv)
 	{
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      patchGeom[k1][k2] = patchGeomN3[k1][k2]
+	      patchGeom[k1][k2] = patchGeomN3[k1][k2];
 	    }
 	}
     }
@@ -226,7 +227,7 @@ int main(int argc, char **argv)
 	{
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      patchGeom[k1][k2] = patchGeomN4[k1][k2]
+	      patchGeom[k1][k2] = patchGeomN4[k1][k2];
 	    }
 	}
     }
@@ -236,7 +237,7 @@ int main(int argc, char **argv)
 	{
 	  for (k2=0; k2 < 3; k2++)
 	    {
-	      patchGeom[k1][k2] = patchGeomN5[k1][k2]
+	      patchGeom[k1][k2] = patchGeomN5[k1][k2];
 	    }
 	}
     }
@@ -357,16 +358,16 @@ int main(int argc, char **argv)
 
 	  if (k1==0 && k2 ==1)
 	    {
-	      dxMax = abs(dx);
-	      dyMax = abs(dy);
-	      dzMax = abs(dz);
+	      dxMax = fabs(dx);
+	      dyMax = fabs(dy);
+	      dzMax = fabs(dz);
 	    }
-	  if (abs(dx) > dxMax) 
-	    dxMax = abs(dx);
-	  if (abs(dy) > dyMax) 
-	    dyMax = abs(dy);
-	  if (abs(dz) > dzMax) 
-	    dzMax = abs(dz);
+	  if (fabs(dx) > dxMax) 
+	    dxMax = fabs(dx);
+	  if (fabs(dy) > dyMax) 
+	    dyMax = fabs(dy);
+	  if (fabs(dz) > dzMax) 
+	    dzMax = fabs(dz);
 	}
     } 
   dxMax += Len*0.5;
@@ -374,7 +375,7 @@ int main(int argc, char **argv)
   dzMax += Len*0.5;
   bs[0] = dxMax;
   bs[1] = dyMax;
-  by[2] = dzMax;
+  bs[2] = dzMax;
 #else
   bs[0] = Diam>DiamSph?Diam:DiamSph;
   bs[1] = Diam>DiamSph?Diam:DiamSph; 
@@ -560,8 +561,8 @@ int main(int argc, char **argv)
   fprintf(f,"1 1 1 1 1 1000000 1000000 1\n");
   for (k1 = 0; k1 < numarms; k1++)
     {
-      fprint(f, "1 0 2 %d 1 1000000 1000000 1\n", k1);
-      fprint(f, "1 1 2 %d 1 1000000 1000000 1\n", k1);
+      fprintf(f, "1 0 2 %d 1 1000000 1000000 1\n", k1);
+      fprintf(f, "1 1 2 %d 1 1000000 1000000 1\n", k1);
     }
   fprintf(f,"0 1 3 0 1 0 0 1\n");
 #else
