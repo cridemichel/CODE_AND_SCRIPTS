@@ -745,8 +745,15 @@ int main(int argc, char **argv)
   L[0] = Lx;
   L[1] = Ly;
   L[2] = Lz;
-  /* gli antigeni vengono messi nel piano xy (cioè z = -L[2]*0.5) */	
-  numantigens = ((int)(sigmaAntigens*(L[0]*L[1]))); 
+  if (bigAntigenSurfDiam > 0.0)
+    {
+      numantigens = ((int)(sigmaAntigens*(4.0*M_PI*pow(bigAntigenSurfDiam*0.5,3)/3.0))); 
+    }
+  else
+    {
+      /* gli antigeni vengono messi nel piano xy (cioè z = -L[2]*0.5) */	
+      numantigens = ((int)(sigmaAntigens*(L[0]*L[1]))); 
+    }
   printf("parnum=%d nx=%d ny=%d nz=%d argc=%d L=%f %f %f\n", parnum, nxmax, nymax, nzmax, argc, L[0], L[1], L[2]);
 #if 1
   for (i=0; i < numpoly; i++)
