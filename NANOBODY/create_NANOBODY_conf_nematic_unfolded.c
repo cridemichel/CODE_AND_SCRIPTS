@@ -93,8 +93,10 @@ int main(int argc, char **argv)
   del=0.5;
   /* nanobody (Fab) permanent spots diameter */
   permdiam=0.8; 
-  sigSph = 0.119;
-  DiamAntigen = 0.395;
+
+  /* diametro antigeni */
+  DiamAntigen = 0.79;
+  
   //permdiam=0.5;
   if (argc == 1)
    {
@@ -113,7 +115,10 @@ int main(int argc, char **argv)
   distRevPatch = Len/2.0; 
   nanorevpatchDiam = 0.45; 
   /* diametro della sfera della catena */
-  DiamSph=1.0; 
+  DiamSph=2.0; 
+
+  /* diametro delle patch delle sfere */
+  sigSph = 0.119*DiamSph;
 
   pi = acos(0.0)*2.0;
   nxmax = 5;
@@ -350,7 +355,9 @@ int main(int argc, char **argv)
     }
 #endif
 #ifdef MULTIARM
-  /* calcola il box che racchiude il nanobody usando solo i Fab */
+  /* calcola il box che racchiude il nanobody usando solo i Fab,
+   * nel caso numarms=3 il box lungo y deve avere larghezza pari al diamtro 
+   * delle o se più grande a quello del semiasse minore degli ellissoidi */
   for (k1 = 0; k1 < numarms; k1++)
     {
       for (k2 = k1+1; k2 < numarms; k2++)
@@ -391,11 +398,11 @@ int main(int argc, char **argv)
 
   bs[0] = dxMax;
   if (numarms==3)
-    bs[1] = DiamSph;
+    bs[1] = (DiamSph > Diam)?DiamSph:Diam;
   else
     bs[1] = dyMax;
  
- bs[2] = dzMax;
+  bs[2] = dzMax;
   printf("calculated bs=%f %f %f\n", bs[0], bs[1], bs[2]);
 #else
   bs[0] = Diam>DiamSph?Diam:DiamSph;
