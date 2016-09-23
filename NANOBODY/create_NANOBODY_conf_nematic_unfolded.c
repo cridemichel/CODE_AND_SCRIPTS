@@ -252,26 +252,27 @@ int main(int argc, char **argv)
 	Rc[a][b][0] = R0[a][b];
       }
   typesnb[0] = 2;
+  idx = 0;
   for (k1=0; k1 < numarms; k1++)
     {
       for (k2 = 0; k2 < numSpheres; k2++)
 	{
-	  dist = (DiamSph+deltaz)*k;
-       	  idx = k1*numSpheres + k2;
-	  rxc[idx+1] = dist*patchGeom[k1][0];
-	  ryc[idx+1] = dist*patchGeom[k1][1];
-	  rzc[idx+1] = dist*patchGeom[k1][2];
-	  typesnb[idx+1] = 1;
+	  dist = (DiamSph+deltaz)*k2;
+       	  idx++;
+	  rxc[idx] = dist*patchGeom[k1][0];
+	  ryc[idx] = dist*patchGeom[k1][1];
+	  rzc[idx] = dist*patchGeom[k1][2];
+	  typesnb[idx] = 1;
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      {
-		Rc[a][b][idx+1] = R0[a][b];
+		Rc[a][b][idx] = R0[a][b];
 	      }
 
 	}
       /* place nanobody at the end of the arm */
+      idx++;
       dist = (DiamSph+deltaz)*numSpheres + (Len+deltaz)*0.5;
-      idx = k1*numSpheres + 1;
       typesnb[idx] = 0;
       rxc[idx] = dist*patchGeom[k1][0];
       ryc[idx] = dist*patchGeom[k1][1];
