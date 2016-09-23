@@ -6396,6 +6396,7 @@ retry:
     {
       if (tryagain && OprogStatus.targetPhi <= 0.0)
 	{
+	  printf("i=%d (type=%d) j=%d (type=%d)\n", i, typeOfPart[i], j, typeOfPart[j]);
 	  printf("[ERROR] I'm sorry but I can't really calculate distance\n");
 	  exit(-1);
      	}
