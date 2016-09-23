@@ -86,7 +86,7 @@ int main(int argc, char **argv)
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
 #ifdef MULTIARM
-  int numarms=2;
+  int numarms=2, *typesnb;
 #endif
   del=0.5;
   /* nanobody (Fab) permanent spots diameter */
@@ -169,6 +169,7 @@ int main(int argc, char **argv)
   /* ogni braccio ha numSphere sfere ed in più c'è la branching sphere */
   polylen = numarms*numSpheres + 1 + numarms;
   parnum = polylen*nxmax*nymax*nzmax;
+  typesnb = malloc(sizeof(int)*polylen);
 #else
   polylen = numSpheres + 2;
   parnum = polylen*nxmax*nymax*nzmax;
@@ -249,6 +250,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][0] = R0[a][b];
       }
+  typesnb[0] = 2;
   for (k1=0; k1 < numarms; k1++)
     {
       for (k2 = 0; k2 < numSpheres; k2++)
@@ -258,6 +260,7 @@ int main(int argc, char **argv)
 	  rxc[idx+1] = dist*patchGeom[k1][0];
 	  ryc[idx+1] = dist*patchGeom[k1][1];
 	  rzc[idx+1] = dist*patchGeom[k1][2];
+	  typesnb[idx+1] = 1;
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      {
@@ -268,6 +271,7 @@ int main(int argc, char **argv)
       /* place nanobody at the end of the arm */
       dist = (DiamSph+deltaz)*numSpheres + (Len+deltaz)*0.5;
       idx = k1*numSpheres + 1;
+      typesnb[idx] = 0;
       rxc[idx] = dist*patchGeom[k1][0];
       ryc[idx] = dist*patchGeom[k1][1];
       rzc[idx] = dist*patchGeom[k1][2];
@@ -484,16 +488,20 @@ int main(int argc, char **argv)
   /* HEADER */
   fprintf(f, "parnum: %d\n", parnum + numantigens);
 #ifdef MULTIARM
-  fprintf(f,"ninters: %d\n", 9+numarms*2);
+  fprintf(f,"ninters: %d\n", 6+numarms*2);
 #else
   fprintf(f,"ninters: 9\n");
 #endif
   fprintf(f,"nintersIJ: 0\n");
+#ifdef MULTIARM
   fprintf(f,"ntypes: 4\n");
+#else
+  fprintf(f,"ntypes: 4\n");
+#endif
   fprintf(f,"saveBonds: 0\n");
   fprintf(f, "@@@\n");
 #ifdef MULTIARM
-  fprintf(f, "%d %d %d 1 %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
+  fprintf(f, "%d %d 1 %d\n", numpoly, numSpheres*numpoly, numantigens);
 #else
   fprintf(f, "%d %d %d %d\n", numpoly, numpoly, numSpheres*numpoly, numantigens);
 #endif
@@ -505,6 +513,7 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", -(Len/2.0-0.5), 0.612); /* 1: along z axis patch which will form bonds with antigens */
 
+#ifndef MULTIARM
   /* second Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
@@ -512,6 +521,7 @@ int main(int argc, char **argv)
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", (Len/2.0-0.5), 0.612); /* 1: along z axis patch which will form bonds with antigens */
+#endif
 
   /* bi-sphere */
   fprintf(f,"%f %f %f\n", DiamSph/2.0, DiamSph/2.0, DiamSph/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
@@ -542,6 +552,19 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 0 %f\n", DiamAntigen);
 
   /* interactions */
+#ifdef MULTIARM
+  fprintf(f,"0 0 1 0 1 1000000 1000000 1\n");
+  fprintf(f,"0 0 1 1 1 1000000 1000000 1\n");
+  fprintf(f,"1 0 1 0 1 1000000 1000000 1\n");
+  fprintf(f,"1 0 1 1 1 1000000 1000000 1\n");
+  fprintf(f,"1 1 1 1 1 1000000 1000000 1\n");
+  for (k1 = 0; k1 < numarms; k1++)
+    {
+      fprint(f, "1 0 2 %d 1 1000000 1000000 1\n", k1);
+      fprint(f, "1 1 2 %d 1 1000000 1000000 1\n", k1);
+    }
+  fprintf(f,"0 1 3 0 1 0 0 1\n");
+#else
   fprintf(f,"0 0 2 0 1 1000000 1000000 1\n");
   fprintf(f,"1 0 2 0 1 1000000 1000000 1\n");
   fprintf(f,"0 0 2 1 1 1000000 1000000 1\n");
@@ -549,15 +572,6 @@ int main(int argc, char **argv)
   fprintf(f,"2 0 2 0 1 1000000 1000000 1\n");
   fprintf(f,"2 0 2 1 1 1000000 1000000 1\n");
   fprintf(f,"2 1 2 1 1 1000000 1000000 1\n");
-#ifdef MULTIARM
-  for (k1 = 0; k1 < numarms; k1++)
-    {
-      fprint(f, "2 0 3 %d 1 1000000 1000000 1\n", k1);
-      fprint(f, "2 1 3 %d 1 1000000 1000000 1\n", k1);
-    }
-  fprintf(f,"0 1 4 0 1 0 0 1\n");
-  fprintf(f,"1 1 4 0 1 0 0 1\n");
-#else
   fprintf(f,"0 1 3 0 1 0 0 1\n");
   fprintf(f,"1 1 3 0 1 0 0 1\n");
 #endif
@@ -571,6 +585,10 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
+#ifdef MULTIARM
+      kk = i % polylen;
+      type = typesnb[kk];
+#else
       kk = i % polylen;
       if (kk==0) 
 	type = 0;
@@ -578,6 +596,7 @@ int main(int argc, char **argv)
 	type = 1;
       else
 	type = 2;
+#endif
       fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f %d\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i], type);
       //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
       //printf("qui2\n");
@@ -588,7 +607,7 @@ int main(int argc, char **argv)
   ry = realloc(ry,sizeof(double)*(parnum+numantigens));
   rz = realloc(rz,sizeof(double)*(parnum+numantigens));
 #ifdef ANTIGEN_ON_SPH
-
+  /* setup a non flat geometry here...to start a sphere? */
 #else
   for (i=0; i < numantigens; i++)
     {
