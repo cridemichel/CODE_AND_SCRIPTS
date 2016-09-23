@@ -84,7 +84,7 @@ int main(int argc, char **argv)
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
   double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax;
-  double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0;
+  double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
 #ifdef MULTIARM
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
   /* diametro e lunghezza nanobody Fab (ellissoide prolato) */
   Diam=2.0;
   Len = 4.0;
- 
+  nanorevpatchDiam = 0.45; 
   /* diametro della sfera della catena */
   DiamSph=1.0; 
 
@@ -515,7 +515,7 @@ int main(int argc, char **argv)
   fprintf(f, "1 1 1 1 1 0\n");
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", -Len/2.0, 0.45); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", -Len/2.0, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 
 #ifndef MULTIARM
   /* second Fab */
