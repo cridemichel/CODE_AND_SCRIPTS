@@ -260,10 +260,44 @@ double calcDistBox(double rbi[3], double rbj[3], double saxi[3], double saxj[3],
   return -1.0;
 }
 
+void orient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = ranf_vb() * 2.0 - 1.0;
+      xi2  = ranf_vb() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+}
 
 int main(int argc, char **argv)
 {
   FILE *f;
+  double ox, oy, oz;
   double sigChain, DiamSph, orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
@@ -905,37 +939,64 @@ int main(int argc, char **argv)
   rx = realloc(rx,sizeof(double)*(parnum+numantigens));
   ry = realloc(ry,sizeof(double)*(parnum+numantigens));
   rz = realloc(rz,sizeof(double)*(parnum+numantigens));
-#ifdef ANTIGEN_ON_SPH
-  /* setup a non flat geometry here...to start a sphere? */
-#else
-  for (i=0; i < numantigens; i++)
+  if (bigAntigenSurfDiam > 0.0)
     {
-      overlap = 1;
-      rza = -L[2]*0.5;      
-      while (overlap)
+      /* setup a non flat geometry here...to start a sphere? */
+      for (i=0; i < numantigens; i++)
 	{
-	  rxa = (ranf()-0.5)*L[0];
-	  rya = (ranf()-0.5)*L[1];
-	  /* check overlaps between antigens */
-	  overlap = 0;
-	  for (k = 0; k < i-1; k++)
+	  overlap=1;
+	  while (overlap)
 	    {
-	      if (Sqr(rx[parnum+i]-rxa) + Sqr(ry[parnum+i]-rya) < Sqr(DiamAntigen))
+	      orient(&ox, &oy, &oz);
+	      ox *= bigAntigenSurfDiam*0.5;
+	      oy *= bigAntigenSurfDiam*0.5;
+	      oz *= bigAntigenSurfDiam*0.5;
+
+	      /* check overlaps between antigens */
+	      overlap = 0;
+	      for (k = 0; k < i-1; k++)
 		{
-		  overlap=1;
-		  break;
-		}
-	    }	  
+		  if (Sqr(rx[parnum+i]-rxa) + Sqr(ry[parnum+i]-rya) < Sqr(DiamAntigen))
+		    {
+		      overlap=1;
+		      break;
+		    }
+		}	  
+	    }
+	  fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", ox, oy, oz); 
 	}
-      //rx[i+parnum] = rxa;
-      ry[i+parnum] = rya;
-      rz[i+parnum] = rza;
-      fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
-    } 
+    }
+  else
+    {
+      /* setup a non flat geometry here...to start a sphere? */
+      for (i=0; i < numantigens; i++)
+	{
+	  overlap = 1;
+	  rza = -L[2]*0.5;      
+	  while (overlap)
+	    {
+	      rxa = (ranf()-0.5)*L[0];
+	      rya = (ranf()-0.5)*L[1];
+	      /* check overlaps between antigens */
+	      overlap = 0;
+	      for (k = 0; k < i-1; k++)
+		{
+		  if (Sqr(rx[parnum+i]-rxa) + Sqr(ry[parnum+i]-rya) < Sqr(DiamAntigen))
+		    {
+		      overlap=1;
+		      break;
+		    }
+		}	  
+	    }
+	  //rx[i+parnum] = rxa;
+	  ry[i+parnum] = rya;
+	  rz[i+parnum] = rza;
+	  fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
+	} 
+    }
   if (bigAntigenSurfDiam > 0.0)
     fprintf(f, "0 0 0 1 0 0 0 1 0 0 0 1 4\n"); 
 
-#endif
   /* velocities */
   for (i=0; i < parnum; i++)
     {
