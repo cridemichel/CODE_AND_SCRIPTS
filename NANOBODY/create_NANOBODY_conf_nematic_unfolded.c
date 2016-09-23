@@ -7,7 +7,7 @@ double *rxCM, *ryCM, *rzCM;
 double *Rc[3][3], *Ri[3][3];
 int full, ibeg, numpoly;
 #define maxpolylen 10000;
-double R0[3][3];
+double R0[3][3], R1[3][3];
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 
 double ranf(void)
@@ -17,18 +17,77 @@ double ranf(void)
       please use the one recommended for your machine. */
   return drand48();
 }
-
-
+#ifdef MULTIARM
+/* a seconda del numero di braccia le patch vengono disposte in una maniera regolare opportuna,
+ * ossia triangolo (n=3), tetraedro (n=4), triangolo + 2 patch sull'asse ad esso perpendicolare (n=5).
+ * Notare che sono versori unitari. */
+double patchGeomN3[3][3] = {{0,0,-1},{0,0.866025,0.5},{0,-0.866025,0.5}};
+double patchGeomN4[4][3] = {{0.816497, -1.1547, -0.333333},{-0.816497, -1.1547, -0.333333},{0., 2.3094, -0.333333},{1.,0,0}};
+double patchGeomN5[5][3] = {{0,0,-1},{0,0.866025,0.5},{0,-0.866025,0.5},{0,-1,0},{0,1,0}};
+double patchGeom[5][3];
+#endif
+#ifdef MULTIARM
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+#ifdef MC_BENT_DBLCYL
+  double Rout[3][3];
+  int k1, k2;
+#endif
+  /* first row vector */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+  if (typesArr[0].nspots==3 && type==0)
+    {
+      for (k=0; k < 3 ; k++)
+	u[k] = R[1][k];
+      vectProdVec(R[0], u, up);
+      /* rotate randomly second axis */
+      angle=4.0*acos(0.0)*ranf_vb();
+      xx = cos(angle);
+      yy = sin(angle);
+      for (k=0; k < 3 ; k++)
+	R[1][k] = u[k]*xx + up[k]*yy;
+      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
+    }
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+}
+#endif
 int main(int argc, char **argv)
 {
   FILE *f;
   double sigChain, DiamSph, orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, sigmaAntigens, sigSph;
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
-  double Rcmx, Rcmy, Rcmz, rxa, rya, rza;
+  double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens;
+#ifdef MULTIARM
+  int numarms=2;
+#endif
   del=0.5;
   /* nanobody (Fab) permanent spots diameter */
   permdiam=0.8; 
@@ -37,7 +96,7 @@ int main(int argc, char **argv)
   //permdiam=0.5;
   if (argc == 1)
    {
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <Fab-patch-diam> <sphere-patch-diam> <DiametroAntigene> <numarms>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -89,9 +148,31 @@ int main(int argc, char **argv)
   
   if (argc > 12)
     DiamAntigen = atof(argv[12]);
+	
+#ifdef MULTIARM
+  if (argc > 13)
+    numarms = atoi(argv[13]);
 
+  if (numarms > 5)
+    {
+      printf("ERROR: maximum supported branches is 5!\n");
+      exit(-1);	
+    }
+  if (numarms < 3)
+    {
+      printf("Compile without -DMULTI_ARM flag to generate bi-bodies\n");
+      exit(-1);
+    }
+#endif
+
+#ifdef MULTIARM
+  /* ogni braccio ha numSphere sfere ed in più c'è la branching sphere */
+  polylen = numarms*numSpheres + 1 + numarms;
+  parnum = polylen*nxmax*nymax*nzmax;
+#else
   polylen = numSpheres + 2;
   parnum = polylen*nxmax*nymax*nzmax;
+#endif
   numpoly = nxmax*nymax*nzmax;
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
@@ -127,7 +208,39 @@ int main(int argc, char **argv)
   deltay = 0.1;
   deltaz = 0.1;
   /* building the nanobody... */
-  /* ellipsoid */	
+#ifdef MULTIARM
+  if (numarms==3)
+    {
+      for (k1=0; k1 < 3; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      patchGeom[k1][k2] = patchGeomN3[k1][k2]
+	    }
+	}
+    }
+  else if (numarms == 4)
+    {
+      for (k1=0; k1 < 4; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      patchGeom[k1][k2] = patchGeomN4[k1][k2]
+	    }
+	}
+    }
+  else if (numarms == 5)
+    {
+      for (k1=0; k1 < 5; k1++)
+	{
+	  for (k2=0; k2 < 3; k2++)
+	    {
+	      patchGeom[k1][k2] = patchGeomN5[k1][k2]
+	    }
+	}
+    }
+
+  /* first place the branching sphere... */
   rxc[0] = 0.0;
   ryc[0] = 0.0;
   rzc[0] = 0.0;
@@ -136,7 +249,47 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][0] = R0[a][b];
       }
-  /* spheres */
+  for (k1=0; k1 < numarms; k1++)
+    {
+      for (k2 = 0; k2 < numSpheres; k2++)
+	{
+	  dist = (DiamSph+deltaz)*k;
+       	  idx = k1*numSpheres + k2;
+	  rxc[idx+1] = dist*patchGeom[k1][0];
+	  ryc[idx+1] = dist*patchGeom[k1][1];
+	  rzc[idx+1] = dist*patchGeom[k1][2];
+	  for (a=0; a < 3; a++)
+	    for (b=0; b < 3; b++)
+	      {
+		Rc[a][b][idx+1] = R0[a][b];
+	      }
+
+	}
+      /* place nanobody at the end of the arm */
+      dist = (DiamSph+deltaz)*numSpheres + (Len+deltaz)*0.5;
+      idx = k1*numSpheres + 1;
+      rxc[idx] = dist*patchGeom[k1][0];
+      ryc[idx] = dist*patchGeom[k1][1];
+      rzc[idx] = dist*patchGeom[k1][2];
+      /* il meno ci vuole poiché solo una della due patch del nanobody è irreversibile */
+      versor_to_R(-patchGeom[k1][0], -patchGeom[k1][1], -patchGeom[k1][2], R1);
+      for (a=0; a < 3; a++)
+	for (b=0; b < 3; b++)
+	  {
+	    Rc[a][b][idx] = R1[a][b];
+	  }
+    }
+#else
+   /* ellipsoid */	
+  rxc[0] = 0.0;
+  ryc[0] = 0.0;
+  rzc[0] = 0.0;
+  for (a=0; a < 3; a++)
+    for (b=0; b < 3; b++)
+      {
+	Rc[a][b][0] = R0[a][b];
+      }
+ /* spheres */
   for (k=0; k < numSpheres; k++)
     {
       rxc[k+1] = 0.0;
@@ -157,6 +310,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][polylen-1] = R0[a][b];
       }
+#endif
   /* center the nanobody */
   Rcmz=0.0;
   for (k=0; k < polylen; k++)
