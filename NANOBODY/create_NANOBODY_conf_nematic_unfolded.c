@@ -115,7 +115,7 @@ int main(int argc, char **argv)
   distRevPatch = Len/2.0; 
   nanorevpatchDiam = 0.45; 
   /* diametro della sfera della catena */
-  DiamSph=2.0; 
+  DiamSph=1.0; 
 
   /* diametro delle patch delle sfere */
   sigSph = 0.119*DiamSph;
