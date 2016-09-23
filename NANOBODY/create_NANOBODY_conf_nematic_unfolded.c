@@ -187,7 +187,6 @@ int main(int argc, char **argv)
     }
   if (numarms < 3)
     {
-      printf("argv[18]=%s\n", argv[17]);
       printf("Compile without -DMULTI_ARM flag to generate bi-bodies\n");
       exit(-1);
     }
