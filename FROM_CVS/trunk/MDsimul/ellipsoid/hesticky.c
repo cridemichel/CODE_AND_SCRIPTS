@@ -1997,6 +1997,61 @@ extern void check_inf_mass_itens(int typei, int typej, int *infMass_i, int *infM
 double calcDistNegSP(double t, double t1, int i, int j, double shift[3], int *amin, int *bmin, double *dists, int bondpair);
 void assign_bond_mapping(int i, int j);
 #endif
+#ifdef MD_NANOBODY
+int get_onenano_bonds(int ifebA, int tA, int ifebB, int tB)
+{
+  int nb;
+  interStruct ts;
+  ts.type1 = tA;
+  ts.type2 = 3; /*antigen */ 
+  ts.spot1 = 1; /* 1 è lo spot reversibile */
+  ts.spot2 = 0; 
+  nb = getnumbonds(ifebA, &ts, 0);
+  ts.type1 = tB;
+  nb += getnumbonds(ifebB, &ts, 0);
+  return nb;
+}
+void update_rates(int i, int j, int ata, int atb, double inc)
+{
+  int typei, typej, nb, antigene_type;
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  antigene_type=3;
+  if (typei == 0 && typej == antigene_type)
+    nb = get_onenano_bonds(i, 0, i+1, 1);
+  else if (typei == 1 && typej == antigene_type)
+    nb = get_onenano_bonds(i-1, 0, i, 1);
+  else if (typej == 0 && typei == antigene_type)
+    nb = get_onenano_bonds(j, 0, j+1, 1);
+  else if (typej == 1 && typei == antigene_type)
+    nb = get_onenano_bonds(j-1, 0, j, 1);
+  else
+    return;
+  //printf("antigene_type=%d nb=%d rate[1]=%d rate[2]=$d ", antigene_type, nb);
+  if (inc > 0.0)
+    {
+      /* inc = +1 new bond
+         inc = -1 bond broken */
+      /* B = antibody, L = ligand/antigene */
+      if (nb == 1)
+	/* k1: B + L -> BL */
+	OprogStatus.rate[0] += 1.0;
+      else if (nb == 2)
+	/* k2: BL + L -> BL2 */	
+	OprogStatus.rate[1] += 1.0;
+    }
+  else
+    {
+      if (nb == 1)
+	/* k3: BL2 -> BL */
+	OprogStatus.rate[2] += 1.0;
+      else if (nb == 0)
+	/* k5: BL -> B + L */
+	OprogStatus.rate[3] += 1.0;
+    }
+}
+#endif
+
 #ifdef MD_RABBIT
 int get_rabbit_bonds(int ifebA, int tA, int ifebB, int tB)
 {
@@ -2088,73 +2143,6 @@ void update_rates(int i, int j, int ata, int atb, double inc)
   if (Oparams.ghostsim==1)
     make_ghosts(inc, nb, i, typei, j, typej);
 #endif
-  if (inc > 0.0)
-    {
-      /* inc = +1 new bond
-         inc = -1 bond broken */
-      /* B = antibody, L = ligand/antigene */
-      if (nb == 1)
-	/* k1: B + L -> BL */
-	OprogStatus.rate[0] += 1.0;
-      else if (nb == 2)
-	/* k2: BL + L -> BL2 */	
-	OprogStatus.rate[1] += 1.0;
-    }
-  else
-    {
-      if (nb == 1)
-	/* k3: BL2 -> BL */
-	OprogStatus.rate[2] += 1.0;
-      else if (nb == 0)
-	/* k5: BL -> B + L */
-	OprogStatus.rate[3] += 1.0;
-    }
-}
-#endif
-#ifdef MD_NANOBODY
-int get_nanobody_bonds(int ifebA, int tA, int ifebB, int tB)
-{
-  /* NOTA: ogni nanobody è composto da 2 Fab (ellissoidi prolati particelle 0 e 1)
-   * e da n hinges modellizzati come sferete con due patch, quindi gli antigeni (nel caso della EDBD)
-   * sono le particelle il cui tipo è 2+OprogStatus.numhinges */
-  int nb;
-  interStruct ts;
-  ts.type1 = tA;
-#ifdef MD_IGG_EDBD
-  ts.type2 = 3;
-#else
-  ts.type2 = 4;
-#endif
-  ts.spot1 = 1;
-  ts.spot2 = 0; 
-  nb = getnumbonds(ifebA, &ts, 0);
-  ts.type1 = tB;
-  nb += getnumbonds(ifebB, &ts, 0);
-  return nb;
-}
-
-void update_rates(int i, int j, int ata, int atb, double inc)
-{
-  int typei, typej, nb, antigene_type;
-  typei = typeOfPart[i];
-  typej = typeOfPart[j];
-
-#ifdef MD_IGG_EDBD
-  antigene_type=3;
-#else
-  antigene_type=4;
-#endif
-  if (typei == 0 && typej == antigene_type)
-    nb = get_nanobody_bonds(i, 0, i+1, 1);
-  else if (typei == 1 && typej == antigene_type)
-    nb = get_nanobody_bonds(i-1, 0, i, 1);
-  else if (typej == 0 && typei == antigene_type)
-    nb = get_nanobody_bonds(j, 0, j+1, 1);
-  else if (typej == 1 && typei == antigene_type)
-    nb = get_nanobody_bonds(j-1, 0, j, 1);
-  else
-    return;
-  //printf("antigene_type=%d nb=%d rate[1]=%d rate[2]=$d ", antigene_type, nb);
   if (inc > 0.0)
     {
       /* inc = +1 new bond

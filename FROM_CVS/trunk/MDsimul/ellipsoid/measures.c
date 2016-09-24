@@ -236,7 +236,7 @@ double calcpotene(void)
  return 0.5*Epot;
 }
 #endif
-#if defined(MD_RABBIT) || defined(MD_NANOBODY)
+#if defined(MD_RABBIT) 
 extern int getnumbonds(int np, interStruct *ts, int inverted);
 void get_bimono_bonds(int *bulk, int *mono, int *bi)
 {
@@ -252,18 +252,10 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
       if (ti==0 || ti==1)
 	{
 	  ts.type1 = ti;
-#if defined(MD_RABBIT)
 #ifdef MD_IGG_EDBD
 	  ts.type2 = 4;
 #else
 	  ts.type2 = 5;
-#endif
-#elif defined(MD_NANOBODY)
-#ifdef MD_IGG_EDBD
-	  ts.type2 = 3;
-#else
-	  ts.type2 = 4;
-#endif
 #endif
 	  ts.spot1 = 1;
 	  ts.spot2 = 0; 
@@ -280,6 +272,48 @@ void get_bimono_bonds(int *bulk, int *mono, int *bi)
 	      else
 		(*bulk)++;
 	    }
+	}
+    }
+}
+#endif
+#ifdef MD_NANOBODY
+extern int numNanoArms, *nanobondsArr;
+extern int getnumbonds(int np, interStruct *ts, int inverted);
+void get_nanobody_bonds(int *bulk, int *nbondsArr)
+{
+  int nb, i, ti, curnano, numnano, polylen;
+  interStruct ts;
+
+  if (numNanoArms==2)
+    polylen = 2+typeNP[2]/typeNP[0];
+  else 
+    polylen = 1+(typeNP[0]+typeNP[1])/typeNP[2]; 
+  printf("numNanoArms=%d polylen=%d\n", numNanoArms, polylen);
+  for (i=0; i < numNanoArms; i++)
+    nbondsArr[i] = 0;
+  nb = 0;
+  curnano = 0;
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      ti = typeOfPart[i];
+      /* se è un antigene feramti */
+      if (ti==3)
+	break;
+      numnano = i/polylen;	  
+      if (numnano!=curnano)
+	{
+	  curnano = numnano;
+	  (nbondsArr[nb])++;
+	  nb = 0;
+	}
+      if ((numNanoArms==2 && (ti == 0 || ti==1)) 
+	  || (numNanoArms > 1 && ti==0))
+	{
+	  ts.type1 = ti;
+	  ts.type2 = 3;
+	  ts.spot1 = 1;
+	  ts.spot2 = 0; 
+	  nb += getnumbonds(i, &ts, 0);
 	}
     }
 }
@@ -424,6 +458,9 @@ int calc_subenz_compl(void)
   return totnb;
 }
 #endif
+#ifdef MD_NANOBODY
+extern int *nanobondsArr, numNanoArms;
+#endif
 void calcV(void)
 {
 #ifdef MD_SUBENZYME
@@ -526,12 +563,29 @@ void calcV(void)
 #endif
 #if defined(MD_RABBIT) || defined(MD_NANOBODY)
   mf = fopenMPI(absMisHD("bi-mono-bonds.dat"),"a");
+#ifdef MD_RABBIT
   get_bimono_bonds(&bulk, &mono, &bi);
+#else
+  get_nanobody_bonds(&bulk, nanobondsArr);
+#endif
+#ifdef MD_RABBIT
 #ifdef MD_BIG_DT
   fprintf(mf, "%G %d %d %d\n", Oparams.time + OprogStatus.refTime, bulk, mono, bi);
 #else
   fprintf(mf, "%G %d %d %d\n", Oparams.time, bulk, mono, bi);
 #endif
+#endif
+#ifdef MD_NANOBODY
+#ifdef MD_BIG_DT
+  fprintf(mf, "%G", Oparams.time + OprogStatus.refTime);
+#else
+  fprintf(mf, "%G", Oparams.time);
+#endif
+  for (i=0; i < numNanoArms+1; i++)
+    fprintf(mf, " %d", nanobondsArr[i]);
+  fprintf(mf, "\n");
+#endif
+
   fclose(mf);
   /* Salva i rates */
   mf = fopenMPI(absMisHD("rates.dat"),"a");
