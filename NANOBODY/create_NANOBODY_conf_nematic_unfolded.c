@@ -863,7 +863,7 @@ int main(int argc, char **argv)
   /* first Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
-  fprintf(f, "1 1 1 1 1 0\n");
+  fprintf(f, "%f %f %f %f 1 0\n", massNano, INano, INano, INano);
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", -distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
@@ -872,7 +872,7 @@ int main(int argc, char **argv)
   /* second Fab */
   fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
-  fprintf(f, "1 1 1 1 1 0\n");
+  fprintf(f, "%f %f %f %f 1 0\n", massNano, INano, INano, INano);
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", (Len/2.0-0.5), 0.612); /* 1: along z axis patch which will form bonds with antigens */
@@ -881,7 +881,7 @@ int main(int argc, char **argv)
   /* bi-sphere */
   fprintf(f,"%f %f %f\n", DiamSph/2.0, DiamSph/2.0, DiamSph/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
-  fprintf(f, "1 1 1 1 1 0\n");
+  fprintf(f, "%f %f %f %f 1 0\n", massSph, ISph, ISph, ISph);
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", DiamSph/2.0, sigSph);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", -DiamSph/2.0, sigSph); /* 1: along z axis patch which will form bonds with antigens */
@@ -890,7 +890,7 @@ int main(int argc, char **argv)
   /* branching sphere */
   fprintf(f,"%f %f %f\n", DiamSph/2.0, DiamSph/2.0, DiamSph/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
-  fprintf(f, "1 1 1 1 1 0\n");
+  fprintf(f, "%f %f %f %f 1 0\n", massBranch, IBranch, IBranch, IBranch);
   fprintf(f,"%d 0\n", numarms);
   for (k1=0; k1 < numarms; k1++)
     {
