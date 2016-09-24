@@ -1955,9 +1955,6 @@ void usrInitBef(void)
     OprogStatus.first_time = 0.0;
     OprogStatus.rhozBinSize = 0.79/2.0+4.0+0.9+0.4+0.112+0.25;
 #endif
-#ifdef MD_NANOBODY
-    OprogStatus.numhinges=1;
-#endif
 #ifdef MD_BIG_DT
     OprogStatus.bigDt = -1.0;
 #endif
@@ -5208,6 +5205,9 @@ void build_linked_list_bp(void)
     }
 }
 #endif
+#ifdef MD_NANOBODY
+int *nanobondsArr, numNanoArms;
+#endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk);
 void usrInitAft(void)
 {
@@ -6146,6 +6146,11 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("rhoz.dat"), "w+");
       fclose(f);
+#endif
+#ifdef MD_NANOBODY
+      numNanoArms = typesArr[2].nspots;
+      nanobondsArr = malloc(sizeof(int)*(numNanoArms+1));
+      printf("[INFO] nspots=%d\n", numNanoArms);
 #endif
 #ifdef MD_SUBENZYME
       f = fopenMPI(absMisHD("ratesSE.dat"), "w+");
