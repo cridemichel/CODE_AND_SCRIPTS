@@ -313,7 +313,7 @@ int main(int argc, char **argv)
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay, deltaz, DiamAntigen;
   double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch, bigAntigenSurfDiam=0.0;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam, rsp1[3], rsp2[3];
-  double rA[3], rB[3], saA[3], saB[3];
+  double rA[3], rB[3], saA[3], saB[3], massNano, massSph, massBranch, INano, ISph, IBranch;
   int numpolyignored=0;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3, idx1, idx2;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens, *ignorepoly, numpolyeff;
@@ -323,7 +323,6 @@ int main(int argc, char **argv)
   del=0.5;
   /* nanobody (Fab) permanent spots diameter */
   permdiam=0.8; 
-
   /* diametro antigeni */
   DiamAntigen = 0.79;
   
@@ -347,9 +346,16 @@ int main(int argc, char **argv)
   Diam=2.0;
   Len = 4.0;
   nanorevpatchDiam = 0.45; 
+  massNano = 1.0;
+  INano = 1.0;
   /* diametro della sfera della catena */
-  DiamSph=1.0; 
+  DiamSph =1.0; 
+  massSph = pow(DiamSph/2.0,3.0)/((Len/2.0)*Sqr(Diam/2.0));
+  massBranch = massSph;
+  ISph = massSph*Sqr(DiamSph/2.0)/(massNano*Sqr(Diam/2.0)); /* 2/5 massSph*(DiamSph/2)^2 */
+  IBranch = ISph;
 
+  printf("mass sphere=%f mass branch sphere = %f ISph=%f IBranch=%f\n", massSph, massBranch, ISph, IBranch); 
   pi = acos(0.0)*2.0;
   nxmax = 5;
   if (argc > 2) 
