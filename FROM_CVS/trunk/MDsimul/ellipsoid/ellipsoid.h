@@ -911,9 +911,6 @@ struct progStatus
   double rate[10];
   double rhozBinSize;
 #endif
-#ifdef MD_NANOBODY
-  int numhinges;
-#endif
 #ifdef MD_PROTEIN_DESIGN
   char nativeConf[NAME_LENGTH];
 #endif
@@ -1407,9 +1404,6 @@ struct pascii opro_ascii[] =
   {"first_time",           &OS(first_time),                1, 1,             "%.15G"},
   {"rhozBinSize",          &OS(rhozBinSize),               1, 1,             "%.15G"},
   {"rate",                 &OS(rate),                      10, 1,            "%f"},
-#endif
-#ifdef MD_NANOBODY
-  {"numhinges",           &OS(numhinges),                1, 1,             "%d"},
 #endif
 #ifdef MD_SUBENZYME
   {"rateSE",               &OS(rateSE),                    10, 1,            "%f"},
@@ -1969,9 +1963,6 @@ struct singlePar OsinglePar[] = {
 #if defined(MD_RABBIT) || defined(MD_NANOBODY)
   {"time_limit",  &OprogStatus.time_limit,   CT},
   {"rhozBinSize", &OprogStatus.rhozBinSize,  CT},
-#endif
-#ifdef MD_NANOBODY
-  {"numhinges",   &OprogStatus.numhinges,   INT},
 #endif
   {"maxcoll",     &maxcoll,                 INT},
 #ifdef MD_SURV_PROB
