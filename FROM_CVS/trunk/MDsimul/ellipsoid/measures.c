@@ -288,7 +288,7 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
     polylen = 2+typeNP[2]/typeNP[0];
   else 
     polylen = 1+(typeNP[0]+typeNP[1])/typeNP[2]; 
-  printf("numNanoArms=%d polylen=%d\n", numNanoArms, polylen);
+  //printf("numNanoArms=%d polylen=%d\n", numNanoArms, polylen);
   for (i=0; i < numNanoArms; i++)
     nbondsArr[i] = 0;
   nb = 0;
@@ -297,8 +297,6 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
     {
       ti = typeOfPart[i];
       /* se è un antigene feramti */
-      if (ti==3)
-	break;
       numnano = i/polylen;	  
       if (numnano!=curnano)
 	{
@@ -306,6 +304,8 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
 	  (nbondsArr[nb])++;
 	  nb = 0;
 	}
+      if (ti==3)
+	break;
       if ((numNanoArms==2 && (ti == 0 || ti==1)) 
 	  || (numNanoArms > 1 && ti==0))
 	{
