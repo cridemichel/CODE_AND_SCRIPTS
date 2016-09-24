@@ -281,7 +281,7 @@ extern int numNanoArms, *nanobondsArr;
 extern int getnumbonds(int np, interStruct *ts, int inverted);
 void get_nanobody_bonds(int *bulk, int *nbondsArr)
 {
-  int nb, i, ti, curnano, numnano, polylen;
+  int nb, i, ti, kk, curnano, numnano, polylen;
   interStruct ts;
 
   if (numNanoArms==2)
@@ -289,10 +289,11 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
   else 
     polylen = 1+(typeNP[0]+typeNP[1])/typeNP[2]; 
   //printf("numNanoArms=%d polylen=%d\n", numNanoArms, polylen);
-  for (i=0; i < numNanoArms; i++)
+  for (i=0; i < numNanoArms+1; i++)
     nbondsArr[i] = 0;
   nb = 0;
   curnano = 0;
+  kk=0;
   for (i=0; i < Oparams.parnum; i++)
     {
       ti = typeOfPart[i];
@@ -300,7 +301,10 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
       numnano = i/polylen;	  
       if (numnano!=curnano)
 	{
+	  kk++;
 	  curnano = numnano;
+	  if (nb > numNanoArms)
+	    printf("[WARNING] nb=%d probably in the initial configuration there were multiple bonds, fix it!\n",nb);
 	  (nbondsArr[nb])++;
 	  nb = 0;
 	}
@@ -316,6 +320,7 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
 	  nb += getnumbonds(i, &ts, 0);
 	}
     }
+  //printf("num nanob=%d\n", kk);
 }
 #endif
 #ifdef MD_PROTEIN_DESIGN
