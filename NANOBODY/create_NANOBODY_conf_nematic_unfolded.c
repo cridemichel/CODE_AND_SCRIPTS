@@ -350,9 +350,9 @@ int main(int argc, char **argv)
   INano = 1.0;
   /* diametro della sfera della catena */
   DiamSph =1.0; 
-  massSph = pow(DiamSph/2.0,3.0)/((Len/2.0)*Sqr(Diam/2.0));
+  massSph = 1.0;//pow(DiamSph/2.0,3.0)/((Len/2.0)*Sqr(Diam/2.0));
   massBranch = massSph;
-  ISph = massSph*Sqr(DiamSph/2.0)/(massNano*Sqr(Diam/2.0)); /* 2/5 massSph*(DiamSph/2)^2 */
+  ISph = 1.0;//massSph*Sqr(DiamSph/2.0)/(massNano*Sqr(Diam/2.0)); /* 2/5 massSph*(DiamSph/2)^2 */
   IBranch = ISph;
 
   printf("mass sphere=%f mass branch sphere = %f ISph=%f IBranch=%f\n", massSph, massBranch, ISph, IBranch); 
@@ -855,6 +855,8 @@ int main(int argc, char **argv)
   else
     fprintf(f, "%d %d %d %d\n", numpolyeff*numarms, numarms*numSpheres*numpolyeff, numpolyeff, numantigens);
 #else
+  numpolyeff = numpoly;
+  printf("numpolyeff=%d\n", numpolyeff);
   if (bigAntigenSurfDiam > 0.0)
     fprintf(f, "%d %d %d %d 1\n", numpolyeff, numpolyeff, numSpheres*numpolyeff, numantigens);
   else
