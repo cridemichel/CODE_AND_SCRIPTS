@@ -776,7 +776,7 @@ void PredictCellCross(int na, int nc)
 	}
 #ifdef MD_LXYZ
 #if defined(MD_EDHEFLEX_WALL) 
-      if (ignorecross[2] || (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[2][nc][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0))))
+      if (ignorecross[2] || (OprogStatus.hardwall && ((signDir[2]==0 && inCellMLL[nc][2][na]==cellszMLL[nl]-1) || (signDir[2]==1 && inCellMLL[nc][2][na]==0))))
 	tm[2] = timbig;
       else
 	tm[2] = ((inCellMLL[nc][2][na] + 1 - signDir[2]) * L[2] /

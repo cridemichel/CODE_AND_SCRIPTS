@@ -304,8 +304,11 @@ void get_nanobody_bonds(int *bulk, int *nbondsArr)
 	  kk++;
 	  curnano = numnano;
 	  if (nb > numNanoArms)
-	    printf("[WARNING] nb=%d probably in the initial configuration there were multiple bonds, fix it!\n",nb);
-	  (nbondsArr[nb])++;
+	    {
+	      printf("[WARNING] nb=%d probably in the initial configuration there were multiple bonds, fix it!\n",nb);
+	    }
+	  else
+	    (nbondsArr[nb])++;
 	  nb = 0;
 	}
       if (ti==3)
