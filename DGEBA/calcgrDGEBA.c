@@ -12,7 +12,7 @@ double *DR[3], deltaAA=-1.0, deltaBB=-1.0, deltaAB=-1.0, sigmaAA=-1.0, sigmaAB=-
        Dr, theta, sigmaSticky=-1.0, sa[2], sb[2], sc[2], maxax0, maxax1, maxax, maxsax, maxsaxAA, maxsaxAB, maxsaxBB;
 char fname[1024], inputfile[1024];
 int eventDriven=0;
-int points;
+int points=100;
 int foundDRs=0, foundrot=0;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double *DR[3])
 {
@@ -22,15 +22,18 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
   int curstp=-1;
   *ti = -1.0;
   f = fopen(fname, "r");
-  while (!feof(f) && nat < 2) 
+  while (!feof(f)) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
       fscanf(f, "%[^\n]\n",line);
+      //printf("line=%s\n", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
+	  continue;
 	}
+      //printf("nat=%d\n", nat);
       if (nat < 2)
 	{
 	  fseek(f, cpos, SEEK_SET);
@@ -93,15 +96,17 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else
+      else if (nat > 2)
 	{
+	  fseek(f, cpos, SEEK_SET);
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-		{
-		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-		}
+	      //if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+		//{
+	      sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+	      //printf("x[%d]=%f %f %f\n",i, r[0][i], r[1][i], r[2][i]);
+		//}
 	    }
 	  break; 
 	}
@@ -220,6 +225,7 @@ int main(int argc, char** argv)
 	  if (nat==2)
 	    {
 	      fscanf(f, "%d %d ", &NPA, &NP);
+	      printf("particelle: %d %d\n", NPA, NP);
 	      NP += NPA; 
 	    }
 	  else if (nat==3)
@@ -381,7 +387,7 @@ int main(int argc, char** argv)
   g6 = malloc(sizeof(double)*points);
 #endif
   delr = L / 2.0 / ((double)points);
-  printf("delr=%f\n", delr); 
+  printf("L=%f delr=%f points=%d\n", L, delr, points); 
   rewind(f2);
   nf = 0;
   
@@ -398,7 +404,7 @@ int main(int argc, char** argv)
   
      for (i=0; i < NPL-1; i++)
        {
-	 printf("i=%d x=%f %f %f\n", i, x[0][i], x[1][i], x[2][i]);
+	 //printf("i=%d x=%f %f %f\n", i, x[0][i], x[1][i], x[2][i]);
 	for (j = i+1; j < NPL; j++)
 	  {
 	    for (a = 0; a < 3; a++)
