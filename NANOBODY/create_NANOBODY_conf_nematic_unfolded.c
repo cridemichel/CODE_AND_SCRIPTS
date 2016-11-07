@@ -330,9 +330,9 @@ int main(int argc, char **argv)
   if (argc == 1)
     {
 #ifdef MULTIARM
-      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam> <numarms>\n"); 
+      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-permpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam> <numarms>\n"); 
 #else
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-revpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-permpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam>\n"); 
 #endif
      exit(-1);
    }
@@ -770,7 +770,7 @@ int main(int argc, char **argv)
   L[2] = Lz;
   if (bigAntigenSurfDiam > 0.0)
     {
-      numantigens = ((int)(sigmaAntigens*(4.0*M_PI*pow(bigAntigenSurfDiam*0.5,3)/3.0))); 
+      numantigens = ((int)(sigmaAntigens*(4.0*M_PI*pow(bigAntigenSurfDiam*0.5,2)))); 
     }
   else
     {
@@ -855,7 +855,7 @@ int main(int argc, char **argv)
   else
     fprintf(f, "%d %d %d %d\n", numpolyeff*numarms, numarms*numSpheres*numpolyeff, numpolyeff, numantigens);
 #else
-  numpolyeff = numpoly;
+  numpolyeff = numpoly - numpolyignored;
   printf("numpolyeff=%d\n", numpolyeff);
   if (bigAntigenSurfDiam > 0.0)
     fprintf(f, "%d %d %d %d 1\n", numpolyeff, numpolyeff, numSpheres*numpolyeff, numantigens);
