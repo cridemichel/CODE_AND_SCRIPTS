@@ -314,7 +314,7 @@ int main(int argc, char **argv)
   double Rcmx, Rcmy, Rcmz, rxa, rya, rza, dist, dx, dy, dz, dxMax, dyMax, dzMax, distRevPatch, bigAntigenSurfDiam=0.0;
   double phi, targetphi=0.25, xtrafact, Lx=10.0, Ly=10.0, Lz=10.0, nanorevpatchDiam, rsp1[3], rsp2[3];
   double rA[3], rB[3], saA[3], saB[3], massNano, massSph, massBranch, INano, ISph, IBranch;
-  int numpolyignored=0;
+  int numpolyignored=0, maxnanobodies=-1;
   int k1, k2, numpoly, parnum=1000, i, j, polylen, a, b, numSpheres=3, idx1, idx2;
   int type, kk, k, overlap, nx, ny, nz, nxmax, nymax, nzmax, idx, numantigens, *ignorepoly, numpolyeff;
 #ifdef MULTIARM
@@ -330,9 +330,9 @@ int main(int argc, char **argv)
   if (argc == 1)
     {
 #ifdef MULTIARM
-      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-permpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam> <numarms>\n"); 
+      printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres-per-arm> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-permpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam> <numarms> <maxnanobodies>\n"); 
 #else
-     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-permpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam>\n"); 
+     printf("create_NANOBODY_conf_nematic_unfolded <conf_file_name> <nxmax> <nymax> <nzmax> <Lx> <Ly> <Lz> <DensSuperfAntigens> <numspheres> <QFab-diam> <QFab-len> <QFab-diam-permpatch> <QFab-diam-revpatch> <QFab-dist-revpatch> <sphere-diam> <sphere-permpatch-diam> <DiametroAntigene> <bigAntigenSurfDiam> <maxnanobodies>\n"); 
 #endif
      exit(-1);
    }
@@ -424,6 +424,9 @@ int main(int argc, char **argv)
   if (argc > 19)
     numarms = atoi(argv[19]);
 
+  if (argc > 20)
+    maxnanobodies = atoi(argv[20]);
+
   if (numarms > 5)
     {
       printf("ERROR: maximum supported branches is 5!\n");
@@ -434,18 +437,24 @@ int main(int argc, char **argv)
       printf("Compile without -DMULTI_ARM flag to generate bi-bodies\n");
       exit(-1);
     }
+#else
+  if (argc > 19)
+    maxnanobodies = atoi(argv[19]);
 #endif
-
+  numpoly = nxmax*nymax*nzmax;
+  if (maxnanobodies > 0 && numpoly > maxnanobodies)
+    numpoly = maxnanobodies;
+ 
 #ifdef MULTIARM
   /* ogni braccio ha numSphere sfere ed in più c'è la branching sphere */
   polylen = numarms*numSpheres + 1 + numarms;
-  parnum = polylen*nxmax*nymax*nzmax;
+  parnum = polylen*numpoly;
   typesnb = malloc(sizeof(int)*polylen);
 #else
   polylen = numSpheres + 2;
-  parnum = polylen*nxmax*nymax*nzmax;
+  parnum = polylen*numpoly;
 #endif
-  numpoly = nxmax*nymax*nzmax;
+
   ignorepoly = malloc(sizeof(int)*numpoly);
   for (i=0; i < numpoly; i++)
     ignorepoly[i] = 0;
@@ -825,10 +834,15 @@ int main(int argc, char **argv)
 
   printf("# polymers ignored:%d\n", numpolyignored);
   /* HEADER */
+
   if (bigAntigenSurfDiam > 0.0)
-    fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens + 1);
+     {
+      fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens + 1);
+    }
   else
-    fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens);
+    {
+      fprintf(f, "parnum: %d\n", parnum - numpolyignored*polylen + numantigens);
+    }
 #ifdef MULTIARM
   fprintf(f,"ninters: %d\n", 6+numarms*2);
 #else
