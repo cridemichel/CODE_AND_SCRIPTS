@@ -301,9 +301,10 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][3] = R0[a][b];
       }
-  bs[0] = 2.0*Len*cos(inclth)+Diam*cos(inclth)+2.0*delta;
-  bs[1] = dd + permdiam + 2.0*delta;
+  bs[0] = 2.0*dd + permdiam + 2.0*delta;
+  bs[1] = 2.0*Len*sin(inclth)+2.0*Diam*cos(inclth)+2.0*delta;
   bs[2] = Diam;
+  printf("bs=%f %f %f\n", bs[0], bs[1], bs[2]);
 #if 0
   for (i=0; i < polylen; i++)
     {
