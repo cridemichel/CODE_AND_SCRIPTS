@@ -136,7 +136,7 @@ int main(int argc, char **argv)
   Len=16.0; /* 48 bp equal roughly to 16 nm */
   if (argc == 1)
    {
-     printf("create_GDNA_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam>\n"); 
+     printf("create_GDNA_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam> <permdiam> \n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -165,6 +165,9 @@ int main(int argc, char **argv)
 
   if (argc > 6)
     Diam = atof(argv[6]);
+
+  if (argc > 7)
+    permdiam = atof(argv[7]);
 
   parnum = 4*nxmax*nymax*nzmax;
   numpoly = nxmax*nymax*nzmax;
