@@ -33,10 +33,10 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 #endif
   /* first row vector */
   norm = sqrt(Sqr(ox)+Sqr(oy)+Sqr(oz));
-  R[2][0] = ox/norm;
-  R[2][1] = oy/norm;
-  R[2][2] = oz/norm;
-  //printf("orient=%f %f %f\n", ox, oy, oz);
+  R[0][0] = ox/norm;
+  R[0][1] = oy/norm;
+  R[0][2] = oz/norm;
+  printf("orient=%f %f %f\n", ox, oy, oz);
   u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
   if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
     {
@@ -45,9 +45,9 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   /* second row vector */
   sp = 0;
   for (k=0; k < 3 ; k++)
-    sp+=u[k]*R[2][k];
+    sp+=u[k]*R[0][k];
   for (k=0; k < 3 ; k++)
-    u[k] -= sp*R[2][k];
+    u[k] -= sp*R[0][k];
   norm = calc_norm(u);
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
@@ -56,7 +56,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   vectProdVec(R[1], R[2], u);
  
   for (k=0; k < 3 ; k++)
-    R[0][k] = u[k];
+    R[2][k] = u[k];
 }
 double scalProd(double *A, double *B)
 {
@@ -123,7 +123,7 @@ double min3(double a, double b, double c)
 int main(int argc, char **argv)
 {
   FILE *f;
-  double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
+  double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi, norm;
   double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, inclth, dd, uu[4][3];
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
   double phi, targetphi=0.25, xtrafact, rp1[3], rp2[3], rp3[3], rp4[3];
@@ -213,24 +213,26 @@ int main(int argc, char **argv)
   rzc[0] = 0.0;
 #endif
   //dd = permdiam
-  rp1[0] = permdiam*0.5-0.0001;
-  rp1[1] = 0.0;
+  rp1[0] = 0.0;
+  rp1[1] = permdiam*0.5-0.0001;
   rp1[2] = 0.0;
-  rp2[0] = -permdiam*0.5+0.0001;
-  rp2[1] = 0.0;
+  rp2[0] = 0.0;
+  rp2[1] = -permdiam*0.5+0.0001;
   rp2[2] = 0.0;
 
-  rxc[0] = rp1[0] + (permdiam*0.5+Len*0.5)*cos(inclth);
-  rxc[0] = rp1[1] - (permdiam*0.5+Len*0.5)*sin(inclth);
-  rxc[0] = 0.0;
+  rxc[0] = rp1[0] - (permdiam*0.5+Len*0.5)*cos(inclth);
+  ryc[0] = rp1[1] + (permdiam*0.5+Len*0.5)*sin(inclth);
+  rzc[0] = 0.0;
+  printf("cos %f sin %f\n", cos(inclth), sin(inclth));
+  uu[0][0] = rp1[0] - rxc[0];
+  uu[0][1] = rp1[1] - ryc[0];
+  uu[0][2] = rp1[2] - rzc[0];
 
-  for (kk=0; kk < 3; kk++)
-    uu[0][kk] = rp1[kk] - rxc[kk];
-  
-  for (kk=0; kk < 3; kk++)
-    uu[0][kk] /= calc_norm(uu[0]);
-
-  versor_to_R(uu[0][0], uu[0][1], uu[0][2], R0);
+   printf("rcos=%f rsin=%f #0 uu=%f %f %f\n", (permdiam*0.5+Len*0.5)*sin(inclth), (permdiam*0.5+Len*0.5)*cos(inclth), uu[0][0], uu[0][1], uu[0][2]);
+   norm = calc_norm(uu[0]);
+   for (kk=0; kk < 3; kk++)
+     uu[0][kk] /= norm;
+   versor_to_R(uu[0][0], uu[0][1], uu[0][2], R0);
 #if 1
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
@@ -245,12 +247,17 @@ int main(int argc, char **argv)
   rzc[1] = 0.0;
 #endif
   rxc[1] = rp2[0] - (permdiam*0.5+Len*0.5)*cos(inclth);
-  rxc[1] = rp2[1] - (permdiam*0.5+Len*0.5)*sin(inclth);
-  rxc[1] = 0.0;
+  ryc[1] = rp2[1] - (permdiam*0.5+Len*0.5)*sin(inclth);
+  rzc[1] = 0.0;
+
+  uu[1][0] = rp2[0] - rxc[1];
+  uu[1][1] = rp2[1] - ryc[1];
+  uu[1][2] = rp2[2] - rzc[1];
+
+  norm = calc_norm(uu[1]);
   for (kk=0; kk < 3; kk++)
-    uu[1][kk] = rp2[kk] - rxc[kk];
-  for (kk=0; kk < 3; kk++)
-    uu[1][kk] /= calc_norm(uu[1]);
+    uu[1][kk] /= norm;
+
   versor_to_R(uu[1][0], uu[1][1], uu[1][2], R0);
 
   for (a=0; a < 3; a++)
@@ -261,15 +268,16 @@ int main(int argc, char **argv)
 
   dd = Diam*0.5*sin(inclth) + (Len+permdiam*0.5)*cos(inclth);
   /* set origin in the center of mass of the dimer */
-  ryc[0] += dd;
-  ryc[1] += dd;
+  rxc[0] += dd;
+  rxc[1] += dd;
   /* ------------------------------------------- */
 
-  rxc[2] =  rxc[0];
-  ryc[2] = -ryc[0];
+  rxc[2] = -rxc[0];
+  ryc[2] =  ryc[0];
   rzc[2] =  rzc[0];
-  for (kk=0; kk < 3; kk++)
-    uu[2][kk] = -uu[0][kk];
+  for (kk=1; kk < 3; kk++)
+    uu[2][kk] = uu[0][kk];
+  uu[2][0] = -uu[0][0]; 
   versor_to_R(uu[2][0], uu[2][1], uu[2][2], R0);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
@@ -277,12 +285,13 @@ int main(int argc, char **argv)
 	Rc[a][b][2] = R0[a][b];
       }
 
-  rxc[3] =  rxc[1];
-  ryc[3] = -ryc[1];
+  rxc[3] = -rxc[1];
+  ryc[3] =  ryc[1];
   rzc[3] =  rzc[1];
 
-  for (kk=0; kk < 3; kk++)
-    uu[3][kk] = -uu[0][kk];
+  for (kk=1; kk < 3; kk++)
+    uu[3][kk] = uu[1][kk];
+  uu[3][0] = -uu[1][0];
   versor_to_R(uu[3][0], uu[3][1], uu[3][2], R0);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
