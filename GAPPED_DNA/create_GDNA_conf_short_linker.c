@@ -301,8 +301,8 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][3] = R0[a][b];
       }
-  bs[0] = 2.0*dd + permdiam + 2.0*delta;
-  bs[1] = 2.0*Len*sin(inclth)+2.0*Diam*cos(inclth)+2.0*delta;
+  bs[0] = 2.0*Len*cos(inclth) + 2.0*Diam*sin(inclth) + 2.0*delta;
+  bs[1] = 2.0*Len*sin(inclth) + 2.0*Diam*cos(inclth) + 2.0*delta;
   bs[2] = Diam;
   printf("bs=%f %f %f\n", bs[0], bs[1], bs[2]);
 	printf("A=%f B=%f\n",2.0*Len*sin(inclth),2.0*Diam*cos(inclth));
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
 #endif
     }
 #endif
-  fprintf(f, "parnum: %d\n", parnum);
+  fprintf(f,"parnum: %d\n", parnum);
   fprintf(f,"ninters: 2\n");
   fprintf(f,"nintersIJ: 0\n");
   fprintf(f,"ntypes: 1\n");
