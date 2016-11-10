@@ -397,6 +397,8 @@ int main(int argc, char **argv)
   xtrafact = pow(phi/targetphi, 1.0/3.0);
   printf("vol=%f targetphi=%f phi=%f xtrafact=%f\n", vol, targetphi, phi, xtrafact);
 
+  if (xtrafact < 1.0)
+    xtrafact = 1.0001;
   for (i=0; i < numpoly; i++)
     {
       rxCM[i] *= xtrafact;
