@@ -305,6 +305,7 @@ int main(int argc, char **argv)
   bs[1] = 2.0*Len*sin(inclth)+2.0*Diam*cos(inclth)+2.0*delta;
   bs[2] = Diam;
   printf("bs=%f %f %f\n", bs[0], bs[1], bs[2]);
+	printf("A=%f B=%f\n",2.0*Len*sin(inclth),2.0*Diam*cos(inclth));
 #if 0
   for (i=0; i < polylen; i++)
     {
