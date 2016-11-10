@@ -38,7 +38,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   R[0][2] = oz/norm;
   printf("orient=%f %f %f\n", ox, oy, oz);
   u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
-  if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
     {
       u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
     }
@@ -53,7 +53,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
   /* third row vector */
-  vectProdVec(R[1], R[2], u);
+  vectProdVec(R[0], R[1], u);
  
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
