@@ -8,24 +8,134 @@ double *Rc[3][3], *Ri[3][3];
 int full, ibeg, numpoly;
 #define maxpolylen 10000;
 double R0[3][3];
+#define Sqr(x) ((x)*(x))
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+void versor_to_R(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+#ifdef MC_BENT_DBLCYL
+  double Rout[3][3];
+  int k1, k2;
+#endif
+  /* first row vector */
+  norm = sqrt(Sqr(ox)+Sqr(oy)+Sqr(oz));
+  R[2][0] = ox/norm;
+  R[2][1] = oy/norm;
+  R[2][2] = oz/norm;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
+    {
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[2][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[2][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+  /* third row vector */
+  vectProdVec(R[1], R[2], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[0][k] = u[k];
+}
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+
+
+double ranf(void)
+{
+  /*  Returns a uniform random variate in the range 0 to 1.         
+      Good random number generators are machine specific.
+      please use the one recommended for your machine. */
+  return drand48();
+}
+void genorient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = ranf() * 2.0 - 1.0;
+      xi2  = ranf() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+}
+double min3(double a, double b, double c)
+{
+  double m;
+  m = a;
+  if (b < m)
+    m = b;
+  if (c < m)
+    m = c;
+  return m;
+}
+
 
 int main(int argc, char **argv)
 {
   FILE *f;
   double orient, theta0, theta0rad, Diam, del0, del0x, del0y, del0z, maxL, pi;
-  double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len;
+  double vol, permdiam, thmax, del, sigb, delfb1, delfb2, delfb3, delfb4, Len, inclth, dd, uu[4][3];
   double del00x, del00y, del00z, *rxCM, *ryCM, *rzCM, bs[3], factor[3], delta;
-  double phi, targetphi=0.25, xtrafact;
+  double phi, targetphi=0.25, xtrafact, rp1[3], rp2[3], rp3[3], rp4[3];
   int k1, k2, numpoly, parnum=1000, i, j, polylen=4, a, b;
-  int nx, ny, nz, nxmax, nymax, nzmax, idx;
+  int nx, ny, nz, nxmax, nymax, nzmax, idx, kk;
   del=0.5;
   /* permanent spots diameter */
-  permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
+  permdiam=2.205; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   //permdiam=0.5;
   Len=16.0; /* 48 bp equal roughly to 16 nm */
   if (argc == 1)
    {
-
      printf("create_GDNA_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam>\n"); 
      exit(-1);
    }
@@ -67,6 +177,13 @@ int main(int argc, char **argv)
   rxc =malloc(sizeof(double)*polylen);
   ryc =malloc(sizeof(double)*polylen);
   rzc =malloc(sizeof(double)*polylen);
+  /* NOTA: calcola l'angolo d'inclinazione dei due cilindri per far si che le patch
+   * permamenti siano sovrapposte */
+  //dd = sqrt(Sqr((Diam - permdiam)*0.5) + Sqr(permdiam*0.5));  
+  inclth = M_PI*0.5-2.0*atan(permdiam/Diam);
+  inclth *= 1.1;
+  printf("inclination angle=%f deg\n", 180*inclth/M_PI);
+  /* ----------------------------- */
   for (a=0; a < 3; a++)
     {
       for (b=0; b < 3; b++)
@@ -90,45 +207,90 @@ int main(int argc, char **argv)
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
   delta = 0.1;
   /* building the dimer... */
+#if 0
   rxc[0] = Len/2.0+delta;
   ryc[0] = -Diam/2.0-delta;
   rzc[0] = 0.0;
+#endif
+  //dd = permdiam
+  rp1[0] = permdiam*0.5-0.0001;
+  rp1[1] = 0.0;
+  rp1[2] = 0.0;
+  rp2[0] = -permdiam*0.5+0.0001;
+  rp2[1] = 0.0;
+  rp2[2] = 0.0;
+
+  rxc[0] = rp1[0] + (permdiam*0.5+Len*0.5)*cos(inclth);
+  rxc[0] = rp1[1] - (permdiam*0.5+Len*0.5)*sin(inclth);
+  rxc[0] = 0.0;
+
+  for (kk=0; kk < 3; kk++)
+    uu[0][kk] = rp1[kk] - rxc[kk];
+  
+  for (kk=0; kk < 3; kk++)
+    uu[0][kk] /= calc_norm(uu[0]);
+
+  versor_to_R(uu[0][0], uu[0][1], uu[0][2], R0);
+#if 1
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][0] = R0[a][b];
       }
+#endif
 
+#if 0
   rxc[1] = Len/2.0+delta;
   ryc[1] = Diam/2.0+delta;
   rzc[1] = 0.0;
+#endif
+  rxc[1] = rp2[0] - (permdiam*0.5+Len*0.5)*cos(inclth);
+  rxc[1] = rp2[1] - (permdiam*0.5+Len*0.5)*sin(inclth);
+  rxc[1] = 0.0;
+  for (kk=0; kk < 3; kk++)
+    uu[1][kk] = rp2[kk] - rxc[kk];
+  for (kk=0; kk < 3; kk++)
+    uu[1][kk] /= calc_norm(uu[1]);
+  versor_to_R(uu[1][0], uu[1][1], uu[1][2], R0);
+
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][1] = R0[a][b];
       }
 
-  rxc[2] = -Len/2.0-delta;
-  ryc[2] = -Diam/2.0-delta;
-  rzc[2] = 0.0;
+  dd = Diam*0.5*sin(inclth) + (Len+permdiam*0.5)*cos(inclth);
+  /* set origin in the center of mass of the dimer */
+  ryc[0] += dd;
+  ryc[1] += dd;
+  /* ------------------------------------------- */
+
+  rxc[2] =  rxc[0];
+  ryc[2] = -ryc[0];
+  rzc[2] =  rzc[0];
+  for (kk=0; kk < 3; kk++)
+    uu[2][kk] = -uu[0][kk];
+  versor_to_R(uu[2][0], uu[2][1], uu[2][2], R0);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][2] = R0[a][b];
       }
-  Rc[0][0][2] = -Rc[0][0][2];
-  rxc[3] = -Len/2.0-delta;
-  ryc[3] = Diam/2.0+delta;
-  rzc[3] = 0.0;
+
+  rxc[3] =  rxc[1];
+  ryc[3] = -ryc[1];
+  rzc[3] =  rzc[1];
+
+  for (kk=0; kk < 3; kk++)
+    uu[3][kk] = -uu[0][kk];
+  versor_to_R(uu[3][0], uu[3][1], uu[3][2], R0);
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
 	Rc[a][b][3] = R0[a][b];
       }
-  Rc[0][0][3] = -Rc[0][0][3];
-
-  bs[0] = 2.0*Len+2.0*delta;
-  bs[1] = 2.0*Diam+2.0*delta;
+  bs[0] = 2.0*Len*cos(inclth)+Diam*cos(inclth)+2.0*delta;
+  bs[1] = dd + permdiam + 2.0*delta;
   bs[2] = Diam;
 #if 0
   for (i=0; i < polylen; i++)
