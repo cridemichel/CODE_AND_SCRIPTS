@@ -891,7 +891,7 @@ int main(int argc, char **argv)
   fprintf(f, "%f %f %f %f 1 0\n", massNano, INano, INano, INano);
   fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", (Len/2.0-0.5), 0.612); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 #endif
 
   /* bi-sphere */
