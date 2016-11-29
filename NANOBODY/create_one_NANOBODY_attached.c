@@ -582,7 +582,7 @@ int main(int argc, char **argv)
     {
       rxc[k+1] = 0.0;
       ryc[k+1] = 0.0;
-      rzc[k+1] = (Len+deltaz)*0.5+(DiamSph+deltaz)*0.5 + (DiamSph+deltaz)*k;
+      rzc[k+1] = (DiamSph+deltaz)*0.5+(DiamSph+deltaz)*0.5 + (DiamSph+deltaz)*k;
       for (a=0; a < 3; a++)
 	for (b=0; b < 3; b++)
 	  {
@@ -592,7 +592,7 @@ int main(int argc, char **argv)
   /* ellipsoid */
   rxc[polylen-1] = 0.0;
   ryc[polylen-1] = 0.0;
-  rzc[polylen-1] = (Len+deltaz)+(DiamSph+deltaz)*numSpheres;
+  rzc[polylen-1] = (Len+deltaz)*0.5+(DiamSph+deltaz)*0.5+(DiamSph+deltaz)*numSpheres;
   for (a=0; a < 3; a++)
     for (b=0; b < 3; b++)
       {
@@ -733,9 +733,10 @@ int main(int argc, char **argv)
     {
       L[0] = 2.0*(numSpheres*(DiamSph+sigSph)+Diam+permdiam+nanorevpatchDiam);
       L[1] = L[2] = L[0];
+
       rxCM[0] = L[0]*0.5;
       ryCM[0] = L[1]*0.5;
-      rzCM[0] = 0.001;
+      rzCM[0] = sigSph*0.5+deltaz;
     }
   else
     {
@@ -794,10 +795,10 @@ int main(int argc, char **argv)
 	  ryCM[i] *= Ly/L[1];
 	  rzCM[i] *= Lz/L[2];
 	} 
+      L[0] = Lx;
+      L[1] = Ly;
+      L[2] = Lz;
     }
-  L[0] = Lx;
-  L[1] = Ly;
-  L[2] = Lz;
   if (bigAntigenSurfDiam > 0.0)
     {
       numantigens = ((int)(sigmaAntigens*(4.0*M_PI*pow(bigAntigenSurfDiam*0.5,2)))); 
@@ -901,21 +902,21 @@ int main(int argc, char **argv)
     fprintf(f, "%d %d %d %d\n", numpolyeff, numpolyeff, numSpheres*numpolyeff, numantigens);
 #endif
   /* first Fab */
-  fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Len/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
-  fprintf(f,"1 1 1\n");
-  fprintf(f, "%f %f %f %f 1 0\n", massNano, INano, INano, INano);
-  fprintf(f,"2 0\n");
-  fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", -distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
-
-#ifndef MULTIARM
-  /* second Fab */
   fprintf(f,"%f %f %f\n", DiamSph/2.0, DiamSph/2.0, DiamSph/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
   fprintf(f,"1 1 1\n");
   fprintf(f, "%f %f %f %f 1 0\n", massNano, INano, INano, INano);
   fprintf(f,"2 0\n");
+  fprintf(f,"0 0 %f %f\n", DiamSph/2.0, sigSph);/* 0: along z axis (permanent) 0 */
+  fprintf(f,"0 0 %f %f\n", -DiamSph/2.0, sigSph); /* 1: along z axis patch which will form bonds with antigens */
+
+#ifndef MULTIARM
+  /* second Fab */
+  fprintf(f,"%f %f %f\n", Diam/2.0, Diam/2.0, Diam/2.0); /* each dsDNA of 48 bp which is roughly equal to 48 / 3 nm = 16 nm (D=2 nm in our case) */ 
+  fprintf(f,"1 1 1\n");
+  fprintf(f, "%f %f %f %f 1 0\n", massNano, INano, INano, INano);
+  fprintf(f,"2 0\n");
   fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", (Len/2.0-0.5), 0.612); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 #endif
 
   /* bi-sphere */
@@ -1045,37 +1046,39 @@ int main(int argc, char **argv)
   else
     {
       /* setup a non flat geometry here...to start a sphere? */
-      for (i=0; i < numantigens; i++)
+      if (numantigens==1)
 	{
-	  overlap = 1;
-	  rza = -L[2]*0.5;      
-	  while (overlap)
+	  rx[parnum]=0.;
+	  ry[parnum]=0.;
+	  rz[parnum] = -L[2]*0.5;
+	  fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rx[parnum], ry[parnum], rz[parnum]); 
+	}
+      else
+	{
+	  for (i=0; i < numantigens; i++)
 	    {
-	      if (numantigens==1)
-		{
-		  rxa=L[0]*0.5;
-		  rya=L[0]*0.5;
-		}
-	      else
+	      overlap = 1;
+	      rza = -L[2]*0.5;      
+	      while (overlap)
 		{
 		  rxa = (ranf()-0.5)*L[0];
 		  rya = (ranf()-0.5)*L[1];
-		}
-	      /* check overlaps between antigens */
-	      overlap = 0;
-	      for (k = 0; k < i-1; k++)
-		{
-		  if (Sqr(rx[parnum+i]-rxa) + Sqr(ry[parnum+i]-rya) < Sqr(DiamAntigen))
+		  /* check overlaps between antigens */
+		  overlap = 0;
+		  for (k = 0; k < i-1; k++)
 		    {
-		      overlap=1;
-		      break;
-		    }
-		}	  
+		      if (Sqr(rx[parnum+i]-rxa) + Sqr(ry[parnum+i]-rya) < Sqr(DiamAntigen))
+			{
+			  overlap=1;
+			  break;
+			}
+		    }	  
+		}
+	      //rx[i+parnum] = rxa;
+	      ry[i+parnum] = rya;
+	      rz[i+parnum] = rza;
+	      fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
 	    }
-	  //rx[i+parnum] = rxa;
-	  ry[i+parnum] = rya;
-	  rz[i+parnum] = rza;
-	  fprintf(f, "%.15G %.15G %.15G 1 0 0 0 1 0 0 0 1 3\n", rxa, rya, rza); 
 	} 
     }
   if (bigAntigenSurfDiam > 0.0)
