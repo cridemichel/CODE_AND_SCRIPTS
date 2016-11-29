@@ -7458,9 +7458,12 @@ char *par2rgb(int i, double rgb[3])
   double jl, ncx, ncy, ncz, inC[3], Dx, Dy, Dz;
   static char str[128];
 #if 1 
+  //pbc(i);
   if (i % 2 == 1) 
     {
       il = i-1;
+#if 1
+      /* ignore PBC and assemble together cylinder belonging to same gapped duplex */
       Dx = (rx[i]-rx[il]);
       Dx = L[0]*rint(Dx/L[0]);
       Dy = (ry[i]-ry[il]);
@@ -7470,6 +7473,7 @@ char *par2rgb(int i, double rgb[3])
       rx[i] -= Dx;
       ry[i] -= Dy;
       rz[i] -= Dz;
+#endif
     }
   else 
     {
@@ -7487,16 +7491,25 @@ char *par2rgb(int i, double rgb[3])
 #else
   h = i/OprogStatus.polylen/(Oparams.parnum/2.0);
 #endif	
-  printf("il=%d jl=%f\n", il, jl);
+  //printf("il=%d jl=%f\n", il, jl);
+#if 1
   hslToRgb(jl,1.0,0.4,  &(rgb[0]), &(rgb[1]), &(rgb[2]));
   sprintf(str, "%f,%f,%f", rgb[0], rgb[1], rgb[2]);
+#else
+  /* fixed color */
+  rgb[0] = 0.8;
+  rgb[1] = 0.0;
+  rgb[2] = 0.0;
+  //sprintf(str, "%f,%f,%f", 0, 0, 0.6595);
+#endif
 }
 #endif
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
 #ifdef POVRAY
-  double cp[3], bp[3];
+  double cp[3], bp[3], ni[3], nj[3];
+  int kk, i1l, i2l;
 #endif
 #ifdef MC_GAPDNA
   char colrgb[256];
@@ -7716,6 +7729,25 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
       for (i = 0; i < Oparams.parnum; i++)
 	{
+#if 0
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      if (i%2==1)
+		{
+		  i1l = i-1;
+		  i2l = i;
+		}
+	      else
+		{
+		  i1l = i;
+		  i2l = i+1;
+		}
+	      ni[kk] = R[i1l][0][kk];
+	      nj[kk] = R[i2l][0][kk];
+	    }
+	  if (fabs(scalProd(ni, nj)) < 1.0 && scalProd(ni, nj) > -0.99)
+	    continue;
+#endif
 #ifdef EDHE_FLEX
 	  if (!saveAll && !globSaveAll)
 	    {
