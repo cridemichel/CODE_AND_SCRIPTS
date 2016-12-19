@@ -8366,6 +8366,10 @@ void bumpSHW(int i, int type, double rCx, double rCy, double rCz, double *W)
 #endif
 void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
 {
+#ifdef MD_ONE_CHAIN
+  double rc[3];
+  FILE *mf;
+#endif
   double factor, invmi;
   double wrx, wry, wrz, rACn[3];
   double rAC[3], vCA[3], vc;
@@ -8412,6 +8416,21 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
       upd_refsysM(i);
 #endif
 #endif
+#ifdef MD_ONE_CHAIN
+      if (typeOfPart[i]==1)
+	{
+	  mf=fopenMPI (absMisHD("hard_wall_bumps.dat"),"a");
+	  rc[0] = rx[i];
+	  rc[1] = ry[i];
+	  rc[2] = rz[i]-typesArr[typeOfPart[i]].sax[2];
+#ifdef MD_BIG_DT
+	  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, rc[0], rc[1], rc[2]);
+#else
+	  fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, rc[0], rc[1], rc[2]);
+#endif
+	  fclose(mf);
+	}
+#endif
       return;
     }
   /* 18/01/10: se non si tratta di sfere per ora l'urto puo' essere
@@ -8419,7 +8438,19 @@ void bumpHW(int i, int nplane, double rCx, double rCy, double rCz, double *W)
   rAC[0] = rx[i] - rCx;
   rAC[1] = ry[i] - rCy;
   rAC[2] = rz[i] - rCz;
-  
+#ifdef MD_ONE_CHAIN
+  if (typeOfPart[i]==1)
+    {
+      mf=fopenMPI (absMisHD("hard_wall_bumps.dat"),"a");
+#ifdef MD_BIG_DT
+      fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time + OprogStatus.refTime, rCx, rCy, rCz);
+#else
+      fprintf(mf, "%.15G %.15G %.15G %.15G\n", Oparams.time, rCx, rCy, rCz);
+#endif
+      fclose(mf);
+    }
+#endif
+
   MD_DEBUG35(printf("i=%d nplane=%d rAC=%f %f %fi rC=%f %f %f\n", i, nplane, rAC[0], rAC[1], rAC[2], rCx, rCy, rCz));
   MD_DEBUG35(printf("r(%d)=%f %f %f time=%.15G\n", i, rx[i], ry[i], rz[i], Oparams.time));
   typei = typeOfPart[i];
