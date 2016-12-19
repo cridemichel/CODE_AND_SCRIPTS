@@ -6116,6 +6116,10 @@ void usrInitAft(void)
       fclose(f);
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
+#ifdef MD_ONE_CHAIN
+      f = fopenMPI(absMisHD("hard_wall_bumps.dat"), "w+");
+      fclose(f);
+#endif
 #ifdef MD_SURV_PROB
       f = fopenMPI(absMisHD("surv_prob.dat"), "w+");
       fclose(f);
