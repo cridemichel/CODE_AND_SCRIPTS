@@ -356,6 +356,7 @@ int main(int argc, char **argv)
   IBranch = ISph;
 
   printf("mass sphere=%f mass branch sphere = %f ISph=%f IBranch=%f\n", massSph, massBranch, ISph, IBranch); 
+  printf("big sphere diam=%f\n", bigAntigenSurfDiam);
   pi = acos(0.0)*2.0;
   nxmax = 5;
   if (argc > 2) 
@@ -933,8 +934,8 @@ int main(int argc, char **argv)
   fprintf(f,"1 1 1\n");
   fprintf(f, "%f %f %f %f 1 0\n", massSph, ISph, ISph, ISph);
   fprintf(f,"2 0\n");
-  fprintf(f,"0 0 %f %f\n", Len/2.0, sigSph);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", -Len/2.0, sigSph); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
+  fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam); /* 1: along z axis patch which will form bonds with antigens */
 
 #ifndef MULTIARM
   /* second Fab */
@@ -946,8 +947,8 @@ int main(int argc, char **argv)
   fprintf(f,"0 0 %f %f\n", -Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
   fprintf(f,"0 0 %f %f\n", distRevPatch, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 #else
-  fprintf(f,"0 0 %f %f\n", Len/2.0, sigSph);/* 0: along z axis (permanent) 0 */
-  fprintf(f,"0 0 %f %f\n", -Len/2.0, sigSph); /* 1: along z axis patch which will form bonds with antigens */
+  fprintf(f,"0 0 %f %f\n", Len/2.0, permdiam);/* 0: along z axis (permanent) 0 */
+  fprintf(f,"0 0 %f %f\n", -Len/2.0, nanorevpatchDiam); /* 1: along z axis patch which will form bonds with antigens */
 #endif
 #endif
 
