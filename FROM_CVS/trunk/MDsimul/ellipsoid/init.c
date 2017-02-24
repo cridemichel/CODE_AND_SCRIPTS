@@ -2053,6 +2053,9 @@ void usrInitBef(void)
      * se tale valore resta vuol dire che non vengono settati nel file di parametri
      * e dunque assumeranno i valori degli epsd degli ellissoidi altrimenti
      * vengono usati i valori forniti dall'utente (ved. anche usrInitAft() */
+#ifdef ALIGN_POT
+    OprogStatus.Ual = 0.0;
+#endif
 #ifdef MD_SUBENZYME
     OprogStatus.SEreaction = 1;
     OprogStatus.SEp=1.0;

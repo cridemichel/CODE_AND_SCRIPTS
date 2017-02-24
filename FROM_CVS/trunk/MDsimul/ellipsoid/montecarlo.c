@@ -4535,7 +4535,9 @@ double calcpotene_GC(int ip)
   /* add torsional elastic energy here! */
   Epot += 0.5*calc_elastic_torsional_energy(ip);
 #endif
-
+#ifdef ALIGN_POT
+  Epot += OprogStatus.Ual*(1.0-Sqr(R[ip][0][2]));
+#endif
   return Epot;
 }
 
@@ -10374,6 +10376,9 @@ int mcmotion(void)
 #else
   eno = calcpotene_GC(ip);
 #endif
+#ifdef ALIGN_POT
+      /* correct eno here adding external field contrib */
+#endif
   store_coord(ip);
   movetype=random_move(ip);
 
@@ -10430,6 +10435,9 @@ int mcmotion(void)
       enn=calcpotene();
 #else
       enn=calcpotene_GC(ip);
+#endif
+#ifdef ALIGN_POT
+      /* correct enn here adding external field contrib */
 #endif
 #if 0
       if (enn > eno) 

@@ -897,6 +897,9 @@ struct progStatus
   double Tf; /* temperatura finale per il quench */
   double xi; /* rate di riduzione durante il quench per il folding */
 #endif
+#ifdef ALIGN_POT
+  double Ual;
+#endif
 #ifdef MD_SUBENZYME
   double rateSE[10];
   int SEreaction;
@@ -1391,6 +1394,9 @@ struct pascii opro_ascii[] =
   {"stripStore",   &OS(stripStore),        1, 1,             "%d"},
   {"Tf",           &OS(Tf),                1, 1,             "%.15G"},
   {"xi",           &OS(xi),                1, 1,             "%.15G"},
+#endif
+#ifdef ALIGN_POT
+  {"Ual",     &OS(Ual),   1, 1, "%f"},
 #endif
 #ifdef MD_SUBENZYME
   {"SEreaction",  &OS(SEreaction),          1, 1, "%d"},
@@ -1949,6 +1955,9 @@ struct singlePar OsinglePar[] = {
   {"Tf",          &OprogStatus.Tf,          CT},
   {"xi",          &OprogStatus.xi,          CT},
   {"n_gauleg",    &OprogStatus.n_gauleg,    INT},
+#endif
+#ifdef ALIGN_POT
+  {"Ual",          &OprogStatus.Ual,        CT},
 #endif
 #ifdef MD_SUBENZYME
   {"SEreaction",   &OprogStatus.SEreaction, INT},
