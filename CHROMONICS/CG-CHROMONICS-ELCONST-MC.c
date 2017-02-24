@@ -6,16 +6,654 @@
 #include <time.h>
 //#define USEGSL
 //#define ALBERTA
-#define PRINC_AXES
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
+static double maxarg1,maxarg2;
+double CHROMheight=0.34;
+#ifdef CHROM_ELEC
+struct CHROM {
+  double x;
+  double y;
+  double z;
+  double rad;
+  int atype;
+} *CHROMchain;
+struct CHROM *CHROMs[2];
+#endif
+#ifdef CHROM_ELEC
+double kD, yukcut, yukcutkD, yukcutkDsq;
+#ifdef PARALLEL
+struct kDsortS {
+int k1;
+int k2;
+double invkD;
+} *kD_sorted;
+double *cchrom_arr, *beta_arr;
+int numtemps, numconcs;
+double **yukcutkD_arr, **kD_arr, **yuk_corr_fact_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
+double num_kD=0;
+double maxyukcutkDsq, maxyukcutkD;
+#endif
+double delta_rab0=0.2/*in nm!*/, epsr_prime=1.8, yuk_corr_fact;
+double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*m */
+double esq_eps10, esq_eps_prime10;
+const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
+const double Dalton = 1.660538921E-27;
+const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
+const double qel = 1.602176565E-19, Nav=6.02214129E23;
+const double qchrom = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
+const double CHROMmolmass = 452.0; /* espressa in Dalton, la massa molare fornita da Lavrentovich è 0.452 Kg/mol */
+double cchrom, csalt = 0.0; /* concentrazione del sale aggiunto molare */
+double ximanning, deltamann; /* Debye screening length */
+/* charge on phosphate groups */
+double zeta_a, zeta_b;
+double Ucoul(double rab)
+{
+  //return esq_eps_prime10/rab;
+  return esq_eps_prime10*zeta_a*zeta_b/rab;
+
+}
+double Uyuk(double rab)
+{
+#if 0
+  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
+  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
+#endif
+  
+  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
+} 
+#ifdef PARALLEL
+double Uyuk_arr(double rab)
+{
+#if 0
+  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
+  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
+#endif
+  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b/rab; 
+}
+double calc_yukawa_arr(int i, int j, double distsq, int *kks)
+{
+  double ret, rab0, rab, sigab;
+  int kk, k1, k2;
+  rab = sqrt(distsq);
+  sigab = CHROMs[0][i].rad + CHROMs[1][j].rad;
+  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  *kks=-2;
+  if (distsq > maxyukcutkDsq)
+    return 0.0;
+  for (kk=0; kk < num_kD; kk++)
+    {    
+      if (rab < rab0)
+	{
+	  *kks=-1;
+	  //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
+#ifdef NO_INTERP
+	  return Ucoul(rab);
+#else
+	  return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+#endif
+#if 0
+	  if (isnan(ret))
+	    {
+	      printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
+	      exit(-1);
+	    }
+	  return ret;
+#endif    
+	}
+      /* we set a cutoff for electrostatic interactions */
+      else if (rab < yukcut*kD_sorted[kk].invkD)
+	{
+	  //printf("Yuk=%.15G\n", Uyuk(rab));
+	  *kks = kk; 
+	  return Uyuk_arr(rab);
+	} 
+    }
+}
+#endif
+double calc_yukawa(int i, int j, double distsq)
+{
+  double ret, rab0, rab, sigab;
+  rab = sqrt(distsq);
+  sigab = CHROMs[0][i].rad + CHROMs[1][j].rad;
+  if (sigab==0.0)
+    delta_rab0 = 0.0;
+
+  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
+  
+  if (rab < rab0)
+    {
+      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
+#ifdef NO_INTERP
+      return Ucoul(rab);
+#else
+      return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
+#endif
+#if 0
+      if (isnan(ret))
+	{
+	  printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
+	  exit(-1);
+	}
+      return ret;
+#endif    
+    }
+  /* we set a cutoff for electrostatic interactions */
+  else if (rab < yukcutkD)
+    {
+      //printf("Yuk=%.15G\n", Uyuk(rab));
+      return Uyuk(rab);
+    } 
+  else return 0.0;
+}
+#endif
+
+
+#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+        (maxarg1) : (maxarg2))
+
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
 #ifdef QUASIMC
   double sv[10];
   int nsv;
 #endif
+struct CHROMallStr {
+  double R[3][3];
+  double rcm[3];
+  double sax[3];
+  double boxsax[3];
+} CHROMall[2];
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
+void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      /* NOTE: k2 starts from 1 because xp[0] = 0.0 see function find_initial_guess() below */
+      for (k2=1; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
+int check_convergence(double Told[3], double Tnew[3])
+{
+  double test=0.0, temp;
+  int i;
+  for (i=0;i<3;i++) 
+    {
+      temp=(fabs(Tnew[i]-Told[i]))/FMAX(fabs(Tnew[i]),1.0); 
+      //temp=(fabs(x[i]-xold[i]))/fabs(x[i]); 
+      if (temp > test) 
+	test=temp; 
+    }
+  if (test < 1.0E-13)
+    {
+      //printf("convergence reached! test=%.15G\n", test);
+      return 1;
+    }
+  else 
+    return 0;
+}
+
+void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma);
+void versor_to_R_sym(double ox, double oy, double oz, double R[3][3]);
+
+
+void vectProdVec(double *A, double *B, double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
+}
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
+void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
+{
+  const int meshpts = 8;
+  double Pj[3], Rj[3][3], AiCi[3];
+  int kk, k1, k2, nn;
+  static int firstcall=1;
+  double th, dth, xp[3], Ui[3], UiPj[3];
+  static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
+      {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
+      {0,-1},{0.707106781186547,-0.707106781186547}};*/
+  double PjCini, PjCi[3], normPjCi, d, mindist=-1.0; 
+  versor_to_R_sym(nj[0],nj[1],nj[2], Rj); 
+#if 1
+  if (firstcall)
+    {
+      mesh = malloc(sizeof(double*)*meshpts);
+      for (nn=0; nn < meshpts; nn++)
+	mesh[nn] = malloc(sizeof(double)*3);
+      firstcall=0;
+      dth = acos(0)*4.0/((double)meshpts);
+
+      th=0.0;
+      for (nn=0; nn < meshpts; nn++)
+	{
+	  mesh[nn][0] = cos(th);
+	  mesh[nn][1] = sin(th);
+	  th += dth;
+	}
+    }
+#endif
+  for (nn=0; nn < meshpts; nn++)
+    {
+      //xp[0] = 0.0;
+      xp[1] = D*0.5*mesh[nn][0];
+      xp[2] = D*0.5*mesh[nn][1];
+      body2labHC(0, xp, Pj, Dj, Rj);    
+      for (kk=0; kk < 3; kk++)
+	PjCi[kk] = Pj[kk] - Ci[kk];
+      //normPjCi = calc_norm(PjCi);
+      PjCini = scalProd(PjCi,ni);
+      for (kk=0; kk < 3; kk++)
+	{
+	  Ui[kk] = Ci[kk] + PjCini*ni[kk];
+	  UiPj[kk] = Ui[kk]-Pj[kk];
+	}
+      if ((d=calc_norm(UiPj)) < mindist || nn==0)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Ai[kk] = Ui[kk];
+    	    }
+	  mindist=d;
+	  //printf("nn=%d mindist=%.15G d=%.15G\n", nn, mindist, d);
+	  //printf("Ui=%f %f %f Pi=%f %f %f\n", Ui[0],Ui[1], Ui[2], Pj[0], Pj[1], Pj[2]);
+	}
+    }
+  //printf("done\n");
+#if 0
+   for (kk=0; kk < 3; kk++)
+     AiCi[kk]  = Ai[kk] - Ci[kk]; 
+  printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,ni)/calc_norm(AiCi));
+  for (kk=0; kk < 3; kk++)
+    AiCi[kk]  = Pj[kk] - Dj[kk]; 
+
+  printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
+#endif 
+}
+
+/* cylinder overlap routines here */
+double diamHC=2.0, lengthHC=2.0;
+double calcDistNegHCdiff(void)
+{
+  const int MAX_ITERATIONS = 1000000;
+#ifdef MC_HC_SPHERO_OPT
+  int rim;
+  double sphov;
+#endif
+  int it, k2;
+  double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
+  double LiTmp, LjTmp, DiamiTmp, DiamjTmp;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
+  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
+  double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
+  double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
+  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
+  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
+  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
+  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
+  double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
+  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
+  double normCiCj;	
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
+  int kk, j1, j2;
+ // *retchk = 0; 
+
+ // return calcDistNegHCsame(i, j, shift, retchk);
+  for (kk=0; kk < 3; kk++)
+    {
+      ni[kk] = CHROMall[0].R[0][kk];
+      nj[kk] = CHROMall[1].R[0][kk];
+    }
+  
+  /* qui va cambiato */
+  Ci[0] = CHROMall[0].rcm[0];
+  Ci[1] = CHROMall[0].rcm[1];
+  Ci[2] = CHROMall[0].rcm[2];
+  Cj[0] = CHROMall[1].rcm[0];
+  Cj[1] = CHROMall[1].rcm[1];
+  Cj[2] = CHROMall[1].rcm[2]; 
+  Li = 2.0*CHROMall[0].sax[0];
+  Diami = 2.0*CHROMall[0].sax[1];
+  Lj = 2.0*CHROMall[1].sax[0];
+  Diamj = 2.0*CHROMall[1].sax[1];
+  //printf("r1=%f %f %f r2=%f %f %f\n",CHROMall[0].rcm[0],CHROMall[0].rcm[1],CHROMall[0].rcm[2],
+  //  CHROMall[1].rcm[0],CHROMall[1].rcm[1],CHROMall[1].rcm[2]);
+  //printf("Li=%f Di=%f Lj=%f Dj=%f\n", Li, Diami, Li, Diamj);
+  for (kk=0; kk < 3; kk++)
+    {
+      CiCj[kk] = Ci[kk] - Cj[kk];
+    }
+
+  for (kk=0; kk < 3; kk++)
+    {
+      /* centers of mass of disks */
+      Di[0][kk]=Ci[kk]+0.5*Li*ni[kk];
+      Di[1][kk]=Ci[kk]-0.5*Li*ni[kk];
+      Dj[0][kk]=Cj[kk]+0.5*Lj*nj[kk];
+      Dj[1][kk]=Cj[kk]-0.5*Lj*nj[kk];
+    }
+  /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
+  if (ni[0]==nj[0] && ni[1]==nj[1] && ni[2]==nj[2])
+    {
+      /* special case of collinear cylinders (parallel disks) */
+      normCiCj = calc_norm(CiCj);
+      for (kk=0; kk < 3; kk++)
+	VV[kk] = CiCj[kk]/normCiCj;
+
+      if (scalProd(VV,ni)==1.0)
+	{
+	  if (normCiCj <= 0.5*(Li+Lj))
+	    return -1;
+	  else
+	    return 1;
+	}
+
+      /* parallel disks */
+      for (j1=0; j1 < 2; j1++)
+	for (j2=j1; j2 < 2; j2++)
+	  {
+	    sp=0.0;
+	    for (kk=0; kk < 3; kk++)
+	      {
+		VV[kk] = Di[j1][kk]-Dj[j2][kk];
+		sp += ni[kk]*VV[kk];
+	      }
+	    if (sp == 0 && calc_norm(VV) < 0.5*(Diami+Diamj))
+	      {
+		return -1;
+	      }
+	  }
+    }
+  else 
+    {
+      /* loop over all disk pairs (they are 4) */
+      vectProdVec(ni, nj, N);
+      vectProdVec(ni,N,niN);
+      vectProdVec(nj,N,njN);
+      normN=calc_norm(N);
+      normNSq=Sqr(normN);
+      for (j1=0; j1 < 2; j1++)
+	for (j2=0; j2 < 2; j2++)
+	  {
+	    DiN = scalProd(Di[j1],N);
+	    DjN = scalProd(Dj[j2],N);
+	    Dini = scalProd(Di[j1],ni);
+	    Djnj = scalProd(Dj[j2],nj);
+	    for (kk=0; kk < 3; kk++)
+	      { 
+		Pi[kk] = (DiN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/normNSq;
+		Pj[kk] = (DjN*N[kk] + Dini*njN[kk]-Djnj*niN[kk])/normNSq;
+	      }
+	    for (kk=0; kk < 3; kk++)
+	      {
+		PiDi[kk] = Pi[kk] - Di[j1][kk];
+		PjDj[kk] = Pj[kk] - Dj[j2][kk];
+	      }
+	    normPiDi = calc_norm(PiDi);
+	    normPjDj = calc_norm(PjDj);
+#ifdef DEBUG_HCMC
+	    printf("Di=%f %f %f\n", Di[j1][0], Di[j1][1], Di[j1][2]);
+	    printf("Dj=%f %f %f\n", Dj[j2][0], Dj[j2][1], Dj[j2][2]);
+	    printf("normPiDi: %f normPjDj=%f\n", normPiDi, normPjDj);
+	    printf("0.5*Diami=%f 0.5*Diamj=%f\n", 0.5*Diami, 0.5*Diamj);
+#endif
+	    if (normPiDi <= 0.5*Diami && normPjDj <= 0.5*Diamj)
+	      {
+		Q1 = sqrt(Sqr(Diami)/4.0-Sqr(normPiDi));
+		Q2 = sqrt(Sqr(Diamj)/4.0-Sqr(normPjDj));
+		for (kk=0; kk < 3; kk++)
+		  {
+		    PiPj[kk] = Pi[kk] - Pj[kk];
+		  }
+		normPiPj = calc_norm(PiPj);
+		if (normPiPj <= Q1 + Q2)
+		  {
+#ifdef DEBUG_HCMC
+		    if (dostorebump)
+		      printf("disk-disk\n");
+#endif
+		    return -1;
+		  }
+		//else 
+		//return 1;
+	      }
+	    //else 
+	    //return 1;
+	  }
+    }
+  /* case A.2 overlap of rim and disk */
+
+  /* =================================== >>> Part A <<< ========================= */
+  for (j1=0; j1 < 2; j1++)
+    {
+
+      if (j1==1)
+	{
+	  //break;
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      for (k2=0; k2 < 2; k2++)
+		DjTmp[k2][kk] = Dj[k2][kk];
+	      CiTmp[kk] = Ci[kk];
+	      niTmp[kk] = ni[kk];
+	      njTmp[kk] = nj[kk];
+	      DiamiTmp = Diami;
+	      DiamjTmp = Diamj;
+	      LiTmp = Li;
+	      LjTmp = Lj;
+	      /* exhange the two particles */	
+	      for (k2=0; k2 < 2; k2++)
+		Dj[k2][kk] = Di[k2][kk];
+	      Ci[kk] = Cj[kk];
+	      ni[kk] = nj[kk];
+	      nj[kk] = niTmp[kk];
+	      Diami = Diamj;
+	      Diamj = DiamiTmp;
+	      Li = Lj;
+	      Lj = LiTmp;
+	    }
+	}
+      for (j2=0; j2 < 2; j2++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    DjCi[kk] = Dj[j2][kk] - Ci[kk];
+	  normDjCi = calc_norm(DjCi);
+	  DjCini = scalProd(DjCi,ni);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Ui[kk] = Ci[kk] + DjCini*ni[kk];
+	      DjUi[kk] = Dj[j2][kk] - Ui[kk];
+	    }
+
+	  DjUini = scalProd(DjUi,ni);
+	  normDjUi = calc_norm(DjUi);
+
+	  if (normDjUi > 0.5*(Diami+Diamj))
+	    continue;
+
+	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
+	     there is some mess about following conditions:
+	     The second and third condition on right column of page 514 
+	     should read (D=sigma):
+	     |Di-Uj| < D/2  && |(Dj-Ci).ni| > L/2
+
+	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
+
+	   */
+	  if (normDjUi < Diami*0.5 && fabs(DjCini) > Li*0.5)
+	    continue;
+
+	  if (normDjUi < Diami*0.5 && fabs(DjCini) <= Li*0.5)
+	    {
+#ifdef DEBUG_HCMC
+	      if (dostorebump)
+		printf("A #1 disk-rim NP=%d\n", Oparams.parnum);
+#endif	
+	      return -1;
+	    }
+#if 1
+	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
+#else
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      //Ai[kk] = Ci[kk];
+	      Ai[kk] = Ui[kk];  
+	    }
+#endif
+	  for (it = 0; it < MAX_ITERATIONS; it++)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		{
+		  AiDj[kk] = Ai[kk] - Dj[j2][kk];
+		}
+	      AiDjnj = scalProd(AiDj,nj);
+	      vectProdVec(AiDj,nj,AiDjnjvec);
+	      for (kk=0; kk < 3; kk++)
+		VV[kk] =  0.5*Diamj*(AiDj[kk]-AiDjnj*nj[kk])/calc_norm(AiDjnjvec);
+	      for (kk=0; kk < 3; kk++)
+		{
+		  Tjp[kk] = Dj[j2][kk] + VV[kk];
+		  Tjm[kk] = Dj[j2][kk] - VV[kk];
+		  TjpCi[kk] = Tjp[kk] - Ci[kk];
+		  TjmCi[kk] = Tjm[kk] - Ci[kk];
+		}
+	      TjpCini = scalProd(TjpCi,ni);  
+	      TjmCini = scalProd(TjmCi,ni);
+	      for (kk=0; kk < 3; kk++)
+		{
+		  Tjp_perp[kk] = TjpCi[kk]-TjpCini*ni[kk];
+		  Tjp_para[kk] = TjpCini*ni[kk];
+		  Tjm_perp[kk] = TjmCi[kk]-TjmCini*ni[kk];
+		  Tjm_para[kk] = TjmCini*ni[kk];
+		} 
+	      normTjm_perp = calc_norm(Tjp_perp);
+	      for (kk=0; kk < 3; kk++)
+		TjOld[kk] = TjNew[kk];
+	      if (calc_norm(Tjm_perp) < calc_norm(Tjp_perp))
+		{
+		  for (kk=0; kk < 3; kk++)
+		    TjNew[kk] = Tjm[kk];
+		}	  
+	      else
+		{
+		  for (kk=0; kk < 3; kk++)
+		    TjNew[kk] = Tjp[kk];
+		}
+
+	      for (kk=0; kk < 3; kk++)
+		TjNewCi[kk] = TjNew[kk] - Ci[kk];
+	      TjNewCini = scalProd(TjNewCi,ni);
+
+#ifdef DEBUG_HCMC
+	      printf("j1=%d A it=%d Aiold=%.15G %.15G %.15G\n", j1, it, Ai[0], Ai[1], Ai[2]);
+#endif
+	      for (kk=0; kk < 3; kk++)
+		Ai[kk] = TjNewCini*ni[kk] + Ci[kk]; 
+#ifdef DEBUG_HCMC
+	      printf("A it=%d Ainew=%.15G %.15G %.15G TjNewCini=%.15G\n", it, Ai[0], Ai[1], Ai[2], TjNewCini);
+	      printf("A Ci=%.15G %.15G %.15G\n", Ci[0], Ci[1], Ci[2]);
+	      printf("A ni=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+#endif
+	      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
+		break;
+	    }
+	  //totitsHC += it;
+#ifdef DEBUG_HCMC
+	  printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
+		 TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
+#endif
+	  if (it >= MAX_ITERATIONS)
+	    {
+	      printf("MAX ITERATIONS REACHED in A!\n");
+	      //*retchk=1;
+	      return -1;
+	    }
+	  if ( (calc_norm(Tjp_para) <= Li*0.5 && calc_norm(Tjp_perp) <= Diami*0.5)||
+	       (calc_norm(Tjm_para) <= Li*0.5 && calc_norm(Tjm_perp) <= Diami*0.5) )
+	    {
+#ifdef DEBUG_HCMC
+	      if (dostorebump)
+		printf("A #2 disk-rim\n");
+#endif	   
+	      return -1;
+	    }
+	}
+      if (j1==1)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      /* restore particles*/
+	      for (k2=0; k2 < 2; k2++)
+		Dj[k2][kk] = DjTmp[k2][kk];
+	      Ci[kk] = CiTmp[kk];
+	      ni[kk] = niTmp[kk];
+	      nj[kk] = njTmp[kk];
+	      Diami = DiamiTmp;
+	      Diamj = DiamjTmp;
+	      Li = LiTmp;
+	      Lj = LjTmp;
+	    }
+	}
+
+    }
+  /* =================================== >>> Part B <<< ========================= */
+  //numcallsHC += 4.0; 
+
+  /* case A.3 rim-rim overlap */
+  CiCjni = scalProd(CiCj,ni);
+  CiCjnj = scalProd(CiCj,nj);
+  ninj = scalProd(ni, nj);
+  detA = Sqr(ninj)-1;
+
+  /* WARNING: solution given in Ibarra et al. Mol. Sim. 33,505 (2007) is wrong */
+  lambdai = ( CiCjni - CiCjnj*ninj)/detA;
+  lambdaj = (-CiCjnj + CiCjni*ninj)/detA;
+
+  for (kk=0; kk < 3; kk++)
+    {
+      Vi[kk] = Ci[kk] + lambdai*ni[kk];   
+      Vj[kk] = Cj[kk] + lambdaj*nj[kk];
+      ViVj[kk] = Vi[kk] - Vj[kk];
+    }
+  if (calc_norm(ViVj) < 0.5*(Diami+Diamj) && fabs(lambdai) < 0.5*Li && fabs(lambdaj) < 0.5*Lj)
+    {
+#ifdef DEBUG_HCMC
+      if (dostorebump)
+	printf("rim-rim NP=%d\n", Oparams.parnum);
+#endif	
+//      if (sphov > 0.0)
+//	printf("boh\n");
+      return -1;
+    }
+  return 1;
+}
+
+
+
+/* ------------------------------- */
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
@@ -78,47 +716,14 @@ void sobseq(int *n, double x[])
     }
 }
 
-#if defined(MPI)
-int MPIpid;
-extern int my_rank;
-extern int numOfProcs; /* number of processeses in a communicator */
-#endif 
-//#define ELEC
 //#define NO_INTERP
-#ifdef ELEC
-double kD, yukcut, yukcutkD, yukcutkDsq;
-#endif
-#ifdef PARALLEL
-struct kDsortS {
-int k1;
-int k2;
-double invkD;
-} *kD_sorted;
-double *cdna_arr, *beta_arr;
-int numtemps, numconcs;
-double **yukcutkD_arr, **kD_arr, **yuk_corr_fact_arr, **yukcutkDsq_arr, **uel_arr, **vexclel_arr;
-double num_kD=0;
-double maxyukcutkDsq, maxyukcutkD;
-#endif
+
 char dummy1[32], dummy2[32], atname[32], nbname[8];
 int nat, atnum, nbnum, len;
 long long int tot_trials, tt=0, ttini=0;
 double gamma1, gamma2, L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
 const double thetapts=100000;
 int type;
-double scalProd(double *A, double *B)
-{
-  int kk;
-  double R=0.0;
-  for (kk=0; kk < 3; kk++)
-    R += A[kk]*B[kk];
-  return R;
-}
-struct DNADallStr {
-  double R[3][3];
-  double rcm[3];
-  double sax[3];
-} DNADall[2];
 
 double calcDistBox(void)
 {
@@ -130,17 +735,17 @@ double calcDistBox(void)
   //return -1;
   for (k=0; k < 3; k++)
     {
-      rA[k] = DNADall[0].rcm[k];
-      rB[k] = DNADall[1].rcm[k];
-      EA[k] = DNADall[0].sax[k];
-      EB[k] = DNADall[1].sax[k];
+      rA[k] = CHROMall[0].rcm[k];
+      rB[k] = CHROMall[1].rcm[k];
+      EA[k] = CHROMall[0].boxsax[k];
+      EB[k] = CHROMall[1].boxsax[k];
     }
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  AA[k1][k2] = DNADall[0].R[k1][k2];
-	  BB[k1][k2] = DNADall[1].R[k1][k2];
+	  AA[k1][k2] = CHROMall[0].R[k1][k2];
+	  BB[k1][k2] = CHROMall[1].R[k1][k2];
 	}
     	DD[k1] = rA[k1] - rB[k1];
     }
@@ -288,35 +893,8 @@ double calcDistBox(void)
 
   return -1.0;
 }
-
-void vectProdVec(double *A, double *B, double *C)
-{
-  C[0] = A[1] * B[2] - A[2] * B[1]; 
-  C[1] = A[2] * B[0] - A[0] * B[2];
-  C[2] = A[0] * B[1] - A[1] * B[0];
-}
 //#define ALBERTA
 char fn[1024];
-struct DNA {
-  double x;
-  double y;
-  double z;
-  double rad;
-#ifdef ELEC
-  int atype;
-#endif
-} *DNAchain;
-
-struct DNA *DNADs[2];
-double calc_norm(double *vec)
-{
-  int k1;
-  double norm=0.0;
-  for (k1 = 0; k1 < 3; k1++)
-    norm += Sqr(vec[k1]);
-  return sqrt(norm);
-}
-
 #define MC_BENT_DBLCYL
 
 /*
@@ -338,7 +916,7 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
       x[k1] += rO[k1];
     }
 }
-#ifdef MC_BENT_DBLCYL
+#ifdef CHROM_ELEC
 /* apply a random rotation around the supplied axis because 
    bent cylinders do not have azimuthal symmetry */
 double thetaGlobalBondangle;
@@ -414,31 +992,26 @@ void print_matrix(double M[3][3], int n)
     }
   printf("}\n");
 }
-
-void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
+void versor_to_R_sym(double ox, double oy, double oz, double R[3][3])
 {
   int k;
   double angle, u[3], sp, norm, up[3], xx, yy;
-#ifdef MC_BENT_DBLCYL
-  double Rout[3][3];
-  int k1, k2;
-#endif
-  /* first row vector */
-  R[2][0] = ox;
-  R[2][1] = oy;
-  R[2][2] = oz;
+  /* first row vector (note that cylinder symmetry axis which is x) */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
   //printf("orient=%f %f %f\n", ox, oy, oz);
   u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
-  if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
     {
-      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+      u[0] = 0.0; u[1] = 0.0; u[2] = 1.0;
     }
   /* second row vector */
   sp = 0;
   for (k=0; k < 3 ; k++)
-    sp+=u[k]*R[2][k];
+    sp+=u[k]*R[0][k];
   for (k=0; k < 3 ; k++)
-    u[k] -= sp*R[2][k];
+    u[k] -= sp*R[0][k];
   norm = calc_norm(u);
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
@@ -459,17 +1032,82 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
     }
 #endif
   /* third row vector */
-  vectProdVec(R[1], R[2], u);
+  vectProdVec(R[0], R[1], u);
  
   for (k=0; k < 3 ; k++)
-    R[0][k] = u[k];
-#ifdef MC_BENT_DBLCYL
+    R[2][k] = u[k];
+#if 0
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    Rt[k1][k2]=R[k2][k1];
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    R[k1][k2]=Rt[k1][k2];
+#endif
+  //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
+#ifdef DEBUG
+  printf("==============\n");
+  print_matrix(R, 3);
+  printf("==============\n");
+#endif
+}
+
+void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+#ifdef CHROM_ELEC
+  double Rout[3][3];
+  int k1, k2;
+#endif
+  /* first row vector (note that cylinder symmetry axis which is x) */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = 0.0; u[1] = 0.0; u[2] = 1.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+#if 0
+  if (typesArr[0].nspots==3 && type==0)
+    {
+      for (k=0; k < 3 ; k++)
+	u[k] = R[1][k];
+      vectProdVec(R[0], u, up);
+      /* rotate randomly second axis */
+      angle=4.0*acos(0.0)*ranf_vb();
+      xx = cos(angle);
+      yy = sin(angle);
+      for (k=0; k < 3 ; k++)
+	R[1][k] = u[k]*xx + up[k]*yy;
+      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
+    }
+#endif
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+#ifdef CHROM_ELEC
   /* add a random rotation around the axis (ox, oy, oz) */
   add_rotation_around_axis(ox, oy, oz, R, Rout, gamma);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R[k1][k2] = Rout[k1][k2];
 #endif
+
 #if 0
   for (k1=0; k1 < 3 ; k1++)
     for (k2=0; k2 < 3 ; k2++)
@@ -486,7 +1124,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
 #endif
 }
 double RMDNA[2][3][3];
-void place_DNAD(double x, double y, double z, double ux, double uy, double uz, int which, double gamma)
+void place_CHROM(double x, double y, double z, double ux, double uy, double uz, int which, double gamma)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
@@ -502,36 +1140,51 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, i
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R, gamma);
+
 #ifdef DEBUG 
-  sprintf(fn, "DNAD%d.mgl", which);
+  sprintf(fn, "CHROM%d.mgl", which);
   fd=fopen(fn, "w+");
-  fprintf(fd, ".Vol: %f\n", L*L*L);
+  fprintf(fd, ".Vol: %f\n", 10*10.*10);
 #endif
+  /* ============ */
+#ifdef DEBUG
+  //printf("CHROMall[%d].sax[0]=%f\n", which, CHROMall[which].sax[0]);
+  fprintf(fd, "%f %f %f @ 0.1 C[blue]\n", rO[0]+ux*CHROMall[which].sax[0], rO[1]+uy*CHROMall[which].sax[0],
+	  rO[2]+uz*CHROMall[which].sax[0]);
+  fprintf(fd, "%f %f %f @ 0.1 C[blue]\n", rO[0]-ux*CHROMall[which].sax[0], rO[1]-uy*CHROMall[which].sax[0],
+	  rO[2]-uz*CHROMall[which].sax[0]);
+  fprintf(fd, "%f %f %f @ 0.1 C[red]\n", 0., 0., 1.);
+  fprintf(fd, "%f %f %f @ 0.1 C[red]\n", 0., 0., 0.);
+#endif
+  for (k1=0; k1 < 3; k1++)
+    {
+      CHROMall[which].rcm[k1] = rO[k1];
+      for (k2=0; k2 < 3; k2++)
+	CHROMall[which].R[k1][k2] = R[k1][k2];
+    }
+#ifdef CHROM_ELEC
   /* ============ */
   for (i=0; i < nat; i++)
     {
-      xp[0] = DNAchain[i].x;
-      xp[1] = DNAchain[i].y;
-      xp[2] = DNAchain[i].z;
+      xp[0] = CHROMchain[i].x;
+      xp[1] = CHROMchain[i].y;
+      xp[2] = CHROMchain[i].z;
       
+      //printf("1)chain %f %f %f\n", CHROMchain[i].x, CHROMchain[i].y, CHROMchain[i].z);
+      //printf("chain %f %f %f\n", CHROMchain[i].x, CHROMchain[i].y, CHROMchain[i].z);
       body2lab(xp, xl, rO, R);
-      for (k1=0; k1 < 3; k1++)
-	{
-	  DNADall[which].rcm[k1] = rO[k1];
-	  for (k2=0; k2 < 3; k2++)
-	    DNADall[which].R[k1][k2] = R[k1][k2];
-	}
-      DNADs[which][i].x = xl[0];
-      DNADs[which][i].y = xl[1];
-      DNADs[which][i].z = xl[2];
-#ifdef ELEC
-      DNADs[which][i].atype = DNAchain[i].atype;
-#endif
+      //printf("2)chain %f %f %f\n", CHROMchain[i].x, CHROMchain[i].y, CHROMchain[i].z);
+
+      CHROMs[which][i].x = xl[0];
+      CHROMs[which][i].y = xl[1];
+      CHROMs[which][i].z = xl[2];
+      CHROMs[which][i].atype = CHROMchain[i].atype;
 #ifdef DEBUG
-      fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
+      fprintf(fd,"%f %f %f @ %f C[yellow]\n", xl[0], xl[1], xl[2], 0.1);
 #endif
-      DNADs[which][i].rad = DNAchain[i].rad;
+      CHROMs[which][i].rad = CHROMchain[i].rad;
     }
+#endif
 #ifdef DEBUG
   fclose(fd);
 #endif
@@ -587,6 +1240,62 @@ double theta_onsager(double alpha)
 }
 double distro[10000];
 const int nfons=100;
+void orient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  //Mtot = m; /* total mass of molecule */
+
+  //inert = I; /* momentum of inertia */
+ 
+  //mean = 3.0*temp / inert;
+
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = ranf_vb() * 2.0 - 1.0;
+      xi2  = ranf_vb() * 2.0 - 1.0;
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+  //distro[(int) (acos(oz)/(pi/1000.0))] += 1.0;
+
+#if 0
+  /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
+  osq   = - mean * log(ranf());
+  o     = sqrt(fabs(osq));
+  ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      *wx = ox;
+      *wy = oy;
+      *wz = oz;
+#endif 
+}
+
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
@@ -703,154 +1412,48 @@ void init_distbox(void)
 {
   int i, k;
   double max_x, max_y, max_z, distx, disty, distz;
+  max_x = 0.5*lengthHC;
+  max_y = 0.5*diamHC;
+  max_z = 0.5*diamHC;
+#ifdef CHROM_ELEC
   /* maximum distance to z-axis */
   for (i=0; i < nat; i++)
     {
-      distx = fabs(DNAchain[i].x) + DNAchain[i].rad;
-      disty = fabs(DNAchain[i].y) + DNAchain[i].rad;
-      distz = fabs(DNAchain[i].z) + DNAchain[i].rad;
-#ifdef ELEC
-      if (DNAchain[i].atype==1)/* se si tratta di un P */
-	{
+	distx = fabs(CHROMchain[i].x) + CHROMchain[i].rad;
+	disty = fabs(CHROMchain[i].y) + CHROMchain[i].rad;
+	distz = fabs(CHROMchain[i].z) + CHROMchain[i].rad;
 #ifdef PARALLEL
-	  if (numtemps > 1 || numconcs > 1)
-	    {
-	      yukcutkD = maxyukcutkD;
-	    }
-#endif
-	  if (yukcutkD*0.5 > DNAchain[i].rad)
-	    {
-	      distx = fabs(DNAchain[i].x) + yukcutkD*0.5;
-	      disty = fabs(DNAchain[i].y) + yukcutkD*0.5;
-	      distz = fabs(DNAchain[i].z) + yukcutkD*0.5;
-	    }
+      if (numtemps > 1 || numconcs > 1)
+	{
+	  yukcutkD = maxyukcutkD;
 	}
 #endif
-      if (i==0 || distx > max_x)
+      if (yukcutkD*0.5 > CHROMchain[i].rad)
+	{
+	  distx = fabs(CHROMchain[i].x) + yukcutkD*0.5;
+	  disty = fabs(CHROMchain[i].y) + yukcutkD*0.5;
+	  distz = fabs(CHROMchain[i].z) + yukcutkD*0.5;
+	}
+      if (distx > max_x)
 	max_x = distx;
-       if (i==0 || disty > max_y)
+      if (disty > max_y)
 	max_y = disty;
-       if (i==0 || distz > max_z)
+      if (distz > max_z)
 	max_z = distz;
-    } 
+    }
+#endif 
+  //printf("maxax=%f %f %f\n", max_x, max_y, max_z);
   for (k=0; k < 2; k++)
     {
-      DNADall[k].sax[0] = max_x*1.01;
-      DNADall[k].sax[1] = max_y*1.01;
-      DNADall[k].sax[2] = max_z*1.01;
+      CHROMall[k].sax[0] = lengthHC*0.5;
+      CHROMall[k].sax[1] = diamHC*0.5;
+      CHROMall[k].sax[2] = diamHC*0.5;
+      CHROMall[k].boxsax[0] = max_x;
+      CHROMall[k].boxsax[1] = max_y;
+      CHROMall[k].boxsax[2] = max_z;
     }
-  //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
+  //printf("maxx=%f %f\n",CHROMall[0].sax[0],CHROMall[0].sax[1]);
 }
-#ifdef ELEC
-double delta_rab0=2.0, epsr_prime=1.8, yuk_corr_fact;
-double esq_eps, esq_eps_prime; /* = e^2 / (4*pi*epsilon0*epsilon*kB) in J*angstrom */
-double esq_eps10, esq_eps_prime10;
-const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
-const double Dalton = 1.660538921E-27;
-const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
-const double qel = 1.602176565E-19, Nav=6.02214129E23;
-const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
-double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
-double ximanning, deltamann; /* Debye screening length */
-/* charge on phosphate groups */
-double zeta_a, zeta_b;
-double Ucoul(double rab)
-{
-  //return esq_eps_prime10/rab;
-  return esq_eps_prime10*zeta_a*zeta_b/rab;
-
-}
-double Uyuk(double rab)
-{
-#if 0
-  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
-  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
-#endif
-  
-  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab; 
-} 
-#ifdef PARALLEL
-double Uyuk_arr(double rab)
-{
-#if 0
-  printf("qui esq_eps10=%.15G zeta_a=%f exp(-kD*rab)=%.15G rab=%.15G\n", esq_eps10, zeta_a, exp(-kD*rab), rab);
-  printf("Uyuk=%.15G\n",esq_eps10*zeta_a*zeta_b*exp(-kD*rab)/rab );
-#endif
-  return yuk_corr_fact*esq_eps10*zeta_a*zeta_b/rab; 
-}
-double calc_yukawa_arr(int i, int j, double distsq, int *kks)
-{
-  double ret, rab0, rab, sigab;
-  int kk, k1, k2;
-  rab = sqrt(distsq);
-  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
-  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
-  *kks=-2;
-  if (distsq > maxyukcutkDsq)
-    return 0.0;
-  for (kk=0; kk < num_kD; kk++)
-    {    
-      if (rab < rab0)
-	{
-	  *kks=-1;
-	  //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
-#ifdef NO_INTERP
-	  return Ucoul(rab);
-#else
-	  return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
-#endif
-#if 0
-	  if (isnan(ret))
-	    {
-	      printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
-	      exit(-1);
-	    }
-	  return ret;
-#endif    
-	}
-      /* we set a cutoff for electrostatic interactions */
-      else if (rab < yukcut*kD_sorted[kk].invkD)
-	{
-	  //printf("Yuk=%.15G\n", Uyuk(rab));
-	  *kks = kk; 
-	  return Uyuk_arr(rab);
-	} 
-    }
-}
-#endif
-double calc_yukawa(int i, int j, double distsq)
-{
-  double ret, rab0, rab, sigab;
-  rab = sqrt(distsq);
-  sigab = DNADs[0][i].rad + DNADs[1][j].rad;
-  rab0 = sigab + delta_rab0; /* we are using Angstrom units here (see pag. S2 in the SI of Frezza Soft Matter 2011) */ 
-  
-  if (rab < rab0)
-    {
-      //printf("interp=%.15G\n",  Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab));
-#ifdef NO_INTERP
-      return Ucoul(rab);
-#else
-      return Ucoul(sigab) + (rab-sigab)*(Uyuk(rab0) - Ucoul(sigab))/(rab0-sigab);
-#endif
-#if 0
-      if (isnan(ret))
-	{
-	  printf("a=%f rab=%f boh ret=%f Ucoul(rab)=%f Uyuk(rab)=%f\n", zeta_a, rab, ret, Ucoul(rab), Uyuk(rab));
-	  exit(-1);
-	}
-      return ret;
-#endif    
-    }
-  /* we set a cutoff for electrostatic interactions */
-  else if (rab < yukcutkD)
-    {
-      //printf("Yuk=%.15G\n", Uyuk(rab));
-      return Uyuk(rab);
-    } 
-  else return 0.0;
-}
-#endif
 double max3(double a, double b, double c)
 {
   double m;
@@ -868,6 +1471,7 @@ double max2(double a, double b)
   else 
     return b;
 }
+#if 1
 double epsrtbl[21][2]={{0,87.740},{5,85.763},{10,83.832},{15,81.946},{20,80.103},{25,78.304},{30,76.546},{35,74.828},{40,73.151},{45,71.512},{50,69.910},{55,68.345},{60,66.815},{65,65.319},{70,63.857},{75,62.427},{80,61.027},{85,59.659},{90,58.319},{95,57.007},{100,55.720}};
 double epsr(double T)
 {
@@ -888,197 +1492,32 @@ double epsr(double T)
 	}
     }
 }
-#ifdef PARALLEL
-int compare_func(const void *aa, const void *bb)
-{
-  double temp;
-  temp = ((struct kDsortS*)aa)->invkD - ((struct kDsortS*)bb)->invkD;
-  if (temp < 0)
-    return -1;
-  else if (temp > 0)
-    return 1;
-  else
-    return 0;
-}
 #endif
-#ifdef PRINC_AXES
-double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
-int eigenvectors=1;
-double It[3][3];
-extern void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
-                double* w, double* work, int* lwork, int* info);
-void diagonalize(double M[3][3], double ev[3])
+#ifdef CHROM_ELEC
+void build_CHROM_chain(int nat)
 {
-  double a[9], work[45];
-  char jobz, uplo;
-  int info, i, j, lda, lwork;
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
-      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
-    }	
-  lda = 3;
-  if (eigenvectors)
-    jobz='V';
-  else
-    jobz='N';
-  uplo='U';
-  lwork = 45;
-  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
-  if (!eigenvectors)
-    return;
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
-    }	
-}
-
-double pz[3];
-double Rlp[3][3];
-#if 0
-void build_ref_system(void)
-{
-  int k;
-  double sp, norm;
-  /* build the nematic reference system */
-  Rlp[2][1] = pz[0];
-  Rlp[2][1] = pz[1];
-  Rlp[2][2] = pz[2];
-  //printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
-  Rlp[0][0] = 1.0;
-  Rlp[0][1] = 1.0;
-  Rlp[0][2] = 1.0;
-  if (Rlp[0][0] == Rlp[2][0] && Rlp[0][1]==Rlp[2][1] && Rlp[0][2]==Rlp[2][2])
+  int i;
+  double h, h0, dh;
+  h0 = -lengthHC*0.5+CHROMheight/2.0;
+  dh = CHROMheight;
+  h=h0;
+  //printf("nat=%d h0=%f dh=%f\n", nat, h0, dh);
+  for (i=0; i < nat; i+=2)
     {
-      Rlp[0][0] = 1.0;
-      Rlp[0][1] = -1.0;
-      Rlp[0][2] = 1.0;
-    }
-  sp = 0;
-  for (k=0; k < 3 ; k++)
-    sp+=Rlp[0][k]*Rlp[2][k];
-  for (k=0; k < 3 ; k++)
-    Rlp[0][k] -= sp*Rlp[2][k];
-  norm = calc_norm(Rlp[0]);
-  for (k=0; k < 3 ; k++)
-    Rlp[0][k] = Rlp[0][k]/norm;
-  vectProdVec(Rlp[2], Rlp[0], Rlp[1]);
-}
-#endif
-void calc_It(void)
-{
-  int i, j, k;
-  double distSq, ri[3], rj[3];
-  double Icom[3][3];
-  for (j=0; j < 3; j++)
-    for (k=0; k < 3; k++)
-      It[j][k] = 0.0;
-  /* moment of inertia of centers of mass */
-  for (j=0; j < 3; j++)
-    for (k=0; k < 3; k++)
-      {
-	It[j][k] = 0.0;
-	for (i=0; i < nat; i++)
-	  {
-	    ri[0] = DNAchain[i].x; /* notare che il centro di massa è stato già riportato nell'origine ossia Rcm=(0,0,0) */
-	    ri[1] = DNAchain[i].y;
-	    ri[2] = DNAchain[i].z;
-	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
-	    It[j][k] += ((j==k)?distSq:0.0) - ri[j]*ri[k];
-	  }
-      }
-}
-struct evStruct {
-  double eigvec[3];
-  double ev;
-  int idx;
-} evstruct[3], evstrTmp[3];
-
-int cmpfuncev (const void *p1, const void *p2)
-{
-  if (((struct evStruct*)p1)->ev < ((struct evStruct*)p2)->ev) 
-    return 1;
-  else
-    return -1;
-}
-void align_z_axis(void)
-{
-  double ev[3], St, xp[3], xl[3];
-  int numev, a, b, i, k1, k2;
-
-  calc_It();
-  //print_matrix(It, 3);
-  diagonalize(It, ev);
-#if 1
-  /* find min eigenval */
-  if (fabs(ev[0]) < fabs(ev[1]))
-    { 
-      St = ev[0];
-      numev=0;
-    }
-  else
-    {
-      St = ev[1];
-      numev=1;
-    }  
-  if (fabs(ev[2]) < St)
-    {
-      St = ev[2];
-      numev=2;
-    }
-#endif
-  evstruct[0].ev=ev[0];
-  evstruct[1].ev=ev[1];
-  evstruct[2].ev=ev[2];
-  printf("numev=%d ev[0]=%f ev[1]=%f ev[2]=%f\n", numev, ev[0], ev[1], ev[2]);
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      evstruct[a].eigvec[b] = eigvec[a][b];
-  //print_matrix(eigvec, 3);
-  evstruct[a].idx = a;
-
-  /* we need to preserve chirality, hence we shift eigenvectors in order to preserve their order
-     (e.g xyz -> zxy) */
-  for (a=0; a < 3; a++)
-    {
-      evstrTmp[(a + (2-numev))%3].ev = evstruct[a].ev;
-      for (b=0; b < 3; b++)
-	evstrTmp[(a + (2-numev))%3].eigvec[b] = evstruct[a].eigvec[b];
-    }
-  for (a=0; a < 3; a++)
-    {
-      evstruct[a].ev = evstrTmp[a].ev;
-      for (b=0; b < 3; b++)
-	evstruct[a].eigvec[b] = evstrTmp[a].eigvec[b];
-    }
-
-  //  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
-
-  printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      Rlp[a][b] = evstruct[a].eigvec[b]; /* ogni riga è un autovettore */
-
-  for (i=0; i < nat; i++)
-    {
-      xl[0] = DNAchain[i].x;
-      xl[1] = DNAchain[i].y;
-      xl[2] = DNAchain[i].z;
-      for (k1=0; k1 < 3; k1++)
-	{
-	  xp[k1] = 0;
-	  for (k2=0; k2 < 3; k2++)
-	    {
-	      xp[k1] += Rlp[k1][k2]*xl[k2];
-	    } 
-	}
-      DNAchain[i].x = xp[0];
-      DNAchain[i].y = xp[1];
-      DNAchain[i].z = xp[2];
+      CHROMchain[i].x = h;
+      CHROMchain[i].y = diamHC*0.5-0.085;
+      CHROMchain[i].z = 0.0;
+      CHROMchain[i].rad = 0.085; /* raggio atomo ossigeno carico negativamente (in nm)*/
+      CHROMchain[i].atype = 1;
+      CHROMchain[i+1].x = h;
+      CHROMchain[i+1].y = -diamHC*0.5+0.085;
+      CHROMchain[i+1].z = 0.0;
+      CHROMchain[i+1].rad = 0.085;
+      CHROMchain[i+1].atype = 1;
+      h += dh;
     }
 }
 #endif
-
 int main(int argc, char**argv)
 {
 #ifdef QUASIMC
@@ -1086,56 +1525,45 @@ int main(int argc, char**argv)
   gsl_qrng *qsob;
 #endif
 #endif
-#ifdef MPI
-  MPI_Status status;
-#endif
-#ifdef ELEC
+#ifdef CHROM_ELEC
   double uel, beta;
   int interact;
 #endif
-  double Lx, Ly, Lz;
-  FILE *fin, *fout, *f, *fread;
 #ifdef PARALLEL
   FILE *fp;
   double sigab, rab0, rab0sq, uelcontrib, tempfact;
   int k1, k2, kk;
 #endif
+  double Lx, Ly, Lz;
+  FILE *fin, *fout, *f, *fread;
   int ncontrib, cc, k, i, j, overlap, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
   double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
-  /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
-#if defined(MPI) 
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &numOfProcs);
-  //sprintf(TXT, "rank:%d\n", my_rank);
-#endif
-
+  /* syntax:  CG-DNA-k2K22 <pdb file> <CHROM length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
     {
-#ifdef ELEC
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [DNA concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
+#ifdef CHROM_ELEC
+      printf("syntax:  CHROM-K11K22K33 <CHROM diam> <CHROM len> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [CHROM concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
+      printf("syntax:  CHROM-K11K22K33 <CHROM diam> <CHROM len> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
 #endif
       exit(1);
     }
-  strcpy(fnin,argv[1]);
-  fin=fopen(fnin,"r");
-  len=atoi(argv[2]);
+  diamHC=atof(argv[1]);
+  lengthHC=atoi(argv[2]);
   alpha = atof(argv[3]);
   tot_trials=atoll(argv[4]);
   type = atoi(argv[5]);
   fileoutits = atoll(argv[6]);
-  
+ 
+  lengthHC *= CHROMheight; 
   if (argc == 7)
     outits=100*fileoutits;
   else
     outits = atoll(argv[7]);
-
-#ifdef ELEC
+#ifdef CHROM_ELEC
 #ifdef PARALLEL
   if (argc <= 8)
     {
@@ -1174,7 +1602,7 @@ int main(int argc, char**argv)
   if (argc <= 9)
     {
       numconcs = 1;
-      cdna = 600;
+      cchrom = 600;
     }
   else
     {
@@ -1187,14 +1615,14 @@ int main(int argc, char**argv)
 	      fscanf(fp, "%lf ", &dummydbl);
 	      cc++;
 	    }
-	  cdna_arr = malloc(sizeof(double)*cc);
+	  cchrom_arr = malloc(sizeof(double)*cc);
 	  rewind(fp);
 	  numconcs=cc;
 	  cc=0;
 	  while(!feof(fp))
 	    {
 	      fscanf(fp, "%lf ", &dummydbl);
-	      cdna_arr[cc] = dummydbl;
+	      cchrom_arr[cc] = dummydbl;
 	      cc++;
 	    }
 	  fclose(fp);
@@ -1202,7 +1630,7 @@ int main(int argc, char**argv)
       else
 	{
 	  numconcs = 1;
-	  cdna = atof(argv[9]);
+	  cchrom = atof(argv[9]);
 	}
     }
 #else
@@ -1212,9 +1640,9 @@ int main(int argc, char**argv)
     beta = 1.0/atof(argv[8]);
 
   if (argc <= 9)
-    cdna =  600; /* mg/ml */
+    cchrom =  600; /* mg/ml */
   else
-    cdna = atof(argv[9]);
+    cchrom = atof(argv[9]);
 #endif
   if (argc <= 10)
     yukcut = 2.0;
@@ -1226,7 +1654,7 @@ int main(int argc, char**argv)
   else
     epsr_prime = atof(argv[11]);
   if (argc <= 12)
-    delta_rab0 = 2.0;
+    delta_rab0 = 0.2;
   else
     delta_rab0 = atof(argv[12]);
 
@@ -1242,9 +1670,9 @@ int main(int argc, char**argv)
 #else
   esq_eps = Sqr(qel)/(4.0*M_PI*eps0*epsr(1.0/beta))/kB; /* epsilon_r per l'acqua a 20°C vale 80.1 */
 #endif
-  esq_eps10 = esq_eps*1E10;
+  esq_eps10 = esq_eps*1E9;
   esq_eps_prime = Sqr(qel)/(4.0*M_PI*eps0*epsr_prime)/kB;
-  esq_eps_prime10 = esq_eps_prime*1E10;
+  esq_eps_prime10 = esq_eps_prime*1E9;
 #ifdef PARALLEL
   if (numtemps > 1 || numconcs > 1)
     {
@@ -1297,9 +1725,9 @@ int main(int argc, char**argv)
       for (k1 = 0; k1 < numtemps; k1++)
 	for (k2 = 0; k2 < numconcs; k2++)
 	  {
-	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qdna)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cdna_arr[k2]*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
-	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cdna_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cdna_arr[k2]);
-	    printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps, qdna, deltamann, qsalt, csalt);
+	    kD_arr[k1][k2] = sqrt((4.0*M_PI*esq_eps*(1.0/epsr(1.0/beta_arr[k1])))*beta_arr[k1]*(Sqr(qchrom)*2.0*epsr(1.0/beta_arr[k1])*(deltamann/beta_arr[k1])*cchrom_arr[k2]/CHROMmolmass/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E9;
+	    printf("numtemps=%d numconcs=%d kD:%f beta_arr:%f cchrm_arr: %f\n", numtemps, numconcs, kD_arr[k1][k2], beta_arr[k1], cchrom_arr[k2]);
+	    printf("esq_eps: %f qdna=%f deltamann=%f qsalt=%f csalt=%f\n", esq_eps, qchrom, deltamann, qsalt, csalt);
 	    /* 6.0 Angstrom is the closest distance between phosphate charges */
 	    yukcutkD_arr[k1][k2] = yukcut/kD_arr[k1][k2];
 	    yukcutkDsq_arr[k1][k2] = Sqr(yukcutkD_arr[k1][k2]);	
@@ -1324,32 +1752,42 @@ int main(int argc, char**argv)
     }
   else
     {
-      kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+      kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qchrom)*2.0*deltamann*cchrom/CHROMmolmass/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E9;
       /* 6.0 Angstrom is the closest distance between phosphate charges */
       yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
       yukcutkD = yukcut/kD;
       yukcutkDsq = Sqr(yukcutkD);
     }
 #else
-  kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qdna)*2.0*deltamann*cdna*(22.0/24.0)/660.0/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E10;
+  kD = sqrt((4.0*M_PI*esq_eps)*beta*(Sqr(qchrom)*2.0*deltamann*cchrom/CHROMmolmass/Dalton + Sqr(qsalt)*2.0*csalt*Nav*1000.))/1E9;
   /* 6.0 Angstrom is the closest distance between phosphate charges */
   yuk_corr_fact = 1.0;//exp(kD*6.0)/(1.0+kD*6.0);
   yukcutkD = yukcut/kD;
   yukcutkDsq = Sqr(yukcutkD);
 #endif
 #ifdef PARALLEL
-  printf("epsr_prime=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
+  printf("epsr_prime=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in nm^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
 #else
-  printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in Angstrom^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
+  printf("epsr_prime=%f epsr=%f beta=%f deltamanning=%.15G kB=%.15G kD=%.15G (in nm^-1) esq_eps=%.15G esq_eps_prime=%.15G yukcut=%f\n", epsr_prime, epsr(1.0/beta), beta, deltamann, kB, kD, esq_eps, esq_eps_prime, yukcut);
   printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
 #endif
 #endif
+#ifdef CHROM_ELEC
+  CHROMheight=0.34; /* in nm */
+  nat = 2*(rint(lengthHC/CHROMheight)); /* two negative charges (e-) per SSY molecule */
+  CHROMchain = (struct CHROM*) malloc(sizeof(struct CHROM)*nat);
+  for (k=0; k < 2; k++)
+    CHROMs[k] = (struct CHROM*) malloc(sizeof(struct CHROM)*nat);
+#endif
   cont=0;
-#ifdef ELEC
+#ifdef CHROM_ELEC
   nfrarg = 14;
 #else
   nfrarg = 9;
+#endif
+#ifdef CHROM_ELEC
+  build_CHROM_chain(nat);
 #endif
   if (argc == nfrarg)
     {
@@ -1358,14 +1796,14 @@ int main(int argc, char**argv)
       printf("reading file = %s\n", argv[nfrarg-1]);
       while (!feof(fread))
 	{
-#ifdef ELEC
+#ifdef CHROM_ELEC
 	  fscanf(fread, "%lld %lf %lf %lf\n", &ttini, &dummydbl, &vexcl, &vexclel);
 #else
 	  fscanf(fread, "%lld %lf\n", &ttini, &vexcl);
 #endif
 	}
       fclose(fread);
-#ifdef ELEC
+#ifdef CHROM_ELEC
       printf("restarting tt=%lld vexcltot=%.15G vexcl=%.15G vexclel=%.15G\n", ttini, vexcl+vexclel, vexcl, vexclel);
 #else
       printf("restarting tt=%lld vexcl=%.15G\n", ttini, vexcl);
@@ -1374,19 +1812,8 @@ int main(int argc, char**argv)
   else
     {
       vexcl = 0.0;
-#ifdef ELEC
-#ifdef PARALLEL
-      if (numtemps > 1 || numconcs > 1)
-	{
-	  for (k1=0; k1 < numtemps; k1++)
-	    for (k2=0; k2 < numconcs; k2++)
-	      vexclel_arr[k1][k2] = 0.0;
-	}
-      else
-	vexclel = 0.0;
-#else
+#ifdef CHROM_ELEC
       vexclel = 0.0;
-#endif
 #endif
       ttini = 0;
     }
@@ -1395,107 +1822,19 @@ int main(int argc, char**argv)
   /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
   /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
      in our CG model */
-  nat = 70*len;
-  DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*nat); 
-  for (k=0; k < 2; k++)
-    DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*nat);
+  //nat = 1;//70*len;
   //L = 1.05*3.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
   /* read the CG structure */
   cc=0;
-  while (!feof(fin))
-    {
-#ifdef ALBERTA
-      fscanf(fin, "%s %d %s %d %lf %lf %lf ", dummy1, &atnum, atname, &nbnum, &rx, &ry, &rz);
-#else
-      fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
-#endif
-      DNAchain[cc].x = rx;
-      DNAchain[cc].y = ry;
-      DNAchain[cc].z = rz;
-      //printf("cc=%d (%f,%f,%f)\n", cc, rx, ry, rz);
-#ifdef ALBERTA
-      if (!strcmp(atname, "S"))
-	{
-	  DNAchain[cc].rad = 3.5;
-#ifdef ELEC
-	  DNAchain[cc].atype = 0;
-#endif
-	}
-      else if (!strcmp(atname, "P"))
-	{
-	  DNAchain[cc].rad = 3.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 1;
-#endif
-	}
-      else if (!strcmp(atname, "B"))
-	{
-	  DNAchain[cc].rad = 4.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 2;
-#endif
-	}
-#else
-      if (!strcmp(atname, "Xe"))
-	{
-	  DNAchain[cc].rad = 3.5;
-#ifdef ELEC
-	  DNAchain[cc].atype = 0;
-#endif
-	}
-      else if (!strcmp(atname, "B"))
-	{
-	  DNAchain[cc].rad = 3.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 1;
-#endif
-	}
-      else if (!strcmp(atname, "Se"))
-	{
-	  DNAchain[cc].rad = 4.0;
-#ifdef ELEC
-	  DNAchain[cc].atype = 2;
-#endif
-	}
-#endif     
-      else
-	{
-	  printf("Unrecognized atom name, exiting...\n");
-	  exit(1);
-	}
-      cc++;
-      if (cc >= nat)
-	break;
-    };
-  rcmx=rcmy=rcmz=0.0;
-  for (i=0; i < nat; i++)
-    {
-      rcmx += DNAchain[i].x;
-      rcmy += DNAchain[i].y;
-      rcmz += DNAchain[i].z;
-    }
-  rcmx /= (double) nat;
-  rcmy /= (double) nat;
-  rcmz /= (double) nat;
-  for (i=0; i < nat; i++)
-    {
-      DNAchain[i].x -= rcmx;
-      DNAchain[i].y -= rcmy;
-      DNAchain[i].z -= rcmz;
-    }
-  fclose(fin);
-#ifdef PRINC_AXES
-  printf("Aligning DNAD...\n");
-  align_z_axis();
-#endif
+  
   init_distbox();
-  L=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*3.0;
+  L=1.05*2.0*sqrt(Sqr(CHROMall[0].boxsax[0])+Sqr(CHROMall[0].boxsax[1])+Sqr(CHROMall[0].boxsax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2]);
-#ifdef MPI
-  srand48(((int)time(NULL))+my_rank);
-#else
+  printf("box semiaxes=%f %f %f\n", CHROMall[0].boxsax[0], CHROMall[0].boxsax[1], CHROMall[0].boxsax[2]);
+#if 1
   srand48((int)time(NULL));
+#else
+  srand48(0);
 #endif
   sprintf(fnout, "v%d.dat", type);
   factor=0.0;
@@ -1524,7 +1863,7 @@ int main(int argc, char**argv)
   printf("factor=%.15G\n", factor);
   if (cont)
     { 
-#ifdef ELEC
+#ifdef CHORM_ELEC
       if (type == 0)
 	vexclel *= 1E3*((double)ttini)/(L*L*L);
       else if (type==1)
@@ -1548,7 +1887,7 @@ int main(int argc, char**argv)
 	  for (k1=0; k1 < numtemps; k1++)
     	    for (k2=0; k2 < numconcs; k2++)
 	      {
-		sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
+		sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cchrom_arr[k2], 1.0/beta_arr[k1]);
 		fout = fopen(fnout, "w+");
       		fclose(fout);
 	      }
@@ -1587,7 +1926,7 @@ int main(int argc, char**argv)
 #ifdef PARALLEL
   if (numtemps > 1 || numconcs > 1)
     {
-      sigab = DNADs[0][0].rad + DNADs[1][0].rad;
+      sigab = CHROMs[0][0].rad + CHROMs[1][0].rad;
       rab0 = sigab + delta_rab0; 
       rab0sq = Sqr(rab0);
     }
@@ -1614,7 +1953,16 @@ int main(int argc, char**argv)
       for (contrib=0; contrib < ncontrib; contrib++)
 	{
 	  if (type==0||type==1)
-	    orient_onsager(&u1x, &u1y, &u1z, alpha);
+	    {
+	      if (alpha > 0.0)
+		orient_onsager(&u1x, &u1y, &u1z, alpha);
+	      else
+		{
+		  u1x = 0.0;
+		  u1y = 0.0;
+		  u1z = 1.0;
+		}
+	    }
 	  else
 	    {
 	      if (contrib==0||contrib==1)
@@ -1623,8 +1971,8 @@ int main(int argc, char**argv)
 		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
 	    }
 #ifdef QUASIMC
-     	  /* quasi-MC per rcmx, rcmy, rcmz e gamma2, gamma1 rimane random per 
-	   poter fare run indipendenti */
+	  /* quasi-MC per rcmx, rcmy, rcmz e gamma2, gamma1 rimane random per 
+	     poter fare run indipendenti */
 #ifdef USEGSL
 	  gsl_qrng_get (qsob, sv);
 	  //printf("sv=%f %f %f %f %f\n",sv[1], sv[2], sv[3], sv[4], sv[5]);
@@ -1652,9 +2000,15 @@ int main(int argc, char**argv)
 #endif
 	  //if (type==1 && rcmy > 2.0*max2(DNADall[k].sax[0],DNADall[k].sax[1]))
 	  //break;
-	  place_DNAD(0.0, 0.0, 0.0, u1x, u1y, u1z, 0, gamma1);      
+	  place_CHROM(0.0, 0.0, 0.0, u1x, u1y, u1z, 0, gamma1);      
 	  if (type==0)
-	    orient_onsager(&u2x, &u2y, &u2z, alpha);
+	    {
+	      if (alpha == 0.0)
+		orient(&u2x, &u2y, &u2z);
+	      else
+		orient_onsager(&u2x, &u2y, &u2z, alpha);
+	      //printf("u=%f %f %f\n",u2x, u2y, u2z);
+	    }
 	  else
 	    {
 	      if (type==1)
@@ -1672,13 +2026,14 @@ int main(int argc, char**argv)
 		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
 		}
 	    }
-	  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
+	  place_CHROM(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
+	  //place_CHROM(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
 #ifdef DEBUG
 	  exit(-1);
 #endif
 	  /* check overlaps */
 	  overlap=0;
-#ifdef ELEC
+#ifdef CHROM_ELEC
 #ifdef PARALLEL
 	  if (numtemps > 1 || numconcs > 1)
 	    {
@@ -1698,6 +2053,7 @@ int main(int argc, char**argv)
 	  interact = 0;
 #endif
 #endif
+
 #if 0
 	  printf("res=%f\n", calcDistBox());
 
@@ -1710,39 +2066,45 @@ int main(int argc, char**argv)
 #endif
 	  if (calcDistBox() < 0.0)
 	    {
-#if 0
-	      printf("res=%f\n", calcDistBox());
-	      printf("{%f,%f,%f},", DNADall[0].rcm[0], DNADall[0].rcm[1], DNADall[0].rcm[2]);
-	      print_matrix(DNADall[0].R,3);
-	      printf(",{%f,%f,%f},", DNADall[1].rcm[0], DNADall[1].rcm[1], DNADall[1].rcm[2]);
-	      print_matrix(DNADall[1].R,3);
-	      printf(",{%f,%f,%f}\n", DNADall[0].sax[0],DNADall[0].sax[1],DNADall[0].sax[2]);
-	      exit(-1);
-#endif
-#ifdef ELEC
-	      interact = 1;
-#endif
+	      if (calcDistNegHCdiff() < 0.0)
+		{
+		  //printf("qui\n");
+		  overlap = 1;
+		}
+	    }
+#ifdef CHROM_ELEC
+	  if (!overlap)
+	    {
 	      for (i=0; i < nat; i++)
 		{
-		  for (j=0; j < nat; j++)
+		  for (j=i; j < nat; j++)
 		    {
-		      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
-		      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-		      if (distsq < sigijsq)
+		      distsq = Sqr(CHROMs[0][i].x-CHROMs[1][j].x)+Sqr(CHROMs[0][i].y-CHROMs[1][j].y)+
+			Sqr(CHROMs[0][i].z-CHROMs[1][j].z);
+#if 0
+		      if (distsq<0.00001)
 			{
-			  overlap=1;
+			  printf("BOH?!?\n");
+			  exit(-1);
+			}
+#endif
+		      if (distsq <= Sqr(CHROMs[0][i].rad+CHROMs[1][j].rad))
+			{	
+			  overlap = 1;
+			  interact = 0;
 			  break;
 			}
-#ifdef ELEC
-		      /* if they are both phosphate groups we need to calculate electrostatic interaction here */
 #ifdef PARALLEL
+			
 		      if (numtemps > 1 || numconcs > 1)
 			{
 			  yukcutkDsq = maxyukcutkDsq;
 			}
 #endif
-		      if (DNADs[0][i].atype==1 && DNADs[1][j].atype==1 && distsq < yukcutkDsq)
+		      if (distsq < yukcutkDsq)
 			{
+			  interact = 1;
+			  //printf("dist=%f yukcutkDsq=%f uel=%f\n", sqrt(distsq), sqrt(yukcutkDsq),calc_yukawa(i, j, distsq));
 #if 0
 			  if (distsq < Sqr(yukcut/kD))
 			    printf("tt=%lld boh... dist=%f sigij=%f yukcut/kD=%f\n", tt, sqrt(distsq), sqrt(sigijsq), yukcut/kD);
@@ -1783,12 +2145,21 @@ int main(int argc, char**argv)
 			  uel += calc_yukawa(i, j, distsq); 
 #endif
 			}
-#endif
+
+		      /* if no overlap calculate electrostatics contributions */
 		    }
 		  if (overlap)
 		    break;
 		}
 	    }
+#endif
+#if 0
+	  if (overlap && interact)
+	    {
+  	      printf("BOH\n");
+	      exit(-1);
+	    }
+#endif
 	  if (overlap) 
 	    {
 	      if (type==1) 
@@ -1821,17 +2192,17 @@ int main(int argc, char**argv)
 	      else if (type==2) /* K22 */
 		vexcl += -segno*u1x*u2x*rcmy*rcmy;
 	      /* NOTA:per ottenere le seguenti espressioni per K11 e K22 basta considerare l'eq. (10)
-	       del Phys. Rev. A di Straley del 1976, notando che il versore y nel nostro caso diventa il versore
-	       x e che i termini misti (rcmx*rcmy, rcmx*rcmz e rcmy*rcmz) fanno zero per simmetria.
-	       Tale equazione di Straley si ottiene considerando che grad(n.n) = 0 dove n è il versore parallelo al direttore
-	       nematico e che si puo' sempre scegliere n parallelo all'asse z nel centro di massa della prima particella (R1)
-	       e si puo' sempre fare una rotazione intorno all'asse z per annullare i contributi proporzionali a u1y e u2y */
+		 del Phys. Rev. A di Straley del 1976, notando che il versore y nel nostro caso diventa il versore
+		 x e che i termini misti (rcmx*rcmy, rcmx*rcmz e rcmy*rcmz) fanno zero per simmetria.
+		 Tale equazione di Straley si ottiene considerando che grad(n.n) = 0 dove n è il versore parallelo al direttore
+		 nematico e che si puo' sempre scegliere n parallelo all'asse z nel centro di massa della prima particella (R1)
+		 e si puo' sempre fare una rotazione intorno all'asse z per annullare i contributi proporzionali a u1y e u2y */
 	      else if (type == 3) /* K11 */
-	      	vexcl += -segno*u1x*u2x*rcmx*rcmx;
+		vexcl += -segno*u1x*u2x*rcmx*rcmx;
 	      else /* K33 */
-	      	vexcl += -segno*u1x*u2x*rcmz*rcmz;
+		vexcl += -segno*u1x*u2x*rcmz*rcmz;
 	    }
-#ifdef ELEC
+#ifdef CHROM_ELEC
 	  else if (interact)
 	    {
 	      // printf("boh?!? tt=%lld uel=%f\n", tt, uel);	
@@ -1869,10 +2240,10 @@ int main(int argc, char**argv)
 			    vexclel_arr[k1][k2] += (1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			  else if (type==1)
 			    vexclel_arr[k1][k2] += segno*u2x*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2])); /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
-		  	  else if (type==2)
-		  	    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+			  else if (type==2)
+			    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmy*rcmy*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			  else if (type==3)
-		  	    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmx*rcmx*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
+			    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmx*rcmx*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			  else if (type==4)
 			    vexclel_arr[k1][k2] += -segno*u1x*u2x*rcmz*rcmz*(1.0-exp(-beta_arr[k1]*tempfact*uel_arr[k1][k2]));
 			}
@@ -1905,33 +2276,33 @@ int main(int argc, char**argv)
 	      else
 		vexclel += -segno*u1x*u2x*rcmz*rcmz*(1.0-exp(-beta*uel));
 #endif
+	      //printf("vexcl:%f vexclel:%f uel=%f\n", vexcl, vexclel, uel);
 	    }
 #endif
 	}
-
       if (tt > 0 && tt % fileoutits == 0)
 	{
-#ifdef ELEC
+#ifdef CHROM_ELEC
 #ifdef PARALLEL
 	  if (numtemps > 1 || numconcs > 1)
 	    {
 	      for (k1=0; k1 < numtemps; k1++)
 		for (k2=0; k2 < numconcs; k2++)
 		  {
-		    sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cdna_arr[k2], 1.0/beta_arr[k1]);
+		    sprintf(fnout, "v%d_c%.0f_T%.0f.dat", type, cchrom_arr[k2], 1.0/beta_arr[k1]);
 		    fout = fopen(fnout, "a+");
 		    if (type==0)
 		      //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-			      Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt)/1E3);
+		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt), Lx*Ly*Lz*vexcl/((double)tt)/1E3,
+			      Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt));
 		    else if (type==1)
-		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*factor/1E4,
-			      (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*factor,
+			      (Lx*Ly*Lz*vexcl/((double)tt))*factor,
+			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*factor); /* divido per 10^4 per convertire in nm */
 		    else
-		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*Sqr(factor)/1E5,
-			      (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+		      fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel_arr[k1][k2])/((double)tt))*Sqr(factor),
+			      (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor),
+			      (Lx*Ly*Lz*vexclel_arr[k1][k2]/((double)tt))*Sqr(factor)); /* divido per 10^5 per convertire in nm */
 		    fclose(fout);
 		  }
 	    }
@@ -1940,54 +2311,50 @@ int main(int argc, char**argv)
 	      fout = fopen(fnout, "a+");
       	      if (type==0)
 	    	//fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		      	Lx*Ly*Lz*vexclel/((double)tt)/1E3);
+		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt), Lx*Ly*Lz*vexcl/((double)tt),
+		      	Lx*Ly*Lz*vexclel/((double)tt));
 	      else if (type==1)
-		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-			(Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-			(Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor,
+			(Lx*Ly*Lz*vexcl/((double)tt))*factor,
+			(Lx*Ly*Lz*vexclel/((double)tt))*factor); /* divido per 10^4 per convertire in nm */
 	      else
-		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-			(Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-			(Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+		fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor),
+			(Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor),
+			(Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)); /* divido per 10^5 per convertire in nm */
 	      fclose(fout);
       	    }
 #else 
 	  fout = fopen(fnout, "a+");
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt)/1E3, Lx*Ly*Lz*vexcl/((double)tt)/1E3,
-		    Lx*Ly*Lz*vexclel/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, Lx*Ly*Lz*(vexcl+vexclel)/((double)tt), Lx*Ly*Lz*vexcl/((double)tt),
+		    Lx*Ly*Lz*vexclel/((double)tt));
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor/1E4,
-		    (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4,
-		    (Lx*Ly*Lz*vexclel/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*factor,
+		    (Lx*Ly*Lz*vexcl/((double)tt))*factor,
+		    (Lx*Ly*Lz*vexclel/((double)tt))*factor); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor)/1E5,
-		    (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5,
-		    (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	    fprintf(fout,"%lld %.15G %.15G %.15G\n", tt, (Lx*Ly*Lz*(vexcl+vexclel)/((double)tt))*Sqr(factor),
+		    (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor),
+		    (Lx*Ly*Lz*vexclel/((double)tt))*Sqr(factor)); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
 #endif
-#else 
+#else
 	  fout = fopen(fnout, "a+");
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt));
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*factor); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)/1E5); /* divido per 10^5 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))*Sqr(factor)); /* divido per 10^5 per convertire in nm */
 	  fclose(fout);
 #endif
 	}
       if (tt % outits==0)
 	printf("trials: %lld/%lld\n", tt, tot_trials);
     }
-
 #if defined(QUASIMC) && defined(USEGSL)
   gsl_qrng_free (qsob);   
-#endif
-#ifdef MPI
-  MPI_Finalize();
 #endif
 }

@@ -1,11 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 char line[16384];
 char par[16384], val[16384];
 int main(int argc, char **argv)
 {
   int numat, parnum;
-  double rx, ry, rz, rCMx, rCMy, rCMz, R[3][3], L, Lnew;
+  double rx, ry, rz, rCMx, rCMy, rCMz, R[3][3], L, Lnew, scalfact=1.0;
   double vx, vy, vz, wx, wy, wz;
   FILE *f;
   long pos;
@@ -19,6 +20,9 @@ int main(int argc, char **argv)
   f = fopen(argv[1],"r");
   numat = 0;
   fact=atoi(argv[2]);
+  if (argc == 4)
+    scalfact=atof(argv[3]);
+
   fact3=fact*fact*fact;
   for (;numat < 2;)
     {
@@ -42,6 +46,11 @@ int main(int argc, char **argv)
       else
 	printf("%s\n", line);
     }
+  if (scalfact > 1.0)
+    {
+      L *= scalfact;
+    }
+
   Lnew = L*fact;
   pos = ftell(f);
  
@@ -72,10 +81,20 @@ int main(int argc, char **argv)
 	    {
 	      for (jz = 0; jz < fact; jz++)
 		{
-		  printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
-			 rx+L*jx-rCMx, ry+L*jy-rCMy, rz+L*jz-rCMz,
-			 R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
-			 R[2][0], R[2][1], R[2][2], type); 
+		  if (scalfact > 1.0)
+		    {
+		      printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
+			     scalfact*rx+L*jx-rCMx, scalfact*ry+L*jy-rCMy, scalfact*rz+L*jz-rCMz,
+			     R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
+		    	     R[2][0], R[2][1], R[2][2], type); 
+		    }
+		  else
+		    {
+		      printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
+		    	     rx+L*jx-rCMx, ry+L*jy-rCMy, rz+L*jz-rCMz,
+		    	     R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
+		    	     R[2][0], R[2][1], R[2][2], type); 
+		    }
 		}
 	    }
 	}

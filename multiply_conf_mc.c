@@ -1,8 +1,90 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 char line[16384];
 char par[16384], val[16384];
 int factx, facty, factz;
+double ex_x=1.0, ex_y=1.0, ex_z=1.0;
+char inputfile[1024];
+void print_usage(void)
+{
+  printf("multiply_conf_mc [--expand|-ex <val>][--exp-x|-ex <val>] [--exp-y|-ey <val>] [--exp-z|-ez <val>] <conf file> <fact_x> <fact_y> <fact_z>\n");
+  exit(0);
+}
+int parse_param(int argc, char** argv)
+{
+  int extraparam=0;  
+  int cc=1;
+  //printf("argc==%d\n", argc);	
+  if (argc==1)
+    {
+      print_usage();
+      exit(1);
+    }
+  while (cc < argc)
+    {
+      //printf("argc=%d argv[argc]=%s cc=%d\n", argc, argv[cc], cc);
+      if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
+	{
+	  print_usage();
+	}
+      else if (!strcmp(argv[cc],"--expand")||!strcmp(argv[cc],"-ea"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  ex_x = ex_y = ex_z = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--expandx")||!strcmp(argv[cc],"-ex"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  ex_x = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--expandx")||!strcmp(argv[cc],"-ey"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  ex_y = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--expandz")||!strcmp(argv[cc],"-ez"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  ex_z = atof(argv[cc]);
+	}
+      else if (cc==argc|| extraparam==4)
+	print_usage();
+      else if (extraparam == 0)
+	{
+	  extraparam++;
+	  strcpy(inputfile,argv[cc]);
+	}
+      else if (extraparam==1)
+	{
+	  extraparam++;
+	  factx=facty=factz=atof(argv[cc]);
+	}
+      else if (extraparam==2)
+	{
+	  extraparam++;
+	  facty=atof(argv[cc]);
+	}
+      else if (extraparam==3)
+	{
+	  extraparam++;
+	  factz=atof(argv[cc]);
+	}
+      else 
+	print_usage();
+      cc++;
+    }
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
   int numat, parnum;
@@ -12,30 +94,14 @@ int main(int argc, char **argv)
   long pos;
   int type, jx, jy, jz, i, k1, k2;
   int fact, fact3;
-  f = fopen(argv[1],"r");
+  parse_param(argc, argv);
+  f = fopen(inputfile,"r");
   while (!feof(f))
     fscanf(f, "%[^\n] ", line);
   sscanf(line, "%lf %lf %lf\n", &Lx, &Ly, &Lz);
   fclose(f);
-  f = fopen(argv[1],"r");
+  f = fopen(inputfile,"r");
   numat = 0;
-  if (argc==3)
-    {
-      factx = facty = factz =atoi(argv[2]);
-
-    }
-  else if (argc==5)
-    {
-      factx = atoi(argv[2]);
-      facty = atoi(argv[3]);
-      factz = atoi(argv[4]); 
-    }
-  else 
-    {
-      printf("multiply_conf_mc <conf file> <fact_x> <fact_y> <fact_z>\n");
-      exit-(1);
-    }
-  
   fact3 = factx*facty*factz;
 	
   for (;numat < 2;)
@@ -61,6 +127,12 @@ int main(int argc, char **argv)
 	printf("%s\n", line);
     }
 
+  if (ex_x > 1.0)
+    Lx*= ex_x; 
+  if (ex_y > 1.0) 
+    Ly*= ex_y;
+  if (ex_z > 1.0)
+    Lz*= ex_z;
   Lxnew = Lx*factx;
   Lynew = Ly*facty;
   Lznew = Lz*factz;
@@ -93,10 +165,16 @@ int main(int argc, char **argv)
 	    {
 	      for (jz = 0; jz < factz; jz++)
 		{
-		  printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
-			 rx+Lx*jx-rCMx, ry+Ly*jy-rCMy, rz+Lz*jz-rCMz,
-			 R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
-			 R[2][0], R[2][1], R[2][2], type); 
+		  if (ex_x > 1.0 || ex_y > 1.0 || ex_z > 1.0)
+		    printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
+			   ex_x*rx+Lx*jx-rCMx, ex_y*ry+Ly*jy-rCMy, ex_z*rz+Lz*jz-rCMz,
+			   R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
+			   R[2][0], R[2][1], R[2][2], type); 
+		  else
+		    printf("%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n",
+			   rx+Lx*jx-rCMx, ry+Ly*jy-rCMy, rz+Lz*jz-rCMz,
+			   R[0][0], R[0][1], R[0][2], R[1][0], R[1][1], R[1][2], 
+			   R[2][0], R[2][1], R[2][2], type); 
 		}
 	    }
 	}
