@@ -1,20 +1,35 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
-const int Npart=8000;
+const int Npart=1408;
+const double Lbox=9.754458;
 char line[2048];
 void writehdr(FILE *f)
 {
   fprintf(f, "@@@\n");
-  fprintf(f, "parnum: 8000\n");
+  fprintf(f, "parnum: %d\n", Npart);
+  fprintf(f, "ntypes: 1\n");
+  fprintf(f, "ninters: 3\n");
+  fprintf(f, "nintersIJ: 0\n");
   fprintf(f, "@@@\n");
+  fprintf(f, "%d", Npart);
+  fprintf(f, "0.17 0.55 0.55\n");
+  fprintf(f, "2 2 2\n");
+  fprintf(f, "1 1 1 1 2 0\n");
+  fprintf(f, "2 0\n");
+  fprintf(f, "0.18 0 0 0.3\n");
+  fprintf(f, "-0.18 0 0 0.3\n");
+  fprintf(f, "0 0 0 0 1 0 0 100000\n");
+  fprintf(f, "0 0 0 1 1 0 0 100000\n");
+  fprintf(f, "0 1 0 1 1 0 0 100000\n");
+
   fprintf(f, "@@@\n");
 }
 int main(int argc, char**argv)
 {
   char fname[1024], fon[1024];
   double rx, ry, rz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz;
-  int cc=0;
+  int cc=0, t;
   FILE *f, *fo;
   if (argc<2)
     {
@@ -40,11 +55,12 @@ int main(int argc, char**argv)
 	}
       else
 	{
-	  sscanf(line,"%lf %lf %lf %lf %lf %lf\n", &rx, &ry, &rz, &uxx, &uxy, &uxz, &ayx, &uyy, &uyz,
-		 &uzx, &uzy, &uzz);
-	  fprintf(fo, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n", rx, ry, rz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz);
+	  sscanf(line,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n", &rx, &ry, &rz, &uxx, &uxy, &uxz, &uyx, &uyy, &uyz,
+		 &uzx, &uzy, &uzz, &t);
+	  fprintf(fo, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n", rx, ry, rz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, t);
 	}
     }
+  fprintf(fo, "%.15G %.15G %.15G\n", Lbox, Lbox, Lbox);
   fclose(fo);
   fclose(f);
   exit(0);
