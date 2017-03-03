@@ -11,8 +11,9 @@ void writehdr(FILE *f)
   fprintf(f, "ntypes: 1\n");
   fprintf(f, "ninters: 3\n");
   fprintf(f, "nintersIJ: 0\n");
+  fprintf(f, "saveBonds: 0\n");
   fprintf(f, "@@@\n");
-  fprintf(f, "%d", Npart);
+  fprintf(f, "%d\n", Npart);
   fprintf(f, "0.17 0.55 0.55\n");
   fprintf(f, "2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
