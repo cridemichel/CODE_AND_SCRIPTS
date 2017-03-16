@@ -187,7 +187,7 @@ void readconfBonds(char *fname, double *ti, double *refTime, int NP, double *r[3
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *DR[3], double *R[3][3])
 {
   FILE *f;
-  static first=1;
+  static int first=1;
   int nat=0, i, cpos, j;
   f = fopen(fname, "r");
   while (!feof(f) && nat < 3) 
@@ -1615,6 +1615,7 @@ int main(int argc, char **argv)
     }
   for (nr1 = 0; nr1 < nfiles; nr1++)
     {	
+      //printf("filename=%s\n", fname[nr1]);
       if (saveBonds)
 	{
 	  for (i = 0; i < NP; i++)
@@ -1980,7 +1981,7 @@ int main(int argc, char **argv)
 		  else
 		    nspots[i] = 3;		
 		}
-	      else if (particles_type == 2);
+	      else if (particles_type == 2)
 		{
 		  if (i < NPA)
 		    nspots[i] = 1;
@@ -2340,6 +2341,7 @@ int main(int argc, char **argv)
       for (i = 1; i < NP; i++)
 	{
 	  if (clssizedstAVG[i] != 0.0)
+	    //fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i]));
 	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
 	}
     }

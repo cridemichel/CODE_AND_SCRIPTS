@@ -859,6 +859,8 @@ int main(int argc, char **argv)
   dk[2] = k13max[2]/((double)npoints[2]);
   printf("kmax13=%f %f npoints13= %d %d dk13=%f %f\n", k13max[0], k13max[2], npoints[0], npoints[2], dk[0], dk[2]);
 #endif
+#ifdef FIXED_Z
+#endif
   accQsq13 = malloc(sizeof(double*)*(npoints[0]+1));
   accQsq23 = malloc(sizeof(double*)*(npoints[0]+1));
   nbins =    malloc(sizeof(double*)*(npoints[0]+1));
