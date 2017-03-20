@@ -390,8 +390,14 @@ double max3(double a, double b, double c)
 }
 double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
 int eigenvectors=1;
-double S=0, Q[3][3], reQ[3][3], imQ[3][3], reQ13[3][3], imQ13[3][3], **accQsq13, **accQsq23;
+double S=0, Q[3][3], reQ[3][3], imQ[3][3], reQ13[3][3], imQ13[3][3];
+#ifdef NO_BINNING
+double ***accQsq13, ***accQsq23;
+double ***nbins;
+#else 
+double **accQsq13, **accQsq23;
 double **nbins;
+#endif
 void diagonalize(double M[3][3], double ev[3])
 {
   double a[9], work[45];
@@ -627,7 +633,7 @@ int main(int argc, char **argv)
 {
   FILE *f, *f2, *f1;
   int binx, biny, binz;
-  int k, nf=0, i, a, b, nat, NN, j, ii, bin, binParaAv, binPerpAv;
+  int k, kk, nf=0, i, a, b, nat, NN, j, ii, bin, binParaAv, binPerpAv;
   double rx, ry, rz, norm, g0para, g0perp, minpara, maxpara, minperp, maxperp;
   double r, delr, tref=0.0, Dx[3], DxNem[3], *g0, **g0Perp, **g0Parall, *g0ParaAv, *g0PerpAv,
 	 g0m, distSq, rlower, rupper, cost, nIdeal, costParaAv, costPerpAv, kmax;
@@ -859,8 +865,33 @@ int main(int argc, char **argv)
   dk[2] = k13max[2]/((double)npoints[2]);
   printf("kmax13=%f %f npoints13= %d %d dk13=%f %f\n", k13max[0], k13max[2], npoints[0], npoints[2], dk[0], dk[2]);
 #endif
-#ifdef FIXED_Z
-#endif
+#ifdef NO_BINNING
+  printf("nmax= %d %d %d\n", nmax[0], nmax[1], nmax[2]);
+  accQsq13 = malloc(sizeof(double**)*(nmax[0]+1));
+  accQsq23 = malloc(sizeof(double**)*(nmax[0]+1));
+  nbins =    malloc(sizeof(double**)*(nmax[0]+1));
+  for (k=0; k < nmax[0]+1; k++) 
+    {
+      accQsq13[k] = malloc(sizeof(double*)*(nmax[1]+1));
+      accQsq23[k] = malloc(sizeof(double*)*(nmax[1]+1)); 
+      nbins[k]    = malloc(sizeof(double*)*(nmax[1]+1));
+      for (kk=0; kk < nmax[1]+1; kk++) 
+	{
+	  accQsq13[k][kk] = malloc(sizeof(double)*(nmax[2]+1));
+	  accQsq23[k][kk] = malloc(sizeof(double)*(nmax[2]+1)); 
+	  nbins[k][kk] = malloc(sizeof(double)*(nmax[2]+1));
+	}
+    }
+ 
+  for (nv[0] = 0; nv[0] <= nmax[0]; (nv[0])++)
+    for (nv[1] = 0; nv[1] <= nmax[1]; (nv[1])++)
+      for (nv[2] = 0; nv[2] <= nmax[2]; (nv[2])++)
+	{
+	  accQsq13[nv[0]][nv[1]][nv[2]] = 0.0;
+	  accQsq23[nv[0]][nv[1]][nv[2]] = 0.0;
+	  nbins[nv[0]][nv[1]][nv[2]] = 0.0;
+	}
+#else
   accQsq13 = malloc(sizeof(double*)*(npoints[0]+1));
   accQsq23 = malloc(sizeof(double*)*(npoints[0]+1));
   nbins =    malloc(sizeof(double*)*(npoints[0]+1));
@@ -877,7 +908,7 @@ int main(int argc, char **argv)
 	accQsq23[nv[0]][nv[2]] = 0.0;
 	nbins[nv[0]][nv[2]] = 0.0;
       }
-
+#endif
   nf = 0;
   rewind(f2);
   while (!feof(f2))
@@ -992,13 +1023,25 @@ int main(int argc, char **argv)
 			  }
 		      }
 
+#ifdef NO_BINNING
+		  accQsq13[nv[0]][nv[1]][nv[2]] += Sqr(reQ13[0][2])+Sqr(imQ13[0][2]);
+		  accQsq23[nv[0]][nv[1]][nv[2]] += Sqr(reQ13[1][2])+Sqr(imQ13[1][2]);
+		  nbins[nv[0]][nv[1]][nv[2]] += 1.0;
+#else
 		  accQsq13[n13x][n13z] += Sqr(reQ13[0][2])+Sqr(imQ13[0][2]);
 		  accQsq23[n13x][n13z] += Sqr(reQ13[1][2])+Sqr(imQ13[1][2]);
 		  nbins[n13x][n13z] += 1.0;
+#endif
+#else
+#ifdef NO_BINNING
+		  accQsq13[nv[0]][nv[1]][nv[2]] += Sqr(reQ13[0][2])+Sqr(imQ13[0][2]);
+		  accQsq23[nv[0]][nv[1]][nv[2]] += Sqr(reQ13[1][2])+Sqr(imQ13[1][2]);
+		  nbins[nv[0]][nv[1]][nv[2]] += 1.0;
 #else
 		  accQsq13[n13x][n13z] += Sqr(reQ[0][2])+Sqr(imQ[0][2]);
 		  accQsq23[n13x][n13z] += Sqr(reQ[1][2])+Sqr(imQ[1][2]);
 		  nbins[n13x][n13z] += 1.0;
+#endif
 #endif
 		  //printf("n13x=%d n13z=%d acc13=%f acc23=%f\n", n13x, n13z, accQsq13[n13x][n13z], accQsq23[n13x][n13z]);
 #if 0
@@ -1014,6 +1057,22 @@ int main(int argc, char **argv)
     }
   fclose(f2);	
   //printf("eccolo acc13=%f acc23=%f\n", accQsq13[119][49], accQsq23[119][49]);
+#ifdef NO_BINNING
+  for (nv[0] = 0; nv[0] < nmax[0]; (nv[0])++)
+    for (nv[1] = 0; nv[1] < nmax[1]; (nv[1])++)
+      for (nv[2] = 0; nv[2] < nmax[2]; (nv[2])++)
+	{
+	  if (nbins[nv[0]][nv[1]][nv[2]] > 0)
+	    {
+	      accQsq13[nv[0]][nv[1]][nv[2]] /= nbins[nv[0]][nv[1]][nv[2]];
+	      accQsq23[nv[0]][nv[1]][nv[2]] /= nbins[nv[0]][nv[1]][nv[2]];
+	    }
+	  //printf("eccolo acc13=%f acc23=%f\n", accQsq13[nv[0]][nv[2]], accQsq23[nv[0]][nv[2]]);
+	  //if (nv[0]==119&&nv[2]==49)
+	  //printf("eccolo2 acc13=%f acc23=%f\n", accQsq13[119][49], accQsq23[119][49]);
+	}
+
+#else
   for (nv[0] = 0; nv[0] < npoints[0]; (nv[0])++)
     for (nv[2] = 0; nv[2] < npoints[2]; (nv[2])++)
       {
@@ -1026,11 +1085,27 @@ int main(int argc, char **argv)
 	//if (nv[0]==119&&nv[2]==49)
 	//printf("eccolo2 acc13=%f acc23=%f\n", accQsq13[119][49], accQsq23[119][49]);
       }
-
+#endif
   //printf("eccolo3 acc13=%f acc23=%f\n", accQsq13[119][49], accQsq23[119][49]);
   f = fopen("Welconst.dat", "w+");
   S/=((double)nf);
   printf("S=%f\n", S);
+#ifdef NO_BINNING
+  for (nv[0] = 0; nv[0] < npoints[0]; (nv[0])++)
+    for (nv[1] = 0; nv[1] < npoints[1]; (nv[1])++)
+      for (nv[2] = 0; nv[2] < npoints[2]; (nv[2])++)
+	{
+	  build_ref_system(kv, &k13x, &k13z);
+
+#ifndef SQ_BINNING
+	  if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
+	    fprintf(f, "%f %f %f %f %.0f\n", k13x, k13z, Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
+#else 
+	  if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
+	    fprintf(f, "%f %f %f %f %.0f\n", Sqr(k13x), Sqr(k13z), Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
+#endif
+	}  
+#else
   for (nv[0] = 0; nv[0] < npoints[0]; (nv[0])++)
     for (nv[2] = 0; nv[2] < npoints[2]; (nv[2])++)
       {
@@ -1058,6 +1133,7 @@ int main(int argc, char **argv)
 	//else 
 	  //printf("nv[0]=%d nv[2]=%d k13x=%f k13z=%f is zero!\n", nv[0], nv[2], k13x, k13z);
       }  
+#endif
   fclose(f);
   return 1;
 }
