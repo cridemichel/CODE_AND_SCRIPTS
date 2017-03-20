@@ -944,7 +944,7 @@ int main(int argc, char **argv)
 	      /* ********* */
 	      build_ref_system(kv, &k13x, &k13z);
 //printf("qui\n");
-
+#ifndef NO_BINNING
 #ifdef SQ_BINNING
 #ifdef USE_RINT
 	      n13x = rint(Sqr(k13x)/dksq[0]);
@@ -962,6 +962,7 @@ int main(int argc, char **argv)
 	      n13z = ((int) (fabs(k13z)/dk[2]));
 #endif
 #endif
+#endif
 #if 0
       	      if (nv[0]==15 && nv[1]==0 && nv[2]==0)
       		{
@@ -975,14 +976,24 @@ int main(int argc, char **argv)
 		  printf("k13x=%f k13z=%f\n", Sqr(k13x), Sqr(k13z));
 		}
 #endif
+#ifndef NO_BINNING
 	      if (n13x < 0 || n13z < 0)
 		{
 		  //printf("BOH\n");
 		}
+	      if (n13x > npoints[0] || n13z > npoints[2])
+		{
+		  //printf("BOH n13x=%d n13z=%d\n", n13x, n13z);
+		}
+#endif
+#ifndef NO_BINNING
 	      if (n13x < npoints[0] && n13z < npoints[2] && n13x >= 0 && n13z >=0 )
 		{
+#endif
 		  calc_fourier_Q(kv);
 //printf("qui2 n13x=%d n13z=%d reQ[0][2]=%f imQ[0][2]=%f\n", n13x, n13z, Sqr(reQ[0][2])+Sqr(imQ[0][2]),Sqr(reQ[1][2])+Sqr(imQ[1][2]));
+		  //printf("qui2 kv=%f %f %f reQ[0][2]=%f imQ[0][2]=%f\n", kv[0], kv[1], kv[2], Sqr(reQ[0][2])+Sqr(imQ[0][2]),Sqr(reQ[1][2])+Sqr(imQ[1][2]));
+
 #ifdef TRANSFORM_Q
 		  for (k1=0; k1 < 3; k1++)
 		    {
@@ -1034,8 +1045,11 @@ int main(int argc, char **argv)
 #endif
 #else
 #ifdef NO_BINNING
-		  accQsq13[nv[0]][nv[1]][nv[2]] += Sqr(reQ13[0][2])+Sqr(imQ13[0][2]);
-		  accQsq23[nv[0]][nv[1]][nv[2]] += Sqr(reQ13[1][2])+Sqr(imQ13[1][2]);
+		  accQsq13[nv[0]][nv[1]][nv[2]] += Sqr(reQ[0][2])+Sqr(imQ[0][2]);
+		  accQsq23[nv[0]][nv[1]][nv[2]] += Sqr(reQ[1][2])+Sqr(imQ[1][2]);
+		  //printf("qui2 kv=%f %f %f reQ[0][2]=%f imQ[0][2]=%f\n", kv[0], kv[1], kv[2], Sqr(reQ[0][2])+Sqr(imQ[0][2]),Sqr(reQ[1][2])+Sqr(imQ[1][2]));
+
+		  //printf("acc %f %f\n", accQsq13[nv[0]][nv[1]][nv[2]], accQsq23[nv[0]][nv[1]][nv[2]]);
 		  nbins[nv[0]][nv[1]][nv[2]] += 1.0;
 #else
 		  accQsq13[n13x][n13z] += Sqr(reQ[0][2])+Sqr(imQ[0][2]);
@@ -1051,7 +1065,9 @@ int main(int argc, char **argv)
 		    }
 #endif
 //printf("qui3\n");
+#ifndef NO_BINNING
 		}
+#endif
 	      //printf("acc13=%f acc23=%f\n", accQsq13[119][49], accQsq23[119][49]);
 	    }
     }
@@ -1091,18 +1107,25 @@ int main(int argc, char **argv)
   S/=((double)nf);
   printf("S=%f\n", S);
 #ifdef NO_BINNING
-  for (nv[0] = 0; nv[0] < npoints[0]; (nv[0])++)
-    for (nv[1] = 0; nv[1] < npoints[1]; (nv[1])++)
-      for (nv[2] = 0; nv[2] < npoints[2]; (nv[2])++)
+  for (nv[0] = 0; nv[0] <= nmax[0]; (nv[0])++)
+    for (nv[1] = 0; nv[1] <= nmax[1]; (nv[1])++)
+      for (nv[2] = 0; nv[2] <= nmax[2]; (nv[2])++)
 	{
+      	  if (nv[0]==0 && nv[1]==0 && nv[2]==0)
+	    continue;
+	  for (k=0; k < 3; k++)
+	    kv[k] = twopiL[k]*nv[k]; 
 	  build_ref_system(kv, &k13x, &k13z);
+	if (nbins[nv[0]][nv[1]][nv[2]]==0)
+	  printf("BOH... %d %d %d\n", nv[0], nv[1], nv[2]);
 
+      	//printf("nbins=%f\n", nbins[nv[0]][nv[1]][nv[2]]);
 #ifndef SQ_BINNING
-	  if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
-	    fprintf(f, "%f %f %f %f %.0f\n", k13x, k13z, Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
+	//if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
+	fprintf(f, "%f %f %f %f %.0f\n", k13x, k13z, Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
 #else 
-	  if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
-	    fprintf(f, "%f %f %f %f %.0f\n", Sqr(k13x), Sqr(k13z), Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
+	//if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
+	fprintf(f, "%f %f %f %f %.0f\n", Sqr(k13x), Sqr(k13z), Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
 #endif
 	}  
 #else
