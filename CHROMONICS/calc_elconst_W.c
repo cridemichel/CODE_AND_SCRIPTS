@@ -454,6 +454,9 @@ void build_ref_system(double kv[3], double *k13x, double *k13z)
       vecx[0]=0;
       vecx[1]=0;
       vecx[2]=1;
+      vectProdVec(vecz, vecx, vecy);
+      *k13x = 0;
+      return;
     }
   else
     {
