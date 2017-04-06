@@ -1077,9 +1077,9 @@ int main(int argc, char **argv)
   fclose(f2);	
   //printf("eccolo acc13=%f acc23=%f\n", accQsq13[119][49], accQsq23[119][49]);
 #ifdef NO_BINNING
-  for (nv[0] = 0; nv[0] < nmax[0]; (nv[0])++)
-    for (nv[1] = 0; nv[1] < nmax[1]; (nv[1])++)
-      for (nv[2] = 0; nv[2] < nmax[2]; (nv[2])++)
+  for (nv[0] = 0; nv[0] <= nmax[0]; (nv[0])++)
+    for (nv[1] = 0; nv[1] <= nmax[1]; (nv[1])++)
+      for (nv[2] = 0; nv[2] <= nmax[2]; (nv[2])++)
 	{
 	  if (nbins[nv[0]][nv[1]][nv[2]] > 0)
 	    {
@@ -1125,10 +1125,10 @@ int main(int argc, char **argv)
       	//printf("nbins=%f\n", nbins[nv[0]][nv[1]][nv[2]]);
 #ifndef SQ_BINNING
 	//if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
-	fprintf(f, "%f %f %f %f %.0f\n", k13x, k13z, Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
+	fprintf(f, "%f %f %f %f %.0f %d %d %d\n", k13x, k13z, Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]], nv[0], nv[1], nv[2]);
 #else 
 	//if (nbins[nv[0]][nv[1]][nv[2]] > minbins)
-	fprintf(f, "%f %f %f %f %.0f\n", Sqr(k13x), Sqr(k13z), Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]]);
+	fprintf(f, "%f %f %f %f %.0f %d %d %d\n", Sqr(k13x), Sqr(k13z), Sqr(S)*V*9.0/accQsq13[nv[0]][nv[1]][nv[2]]/4.0, Sqr(S)*V*9.0/accQsq23[nv[0]][nv[1]][nv[2]]/4.0, nbins[nv[0]][nv[1]][nv[2]], nv[0], nv[1], nv[2]);
 #endif
 	}  
 #else
