@@ -84,13 +84,6 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
  
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
-#ifdef MC_BENT_DBLCYL
-  /* add a random rotation around the axis (ox, oy, oz) */
-  add_rotation_around_axis(ox, oy, oz, R, Rout);
-  for (k1=0; k1 < 3; k1++)
-    for (k2=0; k2 < 3; k2++)
-      R[k1][k2] = Rout[k1][k2];
-#endif
 #if 0
   for (k1=0; k1 < 3 ; k1++)
     for (k2=0; k2 < 3 ; k2++)
@@ -150,6 +143,7 @@ int main(int argc, char**argv)
 	  sscanf(line,"%lf %lf %lf %lf %lf %lf\n", &rx, &ry, &rz,  &ox, &oy, &oz);
 	  versor_to_R(ox,oy,oz, R);
 	  R2u();
+	  t=0;
 	  fprintf(fo, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n", rx, ry, rz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, t);
 	}
     }

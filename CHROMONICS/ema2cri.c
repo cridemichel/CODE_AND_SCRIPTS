@@ -2,7 +2,7 @@
 #include<stdio.h>
 #include<string.h>
 const int Npart=1408;
-const double Lbox=9.754458;
+const double Lbox=8.252567086;
 char line[2048];
 void writehdr(FILE *f)
 {
