@@ -1521,6 +1521,7 @@ void build_CHROM_chain(int nat)
 #endif
 int main(int argc, char**argv)
 {
+  double aaa;
 #ifdef QUASIMC
 #ifdef USEGSL
   gsl_qrng *qsob;
@@ -2192,10 +2193,11 @@ int main(int argc, char**argv)
 		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else if (type==2) /* K22 */
 		{
-		  vexcl += -segno*u1x*u2x*rcmy*rcmy;
-#ifndef CHOLESTERIC
-		  vexcl += -segno*u1y*u2y*rcmx*rcmx - segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
-#endif
+		  /* il secondo contributo è equivalente al primo poiché posso scambiare gli assi x e y, quindi lo uso 
+		   * per mediare */
+		  aaa = - segno*u1x*u2x*rcmy*rcmy - segno*u1y*u2y*rcmx*rcmx;// - segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
+		  //aaa = - segno*u1x*u2x*rcmy*rcmy;
+		  vexcl += aaa/2.0;
 		}
 	      /* NOTA:per ottenere le seguenti espressioni per K11 e K22 basta considerare l'eq. (10)
 		 del Phys. Rev. A di Straley del 1976, notando che il versore y nel nostro caso diventa il versore
@@ -2208,17 +2210,14 @@ int main(int argc, char**argv)
 		 */
 	      else if (type == 3) /* K11 */
 		{
-		  vexcl += -segno*u1x*u2x*rcmx*rcmx;
-#ifndef CHOLESTERIC
-		  vexcl += -segno*u1y*u2y*rcmy*rcmy - segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
-#endif
+		  /* il secondo contributo è equivalente al primo poiché posso scambiare gli assi x e y, quindi lo uso 
+		   * per mediare */
+		  aaa = -segno*u1x*u2x*rcmx*rcmx - segno*u1y*u2y*rcmy*rcmy;//- segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
+		  vexcl += aaa/2.0;
 		}
 	      else /* K33 */
 		{
-		  vexcl += -segno*u1x*u2x*rcmz*rcmz;
-#ifndef CHOLESTERIC
-		  vexcl += -segno*u1y*u2y*rcmz*rcmz;
-#endif
+		  vexcl += (-segno*u1x*u2x*rcmz*rcmz - segno*u1y*u2y*rcmz*rcmz)/2.0;
 		}
 	    }
 #ifdef CHROM_ELEC
