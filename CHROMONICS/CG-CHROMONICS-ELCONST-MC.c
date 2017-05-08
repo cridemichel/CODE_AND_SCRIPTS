@@ -1413,6 +1413,7 @@ void init_distbox(void)
   int i, k;
   double max_x, max_y, max_z, distx, disty, distz;
   max_x = 0.5*lengthHC;
+  //printf("max_x=%f len=%f\n", max_x, lengthHC);
   max_y = 0.5*diamHC;
   max_z = 0.5*diamHC;
 #ifdef CHROM_ELEC
@@ -1558,6 +1559,7 @@ int main(int argc, char**argv)
   type = atoi(argv[5]);
   fileoutits = atoll(argv[6]);
  
+  CHROMheight=0.34; /* in nm */
   lengthHC *= CHROMheight; 
   if (argc == 7)
     outits=100*fileoutits;
@@ -1774,7 +1776,6 @@ int main(int argc, char**argv)
 #endif
 #endif
 #ifdef CHROM_ELEC
-  CHROMheight=0.34; /* in nm */
   nat = 2*(rint(lengthHC/CHROMheight)); /* two negative charges (e-) per SSY molecule */
   CHROMchain = (struct CHROM*) malloc(sizeof(struct CHROM)*nat);
   for (k=0; k < 2; k++)
@@ -2190,17 +2191,35 @@ int main(int argc, char**argv)
 	      else if (type==1)
 		vexcl += segno*u2x*rcmy; /* questo '-' rende negativa la k2 e viene dalla derivata della funzione di Onsager! */
 	      else if (type==2) /* K22 */
-		vexcl += -segno*u1x*u2x*rcmy*rcmy;
+		{
+		  vexcl += -segno*u1x*u2x*rcmy*rcmy;
+#ifndef CHOLESTERIC
+		  vexcl += -segno*u1y*u2y*rcmx*rcmx - segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
+#endif
+		}
 	      /* NOTA:per ottenere le seguenti espressioni per K11 e K22 basta considerare l'eq. (10)
 		 del Phys. Rev. A di Straley del 1976, notando che il versore y nel nostro caso diventa il versore
 		 x e che i termini misti (rcmx*rcmy, rcmx*rcmz e rcmy*rcmz) fanno zero per simmetria.
 		 Tale equazione di Straley si ottiene considerando che grad(n.n) = 0 dove n è il versore parallelo al direttore
 		 nematico e che si puo' sempre scegliere n parallelo all'asse z nel centro di massa della prima particella (R1)
-		 e si puo' sempre fare una rotazione intorno all'asse z per annullare i contributi proporzionali a u1y e u2y */
+		 e si puo' sempre fare una rotazione intorno all'asse z per annullare i contributi proporzionali a u1y e u2y.
+		 Le espressioni che ottenute da Straley vanno bene per colesterici, se si tratta di sistemi nematici 
+		 si devono anche considerare i termini nell'espressione di Frank che si ottengono derivando ny. 
+		 */
 	      else if (type == 3) /* K11 */
-		vexcl += -segno*u1x*u2x*rcmx*rcmx;
+		{
+		  vexcl += -segno*u1x*u2x*rcmx*rcmx;
+#ifndef CHOLESTERIC
+		  vexcl += -segno*u1y*u2y*rcmy*rcmy - segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
+#endif
+		}
 	      else /* K33 */
-		vexcl += -segno*u1x*u2x*rcmz*rcmz;
+		{
+		  vexcl += -segno*u1x*u2x*rcmz*rcmz;
+#ifndef CHOLESTERIC
+		  vexcl += -segno*u1y*u2y*rcmz*rcmz;
+#endif
+		}
 	    }
 #ifdef CHROM_ELEC
 	  else if (interact)
