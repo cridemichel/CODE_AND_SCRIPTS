@@ -1,6 +1,5 @@
 #include<mdsimul.h>
-#undef DEBUG_HCMC
-
+//#define DEBUG_HCMC
 #ifdef MC_BOND_POS
 void update_spot_pos(int i, double dx, double dy, double dz);
 void update_spot_pos_dir(int i, int dir, double fact);
@@ -3132,9 +3131,9 @@ int overlapMC_LL(int ip, int *err)
 #endif
 		      if (check_overlap(na, n, shift, err)<0.0)
 			{
-			  //printf("checking i=%d j=%d: ", na, n);
-			  //printf("overlap!\n");
 #ifdef DEBUG_HCMC
+			  printf("checking i=%d j=%d: ", na, n);
+			  printf("overlap!\n");
 			  if (dostorebump)
 			    store_bump(na, n);
 #endif
@@ -4458,6 +4457,36 @@ double calc_elastic_torsional_energy(int ip)
 #ifdef MC_HYDROPHOBIC_INT
 extern double **eneij;
 #endif
+#ifdef ALIGN_POT
+double calc_align_pot(int ip)
+{
+  return OprogStatus.Ual*(1.0-Sqr(R[ip][0][OprogStatus.alignaxis]));
+}
+#endif
+#ifdef GAPDNA_BENDING_ENERGY
+double calc_bending_energy(int i)
+{
+  double upot, norm, theta, sp, uxi[3], uxj[3];
+  int j, kk;
+  /* i cilindri che rappresentano le due stick sono numerati 
+   * in maniera contigua, da cui la condizione di seguito */
+  if ((i%OprogStatus.polylen)==0)
+    j = i+1;
+  else
+    j = i-1;
+  for (kk=0; kk < 3; kk++)
+    {
+      /* permanent patches are along x-axis */
+      uxi[kk] = R[i][0][kk];
+      uxj[kk] = R[j][0][kk];
+    }
+  sp = scalProd(uxi,uxj);
+  upot = OprogStatus.kbend*Sqr((1.0+sp)/2.0);
+  //printf("sp=%f upot=%f\n", sp, upot);
+  /* theta in gradi */
+  return upot;
+}
+#endif
 double calcpotene_GC(int ip)
 {
   double Epot; 
@@ -4530,13 +4559,15 @@ double calcpotene_GC(int ip)
 #else
   Epot -= numbonds[na];
 #endif
-
+#ifdef GAPDNA_BENDING_ENERGY
+  Epot += 0.5*calc_bending_energy(ip);
+#endif
 #ifdef MC_AMYLOID_FIBRILS
   /* add torsional elastic energy here! */
   Epot += 0.5*calc_elastic_torsional_energy(ip);
 #endif
 #ifdef ALIGN_POT
-  Epot += OprogStatus.Ual*(1.0-Sqr(R[ip][0][2]));
+  Epot += calc_align_pot(ip);
 #endif
   return Epot;
 }
@@ -10402,6 +10433,13 @@ int mcmotion(void)
 #endif
   dorej = overlapMC(ip, &err);
 
+#if 0
+  if (OprogStatus.deltaMC==0 && OprogStatus.dthetaMC ==0)
+    {
+      if (dorej)
+	printf("overlap!\n");
+    }
+#endif
   if (!dorej)
     {
 #ifdef MC_STOREBONDS
