@@ -1890,7 +1890,7 @@ void usrInitBef(void)
 #endif
 #ifdef MC_GAPDNA
     OprogStatus.polylen = 2;
-    OprogStatus.kbend = Oparams.T; 
+    OprogStatus.kbend = 0.0;
 #endif
 #ifdef MC_AMYLOID_FIBRILS
     OprogStatus.tors_theta0 = 10.0;
