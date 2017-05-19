@@ -1890,6 +1890,7 @@ void usrInitBef(void)
 #endif
 #ifdef MC_GAPDNA
     OprogStatus.polylen = 2;
+    OprogStatus.kbend = Oparams.T; 
 #endif
 #ifdef MC_AMYLOID_FIBRILS
     OprogStatus.tors_theta0 = 10.0;
@@ -2055,6 +2056,7 @@ void usrInitBef(void)
      * vengono usati i valori forniti dall'utente (ved. anche usrInitAft() */
 #ifdef ALIGN_POT
     OprogStatus.Ual = 0.0;
+    OprogStatus.alignaxis = 0; /* 0=x 1=y 2=z */
 #endif
 #ifdef MD_SUBENZYME
     OprogStatus.SEreaction = 1;
