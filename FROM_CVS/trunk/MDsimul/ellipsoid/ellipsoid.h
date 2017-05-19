@@ -803,6 +803,9 @@ struct progStatus
 #endif
 #ifdef MC_GAPDNA
   int polylen;
+#ifdef GAPDNA_BENDING_ENERGY
+  double kbend;
+#endif
 #endif
 #ifdef MC_AMYLOID_FIBRILS
   double tors_k;
@@ -899,6 +902,7 @@ struct progStatus
 #endif
 #ifdef ALIGN_POT
   double Ual;
+  int alignaxis; /*0=x 1=y 2=z*/
 #endif
 #ifdef MD_SUBENZYME
   double rateSE[10];
@@ -1241,6 +1245,9 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MC_GAPDNA
   {"polylen",   &OS(polylen),                       1,         1, "%d"},
+#ifdef GAPDNA_BENDING_ENERGY
+  {"kbend",     &OS(kbend),                         1,         1, "%.8G"},
+#endif
 #endif
 #ifdef MC_AMYLOID_FIBRILS
   {"tors_theta0",   &OS(tors_theta0),               1,         1, "%.8G"},
@@ -1397,6 +1404,7 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef ALIGN_POT
   {"Ual",     &OS(Ual),   1, 1, "%f"},
+  {"alignaxis", &OS(alignaxis), 1, 1, "%d"},
 #endif
 #ifdef MD_SUBENZYME
   {"SEreaction",  &OS(SEreaction),          1, 1, "%d"},
@@ -1877,6 +1885,9 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef MC_GAPDNA
   {"polylen",   &OprogStatus.polylen, INT},
+#ifdef GAPDNA_BENDING_ENERGY
+  {"kbend",     &OprogStatus.kbend,   CT},
+#endif
 #endif
 #ifdef MC_AMYLOID_FIBRILS
   {"tors_theta0", &OprogStatus.tors_theta0,  CT},
@@ -1958,6 +1969,7 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef ALIGN_POT
   {"Ual",          &OprogStatus.Ual,        CT},
+  {"alignaxis",    &OprogStatus.alignaxis,  INT},
 #endif
 #ifdef MD_SUBENZYME
   {"SEreaction",   &OprogStatus.SEreaction, INT},

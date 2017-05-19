@@ -81,6 +81,12 @@ extern double **eneij;
 #ifdef MC_AMYLOID_FIBRILS
 extern double calc_elastic_torsional_energy(int ip);
 #endif
+#ifdef GAPDNA_BENDING_ENERGY
+extern double calc_bending_energy(int ip);
+#endif
+#ifdef ALIGN_POT
+extern double calc_align_pot(int ip);
+#endif
 double calcpotene(void)
 {
   double Epot; 
@@ -227,8 +233,16 @@ double calcpotene(void)
 #else
       Epot -= numbonds[na];
 #endif
+#ifdef GAPDNA_BENDING_ENERGY 
+      Epot += calc_bending_energy(na);
+#endif
 #if defined(MC_AMYLOID_FIBRILS)
       Epot += calc_elastic_torsional_energy(na);
+#endif
+#ifdef ALIGN_POT
+      /* ho messo il 2.0 poichè alla fine divide per 2 ma il potenziale di allineamento è esterno e non 
+       * tra particelle */
+      Epot += 2.0*calc_align_pot(na);
 #endif
     }
   MD_DEBUG21(printf("END\n"));
