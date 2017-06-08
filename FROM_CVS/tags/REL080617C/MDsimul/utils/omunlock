@@ -1,0 +1,19 @@
+#!/bin/sh
+if [ ! $@ ] 
+then
+exit 1
+fi
+LAMD_RUN=`ps axl | grep lamd | awk -v uid=$UID '{if ($2==uid) print ($2,$13)}'`  
+if [ "$1" != "mpirun" ]
+then
+  mosrun -l $@
+else 
+  if [ "$LAMD_RUN" = "" ]
+  then
+    echo "localhost cpu=10" > $HOME/.lamboot.boot
+    mosrun -l lamboot -v $HOME/.lamboot.boot > /dev/null
+    mosrun -l $@
+  else
+    mosrun -l $@
+  fi
+fi
