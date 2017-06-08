@@ -11295,11 +11295,11 @@ for (np=0; np < clsdim[nc]; np++)
 /* da straight (i.e. fully folded or unfolded) a qualsiasi orientazione */
 #ifdef MC_BIGROT_BIASED
 /* da qualsiasi orientazione a fully folded o fully unfolded */
-int bigrot_move_outin(int in) // in=1 => out->in ; in=0 => in->out
+int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 {
-  int np, kk, k1, k2, dorej, err, extraspots, j;
-  double ox, oy, oz, dist, enn, eno, fact;
-  double rc[3], Rl[3][3];
+  int np, kk, k1, k2, dorej, err, extraspots, j, i;
+  double ox, oy, oz, dist, enn, eno, fact, cos0;
+  double rc[3], Rl[3][3], refaxi[3], refaxj[3];
   double *spXYZ=NULL, costheta;
   /* first pick a particle randomly */
   if (Oparams.parnum==0)
@@ -11336,29 +11336,30 @@ int bigrot_move_outin(int in) // in=1 => out->in ; in=0 => in->out
       refaxi[kk] = R[i][0][kk];
     }
 #if 1
-  if (in==1)
+  if (bmtype==1 || bmtype==2)
     {
-      /* se la mossa è out->in e non è out non fare nulla */
+      /* se la mossa è out->in (o out -> out) e non è out non fare nulla */
       costheta = scalProd(refaxi, refaxj);
-      if (fabs(costheta) < cos(M_PI*theta0/180.0))
+      if (fabs(costheta) > cos(M_PI*OprogStatus.bigrotTheta0/180.0))
 	{
-	  return;
+	  return 0;
 	}
     }
   else
     {
+      /* se la mossa è in->out (o in->in) e non è in non fare nulla */
       costheta = scalProd(refaxi, refaxj);
-      if (fabs(costheta) >= cos(M_PI*theta0/180.0))
+      if (fabs(costheta) <= cos(M_PI*OprogStatus.bigrotTheta0/180.0))
 	{
-	  return;
+	  return 0;
 	}
     }
 #endif
   totbigrotmovMC++;
-  if (in==1)
-    orient_biased(&ox,&oy,&oz, refaxj);
-  else
-    orient(&ox, &oy, &oz);
+  if (bmtype==0 || bmtype==2)// 0=in -> out ; 2 = out->out
+    orient_biased(&ox,&oy,&oz, refaxj, 1);
+  else if (bmtype==1 || bmtype==3) // 1 = out-> in; 3 = in -> in
+    orient_biased(&ox,&oy,&oz, refaxj, 0);
   spXYZ = typesArr[typeOfPart[np]].spots[0].x;
   dist=calc_norm(spXYZ);
   rx[np] = rc[0] + ox*dist;
@@ -11533,10 +11534,25 @@ int bigrot_move_outin(int in) // in=1 => out->in ; in=0 => in->out
 		dorej=2;
 	    }
 #else
-	  if (in==1)
-	    fact = (1.0-cos(M_PI*theta0/180.0))*((1.0 - OprogStatus.bigrotbias)/OprogStatus.bigrotbias);
-	  else
-	    fact = OprogStatus.pbias/((1.0-cos(M_PI*theta0/180.0))*(1.0-OprogStatus.bigrotbias));
+	  if (bmtype==1) // out->in
+	    {
+	      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
+	      fact = ((1.0-cos0)/cos0)*((1.0 - OprogStatus.bigrotbias)/OprogStatus.bigrotbias);
+	    }
+	  else if (bmtype==0) // in -> out
+	    {
+	      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
+	      fact = cos0*OprogStatus.bigrotbias/((1.0-cos0)*(1.0-OprogStatus.bigrotbias));
+	    }
+	  else if (bmtype==3) // in->in
+	    {
+	      fact = 1.0;
+	    }
+	  else if (bmtype==2) // out -> out
+	    {
+	      fact = 1.0;
+	    }
+ 
 	  if (ranf() < fact*exp(-(1.0/Oparams.T)*(enn-eno)))
 	    dorej=0;
 	  else
@@ -11596,6 +11612,7 @@ int bigrot_move_outin(int in) // in=1 => out->in ; in=0 => in->out
 	}
       //printf("restoring finished\n");
       //rebuildLinkedList();
+#endif
     }
 #if 0
   else
@@ -11608,7 +11625,7 @@ int bigrot_move_outin(int in) // in=1 => out->in ; in=0 => in->out
       overestimate_of_displ[np] += displMC; 
     }
   //printf("accettata!\n");
-  if (in==1)
+  if (bmtype==1)
     return 3;
   else
     return 4;
@@ -11915,6 +11932,9 @@ void set_ini_numcells(void)
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
+#ifdef MC_BIGROT_BIASED
+double pbr;
+#endif
 #ifdef MD_LXYZ
   double avL;
 #endif
@@ -12025,10 +12045,29 @@ void move(void)
       if (OprogStatus.bigrotmov > 0.0 && ranf() < OprogStatus.bigrotmov)
 	{
 #ifdef MC_BIGROT_BIASED
-	  if (ranf() < OprogStatus.bigrotbias)
-	    movetype = bigrot_move_outin(1);
+	  if (OprogStatus.bigrotTheta0 < 0.0)
+    	    movetype = bigrot_move();
 	  else
-	    movetype = bigrot_move_outin(0);
+	    {
+	      pbr = ranf();
+	      /* with equal probability select a in->out/out->in or in->in or out->out move*/
+	      if (pbr < 1.0/3.0)
+		{
+		  //movetype = bigrot_move_outin(0);
+		  if (ranf() < OprogStatus.bigrotbias)
+		    {
+		      movetype = bigrot_move_outin(1);
+		    }
+		  else
+		    {
+		      movetype = bigrot_move_outin(0);
+		    }
+		}
+	      else if (pbr > 2.0/3.0) // out -> out
+		movetype = bigrot_move_outin(2);
+	      else 
+		movetype = bigrot_move_outin(3); // in -> in		
+	    }
 #else
 	  movetype = bigrot_move();
 #endif

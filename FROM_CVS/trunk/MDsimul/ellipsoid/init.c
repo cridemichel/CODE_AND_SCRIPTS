@@ -2153,11 +2153,8 @@ void usrInitBef(void)
     OprogStatus.bigrotmov = 0.0;
 #ifdef MC_BIGROT_BIASED
     OprogStatus.bigrotbias = 0.5;
-    OprogStatus.theta0 = 30.0; // in gradi 
+    OprogStatus.bigrotTheta0 = 30.0; // in gradi 
 #endif
-#endif
-#ifdef MC_BIGROT_BIASED
-    OprogStatus.theta0 = 30.0; // in gradi 
 #endif
 #ifdef MC_GRANDCAN
     OprogStatus.zetaMC=0.05;
@@ -4173,7 +4170,7 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
 #ifdef MC_BIGROT_BIASED
-void orient_biased(double *omx, double *omy, double* omz, double refax[3])
+void orient_biased(double *omx, double *omy, double* omz, double refax[3], int type)
 {
   int i, fine=0;
   //double inert;                 /* momentum of inertia of the molecule */
@@ -4187,7 +4184,7 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3])
  
   //mean = 3.0*temp / inert;
 
-  costheta0 = fabs(cos(M_PI*OprogStatus.theta0/180.0));
+  costheta0 = fabs(cos(M_PI*OprogStatus.bigrotTheta0/180.0));
   while (fine==0)
     {
       xisq = 1.0;
@@ -4217,10 +4214,20 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3])
       oo[0] = ox;
       oo[1] = oy;
       oo[2] = oz;
-      costheta = fabs(scalProd(refax, oo));
-      if (costheta >= costheta0)
-	fine=1;
+      if (type==0) // in theta < theta0
+	{
+	  costheta = fabs(scalProd(refax, oo));
+	  if (costheta < costheta0)
+	    fine=1;
+	}
+      else if (type==1) // in theta > theta0
+	{
+	  costheta = fabs(scalProd(refax, oo));
+	  if (costheta >= costheta0)
+	    fine=1;
+	}
     }
+
   //distro[(int) (acos(oz)/(pi/1000.0))] += 1.0;
 
 #if 0
