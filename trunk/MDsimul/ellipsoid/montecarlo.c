@@ -11324,7 +11324,8 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
       rc[kk] = ratA[1][kk];
     }
 #endif
-   if ((i%OprogStatus.polylen)==0)
+  i=np;
+  if ((i%OprogStatus.polylen)==0)
     j = i+1;
   else
     j = i-1;
@@ -11342,6 +11343,7 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
       costheta = scalProd(refaxi, refaxj);
       if (fabs(costheta) > cos(M_PI*OprogStatus.bigrotTheta0/180.0))
 	{
+	  //printf("i=%d j=%d non è out!!!!!!!!!!!!!! costheta=%.15G (%f)\n", i, j, costheta,cos(M_PI*OprogStatus.bigrotTheta0/180.0));
 	  return 0;
 	}
     }
@@ -11356,6 +11358,8 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
     }
 #endif
   totbigrotmovMC++;
+  //if (bmtype==1 || bmtype==2)
+  // printf("bmtype=%d ( 0=in -> out ; 2 = out->out 1 = out-> in; 3 = in -> in)\n", bmtype);
   if (bmtype==0 || bmtype==2)// 0=in -> out ; 2 = out->out
     orient_biased(&ox,&oy,&oz, refaxj, 1);
   else if (bmtype==1 || bmtype==3) // 1 = out-> in; 3 = in -> in
@@ -11933,7 +11937,7 @@ void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
 #ifdef MC_BIGROT_BIASED
-double pbr;
+  double pbr;
 #endif
 #ifdef MD_LXYZ
   double avL;
@@ -12050,8 +12054,9 @@ double pbr;
 	  else
 	    {
 	      pbr = ranf();
+	      //printf("pbr=%f\n", pbr);
 	      /* with equal probability select a in->out/out->in or in->in or out->out move*/
-	      if (pbr < 1.0/3.0)
+	      if (pbr < (1.0/3.0))
 		{
 		  //movetype = bigrot_move_outin(0);
 		  if (ranf() < OprogStatus.bigrotbias)
@@ -12063,7 +12068,7 @@ double pbr;
 		      movetype = bigrot_move_outin(0);
 		    }
 		}
-	      else if (pbr > 2.0/3.0) // out -> out
+	      else if (pbr > (2.0/3.0)) // out -> out
 		movetype = bigrot_move_outin(2);
 	      else 
 		movetype = bigrot_move_outin(3); // in -> in		
