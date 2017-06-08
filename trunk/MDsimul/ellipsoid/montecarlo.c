@@ -11292,9 +11292,331 @@ for (np=0; np < clsdim[nc]; np++)
 }
 #endif
 #ifdef MC_BIGROT_MOVE
+/* da straight (i.e. fully folded or unfolded) a qualsiasi orientazione */
+#ifdef MC_BIGROT_BIASED
+/* da qualsiasi orientazione a fully folded o fully unfolded */
+int bigrot_move_outin(int in) // in=1 => out->in ; in=0 => in->out
+{
+  int np, kk, k1, k2, dorej, err, extraspots, j;
+  double ox, oy, oz, dist, enn, eno, fact;
+  double rc[3], Rl[3][3];
+  double *spXYZ=NULL, costheta;
+  /* first pick a particle randomly */
+  if (Oparams.parnum==0)
+    return 0;
+  np = ranf()*Oparams.parnum;
+  eno = calcpotene_GC(np);
+  /* now set center of rotation */
+  store_coord(np);
+#ifdef MC_BOND_POS
+  for (kk=0; kk < 3; kk++)
+    {
+      rc[kk] = bpos[kk][np][0];
+      ratA[1][kk] = rc[kk];
+    }
+#else
+  rA[0] = rx[np];
+  rA[1] = ry[np];
+  rA[2] = rz[np];
+  BuildAtomPos(np, rA, R[np], ratA);
+  for (kk=0; kk < 3; kk++)
+    {
+      rc[kk] = ratA[1][kk];
+    }
+#endif
+   if ((i%OprogStatus.polylen)==0)
+    j = i+1;
+  else
+    j = i-1;
+  for (kk=0; kk < 3; kk++)
+    {
+      /* l'asse di riferimento è quello della molecola a cui è quello del cilindro 
+       * a cui è legato in maniera permanente.*/
+      refaxj[kk] = R[j][0][kk];
+      refaxi[kk] = R[i][0][kk];
+    }
+#if 1
+  if (in==1)
+    {
+      /* se la mossa è out->in e non è out non fare nulla */
+      costheta = scalProd(refaxi, refaxj);
+      if (fabs(costheta) < cos(M_PI*theta0/180.0))
+	{
+	  return;
+	}
+    }
+  else
+    {
+      costheta = scalProd(refaxi, refaxj);
+      if (fabs(costheta) >= cos(M_PI*theta0/180.0))
+	{
+	  return;
+	}
+    }
+#endif
+  totbigrotmovMC++;
+  if (in==1)
+    orient_biased(&ox,&oy,&oz, refaxj);
+  else
+    orient(&ox, &oy, &oz);
+  spXYZ = typesArr[typeOfPart[np]].spots[0].x;
+  dist=calc_norm(spXYZ);
+  rx[np] = rc[0] + ox*dist;
+  ry[np] = rc[1] + oy*dist;
+  rz[np] = rc[2] + oz*dist;
+ 
+  ox = -ox;
+  oy = -oy;
+  oz = -oz;
+  versor_to_R(ox, oy, oz, Rl);
+  for (k1 = 0; k1 < 3; k1++)
+   for (k2 = 0; k2 < 3; k2++)
+     {
+       R[np][k1][k2] = Rl[k1][k2];
+     }
+#ifdef MC_BOND_POS
+  rA[0] = rx[np];
+  rA[1] = ry[np];
+  rA[2] = rz[np];
+  BuildAtomPos(np, rA, R[np], ratA);
+#ifdef MC_BOUNDING_SPHERES
+  extraspots = typesArr[typeOfPart[np]].nspotsBS;
+#endif
+  for (k1 = 0; k1 < typesArr[typeOfPart[np]].nspots + extraspots; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	bpos[k2][np][k1] = ratA[k1+1][k2];
+    }
+#endif
+
+#ifdef MC_NEW_NNL_CHECK
+  if (OprogStatus.useNNL && mc_check_NNL_escape(np))
+    {
+      //printf("step # %d rebuilding NNL\n", Oparams.curStep);
+      rebuildNNL();
+    }
+#endif
+  pbc(np);
+  update_LL(np);
+ 
+  dorej = overlapMC(np, &err);
+
+  if (!dorej)
+    {
+#ifdef MC_STOREBONDS
+#ifdef MC_FREEZE_BONDS
+      if (!OprogStatus.freezebonds)
+#endif
+	store_bonds_mc(np);
+#endif
+#ifdef MC_FREEZE_BONDS
+      if (OprogStatus.freezebonds==1)
+	{
+	  refFB=0;
+	  fakeFB=1;
+	}
+#endif
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+      rejectMove = 0;
+      checkMoveKF=1;
+#endif
+      update_bonds_MC(np);
+
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+      checkMoveKF = 0;
+#endif	
+      /* qui basta calcolare l'energia della particella che sto muovendo */
+#ifdef MC_FREEZE_BONDS
+      if (OprogStatus.freezebonds==1)
+	fakeFB=0;
+#endif
+#if 0
+      enn=calcpotene();
+#else
+      enn=calcpotene_GC(np);
+#endif
+#if 0
+      if (enn > eno) 
+	printf("BOH rejectMove=%d\n", rejectMove);
+#endif
+#ifdef MC_FREEZE_BONDS
+ //exit(-1);
+      if (OprogStatus.freezebonds)
+	{
+	  if (refFB==1)
+	    {
+	      dorej=2;
+	    }
+	  else
+	    dorej=0;
+	}
+      else
+	{
+     	  if (enn <= eno)
+    	    {
+    	      dorej=0;
+#ifdef MC_NVE
+	      if (OprogStatus.ensembleMC==4)
+		OprogStatus.Ed += (enn-eno);
+#endif
+    	    }
+	  else
+	    {
+#ifdef MC_NVE
+	      if (OprogStatus.ensembleMC==4)
+		{ 
+		  if (OprogStatus.Ed >= (enn-eno))
+		    {
+		      OprogStatuts.Ed -= (enn-eno);
+		      dorej = 0;
+		    }
+		  else 
+		    dorej = 2;
+		}
+	      else
+		{
+		  if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		    dorej=0;
+		  else
+		    dorej=2;
+		}
+#else
+	      if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		dorej=0;
+	      else
+		dorej=2;
+#endif
+	      // if (dorej==0)
+	      // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+	    }
+	}
+#else
+#if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+      if (rejectMove==1)
+	{
+	  dorej=2;
+	}
+      else
+#endif
+      if (enn <= eno)
+	{
+	  //printf("ene=%f (old=%f)\n", enn, eno);
+	  //	  if (abs(enn-eno) >=1 )
+	  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+	  dorej=0;
+#ifdef MC_NVE
+	  if (OprogStatus.ensembleMC==4)
+	    {
+	      //printf("OprogStatus.Ed=%f step=%d\n", OprogStatus.Ed, Oparams.curStep);
+	      OprogStatus.Ed += (eno-enn);
+	    }
+#endif
+	}
+      else
+	{
+#ifdef MC_NVE
+	  if (OprogStatus.ensembleMC==4)
+	    { 
+	      if (OprogStatus.Ed >= (enn-eno))
+		{
+		  OprogStatus.Ed -= (enn-eno);
+		  dorej = 0;
+		}
+	      else 
+		dorej = 2;
+	    }
+	  else
+	    {
+	      if (ranf() < exp(-(1.0/Oparams.T)*(enn-eno)))
+		dorej=0;
+	      else
+		dorej=2;
+	    }
+#else
+	  if (in==1)
+	    fact = (1.0-cos(M_PI*theta0/180.0))*((1.0 - OprogStatus.bigrotbias)/OprogStatus.bigrotbias);
+	  else
+	    fact = OprogStatus.pbias/((1.0-cos(M_PI*theta0/180.0))*(1.0-OprogStatus.bigrotbias));
+	  if (ranf() < fact*exp(-(1.0/Oparams.T)*(enn-eno)))
+	    dorej=0;
+	  else
+	    {
+	      dorej=2;
+	    }
+	  // if (dorej==0)
+	  // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
+	}
+#endif
+    }
+
+#ifdef MC_FREEZE_BONDS
+  if (OprogStatus.freezebonds)
+    refFB=0;
+#endif
+#if 0
+#ifdef MC_KERN_FRENKEL
+  if (dorej && abs(enn-eno) >= 1)
+    {
+      printf("ene=%f (old=%f)\n", enn, eno);
+    }
+#endif
+#endif
+  if (dorej != 0)
+    {
+      totbigrotmovrejMC++;
+      /* move rejected */
+#if 0
+      totrejMC++;
+      if (movetype==0)
+	trarejMC++;
+      else 
+	rotrejMC++;
+#endif
+      //printf("restoring coords\n");
+      if(err)
+	{
+	  printf("[random_move] NR failed...I rejected this trial move...\n");
+	  err=0;
+	}
+      restore_coord(np);
+      //rebuildLinkedList();
+      update_LL(np);
+#ifdef MC_FREEZE_BONDS
+      if (dorej==2 && !OprogStatus.freezebonds)
+#else
+      if (dorej==2)
+#endif
+	{
+#ifdef MC_STOREBONDS
+	  remove_allbonds_ij(np, -2);
+	  restore_bonds_mc(np);
+#else
+	  update_bonds_MC(np);
+#endif
+	}
+      //printf("restoring finished\n");
+      //rebuildLinkedList();
+    }
+#if 0
+  else
+    {
+      printf("BIGROT move accepted!\n");
+    }
+#endif
+  if (OprogStatus.useNNL && dorej==0 )
+    {
+      overestimate_of_displ[np] += displMC; 
+    }
+  //printf("accettata!\n");
+  if (in==1)
+    return 3;
+  else
+    return 4;
+}
+#endif
 int bigrot_move(void)
 {
-  int np, kk, k1, k2, dorej, err, extraspots;
+  int np, kk, k1, k2, dorej, err, extraspots, j;
   double ox, oy, oz, dist, enn, eno;
   double rc[3], Rl[3][3];
   double *spXYZ=NULL;
@@ -11558,6 +11880,12 @@ int bigrot_move(void)
       //printf("restoring finished\n");
       //rebuildLinkedList();
     }
+#if 0
+  else
+    {
+      printf("BIGROT move accepted!\n");
+    }
+#endif
   if (OprogStatus.useNNL && dorej==0 )
     {
       overestimate_of_displ[np] += displMC; 
@@ -11696,7 +12024,14 @@ void move(void)
 #ifdef MC_BIGROT_MOVE
       if (OprogStatus.bigrotmov > 0.0 && ranf() < OprogStatus.bigrotmov)
 	{
+#ifdef MC_BIGROT_BIASED
+	  if (ranf() < OprogStatus.bigrotbias)
+	    movetype = bigrot_move_outin(1);
+	  else
+	    movetype = bigrot_move_outin(0);
+#else
 	  movetype = bigrot_move();
+#endif
 	  continue;
 	}
 #endif

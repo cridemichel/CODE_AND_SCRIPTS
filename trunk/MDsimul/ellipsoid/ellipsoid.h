@@ -940,6 +940,10 @@ struct progStatus
 #endif
 #ifdef MC_BIGROT_MOVE
   double bigrotmov;
+#ifdef MC_BIGROT_BIASED
+  double bigrotbias;
+  double theta0;
+#endif
 #endif
   int restrmove; /* 0=no restriction (default) 1=fixed rot */
 #ifdef MC_GRANDCAN
@@ -1440,6 +1444,10 @@ struct pascii opro_ascii[] =
 #endif
 #ifdef MC_BIGROT_MOVE
   {"bigrotmov",       &OS(bigrotmov),                   1, 1, "%.12G"},
+#ifdef MC_BIGROT_BIASED
+  {"bigrotbias",       &OS(bigrotbias),                   1, 1, "%.12G"},
+  {"theta0",           &OS(theta0),                   1, 1, "%.12G"},
+#endif
 #endif
 #ifdef MC_GRANDCAN
   {"zetaMC",     &OS(zetaMC),                            1,  1, "%.12G"},
@@ -1639,6 +1647,10 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef MC_BIGROT_MOVE
   {"bigrotmov", &OprogStatus.bigrotmov, CT},
+#ifdef MC_BIGROT_BIASED
+  {"bigrotbias", &OprogStatus.bigrotbias, CT},
+  {"theta0", &OprogStatus.theta0, CT},
+#endif
 #endif
 #ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
