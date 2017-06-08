@@ -2151,6 +2151,13 @@ void usrInitBef(void)
 #endif
 #ifdef MC_BIGROT_MOVE
     OprogStatus.bigrotmov = 0.0;
+#ifdef MC_BIGROT_BIASED
+    OprogStatus.bigrotbias = 0.5;
+    OprogStatus.theta0 = 30.0; // in gradi 
+#endif
+#endif
+#ifdef MC_BIGROT_BIASED
+    OprogStatus.theta0 = 30.0; // in gradi 
 #endif
 #ifdef MC_GRANDCAN
     OprogStatus.zetaMC=0.05;
@@ -4165,6 +4172,73 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 #endif
   //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
+#ifdef MC_BIGROT_BIASED
+void orient_biased(double *omx, double *omy, double* omz, double refax[3])
+{
+  int i, fine=0;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm, costheta, oo[3], costheta0;
+  
+  //Mtot = m; /* total mass of molecule */
+
+  //inert = I; /* momentum of inertia */
+ 
+  //mean = 3.0*temp / inert;
+
+  costheta0 = fabs(cos(M_PI*OprogStatus.theta0/180.0));
+  while (fine==0)
+    {
+      xisq = 1.0;
+
+      while (xisq >= 1.0)
+	{
+	  xi1  = ranf_vb() * 2.0 - 1.0;
+	  xi2  = ranf_vb() * 2.0 - 1.0;
+	  xisq = xi1 * xi1 + xi2 * xi2;
+	}
+
+      xi = sqrt (fabs(1.0 - xisq));
+      ox = 2.0 * xi1 * xi;
+      oy = 2.0 * xi2 * xi;
+      oz = 1.0 - 2.0 * xisq;
+
+      /* Renormalize */
+      osq   = ox * ox + oy * oy + oz * oz;
+      norm  = sqrt(fabs(osq));
+      ox    = ox / norm;
+      oy    = oy / norm;
+      oz    = oz / norm;
+
+      *omx = ox;
+      *omy = oy;
+      *omz = oz; 
+      oo[0] = ox;
+      oo[1] = oy;
+      oo[2] = oz;
+      costheta = fabs(scalProd(refax, oo));
+      if (costheta >= costheta0)
+	fine=1;
+    }
+  //distro[(int) (acos(oz)/(pi/1000.0))] += 1.0;
+
+#if 0
+  /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
+  osq   = - mean * log(ranf());
+  o     = sqrt(fabs(osq));
+  ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      *wx = ox;
+      *wy = oy;
+      *wz = oz;
+#endif 
+}
+#endif
 void orient(double *omx, double *omy, double* omz)
 {
   int i;
