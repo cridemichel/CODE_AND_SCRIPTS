@@ -4214,17 +4214,24 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3], int t
       oo[0] = ox;
       oo[1] = oy;
       oo[2] = oz;
-      if (type==0) // in theta < theta0
+      if (type==1) // in theta > theta0
 	{
 	  costheta = fabs(scalProd(refax, oo));
 	  if (costheta < costheta0)
-	    fine=1;
+	    {
+	      //printf("theta=%f(>%f)\n", 180.0*acos(costheta)/M_PI, 180.0*acos(costheta0)/M_PI);
+	      fine=1;
+	    }
 	}
-      else if (type==1) // in theta > theta0
+      else if (type==0) // in theta < theta0
 	{
 	  costheta = fabs(scalProd(refax, oo));
 	  if (costheta >= costheta0)
-	    fine=1;
+	    {
+	      //printf("theta=%f(<%f)\n", 180.0*acos(costheta)/M_PI, 180.0*acos(costheta0)/M_PI);
+	      fine=1;
+	    }
+
 	}
     }
 
