@@ -11353,13 +11353,14 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
       costheta = scalProd(refaxi, refaxj);
       if (fabs(costheta) <= cos(M_PI*OprogStatus.bigrotTheta0/180.0))
 	{
+	  //printf("i=%d j=%d non è out!!!!!!!!!!!!!! costheta=%.15G (%f)\n", i, j, costheta,cos(M_PI*OprogStatus.bigrotTheta0/180.0));
 	  return 0;
 	}
     }
 #endif
   totbigrotmovMC++;
   //if (bmtype==1 || bmtype==2)
-  // printf("bmtype=%d ( 0=in -> out ; 2 = out->out 1 = out-> in; 3 = in -> in)\n", bmtype);
+  //printf("bmtype=%d ( 0=in -> out ; 2 = out->out 1 = out-> in; 3 = in -> in)\n", bmtype);
   if (bmtype==0 || bmtype==2)// 0=in -> out ; 2 = out->out
     orient_biased(&ox,&oy,&oz, refaxj, 1);
   else if (bmtype==1 || bmtype==3) // 1 = out-> in; 3 = in -> in
@@ -11630,9 +11631,9 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
     }
   //printf("accettata!\n");
   if (bmtype==1)
-    return 3;
+    return 1;
   else
-    return 4;
+    return 2;
 }
 #endif
 int bigrot_move(void)
@@ -12061,7 +12062,7 @@ void move(void)
 		  //movetype = bigrot_move_outin(0);
 		  if (ranf() < OprogStatus.bigrotbias)
 		    {
-		      movetype = bigrot_move_outin(1);
+		      movetype = bigrot_move_outin(1);// out -> in (in = theta < theta0)
 		    }
 		  else
 		    {
@@ -12076,7 +12077,8 @@ void move(void)
 #else
 	  movetype = bigrot_move();
 #endif
-	  continue;
+	  if (movetype != 0)
+	    continue;
 	}
 #endif
 #ifdef MC_CLUSTER_MOVE
