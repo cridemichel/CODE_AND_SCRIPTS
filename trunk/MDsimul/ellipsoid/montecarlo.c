@@ -12077,6 +12077,7 @@ void move(void)
 #else
 	  movetype = bigrot_move();
 #endif
+	  /* se la mossa bigrot non è stata effettuata allora tenta una mossa normale */
 	  if (movetype != 0)
 	    continue;
 	}
