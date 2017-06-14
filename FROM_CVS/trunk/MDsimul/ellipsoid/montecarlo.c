@@ -4560,11 +4560,11 @@ double calcpotene_GC(int ip)
   Epot -= numbonds[na];
 #endif
 #ifdef GAPDNA_BENDING_ENERGY
-  Epot += 0.5*calc_bending_energy(ip);
+  Epot += calc_bending_energy(ip);
 #endif
 #ifdef MC_AMYLOID_FIBRILS
   /* add torsional elastic energy here! */
-  Epot += 0.5*calc_elastic_torsional_energy(ip);
+  Epot += calc_elastic_torsional_energy(ip);
 #endif
 #ifdef ALIGN_POT
   Epot += calc_align_pot(ip);
@@ -11557,13 +11557,21 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 	    {
 	      fact = 1.0;
 	    }
- 
+#if 0
+	  if (log(ranf()) < log(fact)-(1.0/Oparams.T)*(enn-eno))
+	    dorej=0;
+	  else
+	    {
+	      dorej=2;
+	    }
+#else 
 	  if (ranf() < fact*exp(-(1.0/Oparams.T)*(enn-eno)))
 	    dorej=0;
 	  else
 	    {
 	      dorej=2;
 	    }
+#endif
 	  // if (dorej==0)
 	  // printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
 	}
@@ -12066,13 +12074,15 @@ void move(void)
 		    }
 		  else
 		    {
-		      movetype = bigrot_move_outin(0);
+		      movetype = bigrot_move_outin(0); //in -> out
 		    }
 		}
+#if 1
 	      else if (pbr > (2.0/3.0)) // out -> out
 		movetype = bigrot_move_outin(2);
 	      else 
-		movetype = bigrot_move_outin(3); // in -> in		
+		movetype = bigrot_move_outin(3); // in -> in	
+#endif	
 	    }
 #else
 	  movetype = bigrot_move();

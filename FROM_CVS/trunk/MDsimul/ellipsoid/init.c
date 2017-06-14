@@ -4214,6 +4214,7 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3], int t
       oo[0] = ox;
       oo[1] = oy;
       oo[2] = oz;
+      //printf("norm refax=%.15G\n", calc_norm(refax));
       if (type==1) // in theta > theta0
 	{
 	  costheta = fabs(scalProd(refax, oo));
