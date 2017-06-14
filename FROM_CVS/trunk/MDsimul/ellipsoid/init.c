@@ -4191,8 +4191,8 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3], int t
 
       while (xisq >= 1.0)
 	{
-	  xi1  = ranf_vb() * 2.0 - 1.0;
-	  xi2  = ranf_vb() * 2.0 - 1.0;
+	  xi1  = 1.0 - 2.0*ranf_vb();
+	  xi2  = 1.0 - 2.0*ranf_vb();
 	  xisq = xi1 * xi1 + xi2 * xi2;
 	}
 
@@ -4272,8 +4272,8 @@ void orient(double *omx, double *omy, double* omz)
 
   while (xisq >= 1.0)
     {
-      xi1  = ranf_vb() * 2.0 - 1.0;
-      xi2  = ranf_vb() * 2.0 - 1.0;
+      xi1  = 1.0 - 2.0*ranf_vb();
+      xi2  = 1.0 - 2.0*ranf_vb();
       xisq = xi1 * xi1 + xi2 * xi2;
     }
 
@@ -4282,13 +4282,15 @@ void orient(double *omx, double *omy, double* omz)
   oy = 2.0 * xi2 * xi;
   oz = 1.0 - 2.0 * xisq;
 
+#if 0
   /* Renormalize */
   osq   = ox * ox + oy * oy + oz * oz;
+  printf("osq=%f\n", osq);
   norm  = sqrt(fabs(osq));
   ox    = ox / norm;
   oy    = oy / norm;
   oz    = oz / norm;
-
+#endif
   *omx = ox;
   *omy = oy;
   *omz = oz; 

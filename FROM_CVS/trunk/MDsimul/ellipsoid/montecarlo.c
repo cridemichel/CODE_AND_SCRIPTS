@@ -11300,12 +11300,13 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
   int np, kk, k1, k2, dorej, err, extraspots, j, i;
   double ox, oy, oz, dist, enn, eno, fact, cos0;
   double rc[3], Rl[3][3], refaxi[3], refaxj[3];
-  double *spXYZ=NULL, costheta;
+  double *spXYZ=NULL, costheta;//, oldbene;
   /* first pick a particle randomly */
   if (Oparams.parnum==0)
     return 0;
   np = ranf()*Oparams.parnum;
   eno = calcpotene_GC(np);
+  //oldbene= calc_bending_energy(np);
   /* now set center of rotation */
   store_coord(np);
 #ifdef MC_BOND_POS
@@ -11543,11 +11544,13 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 	    {
 	      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
 	      fact = ((1.0-cos0)/cos0)*((1.0 - OprogStatus.bigrotbias)/OprogStatus.bigrotbias);
+	      //printf("1 (out->in) fact =%.15G pi=%.15G cos0=%.15G exp=%.15G new bend ene=%.15G (old:%.15G)\n", fact, M_PI, cos0,exp(-(1.0/Oparams.T)*(enn-eno)), calc_bending_energy(np), oldbene);
 	    }
 	  else if (bmtype==0) // in -> out
 	    {
 	      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
 	      fact = cos0*OprogStatus.bigrotbias/((1.0-cos0)*(1.0-OprogStatus.bigrotbias));
+	      //printf("0 (in->out) fact =%.15G pi=%.15G cos0=%.15G exp=%.15G new bend energy=%.15G (old: %.15G)\n", fact, M_PI, cos0,exp(-(1.0/Oparams.T)*(enn-eno)),calc_bending_energy(np), oldbene);
 	    }
 	  else if (bmtype==3) // in->in
 	    {
