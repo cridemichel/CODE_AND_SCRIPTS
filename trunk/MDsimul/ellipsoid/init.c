@@ -4201,13 +4201,14 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3], int t
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
 
+#if 0
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
       ox    = ox / norm;
       oy    = oy / norm;
       oz    = oz / norm;
-
+#endif
       *omx = ox;
       *omy = oy;
       *omz = oz; 
