@@ -11364,7 +11364,7 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
   //printf("bmtype=%d ( 0=in -> out ; 2 = out->out 1 = out-> in; 3 = in -> in)\n", bmtype);
   if (bmtype==0 || bmtype==2)// 0=in -> out ; 2 = out->out
     orient_biased(&ox,&oy,&oz, refaxj, 1);
-  else if (bmtype==1 || bmtype==3) // 1 = out-> in; 3 = in -> in
+  else //if (bmtype==1 || bmtype==3) // 1 = out-> in; 3 = in -> in
     orient_biased(&ox,&oy,&oz, refaxj, 0);
   spXYZ = typesArr[typeOfPart[np]].spots[0].x;
   dist=calc_norm(spXYZ);
@@ -11442,6 +11442,26 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 #else
       enn=calcpotene_GC(np);
 #endif
+      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
+      if (bmtype==1) // out->in
+	{
+	  fact = ((1.0-cos0)/cos0)*((1.0 - OprogStatus.bigrotbias)/OprogStatus.bigrotbias);
+	  //printf("1 (out->in) fact =%.15G pi=%.15G cos0=%.15G exp=%.15G new bend ene=%.15G (old:%.15G)\n", fact, M_PI, cos0,exp(-(1.0/Oparams.T)*(enn-eno)), calc_bending_energy(np), oldbene);
+	}
+      else if (bmtype==0) // in -> out
+	{
+	  //cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
+	  fact = cos0*OprogStatus.bigrotbias/((1.0-cos0)*(1.0-OprogStatus.bigrotbias));
+	  //printf("0 (in->out) fact =%.15G pi=%.15G cos0=%.15G exp=%.15G new bend energy=%.15G (old: %.15G)\n", fact, M_PI, cos0,exp(-(1.0/Oparams.T)*(enn-eno)),calc_bending_energy(np), oldbene);
+	}
+      else if (bmtype==3) // in->in
+	{
+	  fact = 1.0;
+	}
+      else if (bmtype==2) // out -> out
+	{
+	  fact = 1.0;
+	}
 #if 0
       if (enn > eno) 
 	printf("BOH rejectMove=%d\n", rejectMove);
@@ -11498,6 +11518,7 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 	    }
 	}
 #else
+
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
       if (rejectMove==1)
 	{
@@ -11505,8 +11526,9 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 	}
       else
 #endif
-      if (enn <= eno)
+      if (fact >= 1.0 && enn <= eno)
 	{
+	  //printf("qui adso!!!\n");
 	  //printf("ene=%f (old=%f)\n", enn, eno);
 	  //	  if (abs(enn-eno) >=1 )
 	  //	    printf("accetto la mossa energetica enn-eno=%.15G\n", enn-eno);
@@ -11540,26 +11562,6 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 		dorej=2;
 	    }
 #else
-	  if (bmtype==1) // out->in
-	    {
-	      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
-	      fact = ((1.0-cos0)/cos0)*((1.0 - OprogStatus.bigrotbias)/OprogStatus.bigrotbias);
-	      //printf("1 (out->in) fact =%.15G pi=%.15G cos0=%.15G exp=%.15G new bend ene=%.15G (old:%.15G)\n", fact, M_PI, cos0,exp(-(1.0/Oparams.T)*(enn-eno)), calc_bending_energy(np), oldbene);
-	    }
-	  else if (bmtype==0) // in -> out
-	    {
-	      cos0 =cos(M_PI*OprogStatus.bigrotTheta0/180.0);
-	      fact = cos0*OprogStatus.bigrotbias/((1.0-cos0)*(1.0-OprogStatus.bigrotbias));
-	      //printf("0 (in->out) fact =%.15G pi=%.15G cos0=%.15G exp=%.15G new bend energy=%.15G (old: %.15G)\n", fact, M_PI, cos0,exp(-(1.0/Oparams.T)*(enn-eno)),calc_bending_energy(np), oldbene);
-	    }
-	  else if (bmtype==3) // in->in
-	    {
-	      fact = 1.0;
-	    }
-	  else if (bmtype==2) // out -> out
-	    {
-	      fact = 1.0;
-	    }
 #if 0
 	  if (log(ranf()) < log(fact)-(1.0/Oparams.T)*(enn-eno))
 	    dorej=0;
