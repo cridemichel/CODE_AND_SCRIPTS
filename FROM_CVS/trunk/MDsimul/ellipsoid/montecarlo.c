@@ -12094,8 +12094,8 @@ void move(void)
 	  movetype = bigrot_move();
 #endif
 	  /* se la mossa bigrot non è stata effettuata allora tenta una mossa normale */
-	  if (movetype != 0)
-	    continue;
+	  //if (movetype != 0)
+	  continue;
 	}
 #endif
 #ifdef MC_CLUSTER_MOVE
