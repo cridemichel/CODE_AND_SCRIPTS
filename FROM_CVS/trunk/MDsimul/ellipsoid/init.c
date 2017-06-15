@@ -4208,6 +4208,7 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3], int t
       ox    = ox / norm;
       oy    = oy / norm;
       oz    = oz / norm;
+      printf("norm bef=%.15G aft=%.15G\n", norm, sqrt(Sqr(ox)+Sqr(oy)+Sqr(oz)));
 #endif
       *omx = ox;
       *omy = oy;

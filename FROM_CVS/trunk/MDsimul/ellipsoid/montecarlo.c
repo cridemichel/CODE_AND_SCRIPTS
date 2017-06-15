@@ -11295,6 +11295,7 @@ for (np=0; np < clsdim[nc]; np++)
 /* da straight (i.e. fully folded or unfolded) a qualsiasi orientazione */
 #ifdef MC_BIGROT_BIASED
 /* da qualsiasi orientazione a fully folded o fully unfolded */
+extern void orient_biased(double *omx, double *omy, double* omz, double refax[3], int type);
 int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 {
   int np, kk, k1, k2, dorej, err, extraspots, j, i;
