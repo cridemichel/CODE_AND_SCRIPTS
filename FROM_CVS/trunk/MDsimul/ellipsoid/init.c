@@ -4201,7 +4201,7 @@ void orient_biased(double *omx, double *omy, double* omz, double refax[3], int t
       oy = 2.0 * xi2 * xi;
       oz = 1.0 - 2.0 * xisq;
 
-#if 1
+#if 0
       /* Renormalize */
       osq   = ox * ox + oy * oy + oz * oz;
       norm  = sqrt(fabs(osq));
@@ -4284,7 +4284,7 @@ void orient(double *omx, double *omy, double* omz)
   oy = 2.0 * xi2 * xi;
   oz = 1.0 - 2.0 * xisq;
 
-#if 1
+#if 0
   /* Renormalize */
   osq   = ox * ox + oy * oy + oz * oz;
   //printf("osq=%f\n", osq);
