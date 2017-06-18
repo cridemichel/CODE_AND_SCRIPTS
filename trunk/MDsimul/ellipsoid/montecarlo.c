@@ -1240,7 +1240,7 @@ void build_clusters_gapdna(int *Ncls, int *percolating, int check_perc)
       printf("color_dup[%d]=%d\n",i, color_dup[i]);
     }
 #endif
-#if 0
+#if 1
   ncls = 1;
   if (color_dup[0]!=0)
     change_all_colors(NP, color, color_dup[0], 0);
@@ -1295,8 +1295,9 @@ void build_clusters_gapdna(int *Ncls, int *percolating, int check_perc)
 	    }
 	}
     }
-  if (check_perc)
-    *percolating = is_percolating(ncls);
+  *percolating = 0;
+  //if (check_perc)
+    //*percolating = is_percolating(ncls);
   *Ncls = ncls;
   //exit(-1);
 }
@@ -11153,11 +11154,13 @@ int cluster_move(void)
   //printf("clsdim[%d]=%d\n", nc, clsdim[nc]);
  
   //printf("CLUSTER MOVE dim=%d\n", clsdim[nc]); 
+#ifndef MC_GAPDNA
 #if 1 // FIX THIS!!!
   if (is_cls_percolating(nc))
     {
       return -1;
     }
+#endif
 #endif
   eno = calcpotene();
 
