@@ -1215,91 +1215,6 @@ int is_percolating(int ncls)
 }
 #endif
 extern int inside_cluster_move;
-#ifdef MC_GAPDNA
-void build_clusters_gapdna(int *Ncls, int *percolating, int check_perc)
-{
-  int NP, i, j, ncls, nc, a, curcolor, maxc=-1;
-  long long int jj;
-  int freecolor, cidx, first;
-  NP = Oparams.parnum;
-  curcolor=0;
-
-  //init_freecolor(&fcstack, NP);
-  for (i=0; i < NP; i++)
-    {
-      color[i] = i / 2;
-      //printf("color[%d]=%d\n", i, color[i]);
-    }
-  memcpy(color_dup,color,sizeof(int)*NP);
-  //qsort(color_dup,NP,sizeof(int),compare_func);
-#if 0
-  for (i = 0; i < NP; i++)
-    {
-      printf("color_dup[%d]=%d\n",i, color_dup[i]);
-    }
-#endif
-#if 1
-  ncls = 1;
-  if (color_dup[0]!=0)
-    change_all_colors(NP, color, color_dup[0], 0);
-  for (i = 1; i < NP; i++)
-    {
-      //clsdim[color_dup[i]]++;
-      if (color_dup[i]!=color_dup[i-1])
-	{
-	  if (color_dup[i]!=ncls)
-	    change_all_colors(NP, color, color_dup[i], ncls);
-	  ncls++;
-	}
-    }
-#endif 
-#if 0
-  for (i=0; i < Oparams.parnum; i++)
-    printf("color[%d]=%d\n", i, color[i]);
-  exit(-1);
-#endif
-  //printf("ncls = %d\n", ncls);
-  for (nc = 0; nc < ncls; nc++)
-    {
-      clsdim[nc] = 0; 
-      /* nbcls è il numero di bond nel cluster color[a] */
-      nbcls[nc] = 0;
-    }
-  for (nc = 0; nc < ncls; nc++)
-    {
-      for (a = 0; a < NP; a++)
-	{
-	  if (color[a] == nc)
-	    {
-	      clsdim[color[a]]++;
-	      //clscol[nc] = color[a];
-	      nbcls[color[a]] += numbonds[a];
-	    }
-	}
-    }
-  cidx=0;
-  for (nc=0; nc < ncls; nc++)
-    {
-      first=1;
-      for (a=0; a < NP; a++)
-	{
-	  if (color[a]==nc)
-	    {
-	      clsarr[cidx] = a;
-	      if (first)
-		firstofcls[nc] = cidx; 
-	      cidx++;
-	      first = 0;
-	    }
-	}
-    }
-  *percolating = 0;
-  //if (check_perc)
-    //*percolating = is_percolating(ncls);
-  *Ncls = ncls;
-  //exit(-1);
-}
-#endif
 
 void build_clusters(int *Ncls, int *percolating, int check_perc)
 {
@@ -5237,11 +5152,7 @@ void move_box_cluster_xyz(int *ierr)
   assign_bonds_almarza();
 #endif
 
-#ifdef MC_GAPDNA
-  build_clusters_gapdna(&ncls, &percolating, 1);
-#else
   build_clusters(&ncls, &percolating, 1);
-#endif
   numOfClusters = ncls;
 
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
@@ -5645,11 +5556,7 @@ void move_box_cluster(int *ierr)
 #endif 
   assign_bonds_almarza();
 #endif
-#ifdef MC_GAPDNA
-  build_clusters_gapdna(&ncls, &percolating, 1);
-#else
   build_clusters(&ncls, &percolating, 1);
-#endif
   //printf("ncls=%d percolating=%d\n", ncls, percolating);
   /* calcola i centri di massa dei cluster */
   if (percolating)
@@ -11129,6 +11036,7 @@ int cluster_is_not_a_dimer(int nc)
 int cls_move_bonds=0;
 #endif
 int inside_cluster_move=0;
+
 int cluster_move(void)
 {
   int ncls, percolating, nc, totbonds;
@@ -11140,11 +11048,7 @@ int cluster_move(void)
   assign_bonds_almarza();
 #endif
   inside_cluster_move=1;
-#ifdef MC_GAPDNA
-  build_clusters_gapdna(&ncls, &percolating, 0);
-#else
   build_clusters(&ncls, &percolating, 0);
-#endif
   inside_cluster_move=0;
   /* pick randomly a cluster */
   nc = ranf()*ncls;
@@ -11152,13 +11056,11 @@ int cluster_move(void)
   //printf("clsdim[%d]=%d\n", nc, clsdim[nc]);
  
   //printf("CLUSTER MOVE dim=%d\n", clsdim[nc]); 
-#ifndef MC_GAPDNA
 #if 1 // FIX THIS!!!
   if (is_cls_percolating(nc))
     {
       return -1;
     }
-#endif
 #endif
   eno = calcpotene();
 
@@ -11245,7 +11147,6 @@ int cluster_move(void)
 #endif
   for (k=0; k < 3; k++)
     clsCoM[k][nc] /= clsdim[nc];
- 
   movetype=random_cls_move(nc);
   
 #if 0
