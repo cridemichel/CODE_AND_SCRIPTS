@@ -1227,10 +1227,8 @@ void build_clusters_gapdna(int *Ncls, int *percolating, int check_perc)
   //init_freecolor(&fcstack, NP);
   for (i=0; i < NP; i++)
     {
-      if (i % OprogStatus.polylen==0 || i % OprogStatus.polylen ==1)
-	{
-	  color[i] = i / 2;
-	}
+      color[i] = i / 2;
+      //printf("color[%d]=%d\n", i, color[i]);
     }
   memcpy(color_dup,color,sizeof(int)*NP);
   //qsort(color_dup,NP,sizeof(int),compare_func);
