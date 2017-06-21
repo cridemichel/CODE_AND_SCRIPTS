@@ -1,8 +1,8 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
-const int Npart=1408;
-const double Lbox=8.252567086;
+const int Npart=7840;
+double Lbox[3]={19.9255, 19.9255, 19.9255};
 char line[2048];
 void writehdr(FILE *f)
 {
@@ -42,13 +42,24 @@ int main(int argc, char**argv)
   sprintf(fon,"Cnf-%d.cnf", cc);
   fo = fopen(fon, "w+");
   writehdr(fo);
+
+  while (!feof(f))
+    {
+      if (fscanf(f, "%lf %lf %lf\n",&(Lbox[0]), &(Lbox[1]), &(Lbox[2]))<3) 
+         {
+            fscanf(f, "%lf\n", &(Lbox[0]));
+             Lbox[1]=Lbox[0];
+             Lbox[2]=Lbox[0];
+	  }
+    }
+  rewind(f);
   while (!feof(f))
     {
       fscanf(f,"%[^\n]\n",line); 
       if (!strcmp(line,"0"))
 	{
 	  cc++;
-	  fprintf(fo,"10 10 10\n");
+	  fprintf(fo,"%.12G %.12G %.12G\n", Lbox[0], Lbox[1], Lbox[2]);
 	  fclose(fo);
 	  sprintf(fon,"Cnf-%d.cnf", cc);
 	  fo = fopen(fon, "w+");
@@ -61,7 +72,7 @@ int main(int argc, char**argv)
 	  fprintf(fo, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n", rx, ry, rz, uxx, uxy, uxz, uyx, uyy, uyz, uzx, uzy, uzz, t);
 	}
     }
-  fprintf(fo, "%.15G %.15G %.15G\n", Lbox, Lbox, Lbox);
+  fprintf(fo, "%.15G %.15G %.15G\n", Lbox[0], Lbox[1], Lbox[2]);
   fclose(fo);
   fclose(f);
   exit(0);
