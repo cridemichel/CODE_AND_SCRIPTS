@@ -45,21 +45,11 @@ int main(int argc, char**argv)
 
   while (!feof(f))
     {
-      if (fscanf(f, "%lf %lf %lf\n",&(Lbox[0]), &(Lbox[1]), &(Lbox[2]))<3) 
-         {
-            fscanf(f, "%lf\n", &(Lbox[0]));
-             Lbox[1]=Lbox[0];
-             Lbox[2]=Lbox[0];
-	  }
-    }
-  rewind(f);
-  while (!feof(f))
-    {
       fscanf(f,"%[^\n]\n",line); 
       if (!strcmp(line,"0"))
 	{
 	  cc++;
-	  fprintf(fo,"%.12G %.12G %.12G\n", Lbox[0], Lbox[1], Lbox[2]);
+	  fprintf(fo,"%.15G %.15G %.15G\n", Lbox[0], Lbox[1], Lbox[2]);
 	  fclose(fo);
 	  sprintf(fon,"Cnf-%d.cnf", cc);
 	  fo = fopen(fon, "w+");
