@@ -6995,6 +6995,9 @@ int check_bond_added(int j, int nb)
 void addRestrMatrix(double Rl[3][3]);
 #endif
 void save_conf_mc(int i, int ii);
+#ifdef MC_ELASTIC_CONSTANTS
+double *ec_segno, *ec_ux, *ec_uy, *ec_uz;
+#endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
@@ -7211,6 +7214,15 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	{
   	  orient(&ox, &oy, &oz);
 	}
+#ifdef MC_ELASTIC_CONSTANTS
+      else if (dist_type == 10 || dist_type == 11 || dist_type == 12)
+	{
+	  orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
+	  ec_ux[i] = ox;
+	  ec_uy[i] = oy;
+	  ec_uz[i] = oz;
+	}
+#endif
       else 
 	{
   	  //orient(&ox, &oy, &oz);
@@ -8856,7 +8868,7 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
   if (type==9)
     printf("calc B2 MC\n");
   else
-    printf("calc vbonding MC\n");
+    printf("calc vbonding MC!!\n");
   Pi = 2.0*acos(0.0);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
@@ -8868,6 +8880,7 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
   else
     f = fopen("vbonding.dat","w+");
   fclose(f);
+  printf("toteneini=%f\n", toteneini);
   totene = toteneini;
   for (tt=ttini; tt < maxtrials; tt++)
     {
@@ -9193,7 +9206,416 @@ double do_bisection(double rmin, double rmax, int size1, int size2, double rhx, 
   *found=1;
   return rmid;
 }
+#ifdef MC_ELASTIC_CONSTANTS
+double dfons_sinth_max, fons_sinth_max;
+/* return an angle theta sampled from an Onsager angular distribution */
+double dfons(double theta, double alpha);
+double theta_donsager(double alpha)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  static int first = 1;
+  static double f0;
+  double pi, y, f, theta, dtheta;
+  //printf("alpha=%f\n", alpha);
+  pi = acos(0.0)*2.0;
+  if (first == 1)
+    {
+      first=0;
+      /* qui va fornito il massimo della funzione nell'intervallo
+	 [0,Pi] */
+      //f0 = 1.01*alpha*fons(0.0,alpha);
+      f0 = 1.01*dfons_sinth_max;
+    }
+  do 
+    {
+      /* uniform theta between 0 and pi */
+      theta = ranf_vb()*pi;
+      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
+      y = f0*ranf_vb();
+      f = fabs(sin(theta)*dfons(theta,alpha));
+      //printf("theta=%f y=%f\n", theta, y);
+    }
+  while (y >= f);
+  return theta;
+}
 
+/* first derivative of Onsager distribution */
+double dfons(double theta, double alpha)
+{
+  double pi;
+  pi = acos(0.0)*2.0;
+  /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
+     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
+  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+}
+
+void orient_donsager(double *omx, double *omy, double* omz, double alpha, double *segno)
+{
+  double thons;
+  double pi, phi, verso;
+
+  pi = acos(0.0)*2.0;
+  /* random angle from onsager distribution */
+  thons = theta_donsager(alpha);
+  if (thons < pi*0.5)
+    *segno = -1.0;
+  else
+    *segno = 1.0;
+  //printf("thos=%f\n", thons);
+  //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+  phi = 2.0*pi*ranf_vb();
+  //verso = (ranf_vb()<0.5)?1:-1;
+  verso=1;
+#if 1 /* along z */
+  *omx = verso*sin(thons)*cos(phi);
+  *omy = verso*sin(thons)*sin(phi);
+  *omz = verso*cos(thons); 
+#else /* or along x (but it has to be same of course!) */
+  *omy = verso*sin(thons)*cos(phi);
+  *omz = verso*sin(thons)*sin(phi);
+  *omx = verso*cos(thons); 
+#endif
+  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
+}
+const double thetapts=100000;
+
+double estimate_maximum_dfons(double alpha)
+{
+  double th, dth, maxval, m;
+  int i;
+  dth=2.0*(acos(0.0))/((double)thetapts);
+  th=0.0;
+  for (i=0; i < thetapts; i++)
+    {
+      m=sin(th)*dfons(th,alpha);
+      if (i==0 || maxval < m)
+	maxval = m;
+      th += dth;
+      //printf("%f %.15G\n", th, sin(th)*dfons(th, alpha));
+    }
+  // printf("maxval=%f\n", maxval);
+  return maxval;
+}
+void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
+{
+  int i, kk;
+
+  Rcm1[0]=Rcm1[1]=Rcm1[2]=0;
+  Rcm2[0]=Rcm2[1]=Rcm2[2]=0;
+  for (i=0; i < size1; i++)
+    {
+      Rcm1[0]+=rx[i];
+      Rcm1[1]+=ry[i];
+      Rcm1[2]+=rz[i];
+      Rcm2[0]+=rx[i+size1];
+      Rcm2[1]+=ry[i+size1];
+      Rcm2[2]+=rz[i+size1];
+    }
+  for (kk=0; kk < 3; kk++)
+    {
+      Rcm1[kk] /= ((double)size1);
+      Rcm2[kk] /= ((double)size1);
+    }
+}
+void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, int size1)
+{
+  int tt, k1, k2, i, j, kk, merr, selfoverlap, overlap, bt, nb, ierr;
+  FILE *f;
+  double cov, totene, shift[3];
+  double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
+  if (type == 11)
+    f = fopen("v11.dat","w+");
+  else if (type==12)
+    f = fopen("v22.dat","w+");
+  else
+    f = fopen("v33.dat","w+");
+
+  fclose(f);
+  ec_segno = malloc(sizeof(double)*Oparams.parnum);
+  ec_ux =    malloc(sizeof(double)*Oparams.parnum);
+  ec_uy =    malloc(sizeof(double)*Oparams.parnum);
+  ec_uz =    malloc(sizeof(double)*Oparams.parnum);
+  dfons_sinth_max=estimate_maximum_dfons(alpha);
+  fons_sinth_max=dfons_sinth_max/alpha;
+  printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
+
+  while (tt < maxtrials) 
+    {
+      /* first particle is always in the center of the box with the same orientation */
+      rx[0] = 0;
+      ry[0] = 0;
+      rz[0] = 0;
+      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
+      ec_ux[0] = ox;
+      ec_uy[0] = oy;
+      ec_uz[0] = oz;
+      //ox = 0; oy=0; oz=1;
+      //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
+      versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+      addRestrMatrix(Rl);
+#endif
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  {
+	    R[0][k1][k2] = Rl[k1][k2];
+	  }
+      /* place first cluster */
+      if (tt%outits==0)
+	{
+	  if (tt!=0)
+	    {
+#ifdef MD_LXYZ
+	      cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+	    
+#else
+	      cov = (totene/((double)tt))*(L*L*L);
+#endif
+	      if (type==0||type==4)
+		f=fopen("covolume.dat", "a");
+	      else
+		f=fopen("covolume-nem.dat", "a");
+	      printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+	      fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
+	      fclose(f);
+	      sync();
+	    }
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  numbonds[i] = 0;
+	}
+      for (i=1; i < size1; i++)
+	{
+	  bt = 0;
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*i);
+#if 1
+	      if (bt > Oparams.parnum*1000)
+		{
+		  printf("insertion cluster #1: maximum number of iteration reached\n");
+		  if (fabs(calcpotene()+i*2.0) < 1E-10)
+		    {
+		      save_conf_mc(0, 0);
+		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+		      exit(-1);
+		    }
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	      bt++;
+	    }
+	  mcin(i, j, nb, type, alpha, &merr, 0);
+	  if (merr!=0)
+	    {
+	      save_conf_mc(0, 0);
+	      printf("[mcin covolume] attempt to add a bonded particle failed!\n");
+	      break;
+	    }
+	  if (check_self_overlap(0, i))
+	    {
+	      selfoverlap = 1;
+	      break;
+	    }
+	  /* N.B. per ora non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
+	}
+
+      if (selfoverlap)
+	{
+	  tt++;
+	  continue;
+	}
+      /* place second cluster */
+      overlap=0;
+      for (i=size1; i < Oparams.parnum; i++)
+	{
+	  if (i==size1)
+	    {
+#ifdef MD_LXYZ
+	      rx[i] = L[0]*(ranf_vb()-0.5);
+	      ry[i] = L[1]*(ranf_vb()-0.5); 
+	      rz[i] = L[2]*(ranf_vb()-0.5); 
+#else
+	      rx[i] = L*(ranf_vb()-0.5);
+	      ry[i] = L*(ranf_vb()-0.5); 
+	      rz[i] = L*(ranf_vb()-0.5); 
+#endif
+	      /* NOTA 28/06/17:
+	       * ora devo generalre una distribuzione che è la derivata della funzione di Onsager
+	       * ma devo anche aggiustare i segni negativi che spuntano fuori! */
+	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
+
+	      ec_ux[i] = ox;
+	      ec_uy[i] = oy;
+	      ec_uz[i] = oz;
+
+	      versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+	      addRestrMatrix(Rl);
+#endif
+	      for (k1=0; k1 < 3; k1++)
+		for (k2=0; k2 < 3; k2++)
+		  R[i][k1][k2] = Rl[k1][k2];
+	    }
+	  else
+	    {
+	      bt = 0;
+	      while (1)
+		{
+		  nb = (int)(ranf_vb()*2.0);
+		  j = ((int) (ranf_vb()*(i-size1)))+size1;
+		  //printf("i=%d j=%d size1=%d\n", i, j, size1);
+
+#if 1
+		  if (bt > Oparams.parnum*1000)
+		    {
+		      printf("insertion cluster #2: maximum number of iteration reached\n");
+		      if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
+			{
+			  save_conf_mc(0, 0);
+			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+			  exit(-1);
+			}
+		    }
+#endif
+		  if (is_bonded_mc(j, nb))
+		    continue;
+		  else
+		    break;
+		  bt++;
+		}
+	      /* mette la particella i legata a j con posizione ed orientazione a caso */
+	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+	      mcin(i, j, nb, type, alpha, &merr, 0);
+	      if (merr!=0)
+		{
+		  save_conf_mc(0, 0);
+		  printf("[mcin] attempt to add a bonded particle failed!\n");
+		  break;
+		}
+	      if (check_self_overlap(size1, i))
+		{
+#if 0
+		  printf("BOH i=%d j=%d\n", i, j);
+		  save_conf_mc(tt, 0); 
+#endif
+		  selfoverlap = 1;
+		  break;
+		}
+
+	      /* N.B. per ora non controlla il self-overlap della catena 
+		 e la formazione dopo mcin di legami multipli poiché
+		 si presuppone che al massimo stiamo considerando dimeri */
+	    }
+	  if (selfoverlap||merr)
+	    {
+	      break;
+	      //tt++;
+	      //continue;
+	    }
+	  overlap = 0;
+	  for (j=0; j < size1; j++)
+	    {
+#ifdef MD_LXYZ
+	      shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	      shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	      shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	      shift[0] = L*rint((rx[i]-rx[j])/L);
+	      shift[1] = L*rint((ry[i]-ry[j])/L);
+	      shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	      ierr=0;
+	      if (check_overlap(i, j, shift, &ierr)<0.0)
+		{
+		  overlap=1;
+		  //printf("i=%d j=%d overlap!\n", i, j);
+		  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+		  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+		  break;
+		}
+	    }
+	  if (overlap)
+	    break;
+	}
+
+      if (selfoverlap||merr)
+	{
+	  tt++;
+#if 0	  
+	  save_conf_mc(tt, 0); 
+#endif
+	  continue;
+	}
+      /* qui va modificato perché ora calcoliamo le costanti elastiche */
+      if (overlap)// && ierr==0)
+	{
+	  calc_com_cls(Rcm1, Rcm2, size1);
+	  for (kk=0; kk < 3; kk++)
+	    {
+	      Rcm[kk] = Rcm2[kk] - Rcm1[kk];
+	    }
+	  if (type==11) // K11
+	    {
+	      fact1 = fact2 = 0.0;
+	      for (i=0; i < size1; i++)
+		for (j=size1; j < 2*size1; j++)
+		  {
+		    fact1 += ec_ux[i]*ec_uy[j]*ec_segno[i]*ec_segno[j];
+		    fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+		  }
+	      totene += (fact1+fact2)*Rcm[1]*Rcm[0]*0.5;
+	    }
+	  else if (type==12) // K22
+	    {
+	      fact1 = fact2= 0.0;
+	      for (i=0; i < size1; i++)
+		for (j=size1; j < 2*size1; j++)
+		  {
+		    fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+		    fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+		  }
+	      fact1 *= Rcm[1]*Rcm[1];
+	      fact2 *= Rcm[0]*Rcm[0];
+	      totene += (fact1+fact2)*0.5;
+	    }
+	  else if (type==13) // K33
+	    {
+	      fact1 = fact2= 0.0;
+	      for (i=0; i < size1; i++)
+		for (j=size1; j < 2*size1; j++)
+		  {
+		    fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+		    fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+		  }
+	      totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
+	    }
+	}
+#if 0
+      if (tt!=0 && tt%outits==0)
+	save_conf_mc(tt, 0); 
+#endif
+
+      if (ierr!=0)
+	{
+	  printf("COV main loop NR failure\n");
+	  printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
+	  store_bump(i,j);
+	}
+      tt++;
+    }
+
+}
+#endif
 void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits, int maxtrials)
 {
   FILE *f;	 
@@ -9993,6 +10415,9 @@ void calc_cov_additive(void)
      type = 5 -> bonding volume using onsager trial function
      type = 8 -> standard deviation of bonding angle in the nematic phase
      type = 9 -> B2
+     type = 10 -> K11
+     type = 11 -> K22
+     type = 12 -> K33
    */
  if (type==1||type==5||type==7||type==8)
     {
@@ -10027,7 +10452,13 @@ void calc_cov_additive(void)
       exit(-1);
     }
 #endif
- 
+#ifdef MC_ELASTIC_CONSTANTS
+  if (type == 11 || type == 12 || type == 13)
+    {
+      calc_elastic_constants(type, alpha, maxtrials, outits, size1);
+      exit(-1);
+    }
+#endif
   if (type==3||type==5||type==9)
     {
 #if defined(MC_KERN_FRENKEL) && !defined(MC_BIFUNC_SPHERES)
