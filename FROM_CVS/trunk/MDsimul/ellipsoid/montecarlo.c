@@ -6997,6 +6997,7 @@ void addRestrMatrix(double Rl[3][3]);
 void save_conf_mc(int i, int ii);
 #ifdef MC_ELASTIC_CONSTANTS
 double *ec_segno, *ec_ux, *ec_uy, *ec_uz;
+void orient_donsager(double *ox, double *oy, double *oz, double alpha, double *segno); 
 #endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
