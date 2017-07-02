@@ -9334,9 +9334,10 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
 }
 void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, int size1)
 {
-  int tt, k1, k2, i, j, kk, merr, selfoverlap, overlap, bt, nb, ierr;
+  int tt, k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
   int ii, jj;
-  FILE *f;
+  const int nn=1000;
+   FILE *f;
   double cov, totene, shift[3];
   double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
   if (type == 11)
@@ -9345,7 +9346,11 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
     f = fopen("v22.dat","w+");
   else
     f = fopen("v33.dat","w+");
-
+ 
+  distro=malloc(sizeof(double)*nn);
+  for (i=0; i < nn; i++)
+    distro[i] = 0.0;
+  
   fclose(f);
   ec_segno = malloc(sizeof(double)*Oparams.parnum);
   ec_ux =    malloc(sizeof(double)*Oparams.parnum);
@@ -9355,8 +9360,11 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
   fons_sinth_max=dfons_sinth_max/alpha;
   printf("Estimated maximum of dfons is %f maxtrials=%d alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
   tt=0;
+  totene=0.0;
   while (tt < maxtrials) 
     {
+      merr=ierr=0;
+      selfoverlap = 0;
       for (ii=0; ii < size1; ii++)
 	for (jj=size1; jj < Oparams.parnum; jj++)
 	  { 
@@ -9388,7 +9396,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		  R[0][k1][k2] = Rl[k1][k2];
 		}
 	    /* place first cluster */
-	    if (tt%outits==0)
+	    if (tt%outits==0 && ii==0 && jj==size1)
 	      {
 		if (tt!=0)
 		  {
@@ -9483,11 +9491,11 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		      }
 		    else
 		      {
-		      	orient_onsager(&ox, &oy, &oz, alpha);
+			orient_onsager(&ox, &oy, &oz, alpha);
 			ec_segno[i] = 1.0;
 		      }
-	    	    ec_ux[i] = ox;
-    		    ec_uy[i] = oy;
+		    ec_ux[i] = ox;
+		    ec_uy[i] = oy;
 		    ec_uz[i] = oz;
 
 		    versor_to_R(ox, oy, oz, Rl);
@@ -9573,13 +9581,12 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 			//printf("i=%d j=%d overlap!\n", i, j);
 			//printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
 			//printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
-			break;
+			//break;
 		      }
 		  }
-		if (overlap)
-		  break;
+		//if (overlap)
+		  //break;
 	      }
-
 	    if (selfoverlap||merr)
 	      {
 		tt++;
@@ -9591,6 +9598,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 	    /* qui va modificato perché ora calcoliamo le costanti elastiche */
 	    if (overlap)// && ierr==0)
 	      {
+		//printf("qui\n");
 		calc_com_cls(Rcm1, Rcm2, size1);
 		for (kk=0; kk < 3; kk++)
 		  {
@@ -9598,7 +9606,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		  }
 		if (type==11) // K11
 		  {
-		    fact1 = ec_ux[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact1 = -ec_ux[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    totene += fact1*Rcm[1]*Rcm[0]*0.5;
 		  }
 		else if (type==12) // K22
@@ -9607,8 +9615,8 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    for (i=0; i < size1; i++)
 		      for (j=size1; j < 2*size1; j++)
 			{
-			  fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-			  fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			  fact1 += -ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			  fact2 += -ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
 			}
 		    fact1 *= Rcm[1]*Rcm[1];
 		    fact2 *= Rcm[0]*Rcm[0];
@@ -9620,8 +9628,8 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    for (i=0; i < size1; i++)
 		      for (j=size1; j < 2*size1; j++)
 			{
-			  fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-			  fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			  fact1 += -ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			  fact2 += -ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
 			}
 		    totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
 		  }
