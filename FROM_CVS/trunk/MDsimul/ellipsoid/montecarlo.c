@@ -6998,6 +6998,7 @@ void save_conf_mc(int i, int ii);
 #ifdef MC_ELASTIC_CONSTANTS
 double *ec_segno, *ec_ux, *ec_uy, *ec_uz;
 void orient_donsager(double *ox, double *oy, double *oz, double alpha, double *segno); 
+int cur_ii, cur_jj;
 #endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
@@ -7218,10 +7219,21 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #ifdef MC_ELASTIC_CONSTANTS
       else if (dist_type == 10 || dist_type == 11 || dist_type == 12)
 	{
-	  orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
-	  ec_ux[i] = ox;
-	  ec_uy[i] = oy;
-	  ec_uz[i] = oz;
+	  if (i == cur_ii || i == cur_jj)
+	    {
+	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
+	      ec_ux[i] = ox;
+	      ec_uy[i] = oy;
+	      ec_uz[i] = oz;
+	    }
+	  else
+	    {
+	      orient_onsager(&ox, &oy, &oz, alpha);
+	      ec_segno[i] = 1.0;
+	      ec_ux[i] = ox;
+	      ec_uy[i] = oy;
+	      ec_uz[i] = oz;
+	    }
 	}
 #endif
       else 
@@ -9323,6 +9335,7 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
 void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, int size1)
 {
   int tt, k1, k2, i, j, kk, merr, selfoverlap, overlap, bt, nb, ierr;
+  int ii, jj;
   FILE *f;
   double cov, totene, shift[3];
   double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
@@ -9340,278 +9353,291 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
   ec_uz =    malloc(sizeof(double)*Oparams.parnum);
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   fons_sinth_max=dfons_sinth_max/alpha;
-  printf("Estimated maximum of dfons is %f\n", dfons_sinth_max);
-
+  printf("Estimated maximum of dfons is %f maxtrials=%d alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
+  tt=0;
   while (tt < maxtrials) 
     {
-      /* first particle is always in the center of the box with the same orientation */
-      rx[0] = 0;
-      ry[0] = 0;
-      rz[0] = 0;
-      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
-      ec_ux[0] = ox;
-      ec_uy[0] = oy;
-      ec_uz[0] = oz;
-      //ox = 0; oy=0; oz=1;
-      //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
-      versor_to_R(ox, oy, oz, Rl);
+      for (ii=0; ii < size1; ii++)
+	for (jj=size1; jj < Oparams.parnum; jj++)
+	  { 
+	    cur_ii = ii;
+	    cur_jj = jj;
+	    /* first particle is always in the center of the box with the same orientation */
+	    rx[0] = 0;
+	    ry[0] = 0;
+	    rz[0] = 0;
+	    if (ii==0)
+	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
+	    else
+	      {
+		orient_onsager(&ox, &oy, &oz, alpha);
+		ec_segno[0] = 1.0;
+	      }
+	    ec_ux[0] = ox;
+	    ec_uy[0] = oy;
+	    ec_uz[0] = oz;
+	    //ox = 0; oy=0; oz=1;
+	    //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
+	    versor_to_R(ox, oy, oz, Rl);
 #if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
-      addRestrMatrix(Rl);
+	    addRestrMatrix(Rl);
 #endif
-      for (k1=0; k1 < 3; k1++)
-	for (k2=0; k2 < 3; k2++)
-	  {
-	    R[0][k1][k2] = Rl[k1][k2];
-	  }
-      /* place first cluster */
-      if (tt%outits==0)
-	{
-	  if (tt!=0)
-	    {
-#ifdef MD_LXYZ
-	      cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
-	    
-#else
-	      cov = (totene/((double)tt))*(L*L*L);
-#endif
-	      if (type==0||type==4)
-		f=fopen("covolume.dat", "a");
-	      else
-		f=fopen("covolume-nem.dat", "a");
-	      printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
-	      fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
-	      fclose(f);
-	      sync();
-	    }
-	}
-      for (i=0; i < Oparams.parnum; i++)
-	{
-	  numbonds[i] = 0;
-	}
-      for (i=1; i < size1; i++)
-	{
-	  bt = 0;
-	  while (1)
-	    {
-	      nb = (int)(ranf_vb()*2.0);
-	      j = (int) (ranf_vb()*i);
-#if 1
-	      if (bt > Oparams.parnum*1000)
+	    for (k1=0; k1 < 3; k1++)
+	      for (k2=0; k2 < 3; k2++)
 		{
-		  printf("insertion cluster #1: maximum number of iteration reached\n");
-		  if (fabs(calcpotene()+i*2.0) < 1E-10)
-		    {
-		      save_conf_mc(0, 0);
-		      printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
-		      exit(-1);
-		    }
+		  R[0][k1][k2] = Rl[k1][k2];
 		}
-#endif
-	      if (is_bonded_mc(j, nb))
-		continue;
-	      else
-		break;
-	      bt++;
-	    }
-	  mcin(i, j, nb, type, alpha, &merr, 0);
-	  if (merr!=0)
-	    {
-	      save_conf_mc(0, 0);
-	      printf("[mcin covolume] attempt to add a bonded particle failed!\n");
-	      break;
-	    }
-	  if (check_self_overlap(0, i))
-	    {
-	      selfoverlap = 1;
-	      break;
-	    }
-	  /* N.B. per ora non controlla il self-overlap della catena 
-	     e la formazione dopo mcin di legami multipli poiché
-	     si presuppone che al massimo stiamo considerando dimeri */
-	}
-
-      if (selfoverlap)
-	{
-	  tt++;
-	  continue;
-	}
-      /* place second cluster */
-      overlap=0;
-      for (i=size1; i < Oparams.parnum; i++)
-	{
-	  if (i==size1)
-	    {
+	    /* place first cluster */
+	    if (tt%outits==0)
+	      {
+		if (tt!=0)
+		  {
 #ifdef MD_LXYZ
-	      rx[i] = L[0]*(ranf_vb()-0.5);
-	      ry[i] = L[1]*(ranf_vb()-0.5); 
-	      rz[i] = L[2]*(ranf_vb()-0.5); 
+		    cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+
 #else
-	      rx[i] = L*(ranf_vb()-0.5);
-	      ry[i] = L*(ranf_vb()-0.5); 
-	      rz[i] = L*(ranf_vb()-0.5); 
+		    cov = (totene/((double)tt))*(L*L*L);
 #endif
-	      /* NOTA 28/06/17:
-	       * ora devo generalre una distribuzione che è la derivata della funzione di Onsager
-	       * ma devo anche aggiustare i segni negativi che spuntano fuori! */
-	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
-
-	      ec_ux[i] = ox;
-	      ec_uy[i] = oy;
-	      ec_uz[i] = oz;
-
-	      versor_to_R(ox, oy, oz, Rl);
-#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
-	      addRestrMatrix(Rl);
-#endif
-	      for (k1=0; k1 < 3; k1++)
-		for (k2=0; k2 < 3; k2++)
-		  R[i][k1][k2] = Rl[k1][k2];
-	    }
-	  else
-	    {
-	      bt = 0;
-	      while (1)
-		{
-		  nb = (int)(ranf_vb()*2.0);
-		  j = ((int) (ranf_vb()*(i-size1)))+size1;
-		  //printf("i=%d j=%d size1=%d\n", i, j, size1);
-
+		    if (type==0||type==4)
+		      f=fopen("covolume.dat", "a");
+		    else
+		      f=fopen("covolume-nem.dat", "a");
+		    printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+		    fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
+		    fclose(f);
+		    sync();
+		  }
+	      }
+	    for (i=0; i < Oparams.parnum; i++)
+	      {
+		numbonds[i] = 0;
+	      }
+	    for (i=1; i < size1; i++)
+	      {
+		bt = 0;
+		while (1)
+		  {
+		    nb = (int)(ranf_vb()*2.0);
+		    j = (int) (ranf_vb()*i);
 #if 1
-		  if (bt > Oparams.parnum*1000)
-		    {
-		      printf("insertion cluster #2: maximum number of iteration reached\n");
-		      if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
-			{
-			  save_conf_mc(0, 0);
-			  printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
-			  exit(-1);
-			}
-		    }
+		    if (bt > Oparams.parnum*1000)
+		      {
+			printf("insertion cluster #1: maximum number of iteration reached\n");
+			if (fabs(calcpotene()+i*2.0) < 1E-10)
+			  {
+			    save_conf_mc(0, 0);
+			    printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+			    exit(-1);
+			  }
+		      }
 #endif
-		  if (is_bonded_mc(j, nb))
-		    continue;
-		  else
+		    if (is_bonded_mc(j, nb))
+		      continue;
+		    else
+		      break;
+		    bt++;
+		  }
+		mcin(i, j, nb, type, alpha, &merr, 0);
+		if (merr!=0)
+		  {
+		    save_conf_mc(0, 0);
+		    printf("[mcin covolume] attempt to add a bonded particle failed!\n");
 		    break;
-		  bt++;
-		}
-	      /* mette la particella i legata a j con posizione ed orientazione a caso */
-	      //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
-	      mcin(i, j, nb, type, alpha, &merr, 0);
-	      if (merr!=0)
-		{
-		  save_conf_mc(0, 0);
-		  printf("[mcin] attempt to add a bonded particle failed!\n");
-		  break;
-		}
-	      if (check_self_overlap(size1, i))
-		{
-#if 0
-		  printf("BOH i=%d j=%d\n", i, j);
-		  save_conf_mc(tt, 0); 
-#endif
-		  selfoverlap = 1;
-		  break;
-		}
+		  }
+		if (check_self_overlap(0, i))
+		  {
+		    selfoverlap = 1;
+		    break;
+		  }
+		/* N.B. per ora non controlla il self-overlap della catena 
+		   e la formazione dopo mcin di legami multipli poiché
+		   si presuppone che al massimo stiamo considerando dimeri */
+	      }
 
-	      /* N.B. per ora non controlla il self-overlap della catena 
-		 e la formazione dopo mcin di legami multipli poiché
-		 si presuppone che al massimo stiamo considerando dimeri */
-	    }
-	  if (selfoverlap||merr)
-	    {
-	      break;
-	      //tt++;
-	      //continue;
-	    }
-	  overlap = 0;
-	  for (j=0; j < size1; j++)
-	    {
+	    if (selfoverlap)
+	      {
+		tt++;
+		continue;
+	      }
+	    /* place second cluster */
+	    overlap=0;
+	    for (i=size1; i < Oparams.parnum; i++)
+	      {
+		if (i==size1)
+		  {
 #ifdef MD_LXYZ
-	      shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
-	      shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
-	      shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+		    rx[i] = L[0]*(ranf_vb()-0.5);
+		    ry[i] = L[1]*(ranf_vb()-0.5); 
+		    rz[i] = L[2]*(ranf_vb()-0.5); 
 #else
-	      shift[0] = L*rint((rx[i]-rx[j])/L);
-	      shift[1] = L*rint((ry[i]-ry[j])/L);
-	      shift[2] = L*rint((rz[i]-rz[j])/L);
+		    rx[i] = L*(ranf_vb()-0.5);
+		    ry[i] = L*(ranf_vb()-0.5); 
+		    rz[i] = L*(ranf_vb()-0.5); 
 #endif
-	      ierr=0;
-	      if (check_overlap(i, j, shift, &ierr)<0.0)
-		{
-		  overlap=1;
-		  //printf("i=%d j=%d overlap!\n", i, j);
-		  //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
-		  //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
-		  break;
-		}
-	    }
-	  if (overlap)
-	    break;
-	}
+		    /* NOTA 28/06/17:
+		     * ora devo generalre una distribuzione che è la derivata della funzione di Onsager
+		     * ma devo anche aggiustare i segni negativi che spuntano fuori! */
+		    if (i == cur_jj)
+		      {
+			orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
+		      }
+		    else
+		      {
+		      	orient_onsager(&ox, &oy, &oz, alpha);
+			ec_segno[i] = 1.0;
+		      }
+	    	    ec_ux[i] = ox;
+    		    ec_uy[i] = oy;
+		    ec_uz[i] = oz;
 
-      if (selfoverlap||merr)
-	{
-	  tt++;
-#if 0	  
-	  save_conf_mc(tt, 0); 
+		    versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+		    addRestrMatrix(Rl);
 #endif
-	  continue;
-	}
-      /* qui va modificato perché ora calcoliamo le costanti elastiche */
-      if (overlap)// && ierr==0)
-	{
-	  calc_com_cls(Rcm1, Rcm2, size1);
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      Rcm[kk] = Rcm2[kk] - Rcm1[kk];
-	    }
-	  if (type==11) // K11
-	    {
-	      fact1 = fact2 = 0.0;
-	      for (i=0; i < size1; i++)
-		for (j=size1; j < 2*size1; j++)
-		  {
-		    fact1 += ec_ux[i]*ec_uy[j]*ec_segno[i]*ec_segno[j];
-		    fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+		    for (k1=0; k1 < 3; k1++)
+		      for (k2=0; k2 < 3; k2++)
+			R[i][k1][k2] = Rl[k1][k2];
 		  }
-	      totene += (fact1+fact2)*Rcm[1]*Rcm[0]*0.5;
-	    }
-	  else if (type==12) // K22
-	    {
-	      fact1 = fact2= 0.0;
-	      for (i=0; i < size1; i++)
-		for (j=size1; j < 2*size1; j++)
+		else
 		  {
-		    fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-		    fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-		  }
-	      fact1 *= Rcm[1]*Rcm[1];
-	      fact2 *= Rcm[0]*Rcm[0];
-	      totene += (fact1+fact2)*0.5;
-	    }
-	  else if (type==13) // K33
-	    {
-	      fact1 = fact2= 0.0;
-	      for (i=0; i < size1; i++)
-		for (j=size1; j < 2*size1; j++)
-		  {
-		    fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-		    fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-		  }
-	      totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
-	    }
-	}
+		    bt = 0;
+		    while (1)
+		      {
+			nb = (int)(ranf_vb()*2.0);
+			j = ((int) (ranf_vb()*(i-size1)))+size1;
+			//printf("i=%d j=%d size1=%d\n", i, j, size1);
+
+#if 1
+			if (bt > Oparams.parnum*1000)
+			  {
+			    printf("insertion cluster #2: maximum number of iteration reached\n");
+			    if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
+			      {
+				save_conf_mc(0, 0);
+				printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+				exit(-1);
+			      }
+			  }
+#endif
+			if (is_bonded_mc(j, nb))
+			  continue;
+			else
+			  break;
+			bt++;
+		      }
+		    /* mette la particella i legata a j con posizione ed orientazione a caso */
+		    //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+		    mcin(i, j, nb, type, alpha, &merr, 0);
+		    if (merr!=0)
+		      {
+			save_conf_mc(0, 0);
+			printf("[mcin] attempt to add a bonded particle failed!\n");
+			break;
+		      }
+		    if (check_self_overlap(size1, i))
+		      {
 #if 0
-      if (tt!=0 && tt%outits==0)
-	save_conf_mc(tt, 0); 
+			printf("BOH i=%d j=%d\n", i, j);
+			save_conf_mc(tt, 0); 
+#endif
+			selfoverlap = 1;
+			break;
+		      }
+
+		    /* N.B. per ora non controlla il self-overlap della catena 
+		       e la formazione dopo mcin di legami multipli poiché
+		       si presuppone che al massimo stiamo considerando dimeri */
+		  }
+		if (selfoverlap||merr)
+		  {
+		    break;
+		    //tt++;
+		    //continue;
+		  }
+		overlap = 0;
+		for (j=0; j < size1; j++)
+		  {
+#ifdef MD_LXYZ
+		    shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+		    shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+		    shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+		    shift[0] = L*rint((rx[i]-rx[j])/L);
+		    shift[1] = L*rint((ry[i]-ry[j])/L);
+		    shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+		    ierr=0;
+		    if (check_overlap(i, j, shift, &ierr)<0.0)
+		      {
+			overlap=1;
+			//printf("i=%d j=%d overlap!\n", i, j);
+			//printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+			//printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+			break;
+		      }
+		  }
+		if (overlap)
+		  break;
+	      }
+
+	    if (selfoverlap||merr)
+	      {
+		tt++;
+#if 0	  
+		save_conf_mc(tt, 0); 
+#endif
+		continue;
+	      }
+	    /* qui va modificato perché ora calcoliamo le costanti elastiche */
+	    if (overlap)// && ierr==0)
+	      {
+		calc_com_cls(Rcm1, Rcm2, size1);
+		for (kk=0; kk < 3; kk++)
+		  {
+		    Rcm[kk] = Rcm2[kk] - Rcm1[kk];
+		  }
+		if (type==11) // K11
+		  {
+		    fact1 = ec_ux[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    totene += fact1*Rcm[1]*Rcm[0]*0.5;
+		  }
+		else if (type==12) // K22
+		  {
+		    fact1 = fact2= 0.0;
+		    for (i=0; i < size1; i++)
+		      for (j=size1; j < 2*size1; j++)
+			{
+			  fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			  fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			}
+		    fact1 *= Rcm[1]*Rcm[1];
+		    fact2 *= Rcm[0]*Rcm[0];
+		    totene += (fact1+fact2)*0.5;
+		  }
+		else if (type==13) // K33
+		  {
+		    fact1 = fact2= 0.0;
+		    for (i=0; i < size1; i++)
+		      for (j=size1; j < 2*size1; j++)
+			{
+			  fact1 += ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			  fact2 += ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
+			}
+		    totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
+		  }
+	      }
+#if 0
+	    if (tt!=0 && tt%outits==0)
+	      save_conf_mc(tt, 0); 
 #endif
 
-      if (ierr!=0)
-	{
-	  printf("COV main loop NR failure\n");
-	  printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
-	  store_bump(i,j);
-	}
+	    if (ierr!=0)
+	      {
+		printf("COV main loop NR failure\n");
+		printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
+		store_bump(i,j);
+	      }
+	  }
       tt++;
     }
 
@@ -10396,7 +10422,7 @@ void calc_cov_additive(void)
     }
   
   printf("ene iniziale=%f\n", calcpotene());
-  if (type==1||type==5||type==8)
+  if (type==1||type==5||type==8||type==11||type==12||type==13)
     {
       fscanf(fi, " %lf ", &alpha);
       printf("type=%d alpha=%.15G\n", type, alpha);
@@ -10456,6 +10482,7 @@ void calc_cov_additive(void)
 #ifdef MC_ELASTIC_CONSTANTS
   if (type == 11 || type == 12 || type == 13)
     {
+      printf("type=%d alpha=%.15G size1=%d outits=%d\n", type, alpha, size1, outits);
       calc_elastic_constants(type, alpha, maxtrials, outits, size1);
       exit(-1);
     }
