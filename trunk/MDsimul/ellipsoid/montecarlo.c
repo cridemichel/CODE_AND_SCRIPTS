@@ -9633,7 +9633,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		else if (type==13) // K33
 		  {
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
-	  	    fact2 = ec_uy[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
 		  }
 	      }
