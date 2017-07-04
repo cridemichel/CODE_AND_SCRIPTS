@@ -9406,7 +9406,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 #else
 		    cov = (totene/((double)tt))*(L*L*L);
 #endif
-		    cov *= Sqr(alpha/2.0);
+		    cov *= Sqr(alpha);
 		    if (type==0||type==4)
 		      f=fopen("covolume.dat", "a");
 		    else
