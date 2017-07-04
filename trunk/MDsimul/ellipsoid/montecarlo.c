@@ -9616,10 +9616,11 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		  }
 		if (type==11) // K11
 		  {
-		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*Rcm[0]*Rcm[0];
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*Rcm[1]*Rcm[1];
 		    //printf("Rcm %f\n", Rcm[0]);
 		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
-		    totene += fact1*Rcm[0]*Rcm[0];
+		    totene += (fact1+fact2)*0.5;
 		  }
 		else if (type==12) // K22
 		  {
