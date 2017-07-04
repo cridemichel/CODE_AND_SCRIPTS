@@ -7217,7 +7217,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   	  orient(&ox, &oy, &oz);
 	}
 #ifdef MC_ELASTIC_CONSTANTS
-      else if (dist_type == 10 || dist_type == 11 || dist_type == 12)
+      else if (dist_type == 11 || dist_type == 12 || dist_type == 13)
 	{
 	  if (i == cur_ii || i == cur_jj)
 	    {
@@ -9374,7 +9374,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 	    rx[0] = 0;
 	    ry[0] = 0;
 	    rz[0] = 0;
-	    if (ii==0)
+	    if (ii==cur_ii)
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
 	    else
 	      {
@@ -9406,6 +9406,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 #else
 		    cov = (totene/((double)tt))*(L*L*L);
 #endif
+		    cov *= Sqr(alpha/2.0);
 		    if (type==0||type==4)
 		      f=fopen("covolume.dat", "a");
 		    else
@@ -9606,8 +9607,10 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		  }
 		if (type==11) // K11
 		  {
-		    fact1 = -ec_ux[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
-		    totene += fact1*Rcm[1]*Rcm[0]*0.5;
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    //printf("Rcm %f\n", Rcm[0]);
+		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
+		    totene += fact1*Rcm[0]*Rcm[0]*0.5;
 		  }
 		else if (type==12) // K22
 		  {
