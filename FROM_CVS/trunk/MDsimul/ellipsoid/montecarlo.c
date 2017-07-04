@@ -9273,9 +9273,9 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha, double
   /* random angle from onsager distribution */
   thons = theta_donsager(alpha);
   if (thons < pi*0.5)
-    *segno = -1.0;
-  else
     *segno = 1.0;
+  else
+    *segno = -1.0;
   //printf("thos=%f\n", thons);
   //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
   phi = 2.0*pi*ranf_vb();
@@ -9407,11 +9407,20 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    cov = (totene/((double)tt))*(L*L*L);
 #endif
 		    cov *= Sqr(alpha);
-		    if (type==0||type==4)
-		      f=fopen("covolume.dat", "a");
+		    if (type == 11)
+		      f = fopen("v11.dat","a");
+		    else if (type==12)
+		      f = fopen("v22.dat","a");
 		    else
-		      f=fopen("covolume-nem.dat", "a");
-		    printf("co-volume=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+		      f = fopen("v33.dat","a");
+
+		    if (type == 11)
+		      printf("v11=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+		    else if (type==12)
+		      printf("v22=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+		    else
+		      printf("v33=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+
 		    fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
 		    fclose(f);
 		    sync();
@@ -9610,30 +9619,20 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    //printf("Rcm %f\n", Rcm[0]);
 		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
-		    totene += fact1*Rcm[0]*Rcm[0]*0.5;
+		    totene += fact1*Rcm[0]*Rcm[0];
 		  }
 		else if (type==12) // K22
 		  {
-		    fact1 = fact2= 0.0;
-		    for (i=0; i < size1; i++)
-		      for (j=size1; j < 2*size1; j++)
-			{
-			  fact1 += -ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-			  fact2 += -ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-			}
+	  	    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact1 *= Rcm[1]*Rcm[1];
 		    fact2 *= Rcm[0]*Rcm[0];
 		    totene += (fact1+fact2)*0.5;
 		  }
 		else if (type==13) // K33
 		  {
-		    fact1 = fact2= 0.0;
-		    for (i=0; i < size1; i++)
-		      for (j=size1; j < 2*size1; j++)
-			{
-			  fact1 += -ec_ux[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-			  fact2 += -ec_uy[i]*ec_ux[j]*ec_segno[i]*ec_segno[j];
-			}
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+	  	    fact2 = ec_uy[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
 		  }
 	      }
