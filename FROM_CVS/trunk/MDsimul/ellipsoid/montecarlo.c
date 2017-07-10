@@ -9566,7 +9566,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		       e la formazione dopo mcin di legami multipli poiché
 		       si presuppone che al massimo stiamo considerando dimeri */
 		  }
-		if (selfoverlap||merr)
+		if (selfoverlap)
 		  {
 		    break;
 		    //tt++;
@@ -9595,6 +9595,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		      }
 		  }
 	      }
+#if 0
 	    if (selfoverlap||merr)
 	      {
 		//tt++;
@@ -9603,6 +9604,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 #endif
 		break;
 	      }
+#endif
 	    /* qui va modificato perché ora calcoliamo le costanti elastiche */
 	    if (overlap && selfoverlap==0 && merr==0 && ierr==0)
 	      {
