@@ -9566,12 +9566,14 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		       e la formazione dopo mcin di legami multipli poiché
 		       si presuppone che al massimo stiamo considerando dimeri */
 		  }
+#if 0
 		if (selfoverlap)
 		  {
 		    break;
 		    //tt++;
 		    //continue;
 		  }
+#endif
 		//overlap = 0;
 		for (j=0; j < size1; j++)
 		  {
