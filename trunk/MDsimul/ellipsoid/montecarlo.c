@@ -9475,8 +9475,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 	    if (selfoverlap||merr)
 	      {
 		//tt++;
-		//continue;
-		break;
+		continue;
 	      }
 	    /* place second cluster */
 	    for (i=size1; i < Oparams.parnum; i++)
