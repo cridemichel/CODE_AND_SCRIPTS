@@ -9363,18 +9363,18 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
   totene=0.0;
   while (tt < maxtrials) 
     {
-      merr=ierr=0;
-      selfoverlap = 0;
       for (ii=0; ii < size1; ii++)
 	for (jj=size1; jj < Oparams.parnum; jj++)
 	  { 
+      	    merr=ierr=0;
+	    selfoverlap = overlap = 0;
 	    cur_ii = ii;
 	    cur_jj = jj;
 	    /* first particle is always in the center of the box with the same orientation */
 	    rx[0] = 0;
 	    ry[0] = 0;
 	    rz[0] = 0;
-	    if (ii==cur_ii)
+	    if (cur_ii==0)
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
 	    else
 	      {
@@ -9472,13 +9472,13 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		   si presuppone che al massimo stiamo considerando dimeri */
 	      }
 
-	    if (selfoverlap)
+	    if (selfoverlap||merr)
 	      {
-		tt++;
-		continue;
+		//tt++;
+		//continue;
+		break;
 	      }
 	    /* place second cluster */
-	    overlap=0;
 	    for (i=size1; i < Oparams.parnum; i++)
 	      {
 		if (i==size1)
@@ -9572,7 +9572,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    //tt++;
 		    //continue;
 		  }
-		overlap = 0;
+		//overlap = 0;
 		for (j=0; j < size1; j++)
 		  {
 #ifdef MD_LXYZ
@@ -9594,19 +9594,17 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 			//break;
 		      }
 		  }
-		//if (overlap)
-		  //break;
 	      }
 	    if (selfoverlap||merr)
 	      {
-		tt++;
+		//tt++;
 #if 0	  
 		save_conf_mc(tt, 0); 
 #endif
-		continue;
+		break;
 	      }
 	    /* qui va modificato perché ora calcoliamo le costanti elastiche */
-	    if (overlap)// && ierr==0)
+	    if (overlap && selfoverlap==0 && merr==0 && ierr==0)
 	      {
 		//printf("qui\n");
 		calc_com_cls(Rcm1, Rcm2, size1);
@@ -9620,7 +9618,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*Rcm[1]*Rcm[1];
 		    //printf("Rcm %f\n", Rcm[0]);
 		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
-		    totene += (fact1+fact2)*0.5;
+		    totene += -(fact1+fact2)*0.5;
 		  }
 		else if (type==12) // K22
 		  {
@@ -9628,13 +9626,13 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact1 *= Rcm[1]*Rcm[1];
 		    fact2 *= Rcm[0]*Rcm[0];
-		    totene += (fact1+fact2)*0.5;
+		    totene += -(fact1+fact2)*0.5;
 		  }
 		else if (type==13) // K33
 		  {
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
-		    totene += (fact1+fact2)*0.5*Rcm[2]*Rcm[2];
+		    totene += -(fact1+fact2)*0.5*Rcm[2]*Rcm[2];
 		  }
 	      }
 #if 0
