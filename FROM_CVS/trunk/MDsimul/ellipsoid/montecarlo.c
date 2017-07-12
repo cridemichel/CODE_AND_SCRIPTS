@@ -9338,7 +9338,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
   int ii, jj;
   const int nn=1000;
    FILE *f;
-  double cov, totene, shift[3];
+  double cov, totene, shift[3], segno;
   double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
   if (type == 11)
     f = fopen("v11.dat","w+");
@@ -9363,13 +9363,36 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
   totene=0.0;
   while (tt < maxtrials) 
     {
-      for (ii=0; ii < size1; ii++)
+#if 0
+      for (ii=0; ii < Oparams.parnum; ii++)
 	for (jj=size1; jj < Oparams.parnum; jj++)
 	  { 
-      	    merr=ierr=0;
+	    if (ii==jj)
+	      continue;
+
+
+	    if (ii >= size1 && jj >= size1)
+	      segno=1.0;
+	    else 
+	      segno=-1.0;
+#endif
+	    cur_ii=-1; 
+	    cur_jj=-1;
+	    while (cur_ii==cur_jj)
+	      {
+		cur_ii = (int)(ranf()*Oparams.parnum);
+		cur_jj = size1+((int)(ranf()*size1));
+	      }
+	    //printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
+	    if (cur_ii >= size1 && cur_jj >= size1)
+	      segno=1.0;
+	    else 
+	      segno=-1.0;
+	    segno *= Oparams.parnum*size1;
+	    merr=ierr=0;
 	    selfoverlap = overlap = 0;
-	    cur_ii = ii;
-	    cur_jj = jj;
+	    //cur_ii = ii;
+	    //cur_jj = jj;
 	    /* first particle is always in the center of the box with the same orientation */
 	    rx[0] = 0;
 	    ry[0] = 0;
@@ -9396,7 +9419,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		  R[0][k1][k2] = Rl[k1][k2];
 		}
 	    /* place first cluster */
-	    if (tt%outits==0 && ii==0 && jj==size1)
+	    if (tt%outits==0)// && ii==0 && jj==size1)
 	      {
 		if (tt!=0)
 		  {
@@ -9621,21 +9644,21 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*Rcm[1]*Rcm[1];
 		    //printf("Rcm %f\n", Rcm[0]);
 		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
-		    totene += -(fact1+fact2)*0.5;
+		    totene += segno*(fact1+fact2)*0.5;
 		  }
 		else if (type==12) // K22
 		  {
-	  	    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact1 *= Rcm[1]*Rcm[1];
 		    fact2 *= Rcm[0]*Rcm[0];
-		    totene += -(fact1+fact2)*0.5;
+		    totene += segno*(fact1+fact2)*0.5;
 		  }
 		else if (type==13) // K33
 		  {
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
-		    totene += -(fact1+fact2)*0.5*Rcm[2]*Rcm[2];
+		    totene += segno*(fact1+fact2)*0.5*Rcm[2]*Rcm[2];
 		  }
 	      }
 #if 0
@@ -9649,7 +9672,9 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
 		store_bump(i,j);
 	      }
+#if 0
 	  }
+#endif
       tt++;
     }
 
