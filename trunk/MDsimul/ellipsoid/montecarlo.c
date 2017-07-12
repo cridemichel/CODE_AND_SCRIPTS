@@ -9388,7 +9388,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 	      segno=1.0;
 	    else 
 	      segno=-1.0;
-	    segno *= Oparams.parnum*size1;
+	    segno *= (Oparams.parnum-1)*size1;
 	    merr=ierr=0;
 	    selfoverlap = overlap = 0;
 	    //cur_ii = ii;
@@ -9581,7 +9581,8 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 			save_conf_mc(tt, 0); 
 #endif
 			selfoverlap = 1;
-			break;
+			continue;
+			//break;
 		      }
 
 		    /* N.B. per ora non controlla il self-overlap della catena 
