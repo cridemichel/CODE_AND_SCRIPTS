@@ -7266,7 +7266,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       oy = nbB*oy;
       oz = nbB*oz;
 #endif
+#ifndef MC_CALC_COVADD
       pbc(i);
+#endif
 #endif
 #endif
       versor_to_R(ox, oy, oz, Rl);
@@ -9313,10 +9315,113 @@ double estimate_maximum_dfons(double alpha)
 }
 void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
 {
-  int i, kk;
-
+  int i0, i, kk, in0, in1, iold;
+  double lastrx, lastry, lastrz;
   Rcm1[0]=Rcm1[1]=Rcm1[2]=0;
   Rcm2[0]=Rcm2[1]=Rcm2[2]=0;
+  
+#if 0
+  for (i = 0; i < size1; i++)
+    if (numbonds[i]==1)
+      {
+	i0 = i;
+	break;
+      }
+
+  i =  bonds[i0][0] / (NANA);
+  iold=i0;
+  Rcm1[0] = rx[i0];
+  Rcm1[1] = ry[i0];
+  Rcm1[2] = rz[i0];
+   /* if particles has no bond we have to check... */ 
+  while (numbonds[i0]>0)
+    {
+      /* rebuild the cluster as a whole */
+      lastrx = rx[iold];
+      lastry = ry[iold];
+      lastrz = rz[iold];
+      rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+      ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
+      rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+      Rcm1[0] += rx[i];
+      Rcm1[1] += ry[i];
+      Rcm1[2] += rz[i];
+#if 0
+      if (numbonds[i] > 2)
+	{
+	  printf("more than 2 bonds (%d) for particle %d!\n", numbonds[i], i);
+	}
+#endif
+      if (numbonds[i]==1)
+	{
+	  //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
+	  break;
+	}	   
+      /* qui assumo che le particelle siano bifunzionali */
+      in0 = bonds[i][0]/(NANA);
+      in1 = bonds[i][1]/(NANA);
+      if (in1==iold)
+	{
+	  iold = i;
+	  i = in0;
+	}
+      else
+	{
+	  iold = i;
+	  i = in1;
+	}
+    }
+  for (i = size1; i < Oparams.parnum; i++)
+    if (numbonds[i]==1)
+      {
+	i0 = i;
+	break;
+      }
+  i =  bonds[i0][0] / (NANA);
+  iold=i0;
+  Rcm2[0] = rx[i0];
+  Rcm2[1] = ry[i0];
+  Rcm2[2] = rz[i0];
+   /* if particles has no bond we have to check... */ 
+  while (numbonds[i0]>0)
+    {
+      /* rebuild the cluster as a whole */
+      lastrx = rx[iold];
+      lastry = ry[iold];
+      lastrz = rz[iold];
+      rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+      ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
+      rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+      Rcm2[0] += rx[i];
+      Rcm2[1] += ry[i];
+      Rcm2[2] += rz[i];
+#if 0
+      if (numbonds[i] > 2)
+	{
+	  printf("more than 2 bonds (%d) for particle %d!\n", numbonds[i], i);
+	}
+#endif
+      if (numbonds[i]==1)
+	{
+	  //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
+	  break;
+	}	   
+      /* qui assumo che le particelle siano bifunzionali */
+      in0 = bonds[i][0]/(NANA);
+      in1 = bonds[i][1]/(NANA);
+      if (in1==iold)
+	{
+	  iold = i;
+	  i = in0;
+	}
+      else
+	{
+	  iold = i;
+	  i = in1;
+	}
+    }
+#endif
+#if 1
   for (i=0; i < size1; i++)
     {
       Rcm1[0]+=rx[i];
@@ -9326,16 +9431,21 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
       Rcm2[1]+=ry[i+size1];
       Rcm2[2]+=rz[i+size1];
     }
+#endif
   for (kk=0; kk < 3; kk++)
     {
       Rcm1[kk] /= ((double)size1);
       Rcm2[kk] /= ((double)size1);
+      Rcm1[kk] -= L[kk]*rint(Rcm1[kk]/L[kk]);
+      Rcm2[kk] -= L[kk]*rint(Rcm1[kk]/L[kk]);
     }
+  
 }
 void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, int size1)
 {
   int tt, k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
   int ii, jj;
+  double delrxii, delryii, delrzii, delrxjj, delryjj, delrzjj;
   const int nn=1000;
    FILE *f;
   double cov, totene, shift[3], segno;
@@ -9346,7 +9456,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
     f = fopen("v22.dat","w+");
   else
     f = fopen("v33.dat","w+");
- 
+
   distro=malloc(sizeof(double)*nn);
   for (i=0; i < nn; i++)
     distro[i] = 0.0;
@@ -9381,13 +9491,22 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 	    while (cur_ii==cur_jj)
 	      {
 		cur_ii = (int)(ranf()*Oparams.parnum);
+#if 1
+		cur_jj = (int)(ranf()*Oparams.parnum);
+#else
 		cur_jj = size1+((int)(ranf()*size1));
+#endif
+		//	printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
 	      }
 	    //printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
+#if 1
+	    segno = 1.0;
+#else
 	    if (cur_ii >= size1 && cur_jj >= size1)
 	      segno=1.0;
 	    else 
 	      segno=-1.0;
+#endif
 	    segno *= (Oparams.parnum-1)*size1;
 	    merr=ierr=0;
 	    selfoverlap = overlap = 0;
@@ -9639,6 +9758,44 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		  {
 		    Rcm[kk] = Rcm2[kk] - Rcm1[kk];
 		  }
+#if 1
+		if (type==11) // K11
+		  {
+		    delrxii = rx[cur_ii]-Rcm1[0];
+		    delryii = ry[cur_ii]-Rcm1[1];
+		    delrxjj = rx[cur_jj]-Rcm1[0];
+		    delryjj = ry[cur_jj]-Rcm1[1];
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*
+		      (-2.0*delrxii*delrxjj + delrxii*delrxii + delrxjj*delrxjj);
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*
+		      (-2.0*delryii*delryjj + delryii*delryii + delryjj*delryjj);
+		    //(ry[cur_ii]-Rcm1[0])*(ry[cur_jj]-Rcm1[0]);
+		    //printf("Rcm %f\n", Rcm[0]);
+		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
+		    totene += segno*(fact1+fact2)*0.5;
+		  }
+		else if (type==12) // K22
+		  {
+		    delrxii = rx[cur_ii]-Rcm1[0];
+		    delryii = ry[cur_ii]-Rcm1[1];
+		    delrxjj = rx[cur_jj]-Rcm1[0];
+		    delryjj = ry[cur_jj]-Rcm1[1];
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact1 *= (-2.0*delryii*delryjj + delryii*delryii + delryjj*delryjj);
+		    fact2 *= (-2.0*delrxii*delrxjj + delrxii*delrxii + delrxjj*delrxjj);
+		    totene += segno*(fact1+fact2)*0.5;
+		  }
+		else if (type==13) // K33
+		  {
+		    delrzii = rz[cur_ii]-Rcm1[2];
+		    delrzjj = rz[cur_jj]-Rcm1[2];
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    totene += segno*(fact1+fact2)*0.5*(-2.0*delrzii*delrzjj + delrzii*delrzii + delrzjj*delrzjj);
+		  }
+	      }
+#else
 		if (type==11) // K11
 		  {
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*Rcm[0]*Rcm[0];
@@ -9662,6 +9819,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    totene += segno*(fact1+fact2)*0.5*Rcm[2]*Rcm[2];
 		  }
 	      }
+#endif
 #if 0
 	    if (tt!=0 && tt%outits==0)
 	      save_conf_mc(tt, 0); 
