@@ -7192,7 +7192,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
 
 #ifndef MCIN_OPT
+#ifndef MC_CALC_COVADD
       pbc(i);
+#endif
 #endif
 #else
       /* chose a random position inside a sphere (this is of course more efficient than
@@ -9436,8 +9438,8 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
     {
       Rcm1[kk] /= ((double)size1);
       Rcm2[kk] /= ((double)size1);
-      Rcm1[kk] -= L[kk]*rint(Rcm1[kk]/L[kk]);
-      Rcm2[kk] -= L[kk]*rint(Rcm1[kk]/L[kk]);
+      //Rcm1[kk] -= L[kk]*rint(Rcm1[kk]/L[kk]);
+      //Rcm2[kk] -= L[kk]*rint(Rcm2[kk]/L[kk]);
     }
   
 }
@@ -9507,7 +9509,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 	    else 
 	      segno=-1.0;
 #endif
-	    segno *= (Oparams.parnum-1)*size1;
+	    segno *= 0.5*(Oparams.parnum-1)*Oparams.parnum;
 	    merr=ierr=0;
 	    selfoverlap = overlap = 0;
 	    //cur_ii = ii;
