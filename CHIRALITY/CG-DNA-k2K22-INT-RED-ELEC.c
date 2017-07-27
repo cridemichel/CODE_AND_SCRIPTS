@@ -1,4 +1,5 @@
 //#include "./G-DNA-k2K22.h"
+//#define EFF_VALUES
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -744,8 +745,12 @@ double *esq_eps10_arr, esq_eps_prime10;
 const double bmann = 1E-9*0.34/2.0; /* spacing between charged phosphate groups for manning theory */ 
 const double Dalton = 1.660538921E-27;
 const double kB = 1.3806503E-23, eps0=8.85E-12; /* boltzmann constant */
-const double qel = 1.602176565E-19, Nav=6.02214129E23;
-const double qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
+#ifdef EFF_VALUES
+const double qel = 1.602176565E-19;
+#else
+const double qel = 1.602176565E-19;
+#endif
+const double Nav=6.02214129E23, qdna = 1.0, qsalt = 1.0; /* qsalt è la valenza del sale aggiunto (tipicamente 1 poiché si tratta di NaCl */
 double cdna, csalt = 0.0; /* concentrazione del sale aggiunto molare */
 double *ximanning_arr, *deltamann_arr; /* Debye screening length */
 /* charge on phosphate groups */
@@ -908,6 +913,9 @@ double epsr(double T)
 {
   int i;
   i = 0;
+#ifdef EFF_VALUES
+  return 1.0;
+#endif
   T = T - 273.15;
   if (T <= 0.0 || T >= 100.0)
     {

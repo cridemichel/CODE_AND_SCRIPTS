@@ -2212,7 +2212,7 @@ int main(int argc, char**argv)
 		{
 		  /* il secondo contributo è equivalente al primo poiché posso scambiare gli assi x e y, quindi lo uso 
 		   * per mediare */
-#if 0
+#if 1
 		  //aaa = - segno*u1x*u2x*rcmx*rcmx;//- segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
 		  aaa = -segno*u1x*u2x*rcmx*rcmx - segno*u1y*u2y*rcmy*rcmy;//- segno*(u1x*u2y+u1y*u2x)*rcmy*rcmx;
 		  vexcl += aaa/2.0;
