@@ -4,16 +4,17 @@
 #include <string.h>
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
+const double patchdist=11.15;
 char line[1000000], parname[124], parval[2560000];
 int N, NA=-1;
-double x[3], *r[3];
+double x[3], *r[3], *u[3], rx, ry, rz;
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
 #define KMODMAX 599
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
 double qavg[KMODMAX];
-int qmin=0, qmax=KMODMAX-1, eventDriven = 0;
+int qmin=0, qmax=KMODMAX-1, eventDriven = 0, bigpatchsq=0;
 double qminpu=-1.0, qmaxpu=-1.0;
 int ntripl[]=
 #include "./ntripl.dat"
@@ -24,7 +25,7 @@ double Sq[KMODMAX], sumRho, reRho, imRho, rCMk, scalFact[3], invNm, L[3], invNmA
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
 void print_usage(void)
 {
-  printf("calcSq [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
+  printf("calcSq [ --bigpatchsq/-bp --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -47,6 +48,10 @@ void parse_param(int argc, char** argv)
       else if (!strcmp(argv[cc],"--phys-unit") || !strcmp(argv[cc],"-pu"))
 	{
 	  physunit = 1;
+	}
+      else if (!strcmp(argv[cc],"--bigpatchsq") || !strcmp(argv[cc],"-bp"))
+	{
+	  bigpatchsq = 1;
 	}
       else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
 	{
@@ -134,8 +139,6 @@ int main(int argc, char** argv)
     }
   if (qminpu < 0)
     qminpu = 0.0;
-  if (qmaxpu < 0)
-    qmaxpu = twopi/pow(L[0],L[1],L[2],1.0/3.0)*qmax;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -190,7 +193,9 @@ int main(int argc, char** argv)
 	  fscanf(f, "%lf %lf %lf\n", &L[0], &L[1], &L[2]);
       	  //invL = 1.0/L;
 	  //printf("qui L=%.15G\n", L);
-	}
+          if (qmaxpu < 0)
+    	   qmaxpu = twopi/pow(L[0]*L[1]*L[2],1.0/3.0)*qmax;
+  	}
       //printf("L=%.15G\n", L);
       /* -------- */
       rewind(f);
@@ -234,6 +239,7 @@ int main(int argc, char** argv)
 	  for (a = 0; a < 3; a++)
 	    {
 	      r[a] = malloc(sizeof(double)*N);
+	      u[a] = malloc(sizeof(double)*N);
 	    }
 	  //first = 0;
 	}
@@ -241,11 +247,11 @@ int main(int argc, char** argv)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
 	   //printf("line=%s\n", line);
-	   if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-	     {
+	   //if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+	     //{
 	       //printf("boh\n");
-	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-	     }
+	       sscanf(line, "%lf %lf %lf %lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], &u[0][i], &u[1][i], &u[2][i], dummy); 
+	     //}
 	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
 	}
       if (NA == -1)
@@ -259,15 +265,16 @@ int main(int argc, char** argv)
 	    {
 	      for (qmod = 0; qmod < KMODMAX; qmod++)
 		{
+		  qavg[qmod] = 0.0;
 		  for (mp = 0; mp < ntripl[qmod]; mp++) 
 		    {
 		      qval = sqrt(Sqr(((double)mesh[qmod][mp][0])*scalFact[0])+
 		 		  Sqr(((double)mesh[qmod][mp][1])*scalFact[1])+
 					 Sqr(((double)mesh[qmod][mp][2])*scalFact[2]));
-		      qidx = ; 
-		      qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0])*scalFact[0])+
-					 Sqr(((double)mesh[qmod][mp][1])*scalFact[1])+
-					 Sqr(((double)mesh[qmod][mp][2])*scalFact[2]));
+		      qavg[qmod] += qval;
+		      //sqrt(Sqr(((double)mesh[qmod][mp][0])*scalFact[0])+
+		      //Sqr(((double)mesh[qmod][mp][1])*scalFact[1])+
+		      //	Sqr(((double)mesh[qmod][mp][2])*scalFact[2]));
 		    }
 		  qavg[qmod] *= 1.0/((double)ntripl[qmod]);
 		  //printf("qavg[%d]: %f\n", qmod, qavg[qmod]);
@@ -359,9 +366,21 @@ int main(int argc, char** argv)
 			     mp, ntripl[n]);
 		      exit(-1);
 		    }
-		  rCMk = kbeg + 
-		    (scalFact[0]*r[0][i] * mesh[n][mp][0] + scalFact[1]*r[1][i] * mesh[n][mp][1] + 
-		     scalFact[2]*r[2][i] * mesh[n][mp][2]);
+		  if (bigpatchsq==1)
+		    {
+		      rx=r[0][i]+u[0][i]*patchdist;
+		      ry=r[1][i]+u[1][i]*patchdist;
+		      rz=r[2][i]+u[2][i]*patchdist;
+		      rCMk = kbeg + 
+			(scalFact[0]*rx * mesh[n][mp][0] + scalFact[1]*ry * mesh[n][mp][1] + 
+			 scalFact[2]*rz * mesh[n][mp][2]);
+		    }
+		  else
+		    {
+		      rCMk = kbeg + 
+			(scalFact[0]*r[0][i] * mesh[n][mp][0] + scalFact[1]*r[1][i] * mesh[n][mp][1] + 
+			 scalFact[2]*r[2][i] * mesh[n][mp][2]);
+		    }
 		  reRho = reRho + cos(rCMk); 
 		  imRho = imRho + sin(rCMk);
 		  /* Imaginary part of exp(i*k*r) for the actual molecule*/
