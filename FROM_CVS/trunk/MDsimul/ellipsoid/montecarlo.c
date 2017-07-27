@@ -9443,13 +9443,14 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
     }
   
 }
-void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, int size1)
+void calc_elastic_constants(int type, double alpha, long long int maxtrials, int outits, int size1)
 {
-  int tt, k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
+  int k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
+  long long int tt;
   int ii, jj;
   double delrxii, delryii, delrzii, delrxjj, delryjj, delrzjj;
   const int nn=1000;
-   FILE *f;
+  FILE *f;
   double cov, totene, shift[3], segno;
   double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
   if (type == 11)
@@ -9794,6 +9795,7 @@ void calc_elastic_constants(int type, double alpha, int maxtrials, int outits, i
 		    delrzjj = rz[cur_jj]-Rcm1[2];
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+		    //totene += segno*(fact1+fact2)*0.5*Sqr(rz[cur_ii]-rz[cur_jj]);
 		    totene += segno*(fact1+fact2)*0.5*(-2.0*delrzii*delrzjj + delrzii*delrzii + delrzjj*delrzjj);
 		  }
 	      }
