@@ -9443,6 +9443,7 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
     }
   
 }
+
 void calc_elastic_constants(int type, double alpha, long long int maxtrials, int outits, int size1)
 {
   int k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
@@ -9843,6 +9844,270 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 
 }
 #endif
+#ifdef MC_PERSIST_MULTIGAP
+void calc_persist_len_multigap(int type, double alpha, long long int maxtrials, int outits, int size1)
+{
+  /* size1 is the length of polyT spacer */
+  int abort=0, *parlist, i, j, nb, k1, k2, ierr, merr, jj;
+  long long int tt;
+  double rbaki[3], rbakj[3], saxbaki[3], saxbakj[3], Rl[3][3];
+  double dist, *pl, *cc, shift[3], ox, oy, oz;
+  const double DNADlen = 6.6, DNADdiam=3.0; /* length of each DNAD in nm */
+  FILE *fi, *f;
+  /* first particle is always in the center of the box with the same orientation */
+  printf("calculating persistence length\n");
+  cc = malloc(sizeof(double)*Oparams.parnum);
+  pl = malloc(sizeof(double)*Oparams.parnum);
+  parlist = malloc(sizeof(int)*(Oparams.parnum+1));
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      cc[i] = pl[i] = 0;
+      numbonds[i] = 0;
+    }
+  rx[0] = 0;
+  ry[0] = 0;
+  rz[0] = 0;
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+     	R[0][k1][k2] = (k1==k2)?1:0;
+      }
+
+  f = fopen("perslenlast.dat","w+");
+  fclose(f);
+  for (tt=0; tt < maxtrials; tt++)
+    {
+      abort=0;
+      if (tt%outits==0)
+	{
+	  printf("tt=%lld\n", tt);
+	  if (distcc > 0)
+	    printf("average bond distance=%.15G\n", totdist/distcc); 
+	  if (tt!=0 && cc[Oparams.parnum-2]!=0)
+	    {
+	      f = fopen("perslenlast.dat", "a");
+	      fprintf(f, "%lld %.15G\n", tt, pl[Oparams.parnum-2]/cc[Oparams.parnum-2]);
+	      fclose(f);
+	      fi = fopen("persist.dat","w+");
+	      pl[0]=1.0;
+	      for (i=0; i < Oparams.parnum-1; i++)
+		{
+		  if (cc[i]!=0 || i==0)
+		    {
+		      if (i==0)
+			fprintf(fi, "0 1\n");
+		      else
+			fprintf(fi, "%d %.15G\n", i, pl[i]/cc[i]);
+		    }
+		}
+	      fclose(fi);	
+	      sync();
+	    }
+	}
+      for (i=0; i < Oparams.parnum; i++)
+	numbonds[i]=0;
+      rx[0]=ry[0]=rz[0]=0;
+      orient(&ox, &oy, &oz);
+      versor_to_R(ox, oy, oz, Rl);
+      for (k1=0; k1 < 3; k1++)
+	for (k2=0; k2 < 3; k2++)
+	  R[0][k1][k2] = Rl[k1][k2];
+
+      for (i=1; i < Oparams.parnum; i++)
+	{
+	  /* NOTA 29/07/2017: i 5 duplex della molecola multigapped vengono implementati
+	   * come due sferette rigide ad una distanza pari a 20 bp (tanto non c'è self-overlap)
+	   * quindi devo collocare in tutto 7*4+2=30 sferette */
+	  if ((i % (size1+2))==1)
+	    {
+	      ox = R[i-1][0][0]; /* orientation of the previous sphere */
+      	      oy = R[i-1][0][1];
+	      oz = R[i-1][0][2];
+	      rx[i] = rx[i-1] + ox*(DNADlen - DNADdiam);
+	      ry[i] = ry[i-1] + oy*(DNADlen - DNADdiam);
+	      rz[i] = rz[i-1] + oz*(DNADlen - DNADdiam);
+	      for (k1=0; k1 < 3; k1++)
+    		for (k2=0; k2 < 3; k2++)
+		  R[i][k1][k2] = R[i-1][k1][k2];
+	    }
+	  else
+	    {
+	      while (1)
+		{
+		  /* we assume here that bonds 0 and 1 are permanent ones! */
+		  nb = (int)(ranf_vb()*2.0);
+		  j = (int) (ranf_vb()*i);
+#if 0
+		  if (numbonds[j]==2)
+		    {
+		      printf("j=%d has 2 bonds!\n", j);
+		      exit(-1);
+		    }
+#endif
+		  if (is_bonded_mc(j, nb))
+		    continue;
+		  else
+		    break;
+		}
+	      mcin(i, j, nb, 0, 0.0, &merr, 0);
+	      if (merr!=0)
+		{
+		  printf("[mcin] attempt to add a bonded particle failed!\n");
+		  /* mc in ha fallito scarta tale conf */
+		  abort=1;
+		  break;
+		}
+#if 1
+	      /* qui controlla che non ci siano overlap con le particelle
+		 già inserite e che mcin abbia formato un solo legame */
+	      for (jj=0; jj < i; jj++)
+		{
+		  if (jj==j)
+		    continue;
+		  find_bonds_covadd(i, jj);
+		}
+	      if (numbonds[i] > 1)
+		{
+#if 0
+		  restore_bonds_mc(-1);
+		  numbonds[i]=0;
+		  i--;
+		  continue;
+#else
+		  /* scarta tale configurazione "chiusa" (loop) */
+		  abort=1;
+		  break;
+#endif
+		}
+	      for (jj=0; jj < i; jj++)
+		{
+		  if (jj==j) 
+		    continue;
+#ifdef MD_LXYZ
+		  shift[0] = L[0]*rint((rx[i]-rx[jj])/L[0]);
+		  shift[1] = L[1]*rint((ry[i]-ry[jj])/L[1]);
+		  shift[2] = L[2]*rint((rz[i]-rz[jj])/L[2]);
+#else
+		  shift[0] = L*rint((rx[i]-rx[jj])/L);
+		  shift[1] = L*rint((ry[i]-ry[jj])/L);
+		  shift[2] = L*rint((rz[i]-rz[jj])/L);
+#endif
+		  /* check cylinders */
+		  if ((j % (size1+2) == 0) &&
+		      (jj %(size1+2) == 0))
+		    {
+		      /* check overlap of two cylinders here */
+
+		      rbaki[0] = rx[j];
+		      rbaki[1] = ry[j];
+		      rbaki[2] = rz[j];
+		      rbakj[0] = rx[jj];
+		      rbakj[1] = ry[jj];
+		      rbakj[2] = rz[jj];
+		      for (k1=0; k1 < 3; k1++)
+			{
+			  saxbaki[k1] = typesArr[typeOfPart[j]].sax[k1];
+			  saxbakj[k1] = typesArr[typeOfPart[jj]].sax[k1];
+			}
+		      rx[j] = (rx[j] + rx[j+1])*0.5;
+		      ry[j] = (ry[j] + ry[j+1])*0.5;
+		      rz[j] = (rz[j] + rz[j+1])*0.5;
+		      rx[jj] = (rx[jj] + rx[jj+1])*0.5;
+		      ry[jj] = (ry[jj] + ry[jj+1])*0.5;
+		      rz[jj] = (rz[jj] + rz[jj+1])*0.5;
+
+
+		      if (check_overlap(j, jj, shift, &ierr) < 0.0)
+			{
+			  abort = 1;
+			  break;
+			}
+
+		      rx[j] = rbaki[0];
+		      ry[j] = rbaki[1];
+		      rz[j] = rbaki[2];
+		      rx[jj] = rbakj[0];
+		      ry[jj] = rbakj[1];
+		      rz[jj] = rbakj[2];
+		      for (k1=0; k1 < 3; k1++)
+			{
+			  typesArr[typeOfPart[j]].sax[k1] = saxbaki[k1]; 
+			  typesArr[typeOfPart[jj]].sax[k1] = saxbakj[k1];
+			}
+		     }
+		  if (check_overlap(i, jj, shift, &ierr) < 0.0)
+		    {
+#if 0
+		      restore_bonds_mc(-1);
+		      numbonds[i]=0;
+		      i--;
+#endif
+		      /* scarta la conf self-overlapping */
+		      abort=1; 
+		      //save_conf_mc(tt, 0);
+		      break;
+		    }
+		}
+#endif
+	      /* check cylinder overlap */
+	      if (abort)
+		break;
+	    }
+	}
+#if 0
+	if (!abort)
+	  save_conf_mc(tt, 0);
+#else
+      if (!abort)
+	{
+	  /* N.B. size1 viene solo usato per scegliere il modo in cui viene calcolata 
+	     la funzione di correlazione dei bond */
+	  if (size1!=0)
+	    {
+#ifdef MC_BENT_DBLCYL
+	      if (size1==2)
+		accum_persist_len_mono_orient_base_base(parlist, pl, cc);
+	      else
+		accum_persist_len_mono_orient(parlist, pl, cc);
+#else
+	      accum_persist_len_mono_orient(parlist, pl, cc);
+#endif
+	    }
+	  else
+	    accum_persist_len(parlist, pl, cc);
+	}
+#endif
+    }
+  fi = fopen("persist.dat","w+");
+  
+  for (i=(size1==0)?1:0; i < Oparams.parnum-1; i++)
+    {
+      /* la media della funzione di correlazione serve per avere una stima 
+	 più vicina alla funzione di correlazione delle orientazioni dei monomeri (il -1 serve per iniziare
+	 correttamente da s=0), ossia se voglio avere <u(0)*u(s)> dove u è l'orientazione di un monomero allora
+	 <bu(0)*(bu(s)+bu(s-1))*0.5> dove ora bu è la direzione di calcolata usando i centri di 
+	 massa dei monomeri e bu(-1)=0 */
+      if (size1!=0)
+	{
+	  if (i==0)
+	    fprintf(fi, "0 1\n");
+	  else
+	    fprintf(fi, "%d %.15G\n", i, pl[i]/cc[i]);
+	}
+      else
+	{
+	  if (i==1)
+	    fprintf(fi, "0 1\n");
+	  else
+	    fprintf(fi, "%d %.15G\n", i-1, 0.5*(pl[i]/cc[i]+pl[i-1]/cc[i-1]));
+	}
+    }
+ 
+
+
+}
+#endif
+
 void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits, int maxtrials)
 {
   FILE *f;	 
@@ -10604,6 +10869,10 @@ void calc_cov_additive(void)
 }
 
 #else
+#ifdef MC_PERSIST_MULTIGAP
+extern void calc_persist_len_multigap(int type, double alpha, long long int maxtrials, int outits, int size1);
+#endif
+
 void calc_cov_additive(void)
 {
   FILE *fi, *f=NULL;
@@ -10622,7 +10891,7 @@ void calc_cov_additive(void)
     }
   
   printf("ene iniziale=%f\n", calcpotene());
-  if (type==1||type==5||type==8||type==11||type==12||type==13)
+  if (type==1||type==5||type==8||type==11||type==12||type==13||type==14)
     {
       fscanf(fi, " %lf ", &alpha);
       printf("type=%d alpha=%.15G\n", type, alpha);
@@ -10687,7 +10956,14 @@ void calc_cov_additive(void)
       exit(-1);
     }
 #endif
-  if (type==3||type==5||type==9)
+#ifdef MC_PERSIST_MULTIGAP
+  if (type==14)
+    {
+      calc_persist_len_multigap(type, alpha, maxtrials, outits, size1);
+      exit(-1);
+    }
+#endif
+ if (type==3||type==5||type==9)
     {
 #if defined(MC_KERN_FRENKEL) && !defined(MC_BIFUNC_SPHERES)
 	  /* calc_poly_bonding_volume */
