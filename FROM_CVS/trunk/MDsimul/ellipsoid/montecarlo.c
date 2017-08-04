@@ -9504,7 +9504,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	      }
 	    //printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
 #if 1
-	    segno = 1.0;
+	    segno = -1.0;
 #else
 	    if (cur_ii >= size1 && cur_jj >= size1)
 	      segno=1.0;
@@ -9520,7 +9520,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    rx[0] = 0;
 	    ry[0] = 0;
 	    rz[0] = 0;
-	    if (cur_ii==0)
+	    if (cur_ii==0 || cur_jj==0)
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
 	    else
 	      {
@@ -9638,9 +9638,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    rz[i] = L*(ranf_vb()-0.5); 
 #endif
 		    /* NOTA 28/06/17:
-		     * ora devo generalre una distribuzione che è la derivata della funzione di Onsager
+		     * ora devo generare una distribuzione che è la derivata della funzione di Onsager
 		     * ma devo anche aggiustare i segni negativi che spuntano fuori! */
-		    if (i == cur_jj)
+		    if (i == cur_jj || i == cur_ii)
 		      {
 			orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
 		      }
