@@ -6996,7 +6996,7 @@ void addRestrMatrix(double Rl[3][3]);
 #endif
 void save_conf_mc(int i, int ii);
 #ifdef MC_ELASTIC_CONSTANTS
-double *ec_segno, *ec_ux, *ec_uy, *ec_uz;
+double *ec_segno, *ec_ux, *ec_uy, *ec_uz, qvecG;
 void orient_donsager(double *ox, double *oy, double *oz, double alpha, double *segno); 
 int cur_ii, cur_jj;
 #endif
@@ -7221,6 +7221,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #ifdef MC_ELASTIC_CONSTANTS
       else if (dist_type == 11 || dist_type == 12 || dist_type == 13)
 	{
+#ifdef ELCONST_NEWALGO
+	  orient_onsager_field(rx[i], ry[i], rz[i], &ox, &oy, &oz, alpha, qvecG, dist_type);
+	  ec_segno[i] = 1.0;
+      	  ec_ux[i] = ox;
+	  ec_uy[i] = oy;
+	  ec_uz[i] = oz;
+#else
 	  if (i == cur_ii || i == cur_jj)
 	    {
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
@@ -7236,6 +7243,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      ec_uy[i] = oy;
 	      ec_uz[i] = oz;
 	    }
+#endif
 	}
 #endif
       else 
@@ -9443,8 +9451,11 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
     }
   
 }
-
+#ifdef ELCONST_NEWALGO
+void calc_elastic_constants(int type, double alpha, double qvec, long long int maxtrials, int outits, int size1)
+#else
 void calc_elastic_constants(int type, double alpha, long long int maxtrials, int outits, int size1)
+#endif
 {
   int k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
   long long int tt;
@@ -9475,6 +9486,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
   printf("Estimated maximum of dfons is %f maxtrials=%d alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
   tt=0;
   totene=0.0;
+#ifdef ELCONST_NEWALGO
+  qvecG=qvec;
+#endif
   while (tt < maxtrials) 
     {
 #if 0
@@ -9502,6 +9516,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 #endif
 		//	printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
 	      }
+	    cur_ii=0;cur_jj=size1;
 	    //printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
 #if 1
 	    segno = -1.0;
@@ -9509,9 +9524,10 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    if (cur_ii >= size1 && cur_jj >= size1)
 	      segno=1.0;
 	    else 
-	      segno=-1.0;
+	      segno=-2.0;
 #endif
-	    segno *= 0.5*(Oparams.parnum-1)*Oparams.parnum;
+	    //segno *= 0.5*(Oparams.parnum-1)*Oparams.parnum;
+	    //segno *= 1.0;
 	    merr=ierr=0;
 	    selfoverlap = overlap = 0;
 	    //cur_ii = ii;
@@ -9520,6 +9536,10 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    rx[0] = 0;
 	    ry[0] = 0;
 	    rz[0] = 0;
+#ifdef ELCONST_NEWALGO
+	    orient_onsager_field(rx[0], ry[0], rz[0], &ox, &oy, &oz, alpha, qvec, type);
+	    ec_segno[0] = 1.0;
+#else
 	    if (cur_ii==0 || cur_jj==0)
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
 	    else
@@ -9527,6 +9547,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		orient_onsager(&ox, &oy, &oz, alpha);
 		ec_segno[0] = 1.0;
 	      }
+#endif
 	    ec_ux[0] = ox;
 	    ec_uy[0] = oy;
 	    ec_uz[0] = oz;
@@ -9765,39 +9786,70 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 #if 1
 		if (type==11) // K11
 		  {
+#ifdef ELCONST_NEWALGO
+		    totene += 1.0;
+#else
+#if 0
 		    delrxii = rx[cur_ii]-Rcm1[0];
 		    delryii = ry[cur_ii]-Rcm1[1];
 		    delrxjj = rx[cur_jj]-Rcm1[0];
 		    delryjj = ry[cur_jj]-Rcm1[1];
+#endif
+#if 0
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*
 		      (-2.0*delrxii*delrxjj + delrxii*delrxii + delrxjj*delrxjj);
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*
 		      (-2.0*delryii*delryjj + delryii*delryii + delryjj*delryjj);
+#else
+		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*
+		      Sqr(rx[cur_ii]-rx[cur_jj]);
+		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj]*
+		      Sqr(ry[cur_ii]-ry[cur_jj]);
+#endif
 		    //(ry[cur_ii]-Rcm1[0])*(ry[cur_jj]-Rcm1[0]);
 		    //printf("Rcm %f\n", Rcm[0]);
 		    //printf("segno %f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
 		    totene += segno*(fact1+fact2)*0.5;
+#endif
 		  }
 		else if (type==12) // K22
 		  {
+#ifdef ELCONST_NEWALGO
+		    totene +=1.0;
+#else
+#if 0
 		    delrxii = rx[cur_ii]-Rcm1[0];
 		    delryii = ry[cur_ii]-Rcm1[1];
 		    delrxjj = rx[cur_jj]-Rcm1[0];
 		    delryjj = ry[cur_jj]-Rcm1[1];
+#endif
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
+#if 0
 		    fact1 *= (-2.0*delryii*delryjj + delryii*delryii + delryjj*delryjj);
 		    fact2 *= (-2.0*delrxii*delrxjj + delrxii*delrxii + delrxjj*delrxjj);
+#else
+		    fact1 *= Sqr(ry[cur_ii]-ry[cur_jj]);
+		    fact2 *= Sqr(rx[cur_ii]-rx[cur_jj]); 
+#endif
 		    totene += segno*(fact1+fact2)*0.5;
+#endif
 		  }
 		else if (type==13) // K33
 		  {
+#ifdef ELCONST_NEWALGO
+		    totene += 1.0;
+#else
+#if 0
 		    delrzii = rz[cur_ii]-Rcm1[2];
 		    delrzjj = rz[cur_jj]-Rcm1[2];
+#endif
 		    fact1 = ec_ux[cur_ii]*ec_ux[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
 		    fact2 = ec_uy[cur_ii]*ec_uy[cur_jj]*ec_segno[cur_ii]*ec_segno[cur_jj];
-		    //totene += segno*(fact1+fact2)*0.5*Sqr(rz[cur_ii]-rz[cur_jj]);
-		    totene += segno*(fact1+fact2)*0.5*(-2.0*delrzii*delrzjj + delrzii*delrzii + delrzjj*delrzjj);
+		    //printf("segni=%f %f\n", ec_segno[cur_ii], ec_segno[cur_jj]);
+		    totene += segno*(fact1+fact2)*0.5*Sqr(rz[cur_ii]-rz[cur_jj]);
+		    //totene += segno*(fact1+fact2)*0.5*(-2.0*delrzii*delrzjj + delrzii*delrzii + delrzjj*delrzjj);
+#endif
 		  }
 	      }
 #else
@@ -10880,7 +10932,9 @@ void calc_cov_additive(void)
   int bt=0, merr=0, i, j=-1, selfoverlap=0, size1, size2, nb, k1, k2, overlap=0, ierr, type, outits;
   long long int maxtrials, tt;
   double ox, oy, oz, Rl[3][3];
-
+#ifdef ELCONST_NEWALGO
+  double qvec;
+#endif
   fi = fopen("covmc.conf", "r");
   fscanf(fi, "%lld %d %d %d ", &maxtrials, &type, &size1, &outits);
 
@@ -10896,6 +10950,13 @@ void calc_cov_additive(void)
       fscanf(fi, " %lf ", &alpha);
       printf("type=%d alpha=%.15G\n", type, alpha);
     }
+#ifdef ELCONST_NEWALGO
+ if (type==11||type==12||type==13)
+    {
+      fscanf(fi, " %lf ", &qvec);
+      printf("qvec=%f\n", qvec);
+    }
+#endif
   /* if it is a restart put info initial values here */
   covrestart = 0;
   if (!feof(fi))
@@ -10952,7 +11013,11 @@ void calc_cov_additive(void)
   if (type == 11 || type == 12 || type == 13)
     {
       printf("type=%d alpha=%.15G size1=%d outits=%d\n", type, alpha, size1, outits);
+#ifdef ELCONST_NEWALGO
+      calc_elastic_constants(type, alpha, qvec, maxtrials, outits, size1);
+#else
       calc_elastic_constants(type, alpha, maxtrials, outits, size1);
+#endif
       exit(-1);
     }
 #endif

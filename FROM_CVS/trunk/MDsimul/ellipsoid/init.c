@@ -4145,6 +4145,74 @@ double theta_onsager(double alpha)
 }
 double *distro;
 extern const int nfons;
+#ifdef ELCONST_NEWALGO
+void calc_nvec(int type, double qvec, double px, double py, double pz, double *nv)
+{
+  /* N.B. all'origine il vettore nematico è parallelo all'asse z */
+  double gamma;
+  if (type==11) //K11
+    {
+      gamma = atan(qvec*px/(1.0+qvec*pz));
+    }
+  else if (type==12) //K22
+    {
+      gamma = qvec*py;
+    }
+  else // K33
+    {
+      gamma = atan(qvec*pz/(1.0-qvec*px));
+    }
+  nv[0] = sin(gamma);
+  nv[1] = 0.0;
+  nv[2] = cos(gamma);
+}
+void nem2lab(double v[3], double vp[3], double R[3][3])
+{
+  int k1, k2;
+
+  for (k1=0; k1 < 3; k1++)
+    {
+      vp[k1] = 0.0;
+      for (k2=0; k2 < 3; k2++)
+	vp[k1] += R[k2][k1]*v[k2];
+    }
+  //if(isinf(vp[0])|| isinf(vp[1]) || isinf(vp[2]))
+    //printf("vp=%f %f %f\n", vp[0], vp[1], vp[2]);
+  //printf("v=%f %f %f\n", v[0], v[1], v[2]);
+}
+void versor_to_R(double ox, double oy, double oz, double R[3][3]);
+void orient_onsager_field(double px, double py, double pz, double *omx, double *omy, double* omz, double alpha, double qvec, int type)
+{
+  double thons;
+  double pi, phi, verso;
+  double nv[3], omv[3], omvn[3];
+  double Rnv[3][3];
+  pi = acos(0.0)*2.0;
+  /* random angle from onsager distribution */
+  thons = theta_onsager(alpha);
+  //printf("thos=%f\n", thons);
+  distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+  phi = 2.0*pi*ranf_vb();
+  //verso = (ranf_vb()<0.5)?1:-1;
+  verso=1;
+  calc_nvec(type, qvec, px, py, pz, nv);
+#if 1 /* along z */
+  omvn[0] = verso*sin(thons)*cos(phi);
+  omvn[1] = verso*sin(thons)*sin(phi);
+  omvn[2] = verso*cos(thons);
+  versor_to_R(nv[0],nv[1],nv[2], Rnv);
+  nem2lab(omvn, omv, Rnv);
+  *omx = omv[0];
+  *omy = omv[1];
+  *omz = omv[2];
+#else /* or along x (but it has to be same of course!) */
+  *omy = verso*sin(thons)*cos(phi);
+  *omz = verso*sin(thons)*sin(phi);
+  *omx = verso*cos(thons); 
+#endif
+  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
+}
+#endif
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
