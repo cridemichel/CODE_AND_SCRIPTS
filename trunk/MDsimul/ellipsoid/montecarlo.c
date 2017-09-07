@@ -9670,7 +9670,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		     * ora devo generare una distribuzione che è la derivata della funzione di Onsager
 		     * ma devo anche aggiustare i segni negativi che spuntano fuori! */
 #ifdef ELCONST_NEWALGO
-		    orient_onsager_field(rx[0], ry[0], rz[0], &ox, &oy, &oz, alpha, qvec, type);
+		    orient_onsager_field(rx[i], ry[i], rz[i], &ox, &oy, &oz, alpha, qvec, type);
 		    //orient_onsager(&ox, &oy, &oz, alpha);
 		    ec_segno[0] = 1.0;
 #else
