@@ -4196,6 +4196,7 @@ void orient_onsager_field(double px, double py, double pz, double *omx, double *
   //verso = (ranf_vb()<0.5)?1:-1;
   verso=1;
   calc_nvec(type, qvec, px, py, pz, nv);
+  //printf("nv=%f %f %f\n", nv[0], nv[1], nv[2]);
 #if 1 /* along z */
   omvn[0] = verso*sin(thons)*cos(phi);
   omvn[1] = verso*sin(thons)*sin(phi);
@@ -4205,6 +4206,7 @@ void orient_onsager_field(double px, double py, double pz, double *omx, double *
   *omx = omv[0];
   *omy = omv[1];
   *omz = omv[2];
+  //printf("om=%f %f %f\n", *omx, *omy, *omz);
 #else /* or along x (but it has to be same of course!) */
   *omy = verso*sin(thons)*cos(phi);
   *omz = verso*sin(thons)*sin(phi);

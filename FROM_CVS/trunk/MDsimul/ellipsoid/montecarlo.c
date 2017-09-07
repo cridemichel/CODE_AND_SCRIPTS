@@ -6996,9 +6996,12 @@ void addRestrMatrix(double Rl[3][3]);
 #endif
 void save_conf_mc(int i, int ii);
 #ifdef MC_ELASTIC_CONSTANTS
-double *ec_segno, *ec_ux, *ec_uy, *ec_uz, qvecG;
+double *ec_segno, *ec_ux, *ec_uy, *ec_uz;
 void orient_donsager(double *ox, double *oy, double *oz, double alpha, double *segno); 
 int cur_ii, cur_jj;
+#endif
+#ifdef ELCONST_NEWALGO
+double qvecG;
 #endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
@@ -7222,11 +7225,12 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       else if (dist_type == 11 || dist_type == 12 || dist_type == 13)
 	{
 #ifdef ELCONST_NEWALGO
-	  orient_onsager_field(rx[i], ry[i], rz[i], &ox, &oy, &oz, alpha, qvecG, dist_type);
-	  ec_segno[i] = 1.0;
-      	  ec_ux[i] = ox;
-	  ec_uy[i] = oy;
+	  orient_onsager_field(rat[0]+dx, rat[1]+dy, rat[2]+dz, &ox, &oy, &oz, alpha, qvecG, dist_type);
+	  //orient_onsager(&ox, &oy, &oz, alpha);
+	  ec_ux[i] = ox;
+      	  ec_uy[i] = oy;
 	  ec_uz[i] = oz;
+	  ec_segno[i]=1.0;
 #else
 	  if (i == cur_ii || i == cur_jj)
 	    {
@@ -9475,7 +9479,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
   distro=malloc(sizeof(double)*nn);
   for (i=0; i < nn; i++)
     distro[i] = 0.0;
-  
+#ifdef ELCONST_NEWALGO
+  qvecG=qvec;
+#endif 
   fclose(f);
   ec_segno = malloc(sizeof(double)*Oparams.parnum);
   ec_ux =    malloc(sizeof(double)*Oparams.parnum);
@@ -9483,12 +9489,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
   ec_uz =    malloc(sizeof(double)*Oparams.parnum);
   dfons_sinth_max=estimate_maximum_dfons(alpha);
   fons_sinth_max=dfons_sinth_max/alpha;
-  printf("Estimated maximum of dfons is %f maxtrials=%d alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
+  printf("Estimated maximum of dfons is %f maxtrials=%lld alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
   tt=0;
   totene=0.0;
-#ifdef ELCONST_NEWALGO
-  qvecG=qvec;
-#endif
   while (tt < maxtrials) 
     {
 #if 0
@@ -9504,6 +9507,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    else 
 	      segno=-1.0;
 #endif
+#ifndef ELCONST_NEWALGO
 	    cur_ii=-1; 
 	    cur_jj=-1;
 	    while (cur_ii==cur_jj)
@@ -9517,6 +9521,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		//	printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
 	      }
 	    cur_ii=0;cur_jj=size1;
+#endif
 	    //printf("qui cur_ii=%d cur_jj=%d\n", cur_ii, cur_jj);
 #if 1
 	    segno = -1.0;
@@ -9538,6 +9543,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    rz[0] = 0;
 #ifdef ELCONST_NEWALGO
 	    orient_onsager_field(rx[0], ry[0], rz[0], &ox, &oy, &oz, alpha, qvec, type);
+	    //orient_onsager(&ox, &oy, &oz, alpha);
 	    ec_segno[0] = 1.0;
 #else
 	    if (cur_ii==0 || cur_jj==0)
@@ -9573,7 +9579,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 #else
 		    cov = (totene/((double)tt))*(L*L*L);
 #endif
+#ifndef ELCONST_NEWALGO
 		    cov *= Sqr(alpha);
+#endif
 		    if (type == 11)
 		      f = fopen("v11.dat","a");
 		    else if (type==12)
@@ -9661,6 +9669,11 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    /* NOTA 28/06/17:
 		     * ora devo generare una distribuzione che è la derivata della funzione di Onsager
 		     * ma devo anche aggiustare i segni negativi che spuntano fuori! */
+#ifdef ELCONST_NEWALGO
+		    orient_onsager_field(rx[0], ry[0], rz[0], &ox, &oy, &oz, alpha, qvec, type);
+		    //orient_onsager(&ox, &oy, &oz, alpha);
+		    ec_segno[0] = 1.0;
+#else
 		    if (i == cur_jj || i == cur_ii)
 		      {
 			orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
@@ -9670,6 +9683,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 			orient_onsager(&ox, &oy, &oz, alpha);
 			ec_segno[i] = 1.0;
 		      }
+#endif
 		    ec_ux[i] = ox;
 		    ec_uy[i] = oy;
 		    ec_uz[i] = oz;
