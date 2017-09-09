@@ -1795,6 +1795,33 @@ int main(int argc, char **argv)
     numpts = atoi(argv[1]);
 	
   dang = 120./numpts;
+#if 1
+  cylinders[0].u[0]=0.401885395953800602276;
+  cylinders[0].u[1]=-0.716360138526823950428;
+  cylinders[0].u[2]= 0.570365041397951133713;
+  cylinders[0].r[0] = 11.0591168679512463768;
+  cylinders[0].r[1] = -17.7353459677521030358;
+  cylinders[0].r[2] = -11.6226585214679545288 ;
+  cylinders[0].L = 16.0;
+  cylinders[0].D = 3.0;
+
+  cylinders[1].L = 16.0;
+  cylinders[1].D = 3.0;
+  cylinders[1].u[0]=0.548945295205105798981;
+  cylinders[1].u[1]=-0.694322715168994955646;
+  cylinders[1].u[2]=0.465376224223513539882;//atof(argv[3]);
+  cylinders[1].r[0] = 5.72923336609729716429;    
+  // (cylinders[1].L/2.0)*cos(pi*(90-angle)/180.)+(cylinders[1].D/2.0)*cos(pi*(angle)/180.)+
+  //cylinders[0].D/2.0+atof(argv[2]);
+  cylinders[1].r[1] = -5.78616672908616180848;//atof(argv[5]);
+  cylinders[1].r[2] =-21.6497392151827838802;//atof(argv[6]);
+  shift[0]=shift[1]=shift[2] = 0;
+  sprintf(fn, "cyl-%d.mgl", n);
+  if (check_cyl_overlap(0, 1, shift))
+    printf("Case #%d ang = %f They overlap!\n", n, angle);
+  else
+    printf("Case #%d ang = %f They *do not* overlap!\n",n, angle);
+#else
   for (n=0; n < numpts; n++)
     {
       cylinders[0].u[0]=0;
@@ -1835,6 +1862,7 @@ int main(int argc, char **argv)
 	printf("Case #%d ang = %f They *do not* overlap!\n",n, angle);
       angle += dang;
     }
+#endif
   exit(-1);
 
 
