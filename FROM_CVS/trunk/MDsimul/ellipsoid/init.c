@@ -4157,6 +4157,7 @@ void calc_nvec(int type, double qvec, double px, double py, double pz, double *n
   else if (type==12) //K22
     {
       gamma = qvec*py;
+      //printf("gamma=%f\n", gamma);
     }
   else // K33
     {
@@ -4180,7 +4181,36 @@ void nem2lab(double v[3], double vp[3], double R[3][3])
     //printf("vp=%f %f %f\n", vp[0], vp[1], vp[2]);
   //printf("v=%f %f %f\n", v[0], v[1], v[2]);
 }
-void versor_to_R(double ox, double oy, double oz, double R[3][3]);
+void versor_to_R_nemfield(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double angle, u[3], sp, norm, up[3], xx, yy;
+  /* first row vector */
+  R[2][0] = ox;
+  R[2][1] = oy;
+  R[2][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[2][0] && u[1]==R[2][1] && u[2]==R[2][2])
+    {
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[2][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[2][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+  /* third row vector */
+  vectProdVec(R[1], R[2], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[0][k] = u[k];
+}
 void orient_onsager_field(double px, double py, double pz, double *omx, double *omy, double* omz, double alpha, double qvec, int type)
 {
   double thons;
@@ -4201,7 +4231,7 @@ void orient_onsager_field(double px, double py, double pz, double *omx, double *
   omvn[0] = verso*sin(thons)*cos(phi);
   omvn[1] = verso*sin(thons)*sin(phi);
   omvn[2] = verso*cos(thons);
-  versor_to_R(nv[0],nv[1],nv[2], Rnv);
+  versor_to_R_nemfield(nv[0],nv[1],nv[2], Rnv);
   nem2lab(omvn, omv, Rnv);
   *omx = omv[0];
   *omy = omv[1];

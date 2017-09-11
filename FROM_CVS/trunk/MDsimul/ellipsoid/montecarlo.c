@@ -7225,7 +7225,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       else if (dist_type == 11 || dist_type == 12 || dist_type == 13)
 	{
 #ifdef ELCONST_NEWALGO
-	  orient_onsager_field(rat[0]+dx, rat[1]+dy, rat[2]+dz, &ox, &oy, &oz, alpha, qvecG, dist_type);
+	  /* N.B. qui assumo che il campo nematico vari poco sulle lunghezze corrispondenti alle dimensioni di un monomero e scelgo 
+	   * come punto per calcolare il campo nematico un punto lungo l'asse del monomero j (quello a cui dobbiamo mettere i legata)
+	   * ad una distanza circa pari a L/2 dalla superficie */
+	  orient_onsager_field(rat[0]+dx+vv[0]*norm, rat[1]+dy+vv[1]*norm, rat[2]+dz+vv[2]*norm, &ox, &oy, &oz, alpha, qvecG, dist_type);
 	  //orient_onsager(&ox, &oy, &oz, alpha);
 	  ec_ux[i] = ox;
       	  ec_uy[i] = oy;
@@ -7452,6 +7455,8 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 		  store_bump(i, j);
 		}
 #endif
+	     // printf("qui rj=%f %f %f  u=%f %f %f ri=%f %f %f\n", rx[j], ry[j], rz[j], R[j][0][0], R[j][0][1], 
+	       //    R[j][0][2], rx[i], ry[i], rz[i]);
 	    }
 #if defined(MC_HC) || defined(MC_BIFUNC_SPHERES) 
 	if (bonded)
@@ -7489,6 +7494,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       trials++;
       if (trials > maxtrials)
 	{
+	  printf("MCIN FAILED i=%d j=%d\n", i, j);
 	  *merr=1;
 	  return;
 	}
@@ -9672,7 +9678,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 #ifdef ELCONST_NEWALGO
 		    orient_onsager_field(rx[i], ry[i], rz[i], &ox, &oy, &oz, alpha, qvec, type);
 		    //orient_onsager(&ox, &oy, &oz, alpha);
-		    ec_segno[0] = 1.0;
+		    ec_segno[i] = 1.0;
 #else
 		    if (i == cur_jj || i == cur_ii)
 		      {
@@ -9792,11 +9798,13 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    if (overlap && selfoverlap==0 && merr==0 && ierr==0)
 	      {
 		//printf("qui\n");
+#ifndef ELCONST_NEWALGO
 		calc_com_cls(Rcm1, Rcm2, size1);
 		for (kk=0; kk < 3; kk++)
 		  {
 		    Rcm[kk] = Rcm2[kk] - Rcm1[kk];
 		  }
+#endif
 #if 1
 		if (type==11) // K11
 		  {
