@@ -1,5 +1,6 @@
 X0="2.0"
-QVECS="0 0.001 0.003 0.005 0.007 0.01 0.015 0.02 0.025 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1"
+QVECS="0.001 0.003 0.005 0.007 0.01 0.015 0.02 0.025 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1"
+TYPE="2" #1 =K11 2=K22 3=K33
 if [ \( "$1" == "" \) -o \( "$2" == "" \) ]
 then
 echo "clscov.sh <size1> <size2> <alpha>"
@@ -50,7 +51,7 @@ ln -sf ../../flextheory $EXN
 mosrun ./$EXN -fa ellipsoid_flex.par > screen &
 else
 pnm1=$[$s2]
-echo "100000000000 11 $pnm1 5000 $alpha $qv" > covmc.conf
+echo "100000000000 1${TYPE} $pnm1 5000 $alpha $qv" > covmc.conf
 cp ../../ellipsoid_flex.par .
 ../../set_params.sh ellipsoid_flex.par parnum $pn inifile $fn
 cp ../../$fn .
