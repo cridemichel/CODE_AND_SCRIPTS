@@ -1,7 +1,14 @@
 echo -n "" > v_vs_qsq.dat
 echo -n "" > v_vs_q.dat
-cd "alpha_20.0"
+cd "alpha_20.0_R0"
 QS=`ls -d q_*`
+TYPE="0"
+if [ "$TYPE" == "0" ]
+then
+FN="covolume-nem.dat"
+else
+FN="v1${TYPE}.dat"
+fi
 cd ..
 for f in `echo $QS` 
 do
@@ -11,8 +18,8 @@ for a in `ls -d alpha_*`
 do
 cd $a
 cd $f
-TE=`tail -n 1 v11.dat | LANG=C awk '{print $3}'` 
-TR=`tail -n 1 v11.dat | LANG=C awk '{print $1}'`
+TE=`tail -n 1 $FN | LANG=C awk '{print $3}'` 
+TR=`tail -n 1 $FN | LANG=C awk '{print $1}'`
 TTE=`echo ${TTE}+${TE} | bc -l`
 TTR=`echo ${TTR}+${TR} | bc -l`
 VOL3=`tail -n1 'iniconf_10-10.dat' |LANG=C awk '{print $1*$2*$3}'`
