@@ -7233,6 +7233,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  ec_ux[i] = ox;
       	  ec_uy[i] = oy;
 	  ec_uz[i] = oz;
+	  //printf("i=%d u=%f %f %f\n", i, ox, oy, oz);
 	  ec_segno[i]=1.0;
 #else
 	  if (i == cur_ii || i == cur_jj)
@@ -7494,7 +7495,17 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       trials++;
       if (trials > maxtrials)
 	{
-	  printf("MCIN FAILED i=%d j=%d\n", i, j);
+	  double nv[3];
+	  printf("MCIN FAILED i=%d (r=%f %f %f u=%f %f %f) j=%d (r=%f %f %f u=%f %f %f)\n", i, j, 
+		 rx[i], ry[i], rz[i], ec_ux[i], ec_uy[i], ec_uz[i],
+		 rx[j], ry[j], rz[j], ec_ux[j], ec_uy[j], ec_uz[j]);
+#if 0
+	  calc_nvec(dist_type, rx[i], ry[i], rz[i], qvecG,  nv);
+	  printf("i nv=%f %f %f\n", nv[0], nv[1], nv[2]);
+	  calc_nvec(dist_type, rx[j], ry[j], rz[j], qvecG, nv);
+	  printf("j nv=%f %f %f\n", nv[0], nv[1], nv[2]);
+	  printf("BOH %f %f %f\n", dx+norm*vv[0], dy+norm*vv[1], dz+norm*vv[2]);
+#endif
 	  *merr=1;
 	  return;
 	}
@@ -9462,10 +9473,396 @@ void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
   
 }
 #ifdef ELCONST_NEWALGO
+int create_pair_and_check(int type, int size1, double r1[3], double r2[3], double u1[3], double alpha, double qvec, double *totene, double *toteneExc, int use_stored_bonds)
+{
+#ifdef MD_LL_BONDS
+  long long int aa, bb, ii, jj, jj2;
+#else
+  int ii, jj, aa, bb, jj2;
+#endif
+  int k1, k2, i, j, kk, merr, bt, nb, ierr, selfoverlap=0, overlap=0;
+  long long int tt;
+  double delrxii, delryii, delrzii, delrxjj, delryjj, delrzjj;
+  const int nn=1000;
+  FILE *f;
+  double shift[3], segno;
+  double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
+
+  merr=ierr=0;
+  selfoverlap = overlap = 0;
+  //cur_ii = ii;
+  //cur_jj = jj;
+  /* first particle is always in the center of the box with the same orientation */
+  rx[0] = r1[0];
+  ry[0] = r1[1];
+  rz[0] = r1[2];
+#if 0
+  if (type==1)
+    orient_onsager(&ox, &oy, &oz, alpha);
+  else
+    orient_onsager_field(rx[0], ry[0], rz[0], &ox, &oy, &oz, alpha, qvec, type);
+#endif
+  ec_segno[0] = 1.0;
+  ec_ux[0] = ox;
+  ec_uy[0] = oy;
+  ec_uz[0] = oz;
+  //ox = 0; oy=0; oz=1;
+  //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
+  ox = u1[0];
+  oy = u1[1];
+  oz = u1[2];
+  versor_to_R(ox, oy, oz, Rl);
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	R[0][k1][k2] = Rl[k1][k2];
+      }
+  for (i=0; i < Oparams.parnum; i++)
+    {
+      numbonds[i] = 0;
+    }
+  for (i=1; i < size1; i++)
+    {
+      bt = 0;
+      if (use_stored_bonds)
+	{
+	  for (ii=0; ii < i; ii++)
+	    {
+	      for (kk=0; kk < numbondsMC[ii]; kk++)
+		{
+	      	  jj = bondsMC[ii][kk] / (NANA);
+	      	  jj2 = bonds[ii][kk] % (NANA);
+    		  aa = jj2 / NA;
+		  bb = jj2 % NA;
+		  if (jj==i)
+		    {
+		      j=ii;
+		      nb = aa-1;
+		    }
+		}
+	    }
+	}
+      while (1)
+	{
+	  if (!(use_stored_bonds && i == 1))
+	    nb = (int)(ranf_vb()*2.0);
+	  if (!use_stored_bonds)
+	    {
+	      j = (int) (ranf_vb()*i);
+	    }
+#if 1
+	  if (bt > Oparams.parnum*1000)
+	    {
+	      printf("insertion cluster #1: maximum number of iteration reached\n");
+	      if (fabs(calcpotene()+i*2.0) < 1E-10)
+		{
+		  save_conf_mc(0, 0);
+		  printf("During insertion of #1 cluster: every particle has 2 bonds! i=%d\n", i);
+		  exit(-1);
+		}
+	    }
+#endif
+	  if (is_bonded_mc(j, nb))
+	    continue;
+	  else
+	    break;
+	  bt++;
+	}
+      mcin(i, j, nb, type, alpha, &merr, 0);
+      if (merr!=0)
+	{
+	  save_conf_mc(0, 0);
+	  printf("[mcin covolume] attempt to add a bonded particle failed!\n");
+	  break;
+	}
+      if (check_self_overlap(0, i))
+	{
+	  selfoverlap = 1;
+	  break;
+	}
+      /* N.B. per ora non controlla il self-overlap della catena 
+	 e la formazione dopo mcin di legami multipli poiché
+	 si presuppone che al massimo stiamo considerando dimeri */
+    }
+
+  if (selfoverlap||merr)
+    {
+      //tt++;
+      return -1;
+    }
+  /* place second cluster */
+  for (i=size1; i < Oparams.parnum; i++)
+    {
+      if (i==size1)
+	{
+	  rx[i] = r2[0];
+	  ry[i] = r2[1]; 
+	  rz[i] = r2[2]; 
+	  /* NOTA 28/06/17:
+	   * ora devo generare una distribuzione che è la derivata della funzione di Onsager
+	   * ma devo anche aggiustare i segni negativi che spuntano fuori! */
+	  if (type==1)
+	    orient_onsager(&ox, &oy, &oz, alpha);
+	  else
+	    orient_onsager_field(rx[i], ry[i], rz[i], &ox, &oy, &oz, alpha, qvec, type);
+     	  if (oz < 0.0)
+    	    {
+    	      ox=-ox;// since particle have head-tail symmetry we can change sign to orientation vector
+    	      oy=-oy;
+    	      oz=-oz;
+    	    }
+
+	  ec_segno[i] = 1.0;
+	  ec_ux[i] = ox;
+	  ec_uy[i] = oy;
+	  ec_uz[i] = oz;
+
+	  versor_to_R(ox, oy, oz, Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      R[i][k1][k2] = Rl[k1][k2];
+	}
+      else
+	{
+	  bt = 0;
+	  if (use_stored_bonds)
+	    {
+	      for (ii=size1; ii < i; ii++)
+		{
+		  for (kk=0; kk < numbondsMC[ii]; kk++)
+		    {
+		      jj = bondsMC[ii][kk] / (NANA);
+		      jj2 = bonds[ii][kk] % (NANA);
+	    	      aa = jj2 / NA;
+	    	      bb = jj2 % NA;
+	    	      if (jj==i)
+	    		{
+	    		  j=ii;
+	    		  nb = aa-1;
+	    		}
+		    }
+		}
+	    }
+	  while (1)
+	    {
+	      if (!(use_stored_bonds && i == size1+1))
+		nb = (int)(ranf_vb()*2.0);
+
+	      if (!use_stored_bonds)
+		j = ((int) (ranf_vb()*(i-size1)))+size1;
+	      //printf("i=%d j=%d size1=%d\n", i, j, size1);
+
+#if 1
+	      if (bt > Oparams.parnum*1000)
+		{
+		  printf("insertion cluster #2: maximum number of iteration reached\n");
+		  if (fabs(calcpotene()+(i-size1)*2.0) < 1E-10)
+		    {
+		      save_conf_mc(0, 0);
+		      printf("During insertion of #2 cluster: every particle has 2 bonds! i=%d\n", i);
+		      exit(-1);
+		    }
+		}
+#endif
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	      bt++;
+	    }
+	  /* mette la particella i legata a j con posizione ed orientazione a caso */
+	  //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+	  mcin(i, j, nb, type, alpha, &merr, 0);
+	  if (merr!=0)
+	    {
+	      save_conf_mc(0, 0);
+	      printf("[mcin] attempt to add a bonded particle failed!\n");
+	      break;
+	    }
+	  if (check_self_overlap(size1, i))
+	    {
+#if 0
+	      printf("BOH i=%d j=%d\n", i, j);
+	      save_conf_mc(tt, 0); 
+#endif
+	      selfoverlap = 1;
+	      continue;
+	      //break;
+	    }
+
+	  /* N.B. per ora non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
+	}
+#if 0
+      if (selfoverlap)
+	{
+	  break;
+	  //tt++;
+	  //continue;
+	}
+#endif
+      //overlap = 0;
+      for (j=0; j < size1; j++)
+	{
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	  ierr=0;
+	  if (check_overlap(i, j, shift, &ierr)<0.0)
+	    {
+	      overlap=1;
+	      //printf("i=%d j=%d overlap!\n", i, j);
+	      //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	      //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	      //break;
+	    }
+	}
+    }
+  /* qui va modificato perché ora calcoliamo le costanti elastiche */
+  if (overlap && selfoverlap==0 && merr==0 && ierr==0)
+    {
+      //printf("qui\n");
+      if (type==1)
+	*toteneExc += 1.0;
+      else if (type==11) // K11
+	{
+	  *totene += 1.0;
+	}
+      else if (type==12) // K22
+	{
+	  *totene +=1.0;
+	}
+      else if (type==13) // K33
+	{
+	  *totene +=1.0;
+	}
+    }
+  
+
+  if (selfoverlap || merr || ierr)
+    return -1;
+  else
+    return 1;
+}
+#endif
+#ifdef ELCONST_NEWALGO
 void calc_elastic_constants(int type, double alpha, double qvec, long long int maxtrials, int outits, int size1)
+{
+  int k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
+  long long int tt;
+  int ii, jj;
+  double r1[3], r2[3], u1[3], delrxii, delryii, delrzii, delrxjj, delryjj, delrzjj;
+  const int nn=1000;
+  FILE *f;
+  double cov, covExc, totene, toteneExc, shift[3], segno;
+  double ox, oy, oz, Rl[3][3], Rcm1[3], Rcm2[3], Rcm[3], fact1, fact2; 
+  if (type == 11)
+    f = fopen("v11.dat","w+");
+  else if (type==12)
+    f = fopen("v22.dat","w+");
+  else
+    f = fopen("v33.dat","w+");
+
+  distro=malloc(sizeof(double)*nn);
+  for (i=0; i < nn; i++)
+    distro[i] = 0.0;
+#ifdef ELCONST_NEWALGO
+  qvecG=qvec;
+#endif 
+  fclose(f);
+  ec_segno = malloc(sizeof(double)*Oparams.parnum);
+  ec_ux =    malloc(sizeof(double)*Oparams.parnum);
+  ec_uy =    malloc(sizeof(double)*Oparams.parnum);
+  ec_uz =    malloc(sizeof(double)*Oparams.parnum);
+  dfons_sinth_max=estimate_maximum_dfons(alpha);
+  fons_sinth_max=dfons_sinth_max/alpha;
+  printf("Estimated maximum of dfons is %f maxtrials=%lld alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
+  tt=0;
+  totene=toteneExc=0.0;
+  while (tt < maxtrials) 
+    {
+      /* place first cluster */
+      if (tt%outits==0)// && ii==0 && jj==size1)
+	{
+	  if (tt!=0)
+	    {
+#ifdef MD_LXYZ
+	      cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+	      covExc = (toteneExc/((double)tt))*(L[0]*L[1]*L[2]);
+
+#else
+	      cov = (totene/((double)tt))*(L*L*L);
+	      covExc = (toteneExc/((double)tt))*(L[0]*L[1]*L[2]);
+#endif
+	      if (type == 11)
+		f = fopen("v11.dat","a");
+	      else if (type==12)
+		f = fopen("v22.dat","a");
+	      else
+		f = fopen("v33.dat","a");
+
+  	      if (type == 11)
+		printf("v11=%.10f (totene=%f/%lld)\n", cov-covExc, totene, tt);
+	      else if (type==12)
+		printf("v22=%.10f (totene=%f/%lld)\n", cov-covExc, totene, tt);
+	      else
+	  	printf("v33=%.10f (totene=%f/%lld)\n", cov-covExc, totene, tt);
+
+  	      fprintf(f, "%lld %.15G %.15G %.15G\n", tt, cov-covExc, totene, toteneExc);
+	      fclose(f);
+	      sync();
+	    }
+	}
+      r1[0]=r1[1]=r1[2]=0.0;
+#ifdef MD_LXYZ
+      r2[0] = L[0]*(ranf_vb()-0.5);
+      r2[1] = L[1]*(ranf_vb()-0.5); 
+      r2[2] = L[2]*(ranf_vb()-0.5); 
+#else
+      r2[0] = L*(ranf_vb()-0.5);
+      r2[1] = L*(ranf_vb()-0.5);
+      r2[2] = L*(ranf_vb()-0.5);
+#endif
+      orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
+      if (u1[2] < 0.0)
+	{
+	  u1[0]=-u1[0];// since particle have head-tail symmetry we can change sign to orientation vector
+	  u1[1]=-u1[1];
+	  u1[2]=-u1[2];
+	}
+
+      if (create_pair_and_check(type, size1, r1, r2, u1, alpha, qvecG, &totene, &toteneExc, 0)==-1)
+	{
+	  printf("type=%d qui1?!?\n", type);
+	  //tt++;
+	  continue;
+	}
+      save_conf_mc(tt,0);
+      /* store all bonds to use them in create_pair_and_check */
+      for (i=0; i < Oparams.parnum; i++)
+	{
+	  store_bonds_mc(i);
+	}
+      if (create_pair_and_check(1, size1, r1, r2, u1, alpha, qvecG, &totene, &toteneExc, 1)==-1)
+	{
+	  //tt++;
+	  printf("qui2?!?\n");
+	  continue;
+	}
+
+      save_conf_mc(tt,1);
+      tt++;
+    }
+}
 #else
 void calc_elastic_constants(int type, double alpha, long long int maxtrials, int outits, int size1)
-#endif
 {
   int k1, k2, i, j, kk, merr, selfoverlap=0, overlap, bt, nb, ierr;
   long long int tt;
@@ -9899,10 +10296,6 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		  }
 	      }
 #endif
-#if 0
-	    if (tt!=0 && tt%outits==0)
-	      save_conf_mc(tt, 0); 
-#endif
 
 	    if (ierr!=0)
 	      {
@@ -9910,13 +10303,10 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
 		store_bump(i,j);
 	      }
-#if 0
-	  }
-#endif
       tt++;
     }
-
 }
+#endif
 #endif
 #ifdef MC_PERSIST_MULTIGAP
 void calc_persist_len_multigap(int type, double alpha, long long int maxtrials, int outits, int size1)
