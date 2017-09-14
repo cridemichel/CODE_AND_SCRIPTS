@@ -4152,7 +4152,8 @@ void calc_nvec(int type, double qvec, double px, double py, double pz, double *n
   double gamma;
   if (type==11) //K11
     {
-      gamma = qvec*px - Sqr(qvec)*px*pz;// atan(qvec*px/(1.0+qvec*pz));
+      gamma = atan(qvec*px/(1.0+qvec*pz));
+      //gamma = qvec*px - Sqr(qvec)*px*pz;// atan(qvec*px/(1.0+qvec*pz));
     }
   else if (type==12) //K22
     {
@@ -4161,7 +4162,8 @@ void calc_nvec(int type, double qvec, double px, double py, double pz, double *n
     }
   else // K33
     {
-      gamma = qvec*pz + Sqr(qvec)*px*pz;//atan(qvec*pz/(1.0-qvec*px));
+      gamma = atan(qvec*pz/(1.0-qvec*px));
+      //gamma = qvec*pz + Sqr(qvec)*px*pz;//atan(qvec*pz/(1.0-qvec*px));
     }
   nv[0] = sin(gamma);
   nv[1] = 0.0;
