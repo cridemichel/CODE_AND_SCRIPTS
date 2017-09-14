@@ -9531,7 +9531,7 @@ int create_pair_and_check(int type, int size1, double r1[3], double r2[3], doubl
 	      for (kk=0; kk < numbondsMC[ii]; kk++)
 		{
 	      	  jj = bondsMC[ii][kk] / (NANA);
-	      	  jj2 = bonds[ii][kk] % (NANA);
+	      	  jj2 = bondsMC[ii][kk] % (NANA);
     		  aa = jj2 / NA;
 		  bb = jj2 % NA;
 		  if (jj==i)
@@ -9568,6 +9568,7 @@ int create_pair_and_check(int type, int size1, double r1[3], double r2[3], doubl
 	    break;
 	  bt++;
 	}
+      //printf("i=%d j=%d nb=%d\n", i, j, nb);
       mcin(i, j, nb, type, alpha, &merr, 0);
       if (merr!=0)
 	{
@@ -9632,7 +9633,7 @@ int create_pair_and_check(int type, int size1, double r1[3], double r2[3], doubl
 		  for (kk=0; kk < numbondsMC[ii]; kk++)
 		    {
 		      jj = bondsMC[ii][kk] / (NANA);
-		      jj2 = bonds[ii][kk] % (NANA);
+		      jj2 = bondsMC[ii][kk] % (NANA);
 	    	      aa = jj2 / NA;
 	    	      bb = jj2 % NA;
 	    	      if (jj==i)
@@ -9672,6 +9673,7 @@ int create_pair_and_check(int type, int size1, double r1[3], double r2[3], doubl
 	    }
 	  /* mette la particella i legata a j con posizione ed orientazione a caso */
 	  //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
+	  //printf("i=%d j=%d nb=%d\n", i, j, nb);
 	  mcin(i, j, nb, type, alpha, &merr, 0);
 	  if (merr!=0)
 	    {
@@ -9838,18 +9840,20 @@ void calc_elastic_constants(int type, double alpha, double qvec, long long int m
 	  u1[2]=-u1[2];
 	}
 
+      //printf("WITH DISTORTION\n");
       if (create_pair_and_check(type, size1, r1, r2, u1, alpha, qvecG, &totene, &toteneExc, 0)==-1)
 	{
 	  printf("type=%d qui1?!?\n", type);
 	  //tt++;
 	  continue;
 	}
-      save_conf_mc(tt,0);
+      //save_conf_mc(tt,0);
       /* store all bonds to use them in create_pair_and_check */
       for (i=0; i < Oparams.parnum; i++)
 	{
 	  store_bonds_mc(i);
 	}
+      //printf("EXCL VOL\n");
       if (create_pair_and_check(1, size1, r1, r2, u1, alpha, qvecG, &totene, &toteneExc, 1)==-1)
 	{
 	  //tt++;
@@ -9857,7 +9861,7 @@ void calc_elastic_constants(int type, double alpha, double qvec, long long int m
 	  continue;
 	}
 
-      save_conf_mc(tt,1);
+      //save_conf_mc(tt,1);
       tt++;
     }
 }
