@@ -9723,9 +9723,12 @@ int create_pair_and_check(int type, int size1, double r1[3], double r2[3], doubl
 	      //printf("i=%d j=%d overlap!\n", i, j);
 	      //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
 	      //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	      //if (use_stored_bonds)
 	      //break;
 	    }
 	}
+      //if (overlap && use_stored_bonds)
+	//break;
     }
   /* qui va modificato perché ora calcoliamo le costanti elastiche */
   if (overlap && selfoverlap==0 && merr==0 && ierr==0)
@@ -9746,7 +9749,6 @@ int create_pair_and_check(int type, int size1, double r1[3], double r2[3], doubl
 	  *totene +=1.0;
 	}
     }
-  
 
   if (selfoverlap || merr || ierr)
     return -1;
