@@ -109,7 +109,7 @@ char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
 int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=-1;
-int avgbondlen=1, calcordparam=0;
+int avgbondlen=1, calcordparam=0, save_cls_conf=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -929,7 +929,7 @@ void change_all_colors(int NP, int* color, int colorsrc, int colordst)
 	color[ii] = colordst;
     }
 }
-char fncls[1024];
+char fncls[1024], fsclsn[1024];
 char fn[1024];
 int findmaxColor(int NP, int *color)
 {
@@ -988,7 +988,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [-mc] [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
+  printf("Usage: clusters [--saveclsconf/-sc] [-mc] [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] <listafile>\n");
   exit(0);
 }
 
@@ -1012,6 +1012,10 @@ void parse_params(int argc, char** argv)
 	     print_usage();
 	  mix_type = atoi(argv[cc]);
 	}
+      else if (!strcmp(argv[cc],"--saveclsconf") || !strcmp(argv[cc],"-sc" ))
+	{
+	  save_cls_conf = 1;
+	} 
       else if (!strcmp(argv[cc],"--noperc") || !strcmp(argv[cc],"-np" ))
 	{
 	  check_percolation = 0;
@@ -1252,7 +1256,7 @@ int main(int argc, char **argv)
   double *Q[3][3], Snem, *normQ;
   double ev[3];
   double am, xmed;
-  FILE *f, *f2, *f3;
+  FILE *f, *f2, *f3, *fscls;
   char *s1, *s2;
   int beg, c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
@@ -2199,6 +2203,11 @@ int main(int argc, char **argv)
       almenouno = 0;
       if (!only_average_clsdistro)
 	{
+	  if (save_cls_conf)
+	    {
+	      sprintf(fsclsn, "cls-%s", fname[nr1]);
+	      fscls=fopen(fsclsn,"w+");
+	    }
 	  if (check_percolation)
 	    {
 	      sprintf(fn, "perc%s.dat", fname[nr1]);
@@ -2231,15 +2240,23 @@ int main(int argc, char **argv)
 		    {
 		    
 		      fprintf(f, "%d ", i);
+		      if (save_cls_conf)
+			{
+			  fprintf(fscls, "%.15G %.15G %.15G %.15G\n", r0[0][i], r0[1][i], r0[2][i], typesArr[typeOfPart[i]].sax[0]);
+			}
 
 		    }
 		}
+	      if (save_cls_conf)
+		fprintf(fscls, "\n");
 	      fprintf(f, "\n");
 	    }
 	  
 	  //if (almenouno==0)
 	  //fprintf(f, "WARNING: No clusters found!\n");
 	  fclose(f);
+	  if (save_cls_conf)
+	    fclose(fscls);
 	}
       for (nc = 0; nc < ncls; nc++)
 	{
