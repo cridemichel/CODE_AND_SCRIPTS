@@ -2214,6 +2214,8 @@ int main(int argc, char **argv)
 	      f2 = fopen(fn, "w");
 	      fclose(f2);
 	    }
+
+	  fprintf(fscls, ".Vol: 8338.39\n");
 	  for (nc = 0; nc < ncls; nc++)
 	    {
 	      //if (cluster_sort[nc].dim >= 2)
@@ -2242,7 +2244,7 @@ int main(int argc, char **argv)
 		      fprintf(f, "%d ", i);
 		      if (save_cls_conf)
 			{
-			  fprintf(fscls, "%.15G %.15G %.15G %.15G\n", r0[0][i], r0[1][i], r0[2][i], typesArr[typeOfPart[i]].sax[0]);
+			  fprintf(fscls, "%.15G %.15G %.15G @ %.15G\n", r0[0][i], r0[1][i], r0[2][i], typesArr[typeOfPart[i]].sax[2]);
 			}
 
 		    }
