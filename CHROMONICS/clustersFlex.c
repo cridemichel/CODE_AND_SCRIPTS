@@ -1262,7 +1262,7 @@ int main(int argc, char **argv)
   int  NN, fine, JJ, nat, maxl, maxnp, np, nc2, nc, dix, diy, diz, djx,djy,djz,imgi2, imgj2, jbeg, ifin;
   int jX, jY, jZ, iX, iY, iZ, jj;
   //int coppie;
-  double refTime=0.0, ti, ene=0.0;
+  double refTime=0.0, ti, ene=0.0, totene=0.0;
   int curcolor, ncls, b, j, almenouno, na, c, i2, j2, ncls2;
   pi = acos(0.0)*2.0;
     /* parse arguments */
@@ -1944,6 +1944,7 @@ int main(int argc, char **argv)
 
 	}
       ncls = ncNV;
+      totene += ene;
       if (!saveBonds)
 	printf("E/N = %.15G\n", ene/((double)NP));
       //printf("coppie PERC=%d\n", coppie);
@@ -2214,8 +2215,8 @@ int main(int argc, char **argv)
 	      f2 = fopen(fn, "w");
 	      fclose(f2);
 	    }
-
-	  fprintf(fscls, ".Vol: 8338.39\n");
+	  if (save_cls_conf)
+	    fprintf(fscls, ".Vol: 8338.39\n");
 	  for (nc = 0; nc < ncls; nc++)
 	    {
 	      //if (cluster_sort[nc].dim >= 2)
@@ -2364,6 +2365,7 @@ int main(int argc, char **argv)
 	    fprintf(f, "%d %.15G\n", i, ((double)clssizedstAVG[i])/((double)nfiles));
 	}
     }
+  printf("Energia Media = %.15G\n", totene/((double)nfiles)/((double)NP));
   if (calcordparam)
     {
       int a, b;
