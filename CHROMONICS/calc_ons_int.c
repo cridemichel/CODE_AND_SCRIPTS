@@ -125,23 +125,19 @@ double fons(double theta, double alpha)
   return cosh(alpha*cos(theta))*alpha/(4.0*M_PI*sinh(alpha));
 }
 
-
+double f0;
+void init_theta_onsager(double alpha)
+{
+  f0 = 1.01*fons(0.0,alpha);
+}
 double theta_onsager(double alpha)
 {
   /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
      using rejection method */
   /* the comparison function g(theta) is just g(theta)=1 */ 
-  static int first = 1;
-  static double f0;
   double pi, y, f, theta, dtheta;
   //printf("alpha=%f\n", alpha);
   //pi = acos(0.0)*2.0;
-  if (first == 1)
-    {
-      first=0;
-      f0 = 1.01*fons(0.0,alpha);
-    }
-
   do 
     {
       /* uniform theta between 0 and pi */
@@ -159,12 +155,12 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   double thons;
   double pi, phi, verso;
 
-  pi = acos(0.0)*2.0;
+  //pi = acos(0.0)*2.0;
   /* random angle from onsager distribution */
   thons = theta_onsager(alpha);
   //printf("thos=%f\n", thons);
   //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
-  phi = 2.0*pi*ranf_vb();
+  phi = 2.0*M_PI*ranf_vb();
   //verso = (ranf_vb()<0.5)?1:-1;
   verso=1.0;
 #if 1 /* along z */
@@ -187,11 +183,14 @@ double scalProd(double *A, double *B)
   return R;
 }
 double u1[3], u2[3], alpha;
+unsigned short inir48[3]={1,2,3};
 char fn[1024];
 int main(int argc, char** argv)
 {
   long long int tt = 0, maxtrials, outstps;
   double aini, aend, da, integAn=0.0, integkn=0.0, sp, fact, avgkn, avgAn, avgold, singamma;
+  gsl_sf_result ellint;
+  int status;
   FILE *f;
   fact = M_PI/4.0; 
   if (argc==1)
@@ -220,13 +219,17 @@ int main(int argc, char** argv)
   fclose(f);
   f = fopen("kn.dat", "w+");
   fprintf(f, "{ ");
+  srand48(123243546);
   fclose(f);
+  gsl_set_error_handler_off();
   for (alpha=aini; alpha <= aend; alpha+=da)
     {
+      init_theta_onsager(alpha);
       sprintf(fn, "onsint_alpha_%f.dat", alpha);
       f = fopen(fn, "w+");
       tt = 0;
       integAn = integkn = 0.0; 
+      printf("Doing alpha=%.15G\n", alpha);
       while (tt < maxtrials)
 	{
 	  orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
@@ -236,7 +239,15 @@ int main(int argc, char** argv)
 	  integAn += singamma;
 	  /* NOTA: ci va la radice poiché in mathematica l'integrale ellittico è definito in funzione di m=k^2 
 	   * dove k è l'argomento dell'integrale ellittico nelle gsl */
-	  integkn += 1.0 + fabs(sp) + (4.0/M_PI)*gsl_sf_ellint_Ecomp(sqrt(singamma), GSL_PREC_DOUBLE);
+	  status=gsl_sf_ellint_Ecomp_e(sqrt(singamma), GSL_PREC_DOUBLE, &ellint);
+	  if (status) 
+	    { /* an error occurred */
+	      printf("singamm=%.15G sqrt(singamma)=%.15G\n", singamma, sqrt(singamma));
+	      exit(-1);
+	    }
+	  integkn += 1.0 + fabs(sp) + (4.0/M_PI)*ellint.val;
+
+	  tt++;
 	  //printf("gamma=%f u1=%f %f %f u2=%f %f %f\n", 180.0*acos(sp)/M_PI,
 	  //     u1[0], u1[1], u1[2], u2[0], u2[1], u2[2]);
 	  //printf("gamma=%f\n", 180.0*acos(sp)/M_PI);
@@ -247,7 +258,6 @@ int main(int argc, char** argv)
 	      printf("An=%.15G kn=%.15G\n", avgAn, avgkn);
 	      fprintf(f, "%lld %.15G %.15G\n", tt, avgAn, avgkn);
 	    }	  
-	  tt++;
 	}
       fclose(f);
 
@@ -270,5 +280,4 @@ int main(int argc, char** argv)
   f = fopen("kn.dat", "a+");
   fprintf(f, " };\n");
   fclose(f);
-
 }
