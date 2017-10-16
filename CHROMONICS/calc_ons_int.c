@@ -212,8 +212,11 @@ int main(int argc, char** argv)
   sobseq(&nsv, sv);
   nsv = 4;
 #endif
-  //printf("EllipticE(%f)=%.15G\n", 0.9455, gsl_sf_ellint_Ecomp(sqrt(0.9455), GSL_PREC_DOUBLE));
-  //exit(-1);
+#if 0
+  printf("EllipticE(%.15G)=%.15G\n", 0.99999, gsl_sf_ellint_Ecomp(sqrt(0.99999), GSL_PREC_DOUBLE));
+  printf("EllipticE(%f)=%.15G\n", 1.0, gsl_sf_ellint_Ecomp(sqrt(1.0), GSL_PREC_DOUBLE));
+  exit(-1);
+#endif
   f = fopen("An.dat", "w+");
   fprintf(f, "{ ");
   fclose(f);
@@ -239,12 +242,16 @@ int main(int argc, char** argv)
 	  integAn += singamma;
 	  /* NOTA: ci va la radice poiché in mathematica l'integrale ellittico è definito in funzione di m=k^2 
 	   * dove k è l'argomento dell'integrale ellittico nelle gsl */
-	  status=gsl_sf_ellint_Ecomp_e(sqrt(singamma), GSL_PREC_DOUBLE, &ellint);
+	  if (singamma==1.0)
+	    ellint.val=1.0;
+	  else
+	    status=gsl_sf_ellint_Ecomp_e(sqrt(singamma), GSL_PREC_DOUBLE, &ellint);
 	  if (status) 
 	    { /* an error occurred */
 	      printf("singamm=%.15G sqrt(singamma)=%.15G\n", singamma, sqrt(singamma));
 	      exit(-1);
 	    }
+	
 	  integkn += 1.0 + fabs(sp) + (4.0/M_PI)*ellint.val;
 
 	  tt++;
