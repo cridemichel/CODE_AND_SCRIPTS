@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_precision.h>
+#include <gsl/gsl_sf_ellint.h>
 double ranf_vb(void)
 {
   /*  Returns a uniform random variate in the range 0 to 1.         
@@ -82,7 +86,7 @@ double u1[3], u2[3], alpha;
 int main(int argc, char** argv)
 {
   long long int tt = 0, maxtrials, outstps;
-  double integ=0.0, sp, fact, avg, avgold;
+  double integAn=0.0, integkn=0.0, sp, fact, avgkn, avgAn, avgold, singamma;
   FILE *f;
   fact = M_PI/4.0; 
   maxtrials = atoll(argv[1]);
@@ -93,22 +97,31 @@ int main(int argc, char** argv)
     outstps = 100000;
   printf("alpha=%f totsteps=%lld outits=%lld\n", alpha, maxtrials, outstps);
   f = fopen("onsint.dat", "w+");
+
+  printf("EllipticE(%f)=%.15G\n", 0.9455, gsl_sf_ellint_Ecomp(sqrt(0.9455), GSL_PREC_DOUBLE));
+  exit(-1);
   while (tt < maxtrials)
     {
       orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
       orient_onsager(&(u2[0]), &(u2[1]), &(u2[2]), alpha);
       sp = scalProd(u1,u2);
-      integ += sin(acos(sp));
+      singamma = sin(acos(sp));
+      integAn += singamma;
+      /* NOTA: ci va la radice poiché in mathematica l'integrale ellittico è definito in funzione di m=k^2 
+       * dove k è l'argomento dell'integrale ellittico nelle gsl */
+      integkn += 1.0 + fabs(sp) + (4.0/M_PI)*gsl_sf_ellint_Ecomp(sqrt(singamma), GSL_PREC_DOUBLE);
       //printf("gamma=%f u1=%f %f %f u2=%f %f %f\n", 180.0*acos(sp)/M_PI,
       	//     u1[0], u1[1], u1[2], u2[0], u2[1], u2[2]);
       //printf("gamma=%f\n", 180.0*acos(sp)/M_PI);
       if (tt % outstps == 0 && tt != 0) 
 	{
-  	  printf("int value=%.15G\n", avg=fact*integ/((double)tt));
-	  fprintf(f, "%lld %.15G\n", tt, avg);
+	  avgAn = fact*integAn/((double)tt);
+	  avgkn = fact*integkn/((double)tt);
+  	  printf("An=%.15G kn=%.15G\n", avgAn, avgkn);
+	  fprintf(f, "%lld %.15G %.15G\n", tt, avgAn, avgkn);
 	}	  
       tt++;
     }
   fclose(f);
-  printf("final value=%.15G\n", fact*integ/((double)tt));
+  printf("final An=%.15G kn=%.15G\n", fact*integAn/((double)tt), fact*integkn/((double)tt));
 }
