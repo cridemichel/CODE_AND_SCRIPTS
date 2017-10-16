@@ -1554,7 +1554,7 @@ int main(int argc, char**argv)
       exit(1);
     }
   diamHC=atof(argv[1]);
-  lengthHC=atoi(argv[2]);
+  lengthHC=atof(argv[2]);
   alpha = atof(argv[3]);
   tot_trials=atoll(argv[4]);
   type = atoi(argv[5]);
@@ -1562,6 +1562,7 @@ int main(int argc, char**argv)
  
   CHROMheight=0.34; /* in nm */
   lengthHC *= CHROMheight; 
+  printf("lengthHC=%f\n", lengthHC);
   if (argc == 7)
     outits=100*fileoutits;
   else
