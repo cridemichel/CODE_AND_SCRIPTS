@@ -226,6 +226,7 @@ int main(int argc, char** argv)
       sprintf(fn, "onsint_alpha_%f.dat", alpha);
       f = fopen(fn, "w+");
       tt = 0;
+      integAn = integkn = 0.0; 
       while (tt < maxtrials)
 	{
 	  orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
