@@ -174,6 +174,63 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 #endif
   //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
+void orient(double *omx, double *omy, double* omz)
+{
+  int i;
+  //double inert;                 /* momentum of inertia of the molecule */
+  //double norm, dot, osq, o, mean;
+  double  xisq, xi1, xi2, xi;
+  double ox, oy, oz, osq, norm;
+  
+  //Mtot = m; /* total mass of molecule */
+
+  //inert = I; /* momentum of inertia */
+ 
+  //mean = 3.0*temp / inert;
+
+  xisq = 1.0;
+
+  while (xisq >= 1.0)
+    {
+      xi1  = 1.0 - 2.0*ranf_vb();
+      xi2  = 1.0 - 2.0*ranf_vb();
+      xisq = xi1 * xi1 + xi2 * xi2;
+    }
+
+  xi = sqrt (fabs(1.0 - xisq));
+  ox = 2.0 * xi1 * xi;
+  oy = 2.0 * xi2 * xi;
+  oz = 1.0 - 2.0 * xisq;
+
+#if 0
+  /* Renormalize */
+  osq   = ox * ox + oy * oy + oz * oz;
+  //printf("osq=%f\n", osq);
+  norm  = sqrt(fabs(osq));
+  ox    = ox / norm;
+  oy    = oy / norm;
+  oz    = oz / norm;
+#endif
+  *omx = ox;
+  *omy = oy;
+  *omz = oz; 
+  //distro[(int) (acos(oz)/(pi/1000.0))] += 1.0;
+
+#if 0
+  /* Choose the magnitude of the angular velocity
+NOTE: consider that it is an exponential distribution 
+(i.e. Maxwell-Boltzmann, see Allen-Tildesley pag. 348-349)*/
+
+  osq   = - mean * log(ranf());
+  o     = sqrt(fabs(osq));
+  ox    = o * ox;
+      oy    = o * oy;
+      oz    = o * oz;
+      *wx = ox;
+      *wy = oy;
+      *wz = oz;
+#endif 
+}
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -235,8 +292,16 @@ int main(int argc, char** argv)
       printf("Doing alpha=%.15G\n", alpha);
       while (tt < maxtrials)
 	{
-	  orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
-	  orient_onsager(&(u2[0]), &(u2[1]), &(u2[2]), alpha);
+	  if (alpha==0.0)
+	    {
+	      orient(&(u1[0]), &(u1[1]), &(u1[2]));
+    	      orient(&(u2[0]), &(u2[1]), &(u2[2]));
+	    }
+	  else
+	    {
+    	      orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
+    	      orient_onsager(&(u2[0]), &(u2[1]), &(u2[2]), alpha);
+	    }
 	  sp = scalProd(u1,u2);
 	  singamma = sin(acos(sp));
 	  integAn += singamma;
