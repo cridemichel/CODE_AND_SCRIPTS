@@ -5428,6 +5428,7 @@ void create_chains(void)
   u1[2] = u2[2] = 1.0;
   size1 = Oparams.parnum/2;
   numbonds[0] = 0;
+  printf("size1=%d\n", size1);
   for (i=0; i < size1; i++)
     {
       if (i==0)
@@ -5487,7 +5488,7 @@ void create_chains(void)
       while (1)
 	{
 	  nb = (int)(ranf_vb()*2.0);
-	  j = (int) (ranf_vb()*i);
+	  j = (int) (ranf_vb()*(i-size1))+size1;
 	  if (is_bonded_mc(j, nb))
 	    continue;
 	  else
