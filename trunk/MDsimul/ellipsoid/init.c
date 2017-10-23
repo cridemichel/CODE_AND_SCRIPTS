@@ -1877,7 +1877,10 @@ void usrInitBef(void)
     OprogStatus.alpha=10.0;
     OprogStatus.curi[0]=0;
     OprogStatus.curi[1]=Oparams.parnum/2;
-    OprogStatus.totene=0.0;
+    OprogStatus.totene[0]=0.0;
+    OprogStatus.totene[1]=0.0;
+    OprogStatus.totene[2]=0.0;
+    OprogStatus.tottrials = 0.0;
 #endif
 #ifdef MD_GRAVITY
     Lz = 9.4;
@@ -6422,6 +6425,10 @@ void usrInitAft(void)
 #endif
       f = fopenMPI(absMisHD("radius_of_gyration.dat"), "w+");
       fclose(f);
+#ifdef MC_ELCONST_MC
+      f = fopenMPI(absMisHD("elconst.dat"), "w+");
+      fclose(f);
+#endif
       f = fopenMPI(absMisHD("energy.dat"), "w+");
       fclose(f);
 #ifdef MD_ONE_CHAIN
