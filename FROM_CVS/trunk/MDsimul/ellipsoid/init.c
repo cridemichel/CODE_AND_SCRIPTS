@@ -1877,6 +1877,7 @@ void usrInitBef(void)
     OprogStatus.alpha=10.0;
     OprogStatus.curi[0]=0;
     OprogStatus.curi[1]=Oparams.parnum/2;
+    OprogStatus.totene=0.0;
 #endif
 #ifdef MD_GRAVITY
     Lz = 9.4;
