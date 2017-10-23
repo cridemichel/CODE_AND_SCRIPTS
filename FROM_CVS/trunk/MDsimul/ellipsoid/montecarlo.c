@@ -12700,7 +12700,6 @@ void rot_cls_move(int nc, int flip)
   double rhb[3], rhbn[3];
   int k1, k2, k3, ip, np;
   /* pick a random orientation */
-  printf("qui?!?nnnnnnnnnnnnnnnnnnnnnnoooo!!!\n");
   orient(&ox,&oy,&oz);
   /* pick a random rotation angle */
 #ifdef MC_FLIP_MOVE
@@ -12833,6 +12832,7 @@ int random_cls_move(int nc)
       || OprogStatus.restrmove==3
 #endif
      )
+  p=0.0;
 #ifdef MC_ELCONST_MC
   p=0.0;
 #endif
