@@ -546,7 +546,8 @@ struct progStatus
 #ifdef MC_ELCONST_MC
   double alpha;
   int curi[2];
-  double totene;
+  double totene[3];
+  double tottrials;
 #endif
   char endfile[NAME_LENGTH];
   /* stringa contenente il nome del file in cui
@@ -1235,7 +1236,8 @@ struct pascii opro_ascii[] =
 #ifdef MC_ELCONST_MC
   {"alpha",    &OS(alpha),   1, 1, "%.10G"},
   {"curi",    OS(curi),    2, 1, "%d"}, 
-  {"totene",  &OS(totene), 1, 1, "%.15G"},
+  {"totene",  &OS(totene), 3, 1, "%.15G"},
+  {"tottrials", &OS(tottrials), 1, 1, "%.15G"},
 #endif
   //  {"sumMedia",     &OS(sumMedia),                   1,   1, "%.6f"},
   //{"sumVx",        OS(sumVx),                    MAXPAR,  1, "%.10f"},
