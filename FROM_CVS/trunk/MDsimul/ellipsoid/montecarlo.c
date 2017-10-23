@@ -12333,7 +12333,40 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
 }
 #endif
 double dfons(double theta, double alpha);
-
+#ifdef MC_ELCONST_MC
+void update_mcelconst_ene(void)
+{
+  double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
+  int i, j;
+  i = OprogStatus.curi[0];
+  j = OprogStatus.curi[1];
+  dx = rx[i]-rx[j];
+  dy = ry[i]-ry[j];
+  dz = rz[i]-rz[j];
+  dx = dx - L[0]*rint(dx/L[0]);
+  dy = dy - L[1]*rint(dy/L[1]);
+  dz = dz - L[2]*rint(dz/L[2]);
+  fact = Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+  //fact=1.0;
+  if (R[i][0][0] > 0.0)
+    ec_segnoi=-1.0;
+  else
+    ec_segnoi=1.0;
+  if (R[j][0][0] > 0.0)
+    ec_segnoj=-1.0;
+  else
+    ec_segnoj=1.0;
+  //printf("segno=%f %f dx=%f vol=%f\n", ec_segnoi, ec_segnoj, Sqr(dx), L[0]*L[1]*L[2]);
+  //printf("prima step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
+  /* K11 */
+  OprogStatus.totene[0] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dx);
+  /* K22 */
+  OprogStatus.totene[1] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dy);
+  /* K33 */	
+  OprogStatus.totene[2] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz);
+  //printf("step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
+}
+#endif
 int mcmotion(void)
 {
   int ip, dorej, movetype, err;
@@ -12385,7 +12418,11 @@ int mcmotion(void)
   dorej = overlapMC(ip, &err);
 #ifdef MC_ELCONST_MC
   if (dorej)
-    OprogStatus.totene+=1.0;
+    {
+      update_mcelconst_ene();
+    }
+  else
+  OprogStatus.tottrials +=1.0;
 #endif
 #if 0
   if (OprogStatus.deltaMC==0 && OprogStatus.dthetaMC ==0)
@@ -13198,6 +13235,9 @@ for (np=0; np < clsdim[nc]; np++)
   //err=0;
   dorej=0;
   //printf("clsdim=%d\n", clsdim[nc]);
+#ifdef MC_ELCONST_MC
+  OprogStatus.tottrials+=1.0;
+#endif
   for (np=0; np < clsdim[nc]; np++)
     {
       ip = clsarr[firstofcls[nc]+np];
