@@ -543,6 +543,10 @@ struct progStatus
   double basew;
   int lastbilogsaved;
 #endif
+#ifdef MC_ELCONST_MC
+  double alpha;
+  int curi[2];
+#endif
   char endfile[NAME_LENGTH];
   /* stringa contenente il nome del file in cui
      si salvano le coordinate delle particelle alla fine della simulazione.
@@ -1227,6 +1231,10 @@ struct pascii opro_ascii[] =
   {"histMB",       OS(histMB),                  NUMV,               1, "%d"},
   {"sumTemp",      &OS(sumTemp),                    1,              1, "%.6G"},
   {"sumPress",     &OS(sumPress),                   1,              1, "%.6G"},
+#ifdef MC_ELCONST_MC
+  {"alpha",    &OS(alpha),   1, 1, "%.10G"},
+  {"curi",    OS(curi),    2, 1, "%d"}, 
+#endif
   //  {"sumMedia",     &OS(sumMedia),                   1,   1, "%.6f"},
   //{"sumVx",        OS(sumVx),                    MAXPAR,  1, "%.10f"},
   //{"sumVy",        OS(sumVy),                    MAXPAR,  1, "%.10f"},
@@ -1651,6 +1659,11 @@ struct singlePar OsinglePar[] = {
   {"bigrotbias", &OprogStatus.bigrotbias, CT},
   {"bigrotTheta0", &OprogStatus.bigrotTheta0, CT},
 #endif
+#endif
+#ifdef MC_ELCONST_MC
+  {"alpha", &OprogStatus.alpha, CT},
+  {"curiA", &(OprogStatus.curi[0]), INT},
+  {"curiB", &(OprogStatus.curi[1]), INT},
 #endif
 #ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},

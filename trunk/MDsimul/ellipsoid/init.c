@@ -1873,6 +1873,11 @@ void usrInitBef(void)
     OprogStatus.dofA = 5.0;
     OprogStatus.dofB = 5.0;
 #endif
+#ifdef MC_ELCONST_MC
+    OprogStatus.alpha=10.0;
+    OprogStatus.curi[0]=0;
+    OprogStatus.curi[1]=Oparams.parnum/2;
+#endif
 #ifdef MD_GRAVITY
     Lz = 9.4;
 #endif
@@ -4256,7 +4261,9 @@ void orient_onsager(double *omx, double *omy, double* omz, double alpha)
   /* random angle from onsager distribution */
   thons = theta_onsager(alpha);
   //printf("thos=%f\n", thons);
+#ifdef MC_ELASTIC_CONSTANTS
   distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+#endif
   phi = 2.0*pi*ranf_vb();
   //verso = (ranf_vb()<0.5)?1:-1;
   verso=1;
@@ -5409,6 +5416,105 @@ void build_linked_list_bp(void)
 int *nanobondsArr, numNanoArms;
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk);
+#ifdef MC_ELCONST_MC
+void create_chains(void)
+{
+  int k1, k2, i,j, bt, nb, size1;
+  double Rl[3][3], u1[3], u2[3];
+  int merr, selfoverlap;
+  printf("Creo le catene\n");
+  u1[0] = u2[0] = 0.0;
+  u1[1] = u2[1] = 0.0;
+  u1[2] = u2[2] = 1.0;
+  size1 = Oparams.parnum/2;
+  numbonds[0] = 0;
+  for (i=0; i < size1; i++)
+    {
+      if (i==0)
+	{
+	  rx[i] = 0.0;
+	  ry[i] = 0.0;
+	  rz[i] = 0.0;
+	  versor_to_R(u1[0], u1[1], u1[2], Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      R[i][k1][k2] = Rl[k1][k2];
+	  continue;
+	}
+      bt = 0;
+      while (1)
+	{
+	  nb = (int)(ranf_vb()*2.0);
+	  j = (int) (ranf_vb()*i);
+	  if (is_bonded_mc(j, nb))
+	    continue;
+	  else
+	    break;
+	  bt++;
+	}
+      //printf("i=%d j=%d nb=%d\n", i, j, nb);
+      mcin(i, j, nb, 1, 100.0, &merr, 0);
+      if (merr!=0)
+	{
+	  break;
+	}
+#if 0
+      if (check_self_overlap(0, i))
+	{
+	  selfoverlap = 1;
+	  break;
+	}
+#endif
+      /* N.B. per ora non controlla il self-overlap della catena 
+	 e la formazione dopo mcin di legami multipli poiché
+	 si presuppone che al massimo stiamo considerando dimeri */
+    }
+  numbonds[size1]=0;
+  for (i=size1; i < Oparams.parnum; i++)
+    {
+      bt = 0;
+      if (i==size1)
+	{
+	  rx[i] = L[0]/4.;
+	  ry[i] = 0.0;
+	  rz[i] = 0.0;
+	  versor_to_R(u2[0], u2[1], u2[2], Rl);
+	  for (k1=0; k1 < 3; k1++)
+	    for (k2=0; k2 < 3; k2++)
+	      R[i][k1][k2] = Rl[k1][k2];
+	  continue;
+	}
+      while (1)
+	{
+	  nb = (int)(ranf_vb()*2.0);
+	  j = (int) (ranf_vb()*i);
+	  if (is_bonded_mc(j, nb))
+	    continue;
+	  else
+	    break;
+	  bt++;
+	}
+      //printf("i=%d j=%d nb=%d\n", i, j, nb);
+      mcin(i, j, nb, 1, 100.0, &merr, 0);
+      if (merr!=0)
+	{
+	  break;
+	}
+#if 0
+      if (check_self_overlap(0, i))
+	{
+	  selfoverlap = 1;
+	  break;
+	}
+#endif
+      /* N.B. per ora non controlla il self-overlap della catena 
+	 e la formazione dopo mcin di legami multipli poiché
+	 si presuppone che al massimo stiamo considerando dimeri */
+    }
+  printf("chain create!\n");
+  printf("total energy=%f\n", calcpotene());
+}
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -7492,6 +7598,11 @@ void usrInitAft(void)
 #if defined(MD_CALC_VBONDING) && !defined(MD_STANDALONE) && !defined(MC_SIMUL) 
   calc_vbonding();
 #endif
+#ifdef MC_ELCONST_MC
+  /* create chjains */
+  create_chains();
+#endif
+
 }
 extern double rA[3], rB[3];
 #ifdef EDHE_FLEX
