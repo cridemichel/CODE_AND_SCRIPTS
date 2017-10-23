@@ -7217,7 +7217,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  oy = 0;
 	  oz = 0;
 	}
-      else if (dist_type==0||dist_type==6)
+      else if (dist_type==0||dist_type==6)//|| (i < Oparams.parnum/2))
 	{
   	  orient(&ox, &oy, &oz);
 	}
@@ -7528,9 +7528,11 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       if (trials > maxtrials)
 	{
 	  double nv[3];
+#ifdef MC_ELASTIC_CONSTANTS
 	  printf("MCIN FAILED i=%d (r=%f %f %f u=%f %f %f) j=%d (r=%f %f %f u=%f %f %f)\n", i, j, 
 		 rx[i], ry[i], rz[i], ec_ux[i], ec_uy[i], ec_uz[i],
 		 rx[j], ry[j], rz[j], ec_ux[j], ec_uy[j], ec_uz[j]);
+#endif
 #if 0
 	  calc_nvec(dist_type, rx[i], ry[i], rz[i], qvecG,  nv);
 	  printf("i nv=%f %f %f\n", nv[0], nv[1], nv[2]);
@@ -7940,6 +7942,100 @@ int is_bonded_mc(int ip, int numb)
     }
   return 0;
 }
+#if defined(MC_ELASTIC_CONSTANTS) || defined(MC_ELCONST_MC)
+double dfons_sinth_max, fons_sinth_max;
+/* return an angle theta sampled from an Onsager angular distribution */
+double dfons(double theta, double alpha);
+double theta_donsager(double alpha)
+{
+  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
+     using rejection method */
+  /* the comparison function g(theta) is just g(theta)=1 */ 
+  static int first = 1;
+  static double f0;
+  double pi, y, f, theta, dtheta;
+  //printf("alpha=%f\n", alpha);
+  pi = acos(0.0)*2.0;
+  if (first == 1)
+    {
+      first=0;
+      /* qui va fornito il massimo della funzione nell'intervallo
+	 [0,Pi] */
+      //f0 = 1.01*alpha*fons(0.0,alpha);
+      f0 = 1.01*dfons_sinth_max;
+    }
+  do 
+    {
+      /* uniform theta between 0 and pi */
+      theta = ranf_vb()*pi;
+      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
+      y = f0*ranf_vb();
+      f = fabs(sin(theta)*dfons(theta,alpha));
+      //printf("theta=%f y=%f\n", theta, y);
+    }
+  while (y >= f);
+  return theta;
+}
+
+/* first derivative of Onsager distribution */
+double dfons(double theta, double alpha)
+{
+  double pi;
+  pi = acos(0.0)*2.0;
+  /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
+     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
+  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+}
+
+void orient_donsager(double *omx, double *omy, double* omz, double alpha, double *segno)
+{
+  double thons;
+  double pi, phi, verso;
+
+  pi = acos(0.0)*2.0;
+  /* random angle from onsager distribution */
+  thons = theta_donsager(alpha);
+  if (thons < pi*0.5)
+    *segno = 1.0;
+  else
+    *segno = -1.0;
+  //printf("thos=%f\n", thons);
+  //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+  phi = 2.0*pi*ranf_vb();
+  //verso = (ranf_vb()<0.5)?1:-1;
+  verso=1;
+#if 1 /* along z */
+  *omx = verso*sin(thons)*cos(phi);
+  *omy = verso*sin(thons)*sin(phi);
+  *omz = verso*cos(thons); 
+#else /* or along x (but it has to be same of course!) */
+  *omy = verso*sin(thons)*cos(phi);
+  *omz = verso*sin(thons)*sin(phi);
+  *omx = verso*cos(thons); 
+#endif
+  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
+}
+const double thetapts=100000;
+
+double estimate_maximum_dfons(double alpha)
+{
+  double th, dth, maxval, m;
+  int i;
+  dth=2.0*(acos(0.0))/((double)thetapts);
+  th=0.0;
+  for (i=0; i < thetapts; i++)
+    {
+      m=sin(th)*dfons(th,alpha);
+      if (i==0 || maxval < m)
+	maxval = m;
+      th += dth;
+      //printf("%f %.15G\n", th, sin(th)*dfons(th, alpha));
+    }
+  // printf("maxval=%f\n", maxval);
+  return maxval;
+}
+#endif
+
 #ifdef MC_CALC_COVADD
 extern const char sepStr[];
 void save_conf_mc(int i, int ii)
@@ -9285,97 +9381,6 @@ double do_bisection(double rmin, double rmax, int size1, int size2, double rhx, 
   return rmid;
 }
 #ifdef MC_ELASTIC_CONSTANTS
-double dfons_sinth_max, fons_sinth_max;
-/* return an angle theta sampled from an Onsager angular distribution */
-double dfons(double theta, double alpha);
-double theta_donsager(double alpha)
-{
-  /* sample orientation from an Onsager trial function (see Odijk macromol. (1986) )
-     using rejection method */
-  /* the comparison function g(theta) is just g(theta)=1 */ 
-  static int first = 1;
-  static double f0;
-  double pi, y, f, theta, dtheta;
-  //printf("alpha=%f\n", alpha);
-  pi = acos(0.0)*2.0;
-  if (first == 1)
-    {
-      first=0;
-      /* qui va fornito il massimo della funzione nell'intervallo
-	 [0,Pi] */
-      //f0 = 1.01*alpha*fons(0.0,alpha);
-      f0 = 1.01*dfons_sinth_max;
-    }
-  do 
-    {
-      /* uniform theta between 0 and pi */
-      theta = ranf_vb()*pi;
-      /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
-      y = f0*ranf_vb();
-      f = fabs(sin(theta)*dfons(theta,alpha));
-      //printf("theta=%f y=%f\n", theta, y);
-    }
-  while (y >= f);
-  return theta;
-}
-
-/* first derivative of Onsager distribution */
-double dfons(double theta, double alpha)
-{
-  double pi;
-  pi = acos(0.0)*2.0;
-  /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
-     di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
-}
-
-void orient_donsager(double *omx, double *omy, double* omz, double alpha, double *segno)
-{
-  double thons;
-  double pi, phi, verso;
-
-  pi = acos(0.0)*2.0;
-  /* random angle from onsager distribution */
-  thons = theta_donsager(alpha);
-  if (thons < pi*0.5)
-    *segno = 1.0;
-  else
-    *segno = -1.0;
-  //printf("thos=%f\n", thons);
-  //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
-  phi = 2.0*pi*ranf_vb();
-  //verso = (ranf_vb()<0.5)?1:-1;
-  verso=1;
-#if 1 /* along z */
-  *omx = verso*sin(thons)*cos(phi);
-  *omy = verso*sin(thons)*sin(phi);
-  *omz = verso*cos(thons); 
-#else /* or along x (but it has to be same of course!) */
-  *omy = verso*sin(thons)*cos(phi);
-  *omz = verso*sin(thons)*sin(phi);
-  *omx = verso*cos(thons); 
-#endif
-  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
-}
-const double thetapts=100000;
-
-double estimate_maximum_dfons(double alpha)
-{
-  double th, dth, maxval, m;
-  int i;
-  dth=2.0*(acos(0.0))/((double)thetapts);
-  th=0.0;
-  for (i=0; i < thetapts; i++)
-    {
-      m=sin(th)*dfons(th,alpha);
-      if (i==0 || maxval < m)
-	maxval = m;
-      th += dth;
-      //printf("%f %.15G\n", th, sin(th)*dfons(th, alpha));
-    }
-  // printf("maxval=%f\n", maxval);
-  return maxval;
-}
 void calc_com_cls(double Rcm1[3], double Rcm2[3], int size1)
 {
   int i0, i, kk, in0, in1, iold;
@@ -9638,6 +9643,7 @@ void calc_average_len_proj(int type, double alpha, long long int maxtrials, int 
 	      else if (rat[1][2] < zMin)
 		zMin = rat[1][2];
 	    }
+	  //printf("zMax=%f zMin=%f\n", zMax, zMin);
 	  totene += fabs(zMax - zMin);
 	}
 
@@ -12326,11 +12332,17 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
     return 0;
 }
 #endif
+double dfons(double theta, double alpha);
 
 int mcmotion(void)
 {
   int ip, dorej, movetype, err;
   double enn, eno;
+#ifdef MC_ELCONST_MC
+  double uold[3], unew[3];
+  double thetaold, thetanew;
+  int kk;
+#endif
   if (Oparams.parnum==0)
     return 0;
   ip = Oparams.parnum*ranf();
@@ -12340,6 +12352,11 @@ int mcmotion(void)
   eno = calcpotene();
 #else
   eno = calcpotene_GC(ip);
+  //printf("eno=%f\n", eno);
+#endif
+#ifdef MC_ELCONST_MC
+  for (kk=0; kk < 3; kk++)
+    uold[kk] = R[ip][0][kk];
 #endif
 #ifdef ALIGN_POT
       /* correct eno here adding external field contrib */
@@ -12407,6 +12424,7 @@ int mcmotion(void)
       enn=calcpotene();
 #else
       enn=calcpotene_GC(ip);
+      //printf("enn=%f\n", enn);
 #endif
 #ifdef ALIGN_POT
       /* correct enn here adding external field contrib */
@@ -12415,6 +12433,66 @@ int mcmotion(void)
       if (enn > eno) 
 	printf("BOH rejectMove=%d\n", rejectMove);
 #endif
+#ifdef MC_ELCONST_MC
+      if (enn==eno && movetype==1)
+	{
+	  /* calcola thetaold e thetanew */
+	  for (kk=0; kk < 3; kk++)
+	    unew[kk] = R[ip][0][kk];
+	  thetaold = acos(uold[2]);
+	  thetanew = acos(unew[2]);
+	  if (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1])
+	    {
+	      if (!(ranf() < dfons(thetanew, OprogStatus.alpha)*sin(thetanew)/
+		    (sin(thetaold)*dfons(thetaold, OprogStatus.alpha))))
+		{
+		  dorej=1;
+		}
+	    }
+	  else
+	    {
+	      if (!(ranf() < fons(thetanew, OprogStatus.alpha)*sin(thetanew)/
+		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha))))
+		{
+		  dorej=1;
+		}
+	    }
+
+
+	}
+      if (dorej || enn != eno)
+	{
+	  /* move rejected */
+	  totrejMC++;
+	  if (movetype==0)
+	    trarejMC++;
+	  else 
+	    rotrejMC++;
+	  //printf("restoring coords\n");
+	  if(err)
+	    {
+	      printf("[random_move] NR failed...I rejected this trial move...\n");
+	      err=0;
+	    }
+	  restore_coord(ip);
+	  //rebuildLinkedList();
+	  update_LL(ip);
+	  if (dorej==2|| enn!=eno)
+	    {
+#ifdef MC_STOREBONDS
+	      remove_allbonds_ij(ip, -2);
+	      restore_bonds_mc(ip);
+#else
+    	      update_bonds_MC(ip);
+#endif
+	    }
+	  //printf("restoring finished\n");
+	  //rebuildLinkedList();
+	}
+
+      return movetype;
+#endif
+
 #ifdef MC_FREEZE_BONDS
  //exit(-1);
       if (OprogStatus.freezebonds)
