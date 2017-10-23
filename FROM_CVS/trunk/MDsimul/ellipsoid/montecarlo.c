@@ -12383,7 +12383,10 @@ int mcmotion(void)
   //check_all_bonds();
 #endif
   dorej = overlapMC(ip, &err);
-
+#ifdef MC_ELCONST_MC
+  if (dorej)
+    OprogStatus.totene+=1.0;
+#endif
 #if 0
   if (OprogStatus.deltaMC==0 && OprogStatus.dthetaMC ==0)
     {
@@ -13200,10 +13203,25 @@ for (np=0; np < clsdim[nc]; np++)
       ip = clsarr[firstofcls[nc]+np];
       clsNPT=1;
       dorej = overlapMC(ip, &err);
+#ifdef MC_ELCONST_MC
+      if (dorej)
+	{
+	  update_mcelconst_ene();
+	}
+#endif
       clsNPT=0;
       if (dorej!=0)
 	break;
     }
+#ifdef MC_ELCONST_MC
+  enn = calcpotene();
+  if (enn!=eno)
+    {
+      dorej=1;
+    }
+  if (!dorej)
+    return movetype;
+#endif
   /* NOTA: se nel caso dei gapped DNA si muovono solo i dimeri
      che non hanno bond liberi per formare ulteriori legami, 
      il seguente check diventa inutile e si può commentare */
