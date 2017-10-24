@@ -14013,10 +14013,12 @@ void set_ini_numcells(void)
 #ifdef MC_ELCONST_MC
 void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
 {
-  int overlap, i, size1;
-  double pxA, pyA, pzA, pxB, pyB, pzB;
+  int overlap, i, size1, j, ierr;
+  double pxA, pyA, pzA, pxB, pyB, pzB, dxA, dyA, dzA, dxB, dyB, dzB;
+  double shift[3];
   overlap=0;
   store_all_coords();
+  size1= OprogStatus.polylen;
   OprogStatus.tottrials += 1.0;
   /* place chains */
 #ifdef MD_LXYZ
@@ -14074,6 +14076,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
 	  shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
 	  ierr=0;
+	  //printf("i=%d j=%d\n", i, j);
 	  if (check_overlap(i, j, shift, &ierr)<0.0)
 	    {
 	      overlap=1;
@@ -14207,9 +14210,10 @@ void move(void)
     ntot=Oparams.parnum;
   //check_all_bonds();
 #ifdef MC_ELCONST_MC
-  OprogStatus.curi[0] = ((int)(ranf_vb()*OprogStatus.polylen*2));
-  OprogStatus.curi[1] = ((int)(ranf_vb()*OprogStatus.polylen*2));
-  mappairs(OprogStatus.curi[0],OprogStatus.curi[1], &chA, &chB, &curi, &curj)
+  curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
+  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+  mappairs(curi, curj, &chA, &chB, &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
+  printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
   for (i=0; i < ntot; i++)
     {

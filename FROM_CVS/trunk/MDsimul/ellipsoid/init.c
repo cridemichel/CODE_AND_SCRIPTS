@@ -1874,6 +1874,7 @@ void usrInitBef(void)
     OprogStatus.dofB = 5.0;
 #endif
 #ifdef MC_ELCONST_MC
+    OprogStatus.polylen = 10;
     OprogStatus.alpha=10.0;
     OprogStatus.curi[0]=0;
     OprogStatus.curi[1]=Oparams.parnum/2;
@@ -5421,6 +5422,13 @@ int *nanobondsArr, numNanoArms;
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk);
 #ifdef MC_ELCONST_MC
+int summc(int n1, int n2)
+{
+  int i, s=0;
+  for (i = 0; i < n1; i++)
+    s += OprogStatus.polylen - (i + 1);
+  return s+(n2-n1-1);
+}
 void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 {
   /* date la particelle con distribuzione uguale alla derivata di quella di Onsager (tra 0 e polylen-1)
@@ -5442,18 +5450,18 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
   int size1, nset1, nset2, so;
   size1 = OprogStatus.polylen;
   nset1 = size1*(size1-1)/2;
-  nset2 = 2*polylen;
-  if ((curi < size1 && curj < size1) || (curi >= size1 && curj >= size2))
+  nset2 = 2*OprogStatus.polylen;
+  if ((curi < size1 && curj < size1) || (curi >= size1 && curj >= size1))
     {
       if (curi < curj)
 	{
-	  so = summc(curi);
+	  so = summc(curi,curj);
 	  *i = size1+so;
 	  *j = size1+so+curj-curi;
 	}
       else
 	{
-	  so = summc(curj);
+	  so = summc(curj,curi);
 	  *j = size1+so;
 	  *i = size1+so+curi-curj;
 	}
@@ -5475,7 +5483,6 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
       *chB = *j / size1;
     }
 }
-
 void create_chains(void)
 {
   int k1, k2, i,j, bt, nb, size1;
@@ -5491,7 +5498,7 @@ void create_chains(void)
 
   for (i=0; i < Oparams.parnum; i++)	
     numbonds[i] = 0;
-  printf("size1=%d\n", size1);
+  printf("size1=%d numchains=%d\n", size1, numchains);
 
   for (nc = 0; nc < numchains; nc++)
     {
@@ -5503,6 +5510,7 @@ void create_chains(void)
 	      rx[i] = 0.0;
 	      ry[i] = 0.0;
 	      rz[i] = 0.0;
+	      orient_onsager(&u1[0], &u1[1], &u1[2], OprogStatus.alpha);
 	      versor_to_R(u1[0], u1[1], u1[2], Rl);
 	      for (k1=0; k1 < 3; k1++)
 		for (k2=0; k2 < 3; k2++)
@@ -5513,14 +5521,14 @@ void create_chains(void)
 	  while (1)
 	    {
 	      nb = (int)(ranf_vb()*2.0);
-	      j = (int) (ranf_vb()*(i-nm*size1))+nm*size1;
+	      j = (int) (ranf_vb()*(i-nc*size1))+nc*size1;
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else
 		break;
 	      bt++;
 	    }
-	  //printf("i=%d j=%d nb=%d\n", i, j, nb);
+	  //printf("nc=%d nm=%d i=%d j=%d nb=%d\n", nc, nm, i, j, nb);
 	  mcin(i, j, nb, 1, 100.0, &merr, 0);
 	  if (merr!=0)
 	    {
