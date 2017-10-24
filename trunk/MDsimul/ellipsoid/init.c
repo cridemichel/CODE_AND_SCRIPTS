@@ -5421,102 +5421,125 @@ int *nanobondsArr, numNanoArms;
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk);
 #ifdef MC_ELCONST_MC
+void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
+{
+  /* date la particelle con distribuzione uguale alla derivata di quella di Onsager (tra 0 e polylen-1)
+   * seleziona le catene e le particelle corrispondenti da utilizzare per l'overlap nel sistema con tutte le catene simulate  
+   */ 
+  /* NOTA: curi e curj sono due indici compresi tra 0 e 2*polylen-1
+   * ed indicano le due particelle la cui distribuzione angolare è la derivata
+   * della funzione di Onsager. 
+   * Se curi e curj sono entrambi minori di polylen vuol dire che si riferiscono alla prima catena
+   * altrimenti alla seconda (questo relativamente al calcolo delle costanti
+   * elastiche in cui si considerano sempre e solo due catene. 
+   *
+   * la catena 0 è quella in cui tutte la particelle sono distribuite come onsager 
+   * le catene da 1 a 1+polylen*(polylen-1)/2 sono quelle in cui due particelle hanno distribuzione 
+   * angolare come la derivata della distribuzione di Onsager
+   * ed infine quelle da polylen*(polylen-1)/2+2 a polylen*(polylen-1)/2+2+2*polylen sono quelle 
+   * che hanno una sola particelle con distribuzione angolare come la derivata delle distribuzione
+   * di Onsager.*/ 
+  int size1, nset1, nset2, so;
+  size1 = OprogStatus.polylen;
+  nset1 = size1*(size1-1)/2;
+  nset2 = 2*polylen;
+  if ((curi < size1 && curj < size1) || (curi >= size1 && curj >= size2))
+    {
+      if (curi < curj)
+	{
+	  so = summc(curi);
+	  *i = size1+so;
+	  *j = size1+so+curj-curi;
+	}
+      else
+	{
+	  so = summc(curj);
+	  *j = size1+so;
+	  *i = size1+so+curi-curj;
+	}
+      *chB = 0;
+      *chA = *i / size1;
+    }
+  else if (curi < size1 && curj >= size1)
+    {
+      *i = size1+nset1*size1+curi;
+      *j = size1+nset1*size1+curj;
+      *chA = *i / size1;
+      *chB = *j / size1;
+    }
+  else
+    {
+      *i = size1+nset1*size1+curi;
+      *j = size1+nset1*size1+curj;
+      *chA = *i / size1;
+      *chB = *j / size1;
+    }
+}
+
 void create_chains(void)
 {
   int k1, k2, i,j, bt, nb, size1;
   double Rl[3][3], u1[3], u2[3];
-  int merr, selfoverlap;
-  printf("Creo le catene\n");
+  int merr, selfoverlap, nc, numchains, nm;
+  printf("Creating chains....");
   u1[0] = u2[0] = 0.0;
   u1[1] = u2[1] = 0.0;
   u1[2] = u2[2] = 1.0;
-  size1 = Oparams.parnum/2;
-  numbonds[0] = 0;
+
+  numchains = Oparams.parnum/OprogStatus.polylen;
+  size1 = OprogStatus.polylen;
+
+  for (i=0; i < Oparams.parnum; i++)	
+    numbonds[i] = 0;
   printf("size1=%d\n", size1);
-  for (i=0; i < size1; i++)
+
+  for (nc = 0; nc < numchains; nc++)
     {
-      if (i==0)
+      for (nm=0; nm < size1; nm++)
 	{
-	  rx[i] = 0.0;
-	  ry[i] = 0.0;
-	  rz[i] = 0.0;
-	  versor_to_R(u1[0], u1[1], u1[2], Rl);
-	  for (k1=0; k1 < 3; k1++)
-	    for (k2=0; k2 < 3; k2++)
-	      R[i][k1][k2] = Rl[k1][k2];
-	  continue;
-	}
-      bt = 0;
-      while (1)
-	{
-	  nb = (int)(ranf_vb()*2.0);
-	  j = (int) (ranf_vb()*i);
-	  if (is_bonded_mc(j, nb))
-	    continue;
-	  else
-	    break;
-	  bt++;
-	}
-      //printf("i=%d j=%d nb=%d\n", i, j, nb);
-      mcin(i, j, nb, 1, 100.0, &merr, 0);
-      if (merr!=0)
-	{
-	  break;
-	}
+	  i = nc*size1+nm;
+	  if (nm==0)
+	    {
+	      rx[i] = 0.0;
+	      ry[i] = 0.0;
+	      rz[i] = 0.0;
+	      versor_to_R(u1[0], u1[1], u1[2], Rl);
+	      for (k1=0; k1 < 3; k1++)
+		for (k2=0; k2 < 3; k2++)
+		  R[i][k1][k2] = Rl[k1][k2];
+	      continue;
+	    }
+	  bt = 0;
+	  while (1)
+	    {
+	      nb = (int)(ranf_vb()*2.0);
+	      j = (int) (ranf_vb()*(i-nm*size1))+nm*size1;
+	      if (is_bonded_mc(j, nb))
+		continue;
+	      else
+		break;
+	      bt++;
+	    }
+	  //printf("i=%d j=%d nb=%d\n", i, j, nb);
+	  mcin(i, j, nb, 1, 100.0, &merr, 0);
+	  if (merr!=0)
+	    {
+	      break;
+	    }
 #if 0
-      if (check_self_overlap(0, i))
-	{
-	  selfoverlap = 1;
-	  break;
-	}
+	  if (check_self_overlap(0, i))
+	    {
+	      selfoverlap = 1;
+	      break;
+	    }
 #endif
-      /* N.B. per ora non controlla il self-overlap della catena 
-	 e la formazione dopo mcin di legami multipli poiché
-	 si presuppone che al massimo stiamo considerando dimeri */
+	  /* N.B. per ora non controlla il self-overlap della catena 
+	     e la formazione dopo mcin di legami multipli poiché
+	     si presuppone che al massimo stiamo considerando dimeri */
+	}
     }
-  numbonds[size1]=0;
-  for (i=size1; i < Oparams.parnum; i++)
-    {
-      bt = 0;
-      if (i==size1)
-	{
-	  rx[i] = L[0]/4.;
-	  ry[i] = 0.0;
-	  rz[i] = 0.0;
-	  versor_to_R(u2[0], u2[1], u2[2], Rl);
-	  for (k1=0; k1 < 3; k1++)
-	    for (k2=0; k2 < 3; k2++)
-	      R[i][k1][k2] = Rl[k1][k2];
-	  continue;
-	}
-      while (1)
-	{
-	  nb = (int)(ranf_vb()*2.0);
-	  j = (int) (ranf_vb()*(i-size1))+size1;
-	  if (is_bonded_mc(j, nb))
-	    continue;
-	  else
-	    break;
-	  bt++;
-	}
-      //printf("i=%d j=%d nb=%d\n", i, j, nb);
-      mcin(i, j, nb, 1, 100.0, &merr, 0);
-      if (merr!=0)
-	{
-	  break;
-	}
-#if 0
-      if (check_self_overlap(0, i))
-	{
-	  selfoverlap = 1;
-	  break;
-	}
-#endif
-      /* N.B. per ora non controlla il self-overlap della catena 
-	 e la formazione dopo mcin di legami multipli poiché
-	 si presuppone che al massimo stiamo considerando dimeri */
-    }
-  printf("chain create!\n");
+  
+  printf("all chains created!\n");
   printf("total energy=%f\n", calcpotene());
 }
 #endif
