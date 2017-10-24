@@ -12340,12 +12340,12 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
 #endif
 double dfons(double theta, double alpha);
 #ifdef MC_ELCONST_MC
-void update_mcelconst_ene(void)
+void update_mcelconst_ene(int curi, int curj)
 {
   double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
   int i, j;
-  i = OprogStatus.curi[0];
-  j = OprogStatus.curi[1];
+  i = curi;
+  j = curj;
   dx = rx[i]-rx[j];
   dy = ry[i]-ry[j];
   dz = rz[i]-rz[j];
@@ -14011,7 +14011,7 @@ void set_ini_numcells(void)
 #endif
 }
 #ifdef MC_ELCONST_MC
-void calc_overlap_elconst_mc(int chA, int chB)
+void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
 {
   int overlap, i, size1;
   double pxA, pyA, pzA, pxB, pyB, pzB;
@@ -14019,11 +14019,6 @@ void calc_overlap_elconst_mc(int chA, int chB)
   store_all_coords();
   OprogStatus.tottrials += 1.0;
   /* place chains */
-
-
-  /* =========== */
-  /* check overlap */
-  overlap=0;
 #ifdef MD_LXYZ
   pxA = L[0]*(ranf_vb()-0.5);
   pyA = L[1]*(ranf_vb()-0.5); 
@@ -14063,7 +14058,7 @@ void calc_overlap_elconst_mc(int chA, int chB)
       rz[i] += dzB;
     }
 
-
+  /* check overlap */
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
       overlap = 0;
@@ -14093,18 +14088,16 @@ void calc_overlap_elconst_mc(int chA, int chB)
     }
   if (overlap)
     {
-      update_mcelconst_ene();
+      update_mcelconst_ene(curi, curj);
     }
-  restore_all_coords()
-;
-  
+  restore_all_coords();
 }
 #endif
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
 #ifdef MC_ELCONST_MC
-  int chA, chB;
+  int chA, chB, curi, curj;
 #endif
 #ifdef MC_BIGROT_BIASED
   double pbr;
@@ -14216,7 +14209,7 @@ void move(void)
 #ifdef MC_ELCONST_MC
   OprogStatus.curi[0] = ((int)(ranf_vb()*OprogStatus.polylen*2));
   OprogStatus.curi[1] = ((int)(ranf_vb()*OprogStatus.polylen*2));
-  mappairs(OprogStatus.curi[0],OprogStatus.curi[1], &chA, &chB)
+  mappairs(OprogStatus.curi[0],OprogStatus.curi[1], &chA, &chB, &curi, &curj)
 #endif
   for (i=0; i < ntot; i++)
     {
@@ -14374,7 +14367,7 @@ void move(void)
       //printf("done\n");
     }
 #ifdef MC_ELCONST_MC
-  calc_overlap_elconst_mc(chA, chB);
+  calc_overlap_elconst_mc(chA, chB, curi, curj);
 #endif
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
