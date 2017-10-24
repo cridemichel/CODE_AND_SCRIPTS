@@ -3130,6 +3130,12 @@ int overlapMC_LL(int ip, int *err)
 			  continue;
 			}
 #endif
+#ifdef MC_ELCONST_MC
+		      /* se non appartengono allo stesso polimero ignora gli overlap a meno non 
+		       * si stanno calcolando le costanti elastiche */
+		      if (na / OprogStatus.polylen != n / OprogStatus.polylen)
+			continue;
+#endif
 		      if (check_overlap(na, n, shift, err)<0.0)
 			{
 #ifdef DEBUG_HCMC
@@ -12416,14 +12422,6 @@ int mcmotion(void)
   //check_all_bonds();
 #endif
   dorej = overlapMC(ip, &err);
-#ifdef MC_ELCONST_MC
-  if (dorej)
-    {
-      update_mcelconst_ene();
-    }
-  else
-  OprogStatus.tottrials +=1.0;
-#endif
 #if 0
   if (OprogStatus.deltaMC==0 && OprogStatus.dthetaMC ==0)
     {
@@ -13235,20 +13233,11 @@ for (np=0; np < clsdim[nc]; np++)
   //err=0;
   dorej=0;
   //printf("clsdim=%d\n", clsdim[nc]);
-#ifdef MC_ELCONST_MC
-  OprogStatus.tottrials+=1.0;
-#endif
   for (np=0; np < clsdim[nc]; np++)
     {
       ip = clsarr[firstofcls[nc]+np];
       clsNPT=1;
       dorej = overlapMC(ip, &err);
-#ifdef MC_ELCONST_MC
-      if (dorej)
-	{
-	  update_mcelconst_ene();
-	}
-#endif
       clsNPT=0;
       if (dorej!=0)
 	break;
@@ -14021,9 +14010,102 @@ void set_ini_numcells(void)
   cziniBS=cellszBS;
 #endif
 }
+#ifdef MC_ELCONST_MC
+void calc_overlap_elconst_mc(int chA, int chB)
+{
+  int overlap, i, size1;
+  double pxA, pyA, pzA, pxB, pyB, pzB;
+  overlap=0;
+  store_all_coords();
+  OprogStatus.tottrials += 1.0;
+  /* place chains */
+
+
+  /* =========== */
+  /* check overlap */
+  overlap=0;
+#ifdef MD_LXYZ
+  pxA = L[0]*(ranf_vb()-0.5);
+  pyA = L[1]*(ranf_vb()-0.5); 
+  pzA = L[2]*(ranf_vb()-0.5); 
+#else
+  pxA = L*(ranf_vb()-0.5);
+  pyA = L*(ranf_vb()-0.5); 
+  pzA = L*(ranf_vb()-0.5); 
+#endif
+#ifdef MD_LXYZ
+  pxB = L[0]*(ranf_vb()-0.5);
+  pyB = L[1]*(ranf_vb()-0.5); 
+  pzB = L[2]*(ranf_vb()-0.5); 
+#else
+  pxB = L*(ranf_vb()-0.5);
+  pyB = L*(ranf_vb()-0.5); 
+  pzB = L*(ranf_vb()-0.5); 
+#endif
+  dxA = pxA-rx[chA*size1];
+  dyA = pyA-ry[chA*size1];
+  dzA = pzA-rz[chA*size1];
+  dxB = pxB-rx[chB*size1];
+  dyB = pyB-ry[chB*size1];
+  dzB = pzB-rz[chB*size1];
+ 
+  for (i=chA*size1; i < (chA+1)*size1; i++)
+    {
+      rx[i] += dxA;
+      ry[i] += dyA;
+      rz[i] += dzA;
+    }
+  
+  for (i=chB*size1; i < (chB+1)*size1; i++)
+    {
+      rx[i] += dxB;
+      ry[i] += dyB;
+      rz[i] += dzB;
+    }
+
+
+  for (i=chA*size1; i < (chA+1)*size1; i++)
+    {
+      overlap = 0;
+      for (j=chB*size1; j < (chB+1)*size1; j++)
+	{
+#ifdef MD_LXYZ
+	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
+	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
+	  shift[2] = L[2]*rint((rz[i]-rz[j])/L[2]);
+#else
+	  shift[0] = L*rint((rx[i]-rx[j])/L);
+	  shift[1] = L*rint((ry[i]-ry[j])/L);
+	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
+	  ierr=0;
+	  if (check_overlap(i, j, shift, &ierr)<0.0)
+	    {
+	      overlap=1;
+	      //printf("i=%d j=%d overlap!\n", i, j);
+	      //printf("shift=%f %f %f\n", shift[0], shift[1], shift[2]);
+	      //printf("r=%f %f %f  j %f %f %f\n", rx[i], ry[i], rz[i], rx[j], ry[j], rz[j]);
+	      break;
+	    }
+	}
+      if (overlap)
+	break;
+    }
+  if (overlap)
+    {
+      update_mcelconst_ene();
+    }
+  restore_all_coords()
+;
+  
+}
+#endif
 void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
+#ifdef MC_ELCONST_MC
+  int chA, chB;
+#endif
 #ifdef MC_BIGROT_BIASED
   double pbr;
 #endif
@@ -14131,8 +14213,20 @@ void move(void)
   else
     ntot=Oparams.parnum;
   //check_all_bonds();
+#ifdef MC_ELCONST_MC
+  OprogStatus.curi[0] = ((int)(ranf_vb()*OprogStatus.polylen*2));
+  OprogStatus.curi[1] = ((int)(ranf_vb()*OprogStatus.polylen*2));
+  mappairs(OprogStatus.curi[0],OprogStatus.curi[1], &chA, &chB)
+#endif
   for (i=0; i < ntot; i++)
     {
+#ifdef MC_ELCONST_MC
+      /* aggiorna solo le catene da utilizzare per l'overlap */
+      if ((i < chA*OprogStatus.polylen || i >= (chA+1)*OprogStatus.polylen) && i < Oparams.parnum) 
+       continue;
+      if ((i < chB*OprogStatus.polylen || i >= (chB+1)*OprogStatus.polylen) && i < Oparams.parnum)
+       continue;
+#endif
 #ifdef MC_BIGROT_MOVE
       if (OprogStatus.bigrotmov > 0.0 && ranf() < OprogStatus.bigrotmov)
 	{
@@ -14279,6 +14373,9 @@ void move(void)
 	}
       //printf("done\n");
     }
+#ifdef MC_ELCONST_MC
+  calc_overlap_elconst_mc(chA, chB);
+#endif
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
       if (OprogStatus.targetAccept > 0.0 && Oparams.curStep % OprogStatus.resetaccept==0)
