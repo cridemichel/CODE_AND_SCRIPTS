@@ -1449,6 +1449,12 @@ void find_bonds_one(int i)
 	      j = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
 	      for (j = cellList[j]; j > -1; j = cellList[j]) 
 		{
+#ifdef MC_ELCONST_MC
+		  /* se non appartengono allo stesso polimero ignora i bond */
+		  if (i / OprogStatus.polylen != j / OprogStatus.polylen)
+		    continue;
+#endif
+	
 		  if (i == j)
 		    continue;
 #ifdef MD_SPHERICAL_WALL

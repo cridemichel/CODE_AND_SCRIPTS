@@ -544,6 +544,7 @@ struct progStatus
   int lastbilogsaved;
 #endif
 #ifdef MC_ELCONST_MC
+  int polylen;
   double alpha;
   int curi[2];
   double totene[3];
@@ -1238,6 +1239,7 @@ struct pascii opro_ascii[] =
   {"curi",    OS(curi),    2, 1, "%d"}, 
   {"totene",  &OS(totene), 3, 1, "%.15G"},
   {"tottrials", &OS(tottrials), 1, 1, "%.15G"},
+  {"polylen", &OS(polylen), 1, 1, "%d"},
 #endif
   //  {"sumMedia",     &OS(sumMedia),                   1,   1, "%.6f"},
   //{"sumVx",        OS(sumVx),                    MAXPAR,  1, "%.10f"},
@@ -1666,8 +1668,7 @@ struct singlePar OsinglePar[] = {
 #endif
 #ifdef MC_ELCONST_MC
   {"alpha", &OprogStatus.alpha, CT},
-  {"curiA", &(OprogStatus.curi[0]), INT},
-  {"curiB", &(OprogStatus.curi[1]), INT},
+  {"polylen", &OprogStatus.polylen, INT},
 #endif
 #ifdef MC_GRANDCAN
   {"zetaMC",   &OprogStatus.zetaMC,         CT},
