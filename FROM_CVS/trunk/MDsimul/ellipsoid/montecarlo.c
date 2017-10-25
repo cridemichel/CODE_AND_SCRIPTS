@@ -12340,19 +12340,21 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
 #endif
 double dfons(double theta, double alpha);
 #ifdef MC_ELCONST_MC
+extern int *angdist_type;
 void update_mcelconst_ene(void)
 {
   double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
   int i, j;
   i = OprogStatus.curi[0];
   j = OprogStatus.curi[1];
+  //printf("i=%d j=%d angdist=%d %d\n", i, j, angdist_type[i], angdist_type[j]);
   dx = rx[i]-rx[j];
   dy = ry[i]-ry[j];
   dz = rz[i]-rz[j];
   dx = dx - L[0]*rint(dx/L[0]);
   dy = dy - L[1]*rint(dy/L[1]);
   dz = dz - L[2]*rint(dz/L[2]);
-  fact = Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+  fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   //fact=1.0;
   if (R[i][0][0] > 0.0)
     ec_segnoi=-1.0;
@@ -14070,7 +14072,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
   dxB = pxB-rx[chB*size1];
   dyB = pyB-ry[chB*size1];
   dzB = pzB-rz[chB*size1];
- 
+
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
       rx[i] += dxA;
