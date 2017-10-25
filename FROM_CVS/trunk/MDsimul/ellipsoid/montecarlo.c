@@ -12340,12 +12340,12 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
 #endif
 double dfons(double theta, double alpha);
 #ifdef MC_ELCONST_MC
-void update_mcelconst_ene(int curi, int curj)
+void update_mcelconst_ene(void)
 {
   double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
   int i, j;
-  i = curi;
-  j = curj;
+  i = OprogStatus.curi[0];
+  j = OprogStatus.curi[1];
   dx = rx[i]-rx[j];
   dy = ry[i]-ry[j];
   dz = rz[i]-rz[j];
@@ -14116,7 +14116,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
     }
   if (overlap)
     {
-      update_mcelconst_ene(curi, curj);
+      update_mcelconst_ene();
     }
   restore_all_coords();
 }
