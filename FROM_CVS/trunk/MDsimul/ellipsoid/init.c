@@ -5504,6 +5504,7 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 	    }
 	  begi+=size1;
     	} 
+      begi = endi;
       for (k1=0; k1 < size1; k1++)
 	{
 	  if (angdist_type[begi+curj]==2)
@@ -5527,9 +5528,11 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 	    {
 	      *chB = begi/size1;
 	      *j = begi+curj;
+	      break;
 	    }
 	  begi+=size1;
     	} 
+      begi = endi;
       for (k1=0; k1 < size1; k1++)
 	{
 	  if (angdist_type[begi+curi]==2)
