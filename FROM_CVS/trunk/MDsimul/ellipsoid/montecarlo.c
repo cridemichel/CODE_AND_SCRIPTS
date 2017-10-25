@@ -12499,7 +12499,7 @@ int mcmotion(void)
 	    {
 	      if (angdist_type[ip]!=2)
 		{
-		  printf("error inconsitency\n");
+		  printf("error inconsistency\n");
 		  exit(-1);
 		}
 	      if (!(ranf() < dfons(thetanew, OprogStatus.alpha)*sin(thetanew)/
@@ -12510,10 +12510,9 @@ int mcmotion(void)
 	    }
 	  else
 	    {
-	      printf("qui2\n");
 	      if (angdist_type[ip]!=1)
 		{
-		  printf("error inconsitency2\n");
+		  printf("error inconsistency2 angdist_type[%d]=%d\n", ip, angdist_type[ip]);
 		  exit(-1);
 		}
 	      if (!(ranf() < fons(thetanew, OprogStatus.alpha)*sin(thetanew)/
@@ -14236,10 +14235,14 @@ void move(void)
     ntot=Oparams.parnum;
   //check_all_bonds();
 #ifdef MC_ELCONST_MC
-  curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
-  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+  do
+    {
+      curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
+      curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+    }
+  while (curi==curj);
   mappairs(curi, curj, &chA, &chB, &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
-  printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
+  //printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
 #ifdef MC_ELCONST_MC
   ntot = OprogStatus.polylen*2; /* muove solo due catene ossia quelle che contengono curi e curj */
