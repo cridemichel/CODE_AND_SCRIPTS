@@ -12372,6 +12372,7 @@ void update_mcelconst_ene(int curi, int curj)
   OprogStatus.totene[2] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz);
   //printf("step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
 }
+extern int *angdist_type;
 #endif
 int mcmotion(void)
 {
@@ -12380,11 +12381,26 @@ int mcmotion(void)
 #ifdef MC_ELCONST_MC
   double uold[3], unew[3];
   double thetaold, thetanew;
+  int chA, chB;
   int kk;
 #endif
   if (Oparams.parnum==0)
     return 0;
+#ifdef MC_ELCONST_MC
+  ip = 2*OprogStatus.polylen*ranf();
+  if (ip < OprogStatus.polylen)
+    {
+      chA = OprogStatus.curi[0]/OprogStatus.polylen;
+      ip = OprogStatus.polylen*chA + ip;
+    }
+  else
+    {
+      chB = OprogStatus.curi[1]/OprogStatus.polylen;
+      ip = OprogStatus.polylen*chB + ip - OprogStatus.polylen;
+    }
+#else
   ip = Oparams.parnum*ranf();
+#endif
   /* qui basta calcolare l'energia della particella che sto muovendo */
   //return;
 #if 0
@@ -12481,6 +12497,11 @@ int mcmotion(void)
 	  thetanew = acos(unew[2]);
 	  if (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1])
 	    {
+	      if (angdist_type[ip]!=2)
+		{
+		  printf("error inconsitency\n");
+		  exit(-1);
+		}
 	      if (!(ranf() < dfons(thetanew, OprogStatus.alpha)*sin(thetanew)/
 		    (sin(thetaold)*dfons(thetaold, OprogStatus.alpha))))
 		{
@@ -12489,6 +12510,12 @@ int mcmotion(void)
 	    }
 	  else
 	    {
+	      printf("qui2\n");
+	      if (angdist_type[ip]!=1)
+		{
+		  printf("error inconsitency2\n");
+		  exit(-1);
+		}
 	      if (!(ranf() < fons(thetanew, OprogStatus.alpha)*sin(thetanew)/
 		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha))))
 		{
@@ -12527,7 +12554,6 @@ int mcmotion(void)
 	  //printf("restoring finished\n");
 	  //rebuildLinkedList();
 	}
-
       return movetype;
 #endif
 
@@ -14215,15 +14241,11 @@ void move(void)
   mappairs(curi, curj, &chA, &chB, &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
   printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
+#ifdef MC_ELCONST_MC
+  ntot = OprogStatus.polylen*2; /* muove solo due catene ossia quelle che contengono curi e curj */
+#endif
   for (i=0; i < ntot; i++)
     {
-#ifdef MC_ELCONST_MC
-      /* aggiorna solo le catene da utilizzare per l'overlap */
-      if ((i < chA*OprogStatus.polylen || i >= (chA+1)*OprogStatus.polylen) && i < Oparams.parnum) 
-       continue;
-      if ((i < chB*OprogStatus.polylen || i >= (chB+1)*OprogStatus.polylen) && i < Oparams.parnum)
-       continue;
-#endif
 #ifdef MC_BIGROT_MOVE
       if (OprogStatus.bigrotmov > 0.0 && ranf() < OprogStatus.bigrotmov)
 	{
