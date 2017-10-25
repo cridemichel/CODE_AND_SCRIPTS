@@ -1,5 +1,11 @@
 #include<mdsimul.h>
 //#define DEBUG_HCMC
+
+extern double fons(double theta, double alpha);
+extern double dfons(double theta, double alpha);
+#ifdef MC_ELCONST_MC
+extern void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j);
+#endif
 #ifdef MC_BOND_POS
 void update_spot_pos(int i, double dx, double dy, double dz);
 void update_spot_pos_dir(int i, int dir, double fact);
@@ -7986,11 +7992,11 @@ double theta_donsager(double alpha)
 /* first derivative of Onsager distribution */
 double dfons(double theta, double alpha)
 {
-  double pi;
-  pi = acos(0.0)*2.0;
+  //double pi;
+  //pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*pi*sinh(alpha));
+  return sinh(alpha*cos(theta))*alpha*alpha/(4.0*M_PI*sinh(alpha));
 }
 
 void orient_donsager(double *omx, double *omy, double* omz, double alpha, double *segno)
@@ -11337,9 +11343,7 @@ void calc_sigma_parsons(int size1, int size2, double alpha, int type, int outits
   printf("sigma=%.15G\n", 4.0*acos(0.0)*2*sumsigma / tt);
 }
 #endif
-extern double fons(double theta, double alpha);
 #ifdef MC_BENT_DBLCYL
-
 extern double thetaGlobalBondangle;
 void calc_stddev_angle(double alpha, long long int maxtrials, int outits, int size1)
 {
@@ -12497,27 +12501,41 @@ int mcmotion(void)
 	    unew[kk] = R[ip][0][kk];
 	  thetaold = acos(uold[2]);
 	  thetanew = acos(unew[2]);
-	  if (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1])
+	  if (angdist_type[ip]==2)//if (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1])
 	    {
-	      if (angdist_type[ip]!=2)
+	      if (Oparams.curStep > OprogStatus.eqstps && !(ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1]))
 		{
 		  printf("error inconsistency\n");
 		  exit(-1);
 		}
+#if 1
 	      if (!(ranf() < dfons(thetanew, OprogStatus.alpha)*sin(thetanew)/
 		    (sin(thetaold)*dfons(thetaold, OprogStatus.alpha))))
 		{
 		  dorej=1;
 		}
+
+#else
+#if 0
+	      printf("ip=%d thetaold=%.15G thetanew=%.15G fact=%.15G\n", ip, thetaold, thetanew,fons(thetanew, OprogStatus.alpha)*sin(thetanew)/
+		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha)));
+	      printf("alpha=%f f(%.15G)=%.15G fnew=%.15G\n", OprogStatus.alpha, thetaold, fons(thetaold, OprogStatus.alpha), fons(thetanew, OprogStatus.alpha));
+#endif
+	      if (!(ranf() < sin(thetanew)*fons(thetanew, OprogStatus.alpha)/
+		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha))))
+		{
+		  dorej=1;
+		}
+#endif
 	    }
 	  else
 	    {
-	      if (angdist_type[ip]!=1)
+	      if (Oparams.curStep > OprogStatus.eqstps && (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1]))
 		{
 		  printf("error inconsistency2 angdist_type[%d]=%d\n", ip, angdist_type[ip]);
 		  exit(-1);
 		}
-	      if (!(ranf() < fons(thetanew, OprogStatus.alpha)*sin(thetanew)/
+	      if (!(ranf() < sin(thetanew)*fons(thetanew, OprogStatus.alpha)/
 		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha))))
 		{
 		  dorej=1;
@@ -14247,7 +14265,10 @@ void move(void)
   //printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
 #ifdef MC_ELCONST_MC
-  ntot = OprogStatus.polylen*2; /* muove solo due catene ossia quelle che contengono curi e curj */
+  if (Oparams.curStep >= OprogStatus.eqstps)
+    ntot = OprogStatus.polylen*2; /* muove solo due catene ossia quelle che contengono curi e curj */
+  else 
+    ntot = Oparams.parnum;
 #endif
   for (i=0; i < ntot; i++)
     {
@@ -14398,7 +14419,8 @@ void move(void)
       //printf("done\n");
     }
 #ifdef MC_ELCONST_MC
-  calc_overlap_elconst_mc(chA, chB, curi, curj);
+  if (OprogStatus.eqstps > 0 && Oparams.curStep >= OprogStatus.eqstps)
+    calc_overlap_elconst_mc(chA, chB, curi, curj);
 #endif
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {

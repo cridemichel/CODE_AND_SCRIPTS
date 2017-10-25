@@ -1874,6 +1874,7 @@ void usrInitBef(void)
     OprogStatus.dofB = 5.0;
 #endif
 #ifdef MC_ELCONST_MC
+    OprogStatus.eqstps = -1; /* no equilibration stage if < 0 */
     OprogStatus.polylen = 10;
     OprogStatus.alpha=10.0;
     OprogStatus.curi[0]=0;
@@ -4118,10 +4119,10 @@ double ranf_vb(void)
 double fons(double theta, double alpha)
 {
   double pi;
-  pi = acos(0.0)*2.0;
+  //pi = acos(0.0)*2.0;
   /* ho aggiunto un sin(theta) come giustamente fatto notare da Thuy, infatti la distribuzione 
      di Onsager si riduce a 1/(4*pi) e se non c'è il sin(theta) non è uniforma sull'angolo solido */
-  return cosh(alpha*cos(theta))*alpha/(4.0*pi*sinh(alpha));
+  return cosh(alpha*cos(theta))*alpha/(4.0*M_PI*sinh(alpha));
 }
 
 /* return an angle theta sampled from an Onsager angular distribution */
@@ -4132,9 +4133,9 @@ double theta_onsager(double alpha)
   /* the comparison function g(theta) is just g(theta)=1 */ 
   static int first = 1;
   static double f0;
-  double pi, y, f, theta, dtheta;
+  double y, f, theta, dtheta;
   //printf("alpha=%f\n", alpha);
-  pi = acos(0.0)*2.0;
+  //pi = acos(0.0)*2.0;
   if (first == 1)
     {
       first=0;
@@ -4144,7 +4145,7 @@ double theta_onsager(double alpha)
   do 
     {
       /* uniform theta between 0 and pi */
-      theta = pi*ranf_vb();
+      theta = M_PI*ranf_vb();
       /* uniform y between 0 and 1 (note that sin(theta) <= 1 for 0 < theta < pi)*/
       y = f0*ranf_vb();
       f = sin(theta)*fons(theta,alpha);
