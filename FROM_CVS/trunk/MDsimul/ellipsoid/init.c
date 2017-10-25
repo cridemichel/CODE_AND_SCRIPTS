@@ -5454,6 +5454,7 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
   *j=-2;
   *chA=-1;
   *chB=-1;
+  //printf("curi=%d curj=%d\n", curi, curj);
   if (curi==-1 || curj==-1)
     {
       /* caso per calcolare volume escluso nematico */
@@ -5464,6 +5465,12 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
     }
   else if ((curi < size1 && curj < size1) || (curi >= size1 && curj >= size1))
     {
+      //printf("uno\n");
+      if (curi >= size1 && curj >= size1)
+	{
+	  curi-=size1;
+	  curj-=size1;
+	}
       begi = 2*size1;
       endi = begi + size1*size1*(size1-1)/2; 
       totch = size1*(size1-1)/2;
@@ -5475,12 +5482,15 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 	      *chB = 0;
 	      *i = begi+curi;
 	      *j = begi+curj;
+	      break;
 	    }
 	  begi += size1;
 	}
     }
   else if (curi < size1 && curj >= size1)
     {
+      curj-=size1;
+      //printf("due curi=%d curj=%d\n", curi, curj);
       begi = 2*size1 + size1*size1*(size1-1)/2; 
       endi = begi+size1*size1;
       for (k1=0; k1 < size1; k1++)
@@ -5489,6 +5499,8 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 	    {
 	      *chA = begi/size1;
 	      *i = begi+curi;
+	      begi=endi;
+	      break;
 	    }
 	  begi+=size1;
     	} 
@@ -5498,12 +5510,15 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 	    {
 	      *chB = begi/size1;
 	      *j = begi+curj;
+	      break;
 	    }
 	  begi+=size1;
     	} 
     }
   else
     {
+      //printf("tre\n");
+      curi-=size1;
       begi = 2*size1 + size1*size1*(size1-1)/2; 
       endi = begi+size1*size1;
       for (k1=0; k1 < size1; k1++)
@@ -5527,7 +5542,7 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
     }
   if (*i==-2 || *j==-2)
     {
-      printf("[CRITICAL ERROR] Chain not found i=%d j=%d\n", *i, *j);
+      printf("[CRITICAL ERROR] Chain not found i=%d j=%d curi=%d curj=%d\n", *i, *j, curi, curj);
       exit(-1);
     }
 }
