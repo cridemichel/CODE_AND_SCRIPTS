@@ -5429,6 +5429,7 @@ int summc(int n1, int n2)
     s += OprogStatus.polylen - (i + 1);
   return s+(n2-n1-1);
 }
+int *angdist_type;
 void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 {
   /* date la particelle con distribuzione uguale alla derivata di quella di Onsager (tra 0 e polylen-1)
@@ -5447,45 +5448,92 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
    * ed infine quelle da polylen*(polylen-1)/2+2 a polylen*(polylen-1)/2+2+2*polylen sono quelle 
    * che hanno una sola particelle con distribuzione angolare come la derivata delle distribuzione
    * di Onsager.*/ 
-  int size1, nset1, nset2, so;
+  int size1, begi, endi, k1, totch;
   size1 = OprogStatus.polylen;
-  nset1 = size1*(size1-1)/2;
-  nset2 = 2*OprogStatus.polylen;
-  if ((curi < size1 && curj < size1) || (curi >= size1 && curj >= size1))
+  *i=-2;
+  *j=-2;
+  *chA=-1;
+  *chB=-1;
+  if (curi==-1 || curj==-1)
     {
-      if (curi < curj)
+      /* caso per calcolare volume escluso nematico */
+      *chA=0;
+      *chB=1;
+      *i=-1;
+      *j=-1;
+    }
+  else if ((curi < size1 && curj < size1) || (curi >= size1 && curj >= size1))
+    {
+      begi = 2*size1;
+      endi = begi + size1*size1*(size1-1)/2; 
+      totch = size1*(size1-1)/2;
+      for (k1=0; k1 < totch; k1++)
 	{
-	  so = summc(curi,curj);
-	  *i = size1+so;
-	  *j = size1+so+curj-curi;
+	  if (angdist_type[begi+curi]==2 && angdist_type[begi+curj]==2)
+	    {
+	      *chA = begi/size1;
+	      *chB = 0;
+	      *i = begi+curi;
+	      *j = begi+curj;
+	    }
+	  begi += size1;
 	}
-      else
-	{
-	  so = summc(curj,curi);
-	  *j = size1+so;
-	  *i = size1+so+curi-curj;
-	}
-      *chB = 0;
-      *chA = *i / size1;
     }
   else if (curi < size1 && curj >= size1)
     {
-      *i = size1+nset1*size1+curi;
-      *j = size1+nset1*size1+curj;
-      *chA = *i / size1;
-      *chB = *j / size1;
+      begi = 2*size1 + size1*size1*(size1-1)/2; 
+      endi = begi+size1*size1;
+      for (k1=0; k1 < size1; k1++)
+	{
+	  if (angdist_type[begi+curi]==2)
+	    {
+	      *chA = begi/size1;
+	      *i = begi+curi;
+	    }
+	  begi+=size1;
+    	} 
+      for (k1=0; k1 < size1; k1++)
+	{
+	  if (angdist_type[begi+curj]==2)
+	    {
+	      *chB = begi/size1;
+	      *j = begi+curj;
+	    }
+	  begi+=size1;
+    	} 
     }
   else
     {
-      *i = size1+nset1*size1+curi;
-      *j = size1+nset1*size1+curj;
-      *chA = *i / size1;
-      *chB = *j / size1;
+      begi = 2*size1 + size1*size1*(size1-1)/2; 
+      endi = begi+size1*size1;
+      for (k1=0; k1 < size1; k1++)
+	{
+	  if (angdist_type[begi+curj]==2)
+	    {
+	      *chB = begi/size1;
+	      *j = begi+curj;
+	    }
+	  begi+=size1;
+    	} 
+      for (k1=0; k1 < size1; k1++)
+	{
+	  if (angdist_type[begi+curi]==2)
+	    {
+	      *chA = begi/size1;
+	      *i = begi+curi;
+	    }
+	  begi+=size1;
+    	} 
+    }
+  if (*i==-2 || *j==-2)
+    {
+      printf("[CRITICAL ERROR] Chain not found i=%d j=%d\n", *i, *j);
+      exit(-1);
     }
 }
 void create_chains(void)
 {
-  int k1, k2, i,j, bt, nb, size1;
+  int k1, k2, i,j, bt, nb, size1, begi, endi;
   double Rl[3][3], u1[3], u2[3];
   int merr, selfoverlap, nc, numchains, nm;
   printf("Creating chains....");
@@ -5496,10 +5544,47 @@ void create_chains(void)
   numchains = Oparams.parnum/OprogStatus.polylen;
   size1 = OprogStatus.polylen;
 
+  angdist_type=malloc(sizeof(int)*Oparams.parnum);
+  /* 0 = istropic 1=onsager 2=derivative of onsager */
+
+  /* assegna le distro angolaroi alle particelle */
+  /* prima due catene onsager (ma setta a 1 anche tutte le altre poiché dopo setto 
+   * solo quelle che sono derivate di Onsager */ 
+  for (i = 0; i < Oparams.parnum; i++)
+    {
+      angdist_type[i] = 1;
+    }
+  /* catene con due particelle distribuite come la derivata di Onsager */
+  begi = 2*size1;
+  endi = begi + size1*size1*(size1-1)/2; 
+  for (k1=0; k1 < size1-1; k1++)
+    {
+      for (k2=k1+1; k2 < size1; k2++)
+	{
+	  angdist_type[begi+k1]=2; 
+	  angdist_type[begi+k2]=2; 
+	  begi+=size1;
+	}
+    } 
+  printf("dopo catene con due derivate begi = %d\n", begi);
+  /* catene con una sola particelle distribuita come la derivata di Onsager (2*size1 catene lunghe size1)*/
+  begi = endi;
+  /* primo set di size1 catene */
+  for (k1=0; k1 < size1; k1++)
+    {
+      angdist_type[begi+k1] = 2;
+      begi += size1;
+    }
+  /* secondo set di size1 catene */
+  for (k1=0; k1 < size1; k1++)
+    {
+      angdist_type[begi+k1] = 2;
+      begi += size1;
+    } 
+  printf("begi finale=%d\n", begi-size1);
   for (i=0; i < Oparams.parnum; i++)	
     numbonds[i] = 0;
   printf("size1=%d numchains=%d\n", size1, numchains);
-
   for (nc = 0; nc < numchains; nc++)
     {
       for (nm=0; nm < size1; nm++)
@@ -7639,7 +7724,7 @@ void usrInitAft(void)
   calc_vbonding();
 #endif
 #ifdef MC_ELCONST_MC
-  /* create chjains */
+  /* create chains */
   create_chains();
 #endif
 
