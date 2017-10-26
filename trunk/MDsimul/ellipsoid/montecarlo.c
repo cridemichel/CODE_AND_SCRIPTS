@@ -8008,9 +8008,9 @@ void orient_donsager(double *omx, double *omy, double* omz, double alpha, double
   /* random angle from onsager distribution */
   thons = theta_donsager(alpha);
   if (thons < pi*0.5)
-    *segno = 1.0;
-  else
     *segno = -1.0;
+  else
+    *segno = 1.0;
   //printf("thos=%f\n", thons);
   //distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
   phi = 2.0*pi*ranf_vb();
@@ -12353,6 +12353,7 @@ void update_vexcl(void)
 void update_mcelconst_ene(void)
 {
   double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
+  double fact1, fact2;
   int i, j;
   i = OprogStatus.curi[0];
   j = OprogStatus.curi[1];
@@ -12378,11 +12379,17 @@ void update_mcelconst_ene(void)
   //printf("contrib=%f\n", fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz));
   //printf("prima step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
   /* K11 */
-  OprogStatus.totene[0] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dx);
+  fact1 = fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dx);
+  fact2 = fact1;//fact*ec_segnoi*ec_segnoj*R[i][0][1]*R[j][0][1]*Sqr(dy);
+  OprogStatus.totene[0] += (fact1+fact2)*0.5;
   /* K22 */
-  OprogStatus.totene[1] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dy);
+  fact1 = fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dy);
+  fact2 = fact1;//fact*ec_segnoi*ec_segnoj*R[i][0][1]*R[j][0][1]*Sqr(dx);
+  OprogStatus.totene[1] += (fact1+fact2)*0.5;
   /* K33 */	
-  OprogStatus.totene[2] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz);
+  fact1 = fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz);
+  fact2 = fact1;//fact*ec_segnoi*ec_segnoj*R[i][0][1]*R[j][0][1]*Sqr(dz);
+  OprogStatus.totene[2] += (fact1+fact2)*0.5;
   //printf("step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
 }
 extern int *angdist_type;
@@ -14063,25 +14070,152 @@ void set_ini_numcells(void)
 #endif
 }
 #ifdef MC_ELCONST_MC
+void calc_com_cls_mc(int iini, int jini , double Rcm1[3], double Rcm2[3])
+{
+  int i0, i, kk, in0, in1, iold, size1;
+  double lastrx, lastry, lastrz;
+  Rcm1[0]=Rcm1[1]=Rcm1[2]=0;
+  Rcm2[0]=Rcm2[1]=Rcm2[2]=0;
+  
+  size1 = OprogStatus.polylen;
+#if 1
+  for (i = iini; i < iini+size1; i++)
+    if (numbonds[i]==1)
+      {
+	i0 = i;
+	break;
+      }
+
+  i =  bonds[i0][0] / (NANA);
+  iold=i0;
+  Rcm1[0] = rx[i0];
+  Rcm1[1] = ry[i0];
+  Rcm1[2] = rz[i0];
+   /* if particles has no bond we have to check... */ 
+  while (numbonds[i0]>0)
+    {
+      /* rebuild the cluster as a whole */
+      lastrx = rx[iold];
+      lastry = ry[iold];
+      lastrz = rz[iold];
+      rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+      ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
+      rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+      Rcm1[0] += rx[i];
+      Rcm1[1] += ry[i];
+      Rcm1[2] += rz[i];
+#if 0
+      if (numbonds[i] > 2)
+	{
+	  printf("more than 2 bonds (%d) for particle %d!\n", numbonds[i], i);
+	}
+#endif
+      if (numbonds[i]==1)
+	{
+	  //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
+	  break;
+	}	   
+      /* qui assumo che le particelle siano bifunzionali */
+      in0 = bonds[i][0]/(NANA);
+      in1 = bonds[i][1]/(NANA);
+      if (in1==iold)
+	{
+	  iold = i;
+	  i = in0;
+	}
+      else
+	{
+	  iold = i;
+	  i = in1;
+	}
+    }
+  for (i = jini; i < jini+size1; i++)
+    if (numbonds[i]==1)
+      {
+	i0 = i;
+	break;
+      }
+  i =  bonds[i0][0] / (NANA);
+  iold=i0;
+  Rcm2[0] = rx[i0];
+  Rcm2[1] = ry[i0];
+  Rcm2[2] = rz[i0];
+   /* if particles has no bond we have to check... */ 
+  while (numbonds[i0]>0)
+    {
+      /* rebuild the cluster as a whole */
+      lastrx = rx[iold];
+      lastry = ry[iold];
+      lastrz = rz[iold];
+      rx[i] -= L[0]*rint((rx[i]-lastrx)/L[0]);
+      ry[i] -= L[1]*rint((ry[i]-lastry)/L[1]);
+      rz[i] -= L[2]*rint((rz[i]-lastrz)/L[2]); 
+      Rcm2[0] += rx[i];
+      Rcm2[1] += ry[i];
+      Rcm2[2] += rz[i];
+#if 0
+      if (numbonds[i] > 2)
+	{
+	  printf("more than 2 bonds (%d) for particle %d!\n", numbonds[i], i);
+	}
+#endif
+      if (numbonds[i]==1)
+	{
+	  //printf("numbonds[i=%d]=%d numbonds[i0=%d]=%d", i, numbonds[i], i0, numbonds[i0]);
+	  break;
+	}	   
+      /* qui assumo che le particelle siano bifunzionali */
+      in0 = bonds[i][0]/(NANA);
+      in1 = bonds[i][1]/(NANA);
+      if (in1==iold)
+	{
+	  iold = i;
+	  i = in0;
+	}
+      else
+	{
+	  iold = i;
+	  i = in1;
+	}
+    }
+#endif
+#if 0
+  for (i=iini; i < iini+size1; i++)
+    {
+      Rcm1[0]+=rx[i];
+      Rcm1[1]+=ry[i];
+      Rcm1[2]+=rz[i];
+    }
+  for (i=jini; i < jini+size1; i++)
+    {
+      Rcm2[0]+=rx[i];
+      Rcm2[1]+=ry[i];
+      Rcm2[2]+=rz[i];
+    }
+#endif
+  for (kk=0; kk < 3; kk++)
+    {
+      Rcm1[kk] /= ((double)size1);
+      Rcm2[kk] /= ((double)size1);
+      //Rcm1[kk] -= L[kk]*rint(Rcm1[kk]/L[kk]);
+      //Rcm2[kk] -= L[kk]*rint(Rcm2[kk]/L[kk]);
+    }
+}
+
 void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
 {
   int overlap, i, size1, j, ierr;
   double pxA, pyA, pzA, pxB, pyB, pzB, dxA, dyA, dzA, dxB, dyB, dzB;
-  double shift[3];
+  double shift[3], rold[3], RcmA[3], RcmB[3];
   overlap=0;
   store_all_coords();
   size1= OprogStatus.polylen;
   OprogStatus.tottrials += 1.0;
+  calc_com_cls_mc(chA*size1, chB*size1, RcmA, RcmB);
   /* place chains */
-#ifdef MD_LXYZ
-  pxA = L[0]*(ranf_vb()-0.5);
-  pyA = L[1]*(ranf_vb()-0.5); 
-  pzA = L[2]*(ranf_vb()-0.5); 
-#else
-  pxA = L*(ranf_vb()-0.5);
-  pyA = L*(ranf_vb()-0.5); 
-  pzA = L*(ranf_vb()-0.5); 
-#endif
+  pxA = 0.0;
+  pyA = 0.0; 
+  pzA = 0.0; 
 #ifdef MD_LXYZ
   pxB = L[0]*(ranf_vb()-0.5);
   pyB = L[1]*(ranf_vb()-0.5); 
@@ -14091,14 +14225,23 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
   pyB = L*(ranf_vb()-0.5); 
   pzB = L*(ranf_vb()-0.5); 
 #endif
-  dxA = pxA-rx[chA*size1];
-  dyA = pyA-ry[chA*size1];
-  dzA = pzA-rz[chA*size1];
-  dxB = pxB-rx[chB*size1];
-  dyB = pyB-ry[chB*size1];
-  dzB = pzB-rz[chB*size1];
+  dxA = -RcmA[0];
+  dyA = -RcmA[1];
+  dzA = -RcmA[2];
+  dxB = pxB-RcmB[0];
+  dyB = pyB-RcmB[1];
+  dzB = pzB-RcmB[2];
 
   //printf("pA=%f %f %f pB=%f %f %f\n", pxA, pyA, pzA, pxB, pyB, pzB);
+
+  rold[0] = rx[chA*size1]; 
+  for (i=chA*size1; i < (chA+1)*size1; i++)
+    {
+      rx[i] += dxA;
+      ry[i] += dyA;
+      rz[i] += dzA;
+    }
+  
 
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
@@ -14121,6 +14264,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
       overlap = 0;
       for (j=chB*size1; j < (chB+1)*size1; j++)
 	{
+#if 0
 #ifdef MD_LXYZ
 	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
 	  shift[1] = L[1]*rint((ry[i]-ry[j])/L[1]);
@@ -14129,6 +14273,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
 	  shift[0] = L*rint((rx[i]-rx[j])/L);
 	  shift[1] = L*rint((ry[i]-ry[j])/L);
 	  shift[2] = L*rint((rz[i]-rz[j])/L);
+#endif
 #endif
 	  ierr=0;
 	  //printf("i=%d j=%d\n", i, j);
@@ -14151,6 +14296,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
       else
 	update_vexcl();
     }
+  /* TODO: salvare qui le due catene selezionate per visualizzarle */
   restore_all_coords();
 }
 #endif
