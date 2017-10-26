@@ -544,8 +544,15 @@ void calcV(void)
 #endif
 #ifdef MC_ELCONST_MC
   mf = fopenMPI(absMisHD("elconst.dat"),"a");
-  fprintf(mf, "%d %.15G %.15G %.15G %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials, OprogStatus.totene[1]/OprogStatus.tottrials, OprogStatus.totene[2]/OprogStatus.tottrials, OprogStatus.tottrials);
-  fclose(mf);
+ if (OprogStatus.calcvexcl == 0)
+   {
+     fprintf(mf, "%d %.15G %.15G %.15G %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials, OprogStatus.totene[1]/OprogStatus.tottrials, OprogStatus.totene[2]/OprogStatus.tottrials, OprogStatus.tottrials);
+   }
+ else
+   {
+     fprintf(mf, "%d %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials);
+   }
+ fclose(mf);
 #endif
   mf = fopenMPI(absMisHD("energy.dat"),"a");
 #if 0

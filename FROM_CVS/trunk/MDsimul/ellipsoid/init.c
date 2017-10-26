@@ -1874,6 +1874,7 @@ void usrInitBef(void)
     OprogStatus.dofB = 5.0;
 #endif
 #ifdef MC_ELCONST_MC
+    OprogStatus.calcvexcl = 0; /* calcola le costanti elastiche */
     OprogStatus.eqstps = -1; /* no equilibration stage if < 0 */
     OprogStatus.polylen = 10;
     OprogStatus.alpha=10.0;
