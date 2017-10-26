@@ -12345,6 +12345,11 @@ int check_overlp_in_calcdist(double *x, double *fx, double *gx, int iA, int iB)
 double dfons(double theta, double alpha);
 #ifdef MC_ELCONST_MC
 extern int *angdist_type;
+void update_vexcl(void)
+{
+  OprogStatus.totene[0] += L[0]*L[1]*L[2];
+}
+
 void update_mcelconst_ene(void)
 {
   double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
@@ -12360,15 +12365,17 @@ void update_mcelconst_ene(void)
   dz = dz - L[2]*rint(dz/L[2]);
   fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   //fact=1.0;
-  if (R[i][0][0] > 0.0)
+  if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
   else
     ec_segnoi=1.0;
-  if (R[j][0][0] > 0.0)
+  if (R[j][0][2] > 0.0)
     ec_segnoj=-1.0;
   else
     ec_segnoj=1.0;
-  //printf("segno=%f %f dx=%f vol=%f\n", ec_segnoi, ec_segnoj, Sqr(dx), L[0]*L[1]*L[2]);
+  //printf("unem[%d]=%f %f %f\n", i, R[i][0][0], R[i][0][1], R[i][0][2]);
+  //printf("segno=%f %f dx=%f dy=%f dz=%f vol=%f\n", ec_segnoi, ec_segnoj, Sqr(dx), Sqr(dy), Sqr(dz), L[0]*L[1]*L[2]);
+  //printf("contrib=%f\n", fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz));
   //printf("prima step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
   /* K11 */
   OprogStatus.totene[0] += fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dx);
@@ -14091,6 +14098,8 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
   dyB = pyB-ry[chB*size1];
   dzB = pzB-rz[chB*size1];
 
+  //printf("pA=%f %f %f pB=%f %f %f\n", pxA, pyA, pzA, pxB, pyB, pzB);
+
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
       rx[i] += dxA;
@@ -14105,6 +14114,7 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
       rz[i] += dzB;
     }
 
+  overlap=0;
   /* check overlap */
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
@@ -14136,7 +14146,10 @@ void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
     }
   if (overlap)
     {
-      update_mcelconst_ene();
+      if (OprogStatus.calcvexcl==0)
+	update_mcelconst_ene();
+      else
+	update_vexcl();
     }
   restore_all_coords();
 }
@@ -14255,13 +14268,24 @@ void move(void)
     ntot=Oparams.parnum;
   //check_all_bonds();
 #ifdef MC_ELCONST_MC
-  do
+  
+  if (OprogStatus.calcvexcl == 0)
     {
-      curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
-      curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+      do
+	{
+	  curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
+	  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+	}
+      while (curi==curj);
+      mappairs(curi, curj, &chA, &chB, &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
     }
-  while (curi==curj);
-  mappairs(curi, curj, &chA, &chB, &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
+  else
+    {
+      curi = curj = OprogStatus.curi[0] = OprogStatus.curi[1] = -1;
+      chA = 0;
+      chB = 1;
+    }
+
   //printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
 #ifdef MC_ELCONST_MC
