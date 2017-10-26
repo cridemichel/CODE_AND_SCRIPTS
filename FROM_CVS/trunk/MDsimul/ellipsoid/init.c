@@ -5444,10 +5444,10 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
    * altrimenti alla seconda (questo relativamente al calcolo delle costanti
    * elastiche in cui si considerano sempre e solo due catene. 
    *
-   * la catena 0 è quella in cui tutte la particelle sono distribuite come onsager 
-   * le catene da 1 a 1+polylen*(polylen-1)/2 sono quelle in cui due particelle hanno distribuzione 
+   * la catena 0 e 1 sono quelle in cui tutte la particelle sono distribuite come onsager 
+   * le catene da 2 a 2+polylen*(polylen-1)/2 sono quelle in cui due particelle hanno distribuzione 
    * angolare come la derivata della distribuzione di Onsager
-   * ed infine quelle da polylen*(polylen-1)/2+2 a polylen*(polylen-1)/2+2+2*polylen sono quelle 
+   * ed infine quelle da polylen*(polylen-1)/2+3 a polylen*(polylen-1)/2+3+2*polylen sono quelle 
    * che hanno una sola particelle con distribuzione angolare come la derivata delle distribuzione
    * di Onsager.*/ 
   int size1, begi, endi, k1, totch;
