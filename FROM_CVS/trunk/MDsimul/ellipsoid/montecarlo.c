@@ -12380,7 +12380,6 @@ void update_mcelconst_ene(void)
   //printf("segno=%f %f dx=%f dy=%f dz=%f vol=%f\n", ec_segnoi, ec_segnoj, Sqr(dx), Sqr(dy), Sqr(dz), L[0]*L[1]*L[2]);
   //printf("contrib=%f\n", fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dz));
   //printf("prima step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
-  printf("uz=%.15G\n", R[i][0][2]);
   /* K11 */
   fact1 = fact*ec_segnoi*ec_segnoj*R[i][0][0]*R[j][0][0]*Sqr(dx);
   fact2 = fact1;//fact*ec_segnoi*ec_segnoj*R[i][0][1]*R[j][0][1]*Sqr(dy);
