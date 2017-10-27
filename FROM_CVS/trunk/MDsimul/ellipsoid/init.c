@@ -5567,44 +5567,40 @@ void create_chains(void)
     {
       angdist_type[i] = 1;
     }
-  /* catene con due particelle distribuite come la derivata di Onsager */
-  begi = 2*size1;
-  endi = begi + size1*size1*(size1-1)/2; 
-  for (k1=0; k1 < size1-1; k1++)
+  if (OprogStatus.calcvexcl==0)
     {
-      for (k2=k1+1; k2 < size1; k2++)
+      /* catene con due particelle distribuite come la derivata di Onsager */
+      begi = 2*size1;
+      endi = begi + size1*size1*(size1-1)/2; 
+      for (k1=0; k1 < size1-1; k1++)
 	{
-	  angdist_type[begi+k1]=2; 
-	  angdist_type[begi+k2]=2; 
-	  begi+=size1;
+	  for (k2=k1+1; k2 < size1; k2++)
+	    {
+	      angdist_type[begi+k1]=2; 
+	      angdist_type[begi+k2]=2; 
+	      begi+=size1;
+	    }
+	} 
+      printf("dopo catene con due derivate begi = %d\n", begi);
+      /* catene con una sola particelle distribuita come la derivata di Onsager (2*size1 catene lunghe size1)*/
+      begi = endi;
+      /* primo set di size1 catene */
+      for (k1=0; k1 < size1; k1++)
+	{
+	  angdist_type[begi+k1] = 2;
+	  begi += size1;
 	}
-    } 
-  printf("dopo catene con due derivate begi = %d\n", begi);
-  /* catene con una sola particelle distribuita come la derivata di Onsager (2*size1 catene lunghe size1)*/
-  begi = endi;
-  /* primo set di size1 catene */
-  for (k1=0; k1 < size1; k1++)
-    {
-      angdist_type[begi+k1] = 2;
-      begi += size1;
+      /* secondo set di size1 catene */
+      for (k1=0; k1 < size1; k1++)
+	{
+	  angdist_type[begi+k1] = 2;
+	  begi += size1;
+	} 
+      printf("begi finale=%d\n", begi-size1);
+      printf("size1=%d numchains=%d\n", size1, numchains);
     }
-  /* secondo set di size1 catene */
-  for (k1=0; k1 < size1; k1++)
-    {
-      angdist_type[begi+k1] = 2;
-      begi += size1;
-    } 
-  printf("begi finale=%d\n", begi-size1);
   for (i=0; i < Oparams.parnum; i++)	
     numbonds[i] = 0;
-  printf("size1=%d numchains=%d\n", size1, numchains);
-  if (OprogStatus.calcvexcl == 1)
-    {
-      for (i = 0; i < Oparams.parnum; i++)
-	{
-	  angdist_type[i] = 1;
-	}
-    }
   for (nc = 0; nc < numchains; nc++)
     {
       for (nm=0; nm < size1; nm++)
