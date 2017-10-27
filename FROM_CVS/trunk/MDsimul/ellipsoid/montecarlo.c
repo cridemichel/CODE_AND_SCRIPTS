@@ -12367,9 +12367,9 @@ void update_mcelconst_ene(void)
   dz = dz - L[2]*rint(dz/L[2]);
 #endif
   if (OprogStatus.polylen==1)
-    fact = Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+    fact = -Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   else
-    fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+    fact = -0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   //fact=1.0;
   if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
