@@ -5424,13 +5424,6 @@ int *nanobondsArr, numNanoArms;
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk);
 #ifdef MC_ELCONST_MC
-int summc(int n1, int n2)
-{
-  int i, s=0;
-  for (i = 0; i < n1; i++)
-    s += OprogStatus.polylen - (i + 1);
-  return s+(n2-n1-1);
-}
 int *angdist_type;
 void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 {
@@ -5605,6 +5598,13 @@ void create_chains(void)
   for (i=0; i < Oparams.parnum; i++)	
     numbonds[i] = 0;
   printf("size1=%d numchains=%d\n", size1, numchains);
+  if (OprogStatus.calcvexcl == 1)
+    {
+      for (i = 0; i < Oparams.parnum; i++)
+	{
+	  angdist_type[i] = 1;
+	}
+    }
   for (nc = 0; nc < numchains; nc++)
     {
       for (nm=0; nm < size1; nm++)
