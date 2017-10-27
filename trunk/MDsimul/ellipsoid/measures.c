@@ -546,7 +546,7 @@ void calcV(void)
   mf = fopenMPI(absMisHD("elconst.dat"),"a");
  if (OprogStatus.calcvexcl == 0)
    {
-     fprintf(mf, "%d %.15G %.15G %.15G %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials, OprogStatus.totene[1]/OprogStatus.tottrials, OprogStatus.totene[2]/OprogStatus.tottrials, OprogStatus.tottrials);
+     fprintf(mf, "%d %.15G %.15G %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials, OprogStatus.totene[1]/OprogStatus.tottrials, OprogStatus.totene[2]/OprogStatus.tottrials);
    }
  else
    {

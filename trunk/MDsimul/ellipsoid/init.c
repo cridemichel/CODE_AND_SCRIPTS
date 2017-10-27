@@ -5449,6 +5449,14 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
   *j=-2;
   *chA=-1;
   *chB=-1;
+  if (size1==1)
+    {
+      *chA=2;
+      *chB=3;
+      *i=2;
+      *j=3;
+      return;
+    }
   //printf("curi=%d curj=%d\n", curi, curj);
   if (curi==-1 || curj==-1)
     {
@@ -5569,18 +5577,23 @@ void create_chains(void)
     }
   if (OprogStatus.calcvexcl==0)
     {
-      /* catene con due particelle distribuite come la derivata di Onsager */
-      begi = 2*size1;
-      endi = begi + size1*size1*(size1-1)/2; 
-      for (k1=0; k1 < size1-1; k1++)
+      if (size1 > 1)
 	{
-	  for (k2=k1+1; k2 < size1; k2++)
+	  /* catene con due particelle distribuite come la derivata di Onsager */
+	  begi = 2*size1;
+	  endi = begi + size1*size1*(size1-1)/2; 
+	  for (k1=0; k1 < size1-1; k1++)
 	    {
-	      angdist_type[begi+k1]=2; 
-	      angdist_type[begi+k2]=2; 
-	      begi+=size1;
-	    }
-	} 
+	      for (k2=k1+1; k2 < size1; k2++)
+		{
+		  angdist_type[begi+k1]=2; 
+		  angdist_type[begi+k2]=2; 
+		  begi+=size1;
+		}
+	    } 
+	}
+      else
+	endi = 2*size1;
       printf("dopo catene con due derivate begi = %d\n", begi);
       /* catene con una sola particelle distribuita come la derivata di Onsager (2*size1 catene lunghe size1)*/
       begi = endi;
