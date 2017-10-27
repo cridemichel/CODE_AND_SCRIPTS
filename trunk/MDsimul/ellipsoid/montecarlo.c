@@ -12364,7 +12364,7 @@ void update_mcelconst_ene(void)
   dx = dx - L[0]*rint(dx/L[0]);
   dy = dy - L[1]*rint(dy/L[1]);
   dz = dz - L[2]*rint(dz/L[2]);
-  fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+  fact = -0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   //fact=1.0;
   if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
@@ -12393,6 +12393,7 @@ void update_mcelconst_ene(void)
   //printf("step=%d totene=%f %f %f\n", Oparams.curStep, OprogStatus.totene[0],OprogStatus.totene[1],OprogStatus.totene[2]);
 }
 extern int *angdist_type;
+int chainve[2];
 #endif
 int mcmotion(void)
 {
@@ -12407,16 +12408,16 @@ int mcmotion(void)
   if (Oparams.parnum==0)
     return 0;
 #ifdef MC_ELCONST_MC
+	/* NOTA: chainve[0] è la prima catena scelta
+	 * mentre chainve[1] è la seconda */
   ip = 2*OprogStatus.polylen*ranf();
   if (ip < OprogStatus.polylen)
     {
-      chA = OprogStatus.curi[0]/OprogStatus.polylen;
-      ip = OprogStatus.polylen*chA + ip;
+      ip = OprogStatus.polylen*chainve[0] + ip;
     }
   else
     {
-      chB = OprogStatus.curi[1]/OprogStatus.polylen;
-      ip = OprogStatus.polylen*chB + ip - OprogStatus.polylen;
+      ip = OprogStatus.polylen*chainve[1] + ip - OprogStatus.polylen;
     }
 #else
   ip = Oparams.parnum*ranf();
@@ -12517,7 +12518,7 @@ int mcmotion(void)
 	  thetanew = acos(unew[2]);
 	  if (angdist_type[ip]==2)//if (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1])
 	    {
-	      if (Oparams.curStep > OprogStatus.eqstps && !(ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1]))
+	      if (OprogStatus.calcvexcl == 0 && Oparams.curStep > OprogStatus.eqstps && !(ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1]))
 		{
 		  printf("error inconsistency\n");
 		  exit(-1);
@@ -12544,11 +12545,12 @@ int mcmotion(void)
 	    }
 	  else
 	    {
-	      if (Oparams.curStep > OprogStatus.eqstps && (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1]))
+	      if (OprogStatus.calcvexcl == 0 && Oparams.curStep > OprogStatus.eqstps && (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1]))
 		{
 		  printf("error inconsistency2 angdist_type[%d]=%d\n", ip, angdist_type[ip]);
 		  exit(-1);
 		}
+	      //printf("qui ip=%d\n", ip);
 	      if (!(ranf() < sin(thetanew)*fons(thetanew, OprogStatus.alpha)/
 		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha))))
 		{
@@ -14202,7 +14204,7 @@ void calc_com_cls_mc(int iini, int jini , double Rcm1[3], double Rcm2[3])
     }
 }
 
-void calc_overlap_elconst_mc(int chA, int chB, int curi, int curj)
+void calc_overlap_elconst_mc(int chA, int chB)
 {
   int overlap, i, size1, j, ierr;
   double pxA, pyA, pzA, pxB, pyB, pzB, dxA, dyA, dzA, dxB, dyB, dzB;
@@ -14304,7 +14306,7 @@ void move(void)
 {
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
 #ifdef MC_ELCONST_MC
-  int chA, chB, curi, curj;
+  int curi, curj, numch;
 #endif
 #ifdef MC_BIGROT_BIASED
   double pbr;
@@ -14414,7 +14416,6 @@ void move(void)
     ntot=Oparams.parnum;
   //check_all_bonds();
 #ifdef MC_ELCONST_MC
-  
   if (OprogStatus.calcvexcl == 0)
     {
       do
@@ -14423,20 +14424,28 @@ void move(void)
 	  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
 	}
       while (curi==curj);
-      mappairs(curi, curj, &chA, &chB, &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
+      mappairs(curi, curj, &(chainve[0]), &(chainve[1]), &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
     }
   else
     {
-      curi = curj = OprogStatus.curi[0] = OprogStatus.curi[1] = -1;
-      chA = 0;
-      chB = 1;
+      numch = Oparams.parnum/OprogStatus.polylen;
+      do
+	{
+	  chainve[0] = (int)(ranf_vb()*numch);
+	  chainve[1] = (int)(ranf_vb()*numch);
+     	}
+      while (chainve[0]==chainve[1]);
+      OprogStatus.curi[0] = chainve[0]*OprogStatus.polylen;
+      OprogStatus.curi[1] = chainve[1]*OprogStatus.polylen;
     }
 
   //printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
 #ifdef MC_ELCONST_MC
   if (Oparams.curStep >= OprogStatus.eqstps)
-    ntot = OprogStatus.polylen*2; /* muove solo due catene ossia quelle che contengono curi e curj */
+    {
+      ntot = OprogStatus.polylen*2; /* muove solo due catene ossia quelle che contengono curi e curj */
+    }
   else 
     ntot = Oparams.parnum;
 #endif
@@ -14590,7 +14599,7 @@ void move(void)
     }
 #ifdef MC_ELCONST_MC
   if (OprogStatus.eqstps > 0 && Oparams.curStep >= OprogStatus.eqstps)
-    calc_overlap_elconst_mc(chA, chB, curi, curj);
+    calc_overlap_elconst_mc(chainve[0], chainve[1]);
 #endif
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
