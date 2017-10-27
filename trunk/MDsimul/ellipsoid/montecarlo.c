@@ -8047,8 +8047,7 @@ double estimate_maximum_dfons(double alpha)
   return maxval;
 }
 #endif
-
-#ifdef MC_CALC_COVADD
+#if defined(MC_CALC_COVADD)||defined(MC_ELCONST_MC)
 extern const char sepStr[];
 void save_conf_mc(int i, int ii)
 {
@@ -8136,7 +8135,8 @@ void save_conf_mc(int i, int ii)
 #endif	    
     }
 }
-
+#endif
+#ifdef MC_CALC_COVADD
 void build_ll(int *pl)
 {
   int i, i0=-1, iold, in0, in1;
@@ -12361,10 +12361,12 @@ void update_mcelconst_ene(void)
   dx = rx[i]-rx[j];
   dy = ry[i]-ry[j];
   dz = rz[i]-rz[j];
+#if 0
   dx = dx - L[0]*rint(dx/L[0]);
   dy = dy - L[1]*rint(dy/L[1]);
   dz = dz - L[2]*rint(dz/L[2]);
-  fact = -0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+#endif
+  fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   //fact=1.0;
   if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
@@ -14299,6 +14301,10 @@ void calc_overlap_elconst_mc(int chA, int chB)
 	update_vexcl();
     }
   /* TODO: salvare qui le due catene selezionate per visualizzarle */
+#if 0
+  if (Oparams.curStep % 100000 == 0)
+    save_conf_mc(Oparams.curStep, 0);
+#endif
   restore_all_coords();
 }
 #endif
@@ -14600,6 +14606,7 @@ void move(void)
 #ifdef MC_ELCONST_MC
   if (OprogStatus.eqstps > 0 && Oparams.curStep >= OprogStatus.eqstps)
     calc_overlap_elconst_mc(chainve[0], chainve[1]);
+  
 #endif
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
