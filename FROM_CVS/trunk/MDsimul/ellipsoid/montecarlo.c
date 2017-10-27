@@ -12366,7 +12366,10 @@ void update_mcelconst_ene(void)
   dy = dy - L[1]*rint(dy/L[1]);
   dz = dz - L[2]*rint(dz/L[2]);
 #endif
-  fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+  if (OprogStatus.polylen==1)
+    fact = Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+  else
+    fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
   //fact=1.0;
   if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
@@ -14215,7 +14218,19 @@ void calc_overlap_elconst_mc(int chA, int chB)
   store_all_coords();
   size1= OprogStatus.polylen;
   OprogStatus.tottrials += 1.0;
-  calc_com_cls_mc(chA*size1, chB*size1, RcmA, RcmB);
+  if (size1 > 1)
+    {
+      calc_com_cls_mc(chA*size1, chB*size1, RcmA, RcmB);
+    }
+  else
+    {
+      RcmA[0] = rx[2];
+      RcmA[1] = ry[2];
+      RcmA[2] = rz[2];
+      RcmB[0] = rx[3];
+      RcmB[1] = ry[3];
+      RcmB[2] = rz[3];
+    }
   /* place chains */
   pxA = 0.0;
   pyA = 0.0; 
@@ -14237,8 +14252,6 @@ void calc_overlap_elconst_mc(int chA, int chB)
   dzB = pzB-RcmB[2];
 
   //printf("pA=%f %f %f pB=%f %f %f\n", pxA, pyA, pzA, pxB, pyB, pzB);
-
-  rold[0] = rx[chA*size1]; 
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
       rx[i] += dxA;
@@ -14268,6 +14281,7 @@ void calc_overlap_elconst_mc(int chA, int chB)
       overlap = 0;
       for (j=chB*size1; j < (chB+1)*size1; j++)
 	{
+
 #if 0
 #ifdef MD_LXYZ
 	  shift[0] = L[0]*rint((rx[i]-rx[j])/L[0]);
