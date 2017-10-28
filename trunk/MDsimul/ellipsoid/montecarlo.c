@@ -12347,7 +12347,7 @@ double dfons(double theta, double alpha);
 extern int *angdist_type;
 void update_vexcl(void)
 {
-  OprogStatus.totene[0] += L[0]*L[1]*L[2];
+  OprogStatus.totene[0] += 1.0;
 }
 
 void update_mcelconst_ene(void)
@@ -12366,11 +12366,8 @@ void update_mcelconst_ene(void)
   dy = dy - L[1]*rint(dy/L[1]);
   dz = dz - L[2]*rint(dz/L[2]);
 #endif
-  if (OprogStatus.polylen==1)
-    fact = -Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
-  else
-    fact = -0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
-  //fact=1.0;
+  fact = -1.0;
+   //fact=1.0;
   if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
   else
@@ -12405,7 +12402,7 @@ int mcmotion(void)
   int ip, dorej, movetype, err;
   double enn, eno;
 #ifdef MC_ELCONST_MC
-  double uold[3], unew[3];
+  double uold[3], unew[3], nv[3];
   double thetaold, thetanew;
   int chA, chB;
   int kk;
@@ -12519,7 +12516,18 @@ int mcmotion(void)
 	  /* calcola thetaold e thetanew */
 	  for (kk=0; kk < 3; kk++)
 	    unew[kk] = R[ip][0][kk];
-	  thetaold = acos(uold[2]);
+#if 0
+	  if (OprogStatus.calcvexcl > 1)
+	    {
+	      /* calcvecxl==2->K11, 3->K22, 4->K33 */
+	      calc_nvec(OprogStatus.calcvexcl+9, OprogStatus.qvec, rxold, ryold, rzold, nv);
+	      thetaold=acos(scalProd(uold, nv));
+	      /* calcvecxl==2->K11, 3->K22, 4->K33 */
+	      calc_nvec(OprogStatus.calcvexcl+9, OprogStatus.qvec, rx[ip], ry[ip], rz[ip], nv);
+	      thetanew=acos(scalProd(unew, nv));
+	    }
+#endif
+      	  thetaold = acos(uold[2]);
 	  thetanew = acos(unew[2]);
 	  if (angdist_type[ip]==2)//if (ip==OprogStatus.curi[0]||ip==OprogStatus.curi[1])
 	    {
@@ -12555,15 +12563,13 @@ int mcmotion(void)
 		  printf("error inconsistency2 angdist_type[%d]=%d\n", ip, angdist_type[ip]);
 		  exit(-1);
 		}
-	      //printf("qui ip=%d\n", ip);
+    	      //printf("qui ip=%d\n", ip);
 	      if (!(ranf() < sin(thetanew)*fons(thetanew, OprogStatus.alpha)/
 		    (sin(thetaold)*fons(thetaold, OprogStatus.alpha))))
 		{
 		  dorej=1;
 		}
 	    }
-
-
 	}
       if (dorej || enn != eno)
 	{
@@ -14311,7 +14317,7 @@ void calc_overlap_elconst_mc(int chA, int chB)
     {
       if (OprogStatus.calcvexcl==0)
 	update_mcelconst_ene();
-      else
+      else 
 	update_vexcl();
     }
   /* TODO: salvare qui le due catene selezionate per visualizzarle */
@@ -14443,7 +14449,12 @@ void move(void)
 	  curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
 	  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
 	}
+#if 0
+      while ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)||
+	     (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen) || curi==curj);
+#else
       while (curi==curj);
+#endif
       mappairs(curi, curj, &(chainve[0]), &(chainve[1]), &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
     }
   else

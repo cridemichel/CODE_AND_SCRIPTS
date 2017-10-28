@@ -546,11 +546,17 @@ void calcV(void)
   mf = fopenMPI(absMisHD("elconst.dat"),"a");
  if (OprogStatus.calcvexcl == 0)
    {
-     fprintf(mf, "%d %.15G %.15G %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials, OprogStatus.totene[1]/OprogStatus.tottrials, OprogStatus.totene[2]/OprogStatus.tottrials);
+     double fact;
+     if (OprogStatus.polylen==1)
+       fact = Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+     else
+       fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+
+     fprintf(mf, "%d %.15G %.15G %.15G\n", Oparams.curStep, fact*OprogStatus.totene[0]/OprogStatus.tottrials, fact*OprogStatus.totene[1]/OprogStatus.tottrials, fact*OprogStatus.totene[2]/OprogStatus.tottrials);
    }
  else
    {
-     fprintf(mf, "%d %.15G\n", Oparams.curStep, OprogStatus.totene[0]/OprogStatus.tottrials);
+     fprintf(mf, "%d %.15G\n", Oparams.curStep, L[0]*L[1]*L[2]*OprogStatus.totene[0]/OprogStatus.tottrials);
    }
  fclose(mf);
 #endif
