@@ -5556,7 +5556,7 @@ void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j)
 void create_chains(void)
 {
   int k1, k2, i,j, bt, nb, size1, begi, endi;
-  double Rl[3][3], u1[3], u2[3];
+  double Rl[3][3], u1[3], u2[3], rA[3], rat[3];
   int merr, selfoverlap, nc, numchains, nm;
   printf("Creating chains....");
   u1[0] = u2[0] = 0.0;
@@ -5635,8 +5635,18 @@ void create_chains(void)
 	  bt = 0;
 	  while (1)
 	    {
+	      /* N.B. si devono costruire catene ordinate nell'indice i in modo che la particella con i più piccolo
+	       * sia la prima e quella con i più grande l'ultima */
 	      nb = (int)(ranf_vb()*2.0);
-	      j = (int) (ranf_vb()*(i-nc*size1))+nc*size1;
+	      //j = (int) (ranf_vb()*(i-nc*size1))+nc*size1;
+	      j=i-1;
+	      rA[0] = rx[j];
+	      rA[1] = ry[j];
+	      rA[2] = rz[j];
+	      //printf("qui j=%d nb=%d\n", j, nb);
+	      BuildAtomPosAt(j, nb+1, rA, R[j], rat);
+	      if (rat[2] < 0.0)
+		continue;
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else

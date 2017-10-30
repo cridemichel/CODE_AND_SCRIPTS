@@ -14452,6 +14452,7 @@ void move(void)
       mappairs(curi, curj, &(chainve[0]), &(chainve[1]), &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
       if ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
 	  (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen))
+	/* N.B. questa formula funziona se le particelle agli estremi della catena sono 0 e OprogStatus.polylen-1 */
 	dampfact = 1.0-exp(-fabs(curi-curj)/OprogStatus.lp);
       else
 	dampfact = 1.0;
