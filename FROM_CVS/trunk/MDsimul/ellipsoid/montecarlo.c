@@ -7030,6 +7030,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #ifndef MD_SPOT_GLOBAL_ALLOC
   double ratAll[NA][3];
 #endif
+#ifdef MC_ELCONST_MC
+  double ui[3], uj[3];
+#endif
   double rB[3], normo;
   int nbB;
 #endif
@@ -7071,6 +7074,10 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   for (k1=0; k1 < 3; k1++)
     vv[k1] = rat[k1] - rA[k1];
   norm = calc_norm(vv);
+#ifdef MC_ELCONST_MC
+  for (k1=0; k1 < 3; k1++)
+    uj[k1] = R[j][0][k1];
+#endif
   for (k1=0; k1 < 3; k1++)
     vv[k1] /=norm;
   assign_bond_mapping(i,j);
@@ -7302,6 +7309,17 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	{
   	  //orient(&ox, &oy, &oz);
 	  orient_onsager(&ox, &oy, &oz, alpha);
+#ifdef MC_ELCONST_MC
+	  ui[0] = ox;
+	  ui[1] = oy;
+	  ui[2] = oz;
+	  if (scalProd(ui, uj) < 0)
+	    {
+	      ox = -ui[0];
+	      oy = -ui[1];
+	      oz = -ui[2];
+	    }
+#endif
 	}
 #ifdef MCIN_OPT
 #ifndef MC_BENT_DBLCYL
@@ -7324,9 +7342,11 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       oz /= normo;
 #else
       /* nbB = +1 o -1 così viene scelta a caso uno dei due spot */
+#ifndef MC_ELCONST_MC
       ox = nbB*ox;
       oy = nbB*oy;
       oz = nbB*oz;
+#endif
 #endif
 #ifndef MC_CALC_COVADD
       pbc(i);
@@ -14450,11 +14470,22 @@ void move(void)
       while (curi==curj);
 #endif
       mappairs(curi, curj, &(chainve[0]), &(chainve[1]), &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
+      
+#if 0
       if ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
 	  (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen))
 	/* N.B. questa formula funziona se le particelle agli estremi della catena sono 0 e OprogStatus.polylen-1 */
-	dampfact = 1.0-exp(-fabs(curi-curj)/OprogStatus.lp);
+	{
+	  if (abs(curi-curj)!=abs(OprogStatus.curi[0]-OprogStatus.curi[1]))
+	    {
+	      printf("Inconsistency in particles distance in monomer unit\n");
+	      printf("curi-curj=%d curi-curi=%d\n",abs(curi-curj), abs(OprogStatus.curi[0]-OprogStatus.curi[1]));
+	      exit(-1);
+	    }
+	  dampfact = 1.0-exp(-fabs(curi-curj)/OprogStatus.lp);
+	}
       else
+#endif
 	dampfact = 1.0;
     }
   else
