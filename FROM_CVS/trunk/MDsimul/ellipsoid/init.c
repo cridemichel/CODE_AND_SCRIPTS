@@ -4260,6 +4260,38 @@ void orient_onsager_field(double px, double py, double pz, double *omx, double *
   //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
 }
 #endif
+#ifdef MC_ELCONST_MC
+void orient_onsager_positive(double *omx, double *omy, double* omz, double alpha)
+{
+  double thons;
+  double pi, phi, verso;
+
+  pi = acos(0.0)*2.0;
+  /* random angle from onsager distribution */
+  do 
+    {
+      thons = theta_onsager(alpha);
+    }
+  while (thons > M_PI*0.5);
+  //printf("thos=%f\n", thons);
+#ifdef MC_ELASTIC_CONSTANTS
+  distro[(int) (thons/(pi/((double)nfons)))] += 1.0;
+#endif
+  phi = 2.0*pi*ranf_vb();
+  //verso = (ranf_vb()<0.5)?1:-1;
+  verso=1;
+#if 1 /* along z */
+  *omx = verso*sin(thons)*cos(phi);
+  *omy = verso*sin(thons)*sin(phi);
+  *omz = verso*cos(thons); 
+#else /* or along x (but it has to be same of course!) */
+  *omy = verso*sin(thons)*cos(phi);
+  *omz = verso*sin(thons)*sin(phi);
+  *omx = verso*cos(thons); 
+#endif
+  //printf("norma=%f\n", sqrt(Sqr(*omx)+Sqr(*omy)+Sqr(*omz)));
+}
+#endif
 void orient_onsager(double *omx, double *omy, double* omz, double alpha)
 {
   double thons;
@@ -5625,7 +5657,7 @@ void create_chains(void)
 	      rx[i] = 0.0;
 	      ry[i] = 0.0;
 	      rz[i] = 0.0;
-	      orient_onsager(&u1[0], &u1[1], &u1[2], OprogStatus.alpha);
+	      orient_onsager_positive(&u1[0], &u1[1], &u1[2], OprogStatus.alpha);
 	      versor_to_R(u1[0], u1[1], u1[2], Rl);
 	      for (k1=0; k1 < 3; k1++)
 		for (k2=0; k2 < 3; k2++)
@@ -5646,7 +5678,10 @@ void create_chains(void)
 	      //printf("qui j=%d nb=%d\n", j, nb);
 	      BuildAtomPosAt(j, nb+1, rA, R[j], rat);
 	      if (rat[2] < 0.0)
-		continue;
+		{
+		  // printf("i=%d j=%d nb=%d\n", i, j, nb);
+	  	  continue;
+		}
 	      if (is_bonded_mc(j, nb))
 		continue;
 	      else
