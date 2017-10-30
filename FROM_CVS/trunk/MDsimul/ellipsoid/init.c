@@ -5671,7 +5671,24 @@ void create_chains(void)
 	     si presuppone che al massimo stiamo considerando dimeri */
 	}
     }
-  
+  for (nc = 0; nc < numchains; nc++)
+    {
+      for (nm=1; nm < size1; nm++)
+	{
+	  i = nc*size1+nm;
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      u1[k1] = R[i][0][k1];
+	      u2[k1] = R[i-1][0][k1];
+	    }
+	  if (scalProd(u1,u2) < 0.0)
+    	    {
+	      printf("discontinous orientation!!!\n");
+	      printf("%d-%d: %.15G\n", i-1, i, scalProd(u1,u2));
+	      exit(-1);
+	    }
+	}
+    }	
   printf("all chains created!\n");
   printf("total energy=%f\n", calcpotene());
 }
