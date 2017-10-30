@@ -1878,6 +1878,7 @@ void usrInitBef(void)
     OprogStatus.eqstps = -1; /* no equilibration stage if < 0 */
     OprogStatus.polylen = 10;
     OprogStatus.alpha=10.0;
+    OprogStatus.lp = 100000.0; /* stiff chain by default */
     OprogStatus.curi[0]=0;
     OprogStatus.curi[1]=Oparams.parnum/2;
     OprogStatus.totene[0]=0.0;

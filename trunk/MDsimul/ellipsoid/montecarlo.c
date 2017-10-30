@@ -12350,7 +12350,7 @@ void update_vexcl(void)
   OprogStatus.totene[0] += 1.0;
 }
 
-void update_mcelconst_ene(void)
+void update_mcelconst_ene(double dampfact)
 {
   double distsq, dx, dy, dz, fact, ec_segnoi, ec_segnoj;
   double fact1, fact2;
@@ -12366,7 +12366,7 @@ void update_mcelconst_ene(void)
   dy = dy - L[1]*rint(dy/L[1]);
   dz = dz - L[2]*rint(dz/L[2]);
 #endif
-  fact = -1.0;
+   fact = -dampfact;
    //fact=1.0;
   if (R[i][0][2] > 0.0)
     ec_segnoi=-1.0;
@@ -14215,7 +14215,7 @@ void calc_com_cls_mc(int iini, int jini , double Rcm1[3], double Rcm2[3])
     }
 }
 
-void calc_overlap_elconst_mc(int chA, int chB)
+void calc_overlap_elconst_mc(int chA, int chB, double dampfact)
 {
   int overlap, i, size1, j, ierr;
   double pxA, pyA, pzA, pxB, pyB, pzB, dxA, dyA, dzA, dxB, dyB, dzB;
@@ -14258,14 +14258,6 @@ void calc_overlap_elconst_mc(int chA, int chB)
   dzB = pzB-RcmB[2];
 
   //printf("pA=%f %f %f pB=%f %f %f\n", pxA, pyA, pzA, pxB, pyB, pzB);
-  for (i=chA*size1; i < (chA+1)*size1; i++)
-    {
-      rx[i] += dxA;
-      ry[i] += dyA;
-      rz[i] += dzA;
-    }
-  
-
   for (i=chA*size1; i < (chA+1)*size1; i++)
     {
       rx[i] += dxA;
@@ -14316,7 +14308,7 @@ void calc_overlap_elconst_mc(int chA, int chB)
   if (overlap)
     {
       if (OprogStatus.calcvexcl==0)
-	update_mcelconst_ene();
+	update_mcelconst_ene(dampfact);
       else 
 	update_vexcl();
     }
@@ -14333,6 +14325,7 @@ void move(void)
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
 #ifdef MC_ELCONST_MC
   int curi, curj, numch;
+  double lp, dampfact;
 #endif
 #ifdef MC_BIGROT_BIASED
   double pbr;
@@ -14450,12 +14443,18 @@ void move(void)
 	  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
 	}
 #if 0
-      while ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)||
-	     (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen) || curi==curj);
+      while ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
+	     (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen)||
+	     curi==curj);
 #else
       while (curi==curj);
 #endif
       mappairs(curi, curj, &(chainve[0]), &(chainve[1]), &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
+      if ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
+	  (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen))
+	dampfact = 1.0-exp(-fabs(curi-curj)/OprogStatus.lp);
+      else
+	dampfact = 1.0;
     }
   else
     {
@@ -14470,7 +14469,7 @@ void move(void)
       OprogStatus.curi[1] = chainve[1]*OprogStatus.polylen;
     }
 
-  //printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
+   //printf("mapping (%d,%d) -> (%d, %d) [chA:%d,chB:%d]\n", curi, curj, OprogStatus.curi[0], OprogStatus.curi[1], chA, chB);
 #endif
 #ifdef MC_ELCONST_MC
   if (Oparams.curStep >= OprogStatus.eqstps)
@@ -14630,8 +14629,7 @@ void move(void)
     }
 #ifdef MC_ELCONST_MC
   if (OprogStatus.eqstps > 0 && Oparams.curStep >= OprogStatus.eqstps)
-    calc_overlap_elconst_mc(chainve[0], chainve[1]);
-  
+    calc_overlap_elconst_mc(chainve[0], chainve[1],dampfact);
 #endif
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
     {
