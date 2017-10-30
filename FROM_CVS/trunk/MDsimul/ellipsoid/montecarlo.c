@@ -7034,7 +7034,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   double ui[3], uj[3];
 #endif
   double rB[3], normo;
-  int nbB;
+  int nbB=1;
 #endif
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
@@ -7308,8 +7308,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
       else 
 	{
   	  //orient(&ox, &oy, &oz);
-	  orient_onsager(&ox, &oy, &oz, alpha);
 #ifdef MC_ELCONST_MC
+	  orient_onsager_positive(&ox, &oy, &oz, alpha);
+#if 0
 	  ui[0] = ox;
 	  ui[1] = oy;
 	  ui[2] = oz;
@@ -7319,6 +7320,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      oy = -ui[1];
 	      oz = -ui[2];
 	    }
+#endif
+#else
+	  orient_onsager(&ox, &oy, &oz, alpha);
 #endif
 	}
 #ifdef MCIN_OPT
