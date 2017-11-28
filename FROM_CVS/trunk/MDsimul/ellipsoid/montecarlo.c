@@ -1538,6 +1538,7 @@ double calcDistBox(int i, int j, double rbi[3], double rbj[3], double saxi[3], d
   int k, k1, k2, existsParallelPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
+  //return -1;
   for (k=0; k < 3; k++)
     {
       rA[k] = rbi[k];
@@ -12834,8 +12835,15 @@ void rot_cls_move(int nc, int flip)
   double rhb[3], rhbn[3];
   int k1, k2, k3, ip, np;
   /* pick a random orientation */
-  orient(&ox,&oy,&oz);
   /* pick a random rotation angle */
+#ifdef MC_ELCONST_MC
+  ox=1.0;
+  oy=0.0;
+  oz=0.0;
+  if (flip==1)
+    theta = M_PI; /* 180 deg rotation */
+#else
+  orient(&ox,&oy,&oz);
 #ifdef MC_FLIP_MOVE
   if (flip==1)
     theta = acos(0.0); /* 90 degree rotation */
@@ -12843,6 +12851,7 @@ void rot_cls_move(int nc, int flip)
     theta= OprogStatus.delRclsMC*(ranf()-0.5);
 #else
   theta= OprogStatus.delRclsMC*(ranf()-0.5);
+#endif
 #endif
   if (OprogStatus.useNNL)
     {
@@ -12968,7 +12977,8 @@ int random_cls_move(int nc)
      )
   p=0.0;
 #ifdef MC_ELCONST_MC
-  p=0.0;
+  rot_cls_move(nc, 1);
+  return 1;
 #endif
   if (p <= 0.5)
     {
@@ -14349,7 +14359,12 @@ void move(void)
   double acceptance, traaccept, ene, eno, rotaccept, volaccept=0.0, volfrac;
 #ifdef MC_ELCONST_MC
   int curi, curj, numch;
-  double lp, dampfact;
+  int eci, ecj;
+#if 0
+  int numsegs, seglen, im, cursegi, cursegj;
+#endif
+  double dampfact;
+  int lp;
 #endif
 #ifdef MC_BIGROT_BIASED
   double pbr;
@@ -14461,10 +14476,16 @@ void move(void)
 #ifdef MC_ELCONST_MC
   if (OprogStatus.calcvexcl == 0)
     {
+#if 0
       do
 	{
 	  curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
 	  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+	  /* ignora i contributi intrachain */
+	  if ( ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
+	       (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen)) )
+	       //&& abs(curi-curj) < rint(OprogStatus.lp) )	
+	    continue;
 	}
 #if 0
       while ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
@@ -14473,24 +14494,122 @@ void move(void)
 #else
       while (curi==curj);
 #endif
+#else
+      lp = rint(OprogStatus.lp);
+      do
+	{
+	  curi = ((int)(ranf_vb()*OprogStatus.polylen*2));
+	  curj = ((int)(ranf_vb()*OprogStatus.polylen*2));
+	  /* ignora i contributi intrachain */
+
+	  if (curi  >= OprogStatus.polylen)
+	    eci = curi - OprogStatus.polylen;
+	  if (curj  >= OprogStatus.polylen)
+	    ecj = curj - OprogStatus.polylen;
+
+	  if ((eci % lp != 0) || (ecj % lp != 0))
+		continue;
+     	}
+#if 0
+      while ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
+	     (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen)||
+	     curi==curj);
+#else
+      while (curi==curj);
+#endif
+
+#endif
+      //printf("curi=%d curj=%d\n", curi, curj);
+
+#if 0
+      //printf("numsegs=%d seglen=%d cursegi=%d cursegj=%d\n", numsegs, seglen, cursegi, cursegj);
+      if  (cursegi < numsegs && cursegj < numsegs)
+	{
+	  do {	  
+	    curi = cursegi*seglen+(int)(seglen*ranf_vb());
+	    curj = cursegj*seglen+(int)(seglen*ranf_vb());
+	  }
+	  while (abs(curi-curj) < seglen || curi >= OprogStatus.polylen || curj >= OprogStatus.polylen);
+	}
+      else if (cursegi >= numsegs && cursegj >= numsegs)
+	{
+	  do {	  
+	    curi = OprogStatus.polylen + (cursegi-numsegs)*seglen+(int)(seglen*ranf_vb());
+	    curj = OprogStatus.polylen + (cursegj-numsegs)*seglen+(int)(seglen*ranf_vb());
+	  }
+	  while (abs(curi-curj) < seglen || curi >= 2*OprogStatus.polylen || curj >= 2*OprogStatus.polylen);
+	}
+      else if (cursegi < numsegs && cursegj >= numsegs)
+	{
+	  do {	  
+	    curi = cursegi*seglen+(int)(seglen*ranf_vb());
+	    curj = OprogStatus.polylen + (cursegj - numsegs)*seglen+(int)(seglen*ranf_vb());
+	  }
+	  while (curi >= OprogStatus.polylen || curj >= 2*OprogStatus.polylen);
+	
+	}
+      else 
+	{
+	  do {	  
+	    curi = OprogStatus.polylen + (cursegi-numsegs)*seglen+(int)(seglen*ranf_vb());
+	    curj = cursegj*seglen+(int)(seglen*ranf_vb());
+	    //printf("curi=%d curj=%d\n", curi, curj);
+	  }
+	  while (curi >= 2*OprogStatus.polylen || curj >= OprogStatus.polylen);
+	}
+#endif
+      //printf("curi=%d curj=%d\n", curi, curj);
       mappairs(curi, curj, &(chainve[0]), &(chainve[1]), &(OprogStatus.curi[0]), &(OprogStatus.curi[1]));
-      
+
 #if 0
       if ((curi < OprogStatus.polylen && curj < OprogStatus.polylen)|| 
 	  (curi >= OprogStatus.polylen && curj >= OprogStatus.polylen))
 	/* N.B. questa formula funziona se le particelle agli estremi della catena sono 0 e OprogStatus.polylen-1 */
 	{
+	  /* N.B. considero segmenti rigidi lunghi lp (rinormalizzazione) e prendo l'orientazione di un monomero di 
+	   * questi segmenti come rappresentativa */
 	  if (abs(curi-curj)!=abs(OprogStatus.curi[0]-OprogStatus.curi[1]))
 	    {
 	      printf("Inconsistency in particles distance in monomer unit\n");
 	      printf("curi-curj=%d curi-curi=%d\n",abs(curi-curj), abs(OprogStatus.curi[0]-OprogStatus.curi[1]));
 	      exit(-1);
 	    }
-	  dampfact = 1.0-exp(-fabs(curi-curj)/OprogStatus.lp);
+	  if (curi % ((int)rint(OprogStatus.lp)) == 0 && curj % ((int)rint(OprogStatus.lp))==0)
+	    {
+	      //printf("curi=%d curj=%d\n", curi, curj);
+	      dampfact = 1.0-exp(-abs(curi-curj)/OprogStatus.lp);
+	    }
+	  else
+	    dampfact=0.0;
+	  //dampfact = 1.0-exp(-fabs(curi-curj)/OprogStatus.lp);
+	  //dampfact = 0.5+0.5*tanh((fabs(curi-curj)-OprogStatus.lp)/0.01);
 	}
       else
+	{
+	  /* N.B. considero segmenti rigidi lunghi lp (rinormalizzazione) e prendo l'orientazione di un monomero di 
+	   * questi segmenti come rappresentativa */
+#if 0
+	  if ((curi==0 && curj==10) || (curi==10 && curj==0))
+	    {
+	      printf("curi=%d curj=%d\n", curi, curj);
+	      printf("curi \% lp=%d\n", curi % ((int)rint(OprogStatus.lp)));
+	      printf("curj \% lp=%d\n", (curj- OprogStatus.polylen) % ((int)rint(OprogStatus.lp)));
+	    }	    
 #endif
+	    if ((curi < OprogStatus.polylen && curj >=OprogStatus.polylen && (curi % ((int)rint(OprogStatus.lp)) == 0 && (curj - OprogStatus.polylen) % ((int)rint(OprogStatus.lp))==0))
+	    || ( curi >= OprogStatus.polylen && curj < OprogStatus.polylen &&
+		((curi - OprogStatus.polylen) % ((int)rint(OprogStatus.lp)) == 0 && curj % ((int)rint(OprogStatus.lp))==0)))
+
+	    {
+	      //printf("curi=%d curj=%d\n", curi, curj);
+	      dampfact = 1.0;
+	    }
+	  else
+	    dampfact = 0.0;
+	}
+#else
 	dampfact = 1.0;
+#endif
     }
   else
     {

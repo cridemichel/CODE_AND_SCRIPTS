@@ -5597,8 +5597,8 @@ void create_chains(void)
 
   numchains = Oparams.parnum/OprogStatus.polylen;
   size1 = OprogStatus.polylen;
-
   angdist_type=malloc(sizeof(int)*Oparams.parnum);
+	
   /* 0 = istropic 1=onsager 2=derivative of onsager */
 
   /* assegna le distro angolaroi alle particelle */
@@ -7817,7 +7817,8 @@ void usrInitAft(void)
 #endif
 #ifdef MC_ELCONST_MC
   /* create chains */
-  create_chains();
+  //if (newSim)
+    create_chains();
 #endif
 
 }
