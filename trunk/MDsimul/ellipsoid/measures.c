@@ -547,11 +547,18 @@ void calcV(void)
  if (OprogStatus.calcvexcl == 0)
    {
      double fact;
+     int seglen, numsegs;
      if (OprogStatus.polylen==1)
        fact = Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
      else
-       fact = 0.5*OprogStatus.polylen*(OprogStatus.polylen-1)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+       {
 
+   	 seglen = rint(OprogStatus.lp);
+	 numsegs = OprogStatus.polylen/seglen;
+	 if (OprogStatus.polylen % seglen > 0)
+	   numsegs += 1;
+	 fact = Sqr(numsegs)*Sqr(OprogStatus.alpha)*L[0]*L[1]*L[2];
+       }
      fprintf(mf, "%d %.15G %.15G %.15G\n", Oparams.curStep, fact*OprogStatus.totene[0]/OprogStatus.tottrials, fact*OprogStatus.totene[1]/OprogStatus.tottrials, fact*OprogStatus.totene[2]/OprogStatus.tottrials);
    }
  else
