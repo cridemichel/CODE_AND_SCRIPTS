@@ -255,13 +255,17 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
       x[k1] += rO[k1];
     }
 }
-void find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
+#define MESH_PTS 1024
+double CipGbl[3], nipGbl[3], Dgbl;
+
+void find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3], double nj[3], double D, double *thmin)
 {
-  const int meshpts = 8;
+  const int meshpts = MESH_PTS;
   double Pj[3], Rj[3][3], AiCi[3];
   int kk, k1, k2, nn;
   static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3];
+  static double *tharr;
   static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
       {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
       {0,-1},{0.707106781186547,-0.707106781186547}};*/
@@ -271,6 +275,7 @@ void find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3]
   if (firstcall)
     {
       mesh = malloc(sizeof(double*)*meshpts);
+      tharr =malloc(sizeof(double)*meshpts); 
       for (nn=0; nn < meshpts; nn++)
 	mesh[nn] = malloc(sizeof(double)*3);
       firstcall=0;
@@ -281,7 +286,9 @@ void find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3]
 	{
 	  mesh[nn][0] = cos(th);
 	  mesh[nn][1] = sin(th);
+	  tharr[nn] = th;
 	  th += dth;
+
 	}
     }
 #endif
@@ -291,6 +298,7 @@ void find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3]
       xp[1] = D*0.5*mesh[nn][0];
       xp[2] = D*0.5*mesh[nn][1];
       body2labHC(0, xp, Pj, Dj, Rj);    
+//	printf("xp=%f\n", xp[0]);
       for (kk=0; kk < 3; kk++)
 	PjCi[kk] = Pj[kk] - Ci[kk];
       //normPjCi = calc_norm(PjCi);
@@ -306,11 +314,13 @@ void find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3]
 	    {
 	      Aj[kk] = Pj[kk];
     	    }
+	  *thmin = tharr[nn];
 	  mindist=d;
 	  //printf("nn=%d mindist=%.15G d=%.15G\n", nn, mindist, d);
 	  //printf("Ui=%f %f %f Pi=%f %f %f\n", Ui[0],Ui[1], Ui[2], Pj[0], Pj[1], Pj[2]);
 	}
     }
+  printf("mindist=%f thmin=%f\n", mindist, *thmin);
   //printf("done\n");
 #if 0
    for (kk=0; kk < 3; kk++)
@@ -745,7 +755,6 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
   return 1;
 }
 #ifdef HC_ALGO_OPT
-double CipGbl[3], nipGbl[3], Dgbl;
 extern double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
 
@@ -1026,8 +1035,9 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      return -1;
 	    }
 #if 1
-	  find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, D);
-
+	  find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, D, &thg);
+	  printf("Ai-Dj=%f\n", sqrt(Sqr(Ai[0]-Dj[j2][0]) + Sqr(Ai[1]-Dj[j2][1]) +Sqr(Ai[2]-Dj[j2][2])));
+	  printf("Ai=%f %f %f\n", Ai[0], Ai[1], Ai[2]);
 #else
 	  for (kk=0; kk < 3; kk++)
 	    {
@@ -1046,13 +1056,39 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 		  Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
 		} 
 	    }
-	  printf("NormAip=%f\n", Sqr(Aip[0]/D/2.)+Sqr(Aip[1]/D/2.));
-	  if (Aip[1] < 0.0)
-	    thg = M_PI-acos(Aip[0]/D/2.0);
+	  printf("norm Aip=%f\n", calc_norm(Aip));
+	  printf("NormAip=%f\n", sqrt(Sqr(Aip[0])+Sqr(Aip[1]))/(D/2));
+	  printf("thgmin found=%f\n", thg);
+#if 0
+	  if (Aip[0] >= D/2.)
+	    thg = 0;
+	  else if (Aip[0] <= -D/2.0)
+	    thg = M_PI;
+	  else if (Aip[1] < 0.0)
+	    thg = 2.0*M_PI-acos(2.0*Aip[0]/D);
 	  else
-	    thg = acos(Aip[0]/D/2.0);
-	  //printf("Ai=%f %f %f Dj=%f %f %f\n", Ai[0], Ai[1], Ai[2], Dj[j2][0], Dj[j2][1], Dj[j2][2]);
-	  //printf("thg=%f Aip=%f %f %f D=%f\n", thg, Aip[0], Aip[1], Aip[2], D);
+	    thg = acos(2.0*Aip[0]/D);
+	  printf("thgcalc=%f\n", thg);
+#endif
+#if 0
+	    {
+	      double PP[3];
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  PP[kk1] = 0;
+		  for (kk2=0; kk2 < 3; kk2++)
+		    {
+		      PP[kk1] += Rl[kk2][kk1]*Aip[kk2];
+		    } 
+		}
+	      PP[0] += Dj[j2][0];
+	      PP[1] += Dj[j2][1];
+	      PP[2] += Dj[j2][2];
+	      printf("PP=%f %f %f\n", PP[0], PP[1], PP[2]);
+	    }
+#endif
+	  printf("Ai=%f %f %f Dj=%f %f %f\n", Ai[0], Ai[1], Ai[2], Dj[j2][0], Dj[j2][1], Dj[j2][2]);
+	  printf("thg=%f Aip=%f %f %f D=%f\n", thg, Aip[0], Aip[1], Aip[2], D);
 	  for (kk1=0; kk1 < 3; kk1++)
 	    Cip[kk1] = Ci[kk1] - Dj[j2][kk1];
 
@@ -1062,9 +1098,9 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      nipGbl[kk1] = nip[kk1];
 	    }
 	  Dgbl = D;
-	  printf("ax=%f bx=%f cx=%f\n", rimdiskfunc(thg-M_PI*0.25), rimdiskfunc(thg), rimdiskfunc(thg+M_PI*0.25));
-	  dist=brent(thg-M_PI*0.25, thg, thg+M_PI*0.25, rimdiskfunc, 1.0E-14, &th);
-	  printf("dist=%f th=%.15G (min=%f max=%f)\n", dist, th, thg-M_PI*0.25, thg+M_PI*0.25);
+	  printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+M_PI/MESH_PTS));
+	  dist=brent(thg-M_PI/MESH_PTS, thg, thg+M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
+	  printf("dist=%f th=%.15G (min=%f max=%f)\n", dist, th, thg-M_PI/MESH_PTS, thg+M_PI/MESH_PTS);
 	  if (dist < D2)
 	    return -1;
 #if 0
