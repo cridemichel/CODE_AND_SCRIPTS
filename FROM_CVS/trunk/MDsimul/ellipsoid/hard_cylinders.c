@@ -257,7 +257,78 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
 }
 #ifdef HC_ALGO_OPT
 #define MESH_PTS 8
+struct brentOpt 
+{
+  double th; 
+  double UipPjp[3];
+  double normUipPjp;
+  double Uip[3];
+  double Pjp[3];
+  double Pip[3];
+  double PjCi[3];
+  double PjPi[3];
+  double lambda;
+  double sinth;
+  double costh;
+  double minPgbl[3];
+  int id; /* 0 = not yet calculated; 1 = calculated by drimdisk; 2 = calculated by rimdisk */
+} brentmsg;
 
+double CipGbl[3], nipGbl[3], Dgbl, minPgbl[3];
+void calcrimdisk(double th);
+
+double find_initial_guess_bracket(double *thg)
+{
+  static int firstcall=1;
+  double th, dth, xp[3], Ui[3], UiPj[3], dist, mindist;
+  static double *tharr;
+  static struct brentOpt *mesh;
+  const int meshpts = MESH_PTS;
+  int k1, k2, nn;
+  /* bracketing */
+  if (firstcall)
+    {
+      mesh = malloc(sizeof(struct brentOpt)*meshpts);
+      firstcall=0;
+      dth = 2.0*M_PI/((double)meshpts);
+
+      th=0.0;
+      for (nn=0; nn < meshpts; nn++)
+	{
+	  calcrimdisk(th);
+	  mesh[nn].sinth = brentmsg.sinth;
+	  mesh[nn].costh = brentmsg.costh;
+	  mesh[nn].id = 3; 
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      mesh[nn].Pjp[k1] = brentmsg.Pjp[k1];
+	    } 
+	  th += dth;
+	}
+    }
+  dth = 2.0*M_PI/MESH_PTS;
+  th = 0;
+  mindist = -1;
+  for (k1 = 0; k1 < MESH_PTS; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	brentmsg.PjCi[k2] = mesh[k1].Pjp[k2] - CipGbl[k2]; 
+      brentmsg.lambda = scalProd(brentmsg.PjCi,nipGbl);
+      for (k2=0; k2 < 3; k2++)
+	{
+	  brentmsg.Uip[k2] = CipGbl[k2] + brentmsg.lambda*nipGbl[k2];
+	  brentmsg.UipPjp[k2] = brentmsg.Uip[k2] - mesh[k1].Pjp[k2];
+	  //PjPi[k1] = Pjp[k1] - (CipGbl[k1] + lambda*nipGbl[k1]);
+	}
+      dist = calc_norm(brentmsg.UipPjp);
+      if (k1==0 || dist < mindist)
+	{
+	  mindist = dist;
+	  *thg = th;
+	}
+      th+=dth;
+    }
+}
 double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3], double nj[3], double D, double *thmin)
 {
   const int meshpts = MESH_PTS;
@@ -756,26 +827,9 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
   return 1;
 }
 #ifdef HC_ALGO_OPT
-double CipGbl[3], nipGbl[3], Dgbl, minPgbl[3];
 extern double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
 extern double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin);
-struct brentOpt 
-{
-  double th; 
-  double UipPjp[3];
-  double normUipPjp;
-  double Uip[3];
-  double Pjp[3];
-  double Pip[3];
-  double PjCi[3];
-  double PjPi[3];
-  double lambda;
-  double sinth;
-  double costh;
-  double minPgbl[3];
-  int id; /* 0 = not yet calculated; 1 = calculated by drimdisk; 2 = calculated by rimdisk */
-} brentmsg;
 
 void calcrimdisk(double th)
 {
@@ -1104,7 +1158,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      return -1;
 	    }
 #if 1
-	  mindist=find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, D, &thg);
+	  //mindist=find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, D, &thg);
 
 	  //printf("Ai-Dj=%f\n", sqrt(Sqr(Ai[0]-Dj[j2][0]) + Sqr(Ai[1]-Dj[j2][1]) +Sqr(Ai[2]-Dj[j2][2])));
 	  //printf("Ai=%f %f %f\n", Ai[0], Ai[1], Ai[2]);
@@ -1173,21 +1227,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  //if (fabs(rimdiskfunc(thg)-mindist) > 1E-7)
 	    //exit(-1);
 	  brentmsg.id = 0;
-#if 0
-	  /* bracketing */
-	  dth = 2.0*M_PI/MESH_PTS;
-	  th = 0;
-	  mindist = -1;
-	  for (k1 = 0; k1 < MESH_PTS; k1++)
-	    {
-	      dist = rimdiskfunc(th);
-	      if (k1==0 || dist < mindist)
-		{
-		  mindist = dist;
-		  thg = th;
-		}
-	      th+=dth;
-	    }
+#if 1
+	  mindist=find_initial_guess_bracket(&thg);
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
 #if 1
@@ -1196,7 +1237,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #else
 	  dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
 #endif
-#if 0
+#if 1
 	  if (rimdiskfunc(thg) > rimdiskfunc(thg+2.0*M_PI/MESH_PTS)
 	       || rimdiskfunc(thg) > rimdiskfunc(thg-2.0*M_PI/MESH_PTS))
 	    {
