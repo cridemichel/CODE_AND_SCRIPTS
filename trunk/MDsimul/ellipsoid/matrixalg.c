@@ -460,6 +460,7 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
       tol1=tol*fabs(x)+ZEPSDBR; tol2=2.0*tol1; 
       if (fabs(x-xm) <= (tol2-0.5*(b-a))) 
 	{ 
+	  //printf("number of iterations=%d\n", iter);
 	  *xmin=x; return fx; 
 	} 
       if (fabs(e) > tol1)
