@@ -2453,7 +2453,11 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
   if (drSq > daSq)
     return 1.0;
 #endif 
+#ifdef MC_DISABLE_BB
+  d0 = -1;
+#else
   d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
+#endif
   //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 > 0.0)
@@ -2489,7 +2493,11 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
       saxj[k] = saxfactMC[k]*typesArr[typeOfPart[j]].sax[k];
 #endif    
     }
+#ifdef MC_DISABLE_BB
+  d0 = 1.0;
+#else
   d0 = calcDistBox(i, j, rA, rB, saxi, saxj, shift);
+#endif
   //d0 = calcDistNegNNLoverlapPlane(0.0, 0.0, i, j, shift);
   /* se d0 è positiva vuol dire che i due parallelepipedi non s'intersecano */
   if (d0 < 0.0)
