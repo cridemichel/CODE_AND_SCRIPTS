@@ -455,7 +455,7 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
    * as function values. */
   for (iter=1;iter<=ITMAXDBR;iter++)
     { 
-      printf("x=%.15G iter=%d\n", x, iter );
+      //printf("x=%.15G iter=%d\n", x, iter );
       xm=0.5*(a+b); 
       tol1=tol*fabs(x)+ZEPSDBR; tol2=2.0*tol1; 
       if (fabs(x-xm) <= (tol2-0.5*(b-a))) 
