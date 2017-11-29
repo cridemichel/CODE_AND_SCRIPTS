@@ -1237,14 +1237,6 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #else
 	  dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
 #endif
-#if 0
-	  if (rimdiskfunc(thg) > rimdiskfunc(thg+2.0*M_PI/MESH_PTS)
-	       || rimdiskfunc(thg) > rimdiskfunc(thg-2.0*M_PI/MESH_PTS))
-	    {
-	      printf("boh...\n");
-	      exit(-1);
-	    }
-#endif
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      PminCip[k1] = minPgbl[k1] - Cip[k1];
@@ -1252,6 +1244,15 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  Tj_para = scalProd(PminCip,nip);
 	  for (k1=0; k1 < 3; k1++)
 	    Tj_perp[k1] = PminCip[k1] - Tj_para*nip[k1];
+#if 0
+	  if (rimdiskfunc(thg) > rimdiskfunc(thg+2.0*M_PI/MESH_PTS)
+	       || rimdiskfunc(thg) > rimdiskfunc(thg-2.0*M_PI/MESH_PTS))
+	    {
+	      printf("boh...\n");
+	      exit(-1);
+	    }
+	  
+#endif
 	  if ( (fabs(Tj_para) <= L*0.5 && calc_norm(Tj_perp) <= D*0.5))
 	    {
 	      return -1;
@@ -1672,7 +1673,7 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 	      return -1;
 	    }
 #if 1
-	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
+	  //find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
 #else
 	  for (kk=0; kk < 3; kk++)
 	    {
@@ -1680,7 +1681,7 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 	      Ai[kk] = Ui[kk];  
 	    }
 #endif
-	  mindist=find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, Diamj, &thg);
+	  //mindist=find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, Diamj, &thg);
 	  versor_to_R(nj[0], nj[1], nj[2], Rl);
 	  for (kk1=0; kk1 < 3; kk1++)
 	    {
@@ -1719,6 +1720,8 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 	    }
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
+	  mindist=find_initial_guess_bracket(&thg);
+
 	  dist=dbrent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
 	  //dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-7, &th);
 	  for (k1=0; k1 < 3; k1++)
