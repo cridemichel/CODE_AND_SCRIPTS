@@ -2440,7 +2440,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
   rB[0] = rx[j];
   rB[1] = ry[j];
   rB[2] = rz[j];
-#if 1
+#ifndef MC_DISABLE_BB
   /* if bounding spheres do not overlap parallelepiped will not overlap */
   daSq = drSq = 0.0;
   for (kk=0; kk < 3; kk++)

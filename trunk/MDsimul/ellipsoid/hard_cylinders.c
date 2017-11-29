@@ -876,7 +876,7 @@ double drimdiskfunc(double th)
   dUipPjp[0] = nipGbl[0]*fact;
   dUipPjp[1] = nipGbl[1]*fact+D2*brentmsg.sinth;
   dUipPjp[2] = nipGbl[2]*fact-D2*brentmsg.costh;
-  return  2.0*scalProd(dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
+  return  scalProd(dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
   //tj[2] = 0.0;
