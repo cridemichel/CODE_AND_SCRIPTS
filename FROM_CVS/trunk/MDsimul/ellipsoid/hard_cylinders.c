@@ -1237,7 +1237,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #else
 	  dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
 #endif
-#if 1
+#if 0
 	  if (rimdiskfunc(thg) > rimdiskfunc(thg+2.0*M_PI/MESH_PTS)
 	       || rimdiskfunc(thg) > rimdiskfunc(thg-2.0*M_PI/MESH_PTS))
 	    {
