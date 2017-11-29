@@ -262,6 +262,7 @@ struct brentOpt
   double th; 
   double UipPjp[3];
   double normUipPjp;
+  double normUipPjpSq;
   double Uip[3];
   double Pjp[3];
   double Pip[3];
@@ -855,7 +856,11 @@ void calcrimdisk(double th)
       //PjPi[k1] = Pjp[k1] - (CipGbl[k1] + lambda*nipGbl[k1]);
       brentmsg.minPgbl[k1] = brentmsg.Pjp[k1]; 
     }
+#ifdef MC_RIMDISK_NORMSQ
+  brentmsg.normUipPjpSq = Sqr(brentmsg.UipPjp[0])+Sqr(brentmsg.UipPjp[1])+Sqr(brentmsg.UipPjp[2]);
+#else
   brentmsg.normUipPjp = calc_norm(brentmsg.UipPjp);
+#endif
 }
 
 double drimdiskfunc(double th)
@@ -876,7 +881,11 @@ double drimdiskfunc(double th)
   dUipPjp[0] = nipGbl[0]*fact;
   dUipPjp[1] = nipGbl[1]*fact+D2*brentmsg.sinth;
   dUipPjp[2] = nipGbl[2]*fact-D2*brentmsg.costh;
-  return  scalProd(dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
+#ifdef MC_RIMDISK_NORMSQ
+  return 2.0*scalProd(dUipPjp,brentmsg.UipPjp);
+#else
+  return scalProd(dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
+#endif
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
   //tj[2] = 0.0;
