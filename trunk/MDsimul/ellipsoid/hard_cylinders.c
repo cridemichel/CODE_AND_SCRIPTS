@@ -257,6 +257,7 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
 }
 #ifdef HC_ALGO_OPT
 #define MESH_PTS 8
+double meshptsGbl;
 struct brentOpt 
 {
   double th; 
@@ -344,7 +345,7 @@ double find_initial_guess_bracket2(double *thg, int meshpts)
   return mindist;
 }
 #endif
-double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh)
+double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh, int *nnini)
 {
   //static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3], dist, maxdist;
@@ -372,6 +373,7 @@ double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mes
 	{
 	  maxdist = dist;
 	  *thg = th;
+	  *nnini = k1;
 	}
       th+=dth;
     }
@@ -878,7 +880,7 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
 extern double zbrent(double (*func)(double), double x1, double x2, double tol);
 extern double brent(double ax, double bx, double cx, double (*f)(double), double tol, double *xmin);
 extern double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin);
-
+double signGbl;
 void calcrimdisk(double th)
 {
   int k1, k2;
@@ -938,9 +940,9 @@ double ddrimdiskfunc(double th)
   ddUipPjp[1] = nipGbl[1]*dfact+brentmsg.D2costh;
   ddUipPjp[2] = nipGbl[2]*dfact+brentmsg.D2sinth;
 #ifdef MC_RIMDISK_NORMSQ
-  return 2.0*(scalProd(brentmsg.dUipPjp,brentmsg.dUipPjp)+scalProd(ddUipPjp,brentmsg.UipPjp));
+  return signGbl*(2.0*(scalProd(brentmsg.dUipPjp,brentmsg.dUipPjp)+scalProd(ddUipPjp,brentmsg.UipPjp)));
 #else
-  return (scalProd(ddUipPjp,brentmsg.UipPjp)+scalProd(brentmsg.dUipPjp,brentmsg.dUipPjp))/sqrt(brentmsg.normUipPjp)-Sqr(scalProd(brentmsg.dUipPjp,brentmsg.UipPjp))/(brentmsg.normUipPjp,1.5);
+  return signGbl*((scalProd(ddUipPjp,brentmsg.UipPjp)+scalProd(brentmsg.dUipPjp,brentmsg.dUipPjp))/sqrt(brentmsg.normUipPjp)-Sqr(scalProd(brentmsg.dUipPjp,brentmsg.UipPjp))/(brentmsg.normUipPjp,1.5));
 #endif
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
@@ -962,9 +964,9 @@ double drimdiskfunc(double th)
       brentmsg.id = 2;
     }
 #ifdef MC_RIMDISK_NORMSQ
-  return 2.0*scalProd(brentmsg.dUipPjp,brentmsg.UipPjp);
+  return signGbl*2.0*scalProd(brentmsg.dUipPjp,brentmsg.UipPjp);
 #else
-  return scalProd(brentmsg.dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
+  return signGbl*scalProd(brentmsg.dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
 #endif
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
@@ -988,9 +990,9 @@ double rimdiskfunc(double th)
   for (k1=0; k1 < 3; k1++)
     minPgbl[k1] = brentmsg.minPgbl[k1];
 #ifdef MC_RIMDISK_NORMSQ
-  return brentmsg.normUipPjpSq;
+  return signGbl*brentmsg.normUipPjpSq;
 #else
-  return brentmsg.normUipPjp;
+  return signGbl*brentmsg.normUipPjp;
 #endif
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
@@ -1044,7 +1046,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double sphov;
 #endif
   static struct brentOpt *mesh;
-  int it, kk1, kk2, k2, k1, nz, nl, nn;
+  int it, kk1, kk2, k2, k1, nz, nl, nn, nng;
   double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
   double dthg, distleft, distcenter, distright, mindistb, maxdist;
@@ -1087,7 +1089,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
     {
       CiCj[kk] = Ci[kk] - Cj[kk];
     }
-
+  meshptsGbl = MESH_PTS;
   for (kk=0; kk < 3; kk++)
     {
       /* centers of mass of disks */
@@ -1346,15 +1348,28 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 
   	  brentmsg.id = 0;
 #if 1
-	  maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh);
+	  maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh, &nng);
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
+#if 1
+	  signGbl=-1.0;
 	  maxdist = newton1D(thg, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-7, &th);
+#endif
 
+#if 0
+	  for (nn=nng; ;nn++)
+	    {
+	      nnL = nn-1;
+	      if (nnL < MESH_PTS)
+	      if mesh[nn]   
+	    }
+#endif	 
 	  /* at most one has two minima e two maxima... */
+	  signGbl= 1.0;
 	  /* left */
 	  mindistL = newton1D(thg-2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-14, &th);
 
+	  //printf("maxdist=%f th=%f mindistL=%f\n", maxdist, thg, mindistL);
 	  for (k1=0; k1 < 3; k1++)
 	    {
 	      PminCipL[k1] = minPgbl[k1] - Cip[k1];
@@ -1906,7 +1921,7 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 	    }
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
-	  mindist=find_initial_guess_bracket(&thg, MESH_PTS, mesh);
+	  //mindist=find_initial_guess_bracket(&thg, MESH_PTS, mesh);
 
 	  dist=dbrent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
 	  //dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-7, &th);
