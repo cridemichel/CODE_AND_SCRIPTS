@@ -440,20 +440,58 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
 #ifdef HC_ALGO_OPT
 extern double meshptsGbl;
 #define MESH_PTS 8
+extern struct maxminS { 
+  double max;
+  double min;
+  int nnmax;
+  int nnmin;
+  double thgmax;
+  double thgmin;
+} maxmin;
+
+double steepest1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin)
+{
+  const double ZEPSDBR = 1E-20;
+  const int ITMAXDBR=1000;
+  double x, dfx, dx, maxdf, dfxold;
+  int iter; 
+
+  maxdf = (maxmin.max - maxmin.min)/meshptsGbl;
+  x=ax;
+  dx = maxdf/df(x);
+  xold = x - dx;
+  dfxold = df(xold);
+  for (iter=0; iter < ITMAXDBR; iter++)
+    {
+      dfx = df(x);
+      gamma = dx/fabs(dfx-dfxold);
+      x = x + gamma*dfx;
+      dfxold = dfx;
+      dx = x - xold;
+      xold = x;
+      if (dx <= tol) 
+	{ 
+	  //printf("number of iterations=%d\n", iter);
+	  *xmin=x; 
+	  //printf("iterations=%d\n", iter);
+	  return f(x); 
+	} 
+    }
+}
 double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin)
 {
   const double ZEPSDBR = 1E-20;
   const int ITMAXDBR=1000;
-  double x, dx, maxdx; 
+  double x, dfx, dx;
   int iter; 
-  maxdx = 2.0*M_PI/meshptsGbl;
+  x=ax;
+  //printf("maxdf=%f\n", maxdf);
   for (iter=0; iter < ITMAXDBR; iter++)
     {
-      dx = df(x)/ddf(x);
+      dfx= df(x);
+      dx = dfx/ddf(x);
       //printf("df=%.15G ddf=%.15G\n", df(x), ddf(x));
-      if (fabs(dx) > maxdx)
-       dx = ((dx>0.0)?1.0:-1.0)*maxdx;	
-      x = x - dx;
+      x = x-dx; 
       if (dx <= tol) 
 	{ 
 	  //printf("number of iterations=%d\n", iter);
