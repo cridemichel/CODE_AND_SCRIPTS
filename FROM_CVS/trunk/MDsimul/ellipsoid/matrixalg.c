@@ -438,23 +438,33 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
   //free_vector(xicom,1,n); free_vector(pcom,1,n);
 }
 #ifdef HC_ALGO_OPT
+extern double meshptsGbl;
+#define MESH_PTS 8
 double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin)
 {
   const double ZEPSDBR = 1E-20;
-  const int ITMAXDBR=100;
-  double x, dx; 
+  const int ITMAXDBR=1000;
+  double x, dx, maxdx; 
   int iter; 
+  maxdx = 2.0*M_PI/meshptsGbl;
   for (iter=0; iter < ITMAXDBR; iter++)
     {
       dx = df(x)/ddf(x);
+      //printf("df=%.15G ddf=%.15G\n", df(x), ddf(x));
+      if (fabs(dx) > maxdx)
+       dx = ((dx>0.0)?1.0:-1.0)*maxdx;	
       x = x - dx;
       if (dx <= tol) 
 	{ 
 	  //printf("number of iterations=%d\n", iter);
 	  *xmin=x; 
+	  //printf("iterations=%d\n", iter);
 	  return f(x); 
 	} 
     }
+  /* if here NR did not converge ...*/
+  printf("[NR] I did not converge, sorry...\n");
+  exit(-1);
 }
 #endif
 #define MOV3(a,b,c,d,e,f) (a)=(d);(b)=(e);(c)=(f);
