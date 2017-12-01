@@ -345,7 +345,16 @@ double find_initial_guess_bracket2(double *thg, int meshpts)
   return mindist;
 }
 #endif
-double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh, int *nnini)
+struct maxminS { 
+  double max;
+  double min;
+  int nnmax;
+  int nnmin;
+  double thgmax;
+  double thgmin;
+} maxmin;
+
+double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh, int *nnini, struct maxminS *maxmin)
 {
   //static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3], dist, maxdist;
@@ -369,15 +378,21 @@ double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mes
 	}
       dist = mesh[k1].normUipPjp = calc_norm(mesh[k1].UipPjp);
       //printf("bracket 1 (%f,%d)=%.15G\n", th, k1, dist);
-      if (k1==0 || dist > maxdist)
+      if (k1==0 || dist > maxmin->max)
 	{
-	  maxdist = dist;
-	  *thg = th;
-	  *nnini = k1;
+	  maxmin->max = dist;
+	  *thg=maxmin->thgmax = th;
+	  *nnini=maxmin->nnmax = k1;
+	}
+      if (k1==0 || dist < maxmin->min)
+	{
+	  maxmin->min = dist;
+	  maxmin->thgmin = th;
+	  maxmin->nnmin = k1;
 	}
       th+=dth;
     }
-  return maxdist;
+  return maxmin->max;
 }
 double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3], double nj[3], double D, double *thmin)
 {
@@ -1036,7 +1051,6 @@ void versor_to_R_opt(double ox, double oy, double oz, double R[3][3])
 }
 double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk);
 extern double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin);
-
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
@@ -1047,7 +1061,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #endif
   static struct brentOpt *mesh;
   int it, kk1, kk2, k2, k1, nz, nl, nn, nng;
-  double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist;
+  double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist, maxmind[2];
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
   double dthg, distleft, distcenter, distright, mindistb, maxdist;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
@@ -1348,7 +1362,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 
   	  brentmsg.id = 0;
 #if 1
-	  maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh, &nng);
+	  maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh, &nng, &maxmin);
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
 #if 1
