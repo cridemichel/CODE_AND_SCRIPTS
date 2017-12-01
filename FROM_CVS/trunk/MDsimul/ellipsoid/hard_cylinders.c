@@ -261,6 +261,7 @@ struct brentOpt
 {
   double th; 
   double UipPjp[3];
+  double dUipPjp[3];
   double normUipPjp;
   double normUipPjpSq;
   double Uip[3];
@@ -271,23 +272,25 @@ struct brentOpt
   double lambda;
   double sinth;
   double costh;
+  double D2sinth;
+  double D2costh;
   double minPgbl[3];
   int id; /* 0 = not yet calculated; 1 = calculated by drimdisk; 2 = calculated by rimdisk */
 } brentmsg;
 
 double CipGbl[3], nipGbl[3], Dgbl, minPgbl[3];
 void calcrimdisk(double th);
-
-double find_initial_guess_bracket(double *thg)
+#if 0
+double find_initial_guess_bracket2(double *thg, int meshpts)
 {
   static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3], dist, mindist;
   static double *tharr;
   static struct brentOpt *mesh;
-  const int meshpts = MESH_PTS;
+  FILE* f;
   int k1, k2, nn;
   /* bracketing */
-  if (firstcall)
+  if (firstcall || thg==NULL)
     {
       mesh = malloc(sizeof(struct brentOpt)*meshpts);
       firstcall=0;
@@ -306,11 +309,15 @@ double find_initial_guess_bracket(double *thg)
 	    } 
 	  th += dth;
 	}
+      if (thg==NULL)
+	return -1.0;
     }
-  dth = 2.0*M_PI/MESH_PTS;
+  dth = 2.0*M_PI/meshpts;
   th = 0;
   mindist = -1;
-  for (k1 = 0; k1 < MESH_PTS; k1++)
+  if (meshpts > 256)
+    f=fopen("dtheta.dat", "w+");
+  for (k1 = 0; k1 < meshpts; k1++)
     {
       for (k2=0; k2 < 3; k2++)
 	brentmsg.PjCi[k2] = mesh[k1].Pjp[k2] - CipGbl[k2]; 
@@ -322,6 +329,9 @@ double find_initial_guess_bracket(double *thg)
 	  //PjPi[k1] = Pjp[k1] - (CipGbl[k1] + lambda*nipGbl[k1]);
 	}
       dist = calc_norm(brentmsg.UipPjp);
+      if (meshpts > 256)
+	fprintf(f, "%.15G %.15G\n", th, dist);
+      //printf("bracket 2 (%f,%d)=%.15G\n", th, k1, dist);
       if (k1==0 || dist < mindist)
 	{
 	  mindist = dist;
@@ -329,6 +339,43 @@ double find_initial_guess_bracket(double *thg)
 	}
       th+=dth;
     }
+  if (meshpts > 256)
+  fclose(f);  
+  return mindist;
+}
+#endif
+double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh)
+{
+  //static int firstcall=1;
+  double th, dth, xp[3], Ui[3], UiPj[3], dist, maxdist;
+  //static double *tharr;
+  //static struct brentOpt *mesh;
+  int k1, k2, nn;
+  /* bracketing */
+  dth = 2.0*M_PI/meshpts;
+  th = 0;
+  maxdist = -1;
+  for (k1 = 0; k1 < meshpts; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	mesh[k1].PjCi[k2] = mesh[k1].Pjp[k2] - CipGbl[k2]; 
+      mesh[k1].lambda = scalProd(mesh[k1].PjCi,nipGbl);
+      for (k2=0; k2 < 3; k2++)
+	{
+	  mesh[k1].Uip[k2] = CipGbl[k2] + mesh[k1].lambda*nipGbl[k2];
+	  mesh[k1].UipPjp[k2] = mesh[k1].Uip[k2] - mesh[k1].Pjp[k2];
+	  //PjPi[k1] = Pjp[k1] - (CipGbl[k1] + lambda*nipGbl[k1]);
+	}
+      dist = mesh[k1].normUipPjp = calc_norm(mesh[k1].UipPjp);
+      //printf("bracket 1 (%f,%d)=%.15G\n", th, k1, dist);
+      if (k1==0 || dist > maxdist)
+	{
+	  maxdist = dist;
+	  *thg = th;
+	}
+      th+=dth;
+    }
+  return maxdist;
 }
 double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3], double nj[3], double D, double *thmin)
 {
@@ -841,9 +888,11 @@ void calcrimdisk(double th)
   brentmsg.th = th;
   brentmsg.costh=cos(th);
   brentmsg.sinth=sin(th);
+  brentmsg.D2costh=D2*brentmsg.costh;
+  brentmsg.D2sinth=D2*brentmsg.sinth;
   brentmsg.Pjp[0] = 0.0;
-  brentmsg.Pjp[1] = D2*brentmsg.costh;
-  brentmsg.Pjp[2] = D2*brentmsg.sinth;
+  brentmsg.Pjp[1] = brentmsg.D2costh;
+  brentmsg.Pjp[2] = brentmsg.D2sinth;
 
   for (k1=0; k1 < 3; k1++)
     brentmsg.PjCi[k1] = brentmsg.Pjp[k1] - CipGbl[k1]; 
@@ -862,7 +911,42 @@ void calcrimdisk(double th)
   brentmsg.normUipPjp = calc_norm(brentmsg.UipPjp);
 #endif
 }
+void calcdrimdisk(double th)
+{
+  double fact;
+  calcrimdisk(th);
+  fact = -nipGbl[1]*brentmsg.D2sinth+nipGbl[2]*brentmsg.D2costh;
+  brentmsg.dUipPjp[0] = nipGbl[0]*fact;
+  brentmsg.dUipPjp[1] = nipGbl[1]*fact+brentmsg.D2sinth;
+  brentmsg.dUipPjp[2] = nipGbl[2]*fact-brentmsg.D2costh;
+}
+double ddrimdiskfunc(double th)
+{
+  /* i è il rim e j il disco */
+  //double lambda, Pjp[3], Pip[3], D2, tj[3], PjCi[3], PjPi[3];
+  //double UipPjp[3], Uip[3], fact, dUipPjp[3];
+  double dfact, ddUipPjp[3];
+  int k1, k2;
+  if (!(th==brentmsg.th) || brentmsg.id==0)
+    {
+      calcdrimdisk(th);
+      brentmsg.id = 3;
+    }
 
+  dfact = -nipGbl[1]*brentmsg.D2costh-nipGbl[2]*brentmsg.D2sinth;
+  ddUipPjp[0] = nipGbl[0]*dfact;
+  ddUipPjp[1] = nipGbl[1]*dfact+brentmsg.D2costh;
+  ddUipPjp[2] = nipGbl[2]*dfact+brentmsg.D2sinth;
+#ifdef MC_RIMDISK_NORMSQ
+  return 2.0*(scalProd(brentmsg.dUipPjp,brentmsg.dUipPjp)+scalProd(ddUipPjp,brentmsg.UipPjp));
+#else
+  return (scalProd(ddUipPjp,brentmsg.UipPjp)+scalProd(brentmsg.dUipPjp,brentmsg.dUipPjp))/sqrt(brentmsg.normUipPjp)-Sqr(scalProd(brentmsg.dUipPjp,brentmsg.UipPjp))/(brentmsg.normUipPjp,1.5);
+#endif
+  //tj[0] = -D2*sinth;
+  //tj[1] = D2*costh;
+  //tj[2] = 0.0;
+ //return scalProd(PjPi,tj);
+}
 double drimdiskfunc(double th)
 {
   /* i è il rim e j il disco */
@@ -874,17 +958,13 @@ double drimdiskfunc(double th)
 
   if (!(th==brentmsg.th) || brentmsg.id==0)
     {
-      calcrimdisk(th);
+      calcdrimdisk(th);
       brentmsg.id = 2;
     }
-  fact = -nipGbl[1]*D2*brentmsg.sinth+nipGbl[2]*D2*brentmsg.costh;
-  dUipPjp[0] = nipGbl[0]*fact;
-  dUipPjp[1] = nipGbl[1]*fact+D2*brentmsg.sinth;
-  dUipPjp[2] = nipGbl[2]*fact-D2*brentmsg.costh;
 #ifdef MC_RIMDISK_NORMSQ
-  return 2.0*scalProd(dUipPjp,brentmsg.UipPjp);
+  return 2.0*scalProd(brentmsg.dUipPjp,brentmsg.UipPjp);
 #else
-  return scalProd(dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
+  return scalProd(brentmsg.dUipPjp,brentmsg.UipPjp)/sqrt(brentmsg.normUipPjp);
 #endif
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
@@ -907,7 +987,11 @@ double rimdiskfunc(double th)
     }
   for (k1=0; k1 < 3; k1++)
     minPgbl[k1] = brentmsg.minPgbl[k1];
+#ifdef MC_RIMDISK_NORMSQ
+  return brentmsg.normUipPjpSq;
+#else
   return brentmsg.normUipPjp;
+#endif
   //tj[0] = -D2*sinth;
   //tj[1] = D2*costh;
   //tj[2] = 0.0;
@@ -949,17 +1033,21 @@ void versor_to_R_opt(double ox, double oy, double oz, double R[3][3])
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
 }
 double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk);
+extern double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin);
 
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
+  static int firstcall=1;
   const int MAX_ITERATIONS = 1000000;
 #ifdef MC_HC_SPHERO_OPT
   int rim;
   double sphov;
 #endif
-  int it, kk1, kk2, k2, k1;
+  static struct brentOpt *mesh;
+  int it, kk1, kk2, k2, k1, nz, nl, nn;
   double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist;
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  double dthg, distleft, distcenter, distright, mindistb, maxdist;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
@@ -971,9 +1059,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
   double normCiCj;	
-  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3];
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3];
   int kk, j1, j2;
-
+  
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
@@ -1235,24 +1323,112 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  //printf("mindist=%f mindst from rimdisk=%.15G\n", mindist, rimdiskfunc(thg));
 	  //if (fabs(rimdiskfunc(thg)-mindist) > 1E-7)
 	    //exit(-1);
-	  brentmsg.id = 0;
+	  if (firstcall)
+	    {
+	      mesh = malloc(sizeof(struct brentOpt)*MESH_PTS);
+	      firstcall=0;
+	      dth = 2.0*M_PI/((double)MESH_PTS);
+
+	      th=0.0;
+	      for (nn=0; nn < MESH_PTS; nn++)
+		{
+		  calcrimdisk(th);
+		  mesh[nn].sinth = brentmsg.sinth;
+		  mesh[nn].costh = brentmsg.costh;
+		  mesh[nn].id = 3; 
+		  for (k1=0; k1 < 3; k1++)
+		    {
+		      mesh[nn].Pjp[k1] = brentmsg.Pjp[k1];
+		    } 
+		  th += dth;
+		}
+	    }
+
+  	  brentmsg.id = 0;
 #if 1
-	  mindist=find_initial_guess_bracket(&thg);
+	  maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh);
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
-#if 1
-	  /* NOTA: dbrent è molto più efficienti di brent! */
-	  dist=dbrent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
-#else
-	  dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
-#endif
+	  maxdist = newton1D(thg, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-7, &th);
+
+	  /* at most one has two minima e two maxima... */
+	  /* left */
+	  mindistL = newton1D(thg-2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-14, &th);
+
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      PminCip[k1] = minPgbl[k1] - Cip[k1];
+	      PminCipL[k1] = minPgbl[k1] - Cip[k1];
 	    }
+	  /* right */
+	  mindistR = newton1D(th+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-14, &th);
+
+	  for (k1=0; k1 < 3; k1++)
+	    {
+	      PminCipR[k1] = minPgbl[k1] - Cip[k1];
+	    }
+	  if (mindistL < mindistR)	
+	    {
+	      for (k1=0; k1 < 3; k1++)
+		{
+		  PminCip[k1] = PminCipL[k1];
+		}
+	    }
+	  else
+	    {
+	      for (k1=0; k1 < 3; k1++)
+		{
+		  PminCip[k1] = PminCipR[k1];
+		}
+	    }
+	  //printf("mindist=%f dist=%.15G step=%d\n", mindist, dist, Oparams.curStep);
+#if 0
+	  brentmsg.id = 0;
+	  dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
+	  //printf("mindist=%f dist=%.15G step=%d\n", mindist, dist, Oparams.curStep);
+#endif
 	  Tj_para = scalProd(PminCip,nip);
 	  for (k1=0; k1 < 3; k1++)
 	    Tj_perp[k1] = PminCip[k1] - Tj_para*nip[k1];
+#if 0
+	    {
+	      int kkk;
+	      const int mp=16;
+	      double thgold, mindist2, dist2, minPgbl2[3], thold;
+	      //printf("rimdisk4(%f)=%.15G\n", th, rimdiskfunc(th));
+	      brentmsg.id = 0;
+	      thgold = thg;
+	      mindist2=find_initial_guess_bracket2(&thg, mp);
+	      for (kkk=0; kkk < 3; kkk++)
+		minPgbl2[kkk] = minPgbl[kkk];
+	      brentmsg.id = 0;
+	      thold = th;
+	      dist2=dbrent(thg-2.0*M_PI/mp, thg, thg+2.0*M_PI/mp, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
+	      printf("th=%.15G thold=%.15G\n", th, thold);
+	      printf("x1 x2 x3=%f %f %f 2 x1 x2 x3=%f %f %f\n", thg-2.0*M_PI/mp, thg, thg+2.0*M_PI/mp, thgold-2.0*M_PI/MESH_PTS, thgold, thgold+2.0*M_PI/MESH_PTS);
+	      //brentmsg.id = 0;
+	      //dist2=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-14, &th);
+	      //printf("rimdisk8(%f)=%.15G\n", th, rimdiskfunc(th));
+	      if (fabs(minPgbl[0]-minPgbl2[0])> 1E-7 ||
+		 fabs(minPgbl[1]-minPgbl2[1])> 1E-7 ||
+		 fabs(minPgbl[2]-minPgbl2[2])> 1E-7)
+		{
+		  brentmsg.id=0;
+		  find_initial_guess_bracket2(NULL, 1000000);
+		  printf("thg=%.15G thgold=%.15G\n", thg, thgold);
+		  printf("rimdisk(%f)=%.15G\n", th, rimdiskfunc(th));
+		  printf(">>>> dist=%.15G\n",find_initial_guess_bracket2(&thg, 1000000));
+		  printf("nip=%.15G %.15G %.15G\n", nip[0], nip[1], nip[2]);
+		  printf("dist tramite rimdisk(%f)=%.15G\n", thg, rimdiskfunc(thg));
+		  printf("Ci=%f %f %f Dj=%f %f %f\n", Cip[0], Cip[1], Cip[2], Dj[j2][0], Dj[j2][1], Dj[j2][2]);
+		  printf("calc_norm Ci=%.15G\n", calc_norm(Cip));
+		  printf("P8=%.15G %.15G %.15G P4=%.15G %.15G %.15G\n", minPgbl2[0],minPgbl2[1],minPgbl2[2],minPgbl[0],minPgbl[1],minPgbl[2]);
+		  printf("normPgbl=%.15G normPgbl2=%.15G\n", calc_norm(minPgbl), calc_norm(minPgbl2));
+		  printf("dist=%.15G dist2=%.15G\n", dist, dist2);
+		  printf("mindist=%.15G mindist2=%.15G\n", mindist, mindist2);
+		  exit(-1);
+		}
+	    }
+#endif
 #if 0
 	  if (rimdiskfunc(thg) > rimdiskfunc(thg+2.0*M_PI/MESH_PTS)
 	       || rimdiskfunc(thg) > rimdiskfunc(thg-2.0*M_PI/MESH_PTS))
@@ -1473,7 +1649,8 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
   int rim;
   double sphov;
 #endif
-  int it, k2, k1, kk1, kk2;
+  int it, k2, k1, kk1, kk2, nl, nn, nz;
+  static struct brentOpt *mesh;
   double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj, dist, mindist, Tj_para, Tj_perp[3]; 
   double LiTmp, LjTmp, DiamiTmp, DiamjTmp, nip[3], Cip[3], th, thg, PminCip[3], Rl[3][3];
   double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djni, Djnj;
@@ -1729,7 +1906,7 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 	    }
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
-	  mindist=find_initial_guess_bracket(&thg);
+	  mindist=find_initial_guess_bracket(&thg, MESH_PTS, mesh);
 
 	  dist=dbrent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
 	  //dist=brent(thg-2.0*M_PI/MESH_PTS, thg, thg+2.0*M_PI/MESH_PTS, rimdiskfunc, 1.0E-7, &th);

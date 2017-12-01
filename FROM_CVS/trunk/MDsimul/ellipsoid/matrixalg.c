@@ -437,7 +437,26 @@ void linminConstr(double p[], double xi[], int n, double *fret, double (*func)(d
     }
   //free_vector(xicom,1,n); free_vector(pcom,1,n);
 }
-
+#ifdef HC_ALGO_OPT
+double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin)
+{
+  const double ZEPSDBR = 1E-20;
+  const int ITMAXDBR=100;
+  double x, dx; 
+  int iter; 
+  for (iter=0; iter < ITMAXDBR; iter++)
+    {
+      dx = df(x)/ddf(x);
+      x = x - dx;
+      if (dx <= tol) 
+	{ 
+	  //printf("number of iterations=%d\n", iter);
+	  *xmin=x; 
+	  return f(x); 
+	} 
+    }
+}
+#endif
 #define MOV3(a,b,c,d,e,f) (a)=(d);(b)=(e);(c)=(f);
 double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)(double), double tol, double *xmin) 
   /* Given a function f and its derivative function df, and given a bracketing triplet of abscissas ax, bx, cx
@@ -446,7 +465,7 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
    * The abscissa of the minimum is returned as xmin, and 
    the minimum function value is returned as dbrent, the returned function value. */
 { 
-  const double ZEPSDBR = 1E-10;
+  const double ZEPSDBR = 1E-20;
   const int ITMAXDBR=100; 
   int iter,ok1,ok2; /*Will be used as  ags for whether proposed steps are acceptable or not.*/
   double a,b,d=0.0,d1,d2,du,dv,dw,dx,e=0.0; double fu,fv,fw,fx,olde,tol1,tol2,u,u1,u2,v,w,x,xm; 
@@ -455,7 +474,7 @@ double dbrent(double ax, double bx, double cx, double (*f)(double), double (*df)
    * as function values. */
   for (iter=1;iter<=ITMAXDBR;iter++)
     { 
-      //printf("x=%.15G iter=%d\n", x, iter );
+      //printf("x=%.15G fx=%.15G iter=%d\n", x, fx, iter );
       xm=0.5*(a+b); 
       tol1=tol*fabs(x)+ZEPSDBR; tol2=2.0*tol1; 
       if (fabs(x-xm) <= (tol2-0.5*(b-a))) 
