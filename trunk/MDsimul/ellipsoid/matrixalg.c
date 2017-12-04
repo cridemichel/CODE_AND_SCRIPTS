@@ -453,7 +453,7 @@ double steepest1D(double ax, double (*f)(double), double (*df)(double), double (
 {
   const double ZEPSDBR = 1E-20;
   const int ITMAXDBR=1000;
-  double x, dfx, dx, maxdf, dfxold;
+  double x, dfx, dx, maxdf, dfxold, xold, gamma;
   int iter; 
 
   maxdf = (maxmin.max - maxmin.min)/meshptsGbl;
@@ -465,13 +465,14 @@ double steepest1D(double ax, double (*f)(double), double (*df)(double), double (
     {
       dfx = df(x);
       gamma = dx/fabs(dfx-dfxold);
-      x = x + gamma*dfx;
+      x = x - gamma*dfx;
       dfxold = dfx;
       dx = x - xold;
       xold = x;
-      if (dx <= tol) 
+      printf("iter=%d f(%f)=%.15G dx=%.15G tol=%.15G\n", iter, x, f(x), dx, tol);
+      if (fabs(dx) <= tol) 
 	{ 
-	  //printf("number of iterations=%d\n", iter);
+	  printf("number of iterations=%d\n", iter);
 	  *xmin=x; 
 	  //printf("iterations=%d\n", iter);
 	  return f(x); 
@@ -490,7 +491,7 @@ double newton1D(double ax, double (*f)(double), double (*df)(double), double (*d
     {
       dfx= df(x);
       dx = dfx/ddf(x);
-      //printf("df=%.15G ddf=%.15G\n", df(x), ddf(x));
+      //printf("f=%.15G df=%.15G ddf=%.15G\n", f(x), df(x), ddf(x));
       x = x-dx; 
       if (dx <= tol) 
 	{ 
