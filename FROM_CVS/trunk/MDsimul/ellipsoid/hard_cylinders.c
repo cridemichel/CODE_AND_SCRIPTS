@@ -1859,10 +1859,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  /* assegno solcc e calcolo x */
 		  for (kk1=0; kk1 < numsol; kk1++)
 		    {
-		      solec[kk1][0] = (a2 - R2 + xC2 - 2.0*solcub[kk1]*yC + yC2)/(2.0*xC);
-		      solec[kk1][1] = solcub[kk1];
+		      solcc[kk1][0] = (a2 - R2 + xC2 - 2.0*solcub[kk1]*yC + yC2)/(2.0*xC);
+		      solcc[kk1][1] = solcub[kk1];
 		    }
 		  /* torno al sistema di coordinate del disco */
+		  for (kk1=0; kk1 < numsol; kk1++)
+		    ellips2disk(solcc[kk1],solarr[kk1]);
 		}
 	      else if (yC!=0)
 		{
@@ -1876,10 +1878,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  /* assegno solcc e calcolo y */
 		   for (kk1=0; kk1 < numsol; kk1++)
 		    {
-		      solec[kk1][0] = solcub[kk1];
-		      solec[kk1][1] = (a2 - R2 - 2.0*solcub[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
+		      solcc[kk1][0] = solcub[kk1];
+		      solcc[kk1][1] = (a2 - R2 - 2.0*solcub[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
 		    }
 		   /* torno al sistema di coordinate del disco */
+		   for (kk1=0; kk1 < numsol; kk1++)
+		     ellips2disk(solcc[kk1],solarr[kk1]);
 		}
 	      else
 		{
@@ -1922,6 +1926,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      solec[kk1][1] = solqua[kk1];
 		    }
 		  /* torno al sistema di coordinate del disco */
+		  for (kk1=0; kk1 < numsol; kk1++)
+		    ellips2disk(solec[kk1],solarr[kk1]);
 		}
 	      else if (yC!=0)
 		{
@@ -1942,6 +1948,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 				       2.0*a2*solqua[kk1]*xC + a2*xC2 + a2*yC2)/(2.0*a2*yC);
 		    }
 		  /* torno al sistema di coordinate del disco */
+		  for (kk1=0; kk1 < numsol; kk1++)
+		    ellips2disk(solec[kk1],solarr[kk1]);
 		}
 	      else
 		{
@@ -1966,6 +1974,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      /* in questo caso ho due circonferenze e quindi al più due soluzioni ossia ho un'equazione quadratica */
 	    }
+	  /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
+
+
+	  /* =========================================================================== */
 	  //printf("mindist=%f mindst from rimdisk=%.15G\n", mindist, rimdiskfunc(thg));
 	  //if (fabs(rimdiskfunc(thg)-mindist) > 1E-7)
 	  //exit(-1);
