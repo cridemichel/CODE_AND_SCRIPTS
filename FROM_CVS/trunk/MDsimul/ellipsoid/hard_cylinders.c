@@ -1993,6 +1993,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  else
 		    {
+		      /* se non ci sono soluzioni verificare che il disco o l'ellisse non sia l'uno dentro l'altro */
 		      numsol = 0;
 		    }
 		}
@@ -2003,10 +2004,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    {
 	      for (kk2=0; kk2 < 3; kk2++)
 		dsc[kk2] = solarr[kk1][kk2] - Cip[kk2]; 
-	      sp = scalProd(solarr[kk1], nip);
-	      for (kk2=0; kk2 < 3; kk2++)
-		dsc[kk2] = dsc[kk2]-sp*nip[kk2];
-	      if (calc_norm(dsc) < L*0.5)
+	      sp = scalProd(dsc, nip);
+	      //for (kk2=0; kk2 < 3; kk2++)
+		//dsc[kk2] = dsc[kk2]-sp*nip[kk2];
+	      if (fabs(sp) < L*0.5)
 		{
 		  return -1;
 		}
