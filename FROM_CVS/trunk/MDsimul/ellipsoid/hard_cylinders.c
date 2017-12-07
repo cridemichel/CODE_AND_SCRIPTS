@@ -1380,12 +1380,12 @@ void solve_cubic(double *coeff, int *numsol, double sol[3], int justone)
       *numsol = 1;
     }
 }
-
 void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 {
   /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
-  double x1, A, B, C, D, solc[3], nsc, cb[4], m, n;
-  double Asq, alpha, beta, gamma, delta, rho;
+  double x1, A, B, C, D, solc[3], cb[4], m, n;
+  double Asq, alpha, beta, gamma, delta, rho, mp, np, m2;
+  int nsc;
   if (coeff[4]==0)
     {
       printf("[ERROR: solve_fourth_deg] coeff[4] must be different from 0!\n");
@@ -1400,10 +1400,12 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
   cb[3] = 1.0;
   cb[2] = -B;
   cb[1] = A*C-4*D;
-  cb[0] = D(4.0*B - Asq)-Sqr(C);
-  solve_cubic(cb, solc, &nsc, 1);
-  m2 = Asq/4.0-B+x1;
+  cb[0] = D*(4.0*B - Asq)-Sqr(C);
+  solve_cubic(cb, &nsc, solc, 1);
+  //printf("x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", cb[2], cb[1], cb[0]);
   x1=solc[0];
+  m2 = Asq/4.0-B+x1;
+  //printf("solc=%.15G numsol=%d m2=%.15G\n", solc[0], nsc, m2);
   if (m2 > 0)
     {
       m = sqrt(m2);
@@ -1454,6 +1456,7 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       *numsol+=2;
     }
 }
+
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
