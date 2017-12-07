@@ -1458,18 +1458,16 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       //printf("A=%.15G\n",-0.25*A+0.5*m+0.5*gamma);
       *numsol=2;
     }
-  else     
+  else if (fabs(alpha+beta) < ROUNDOFFERR)
+    /* nel caso che alpha+beta è minore di zero ma di poco (entro gli errori di roundoff) 
+     * allora significa che abbiamo zeri degeneri e quindi faccio il calcolo con i numeri complessi
+     * e se la parte immaginaria è piccola allora considero la soluzione reale */
     {
-      /* nel caso che alpha+beta è minore di zero ma di poco (entro gli errori di roundoff) 
-       * allora significa che abbiamo zeri degeneri e quindi faccio il calcolo con i numeri complessi
-       * e se la parte immaginaria è piccola allora considero la soluzione reale */
-      if (fabs(alpha+beta) < ROUNDOFFERR)
-	{
-	  sol[0]=-0.25*A+0.5*m;
-	  sol[1]=-0.25*A+0.5*m;
-	  *numsol=2;
-	}
+      sol[0]=-0.25*A+0.5*m;
+      sol[1]=-0.25*A+0.5*m;
+      *numsol=2;
     }
+
   if (alpha-beta > 0)
     {    
       /* another pair or real solutions */
@@ -1478,14 +1476,11 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       sol[3]=-0.25*A-0.5*m-0.5*delta;
       *numsol+=2;
     }
-  else
+  else if (fabs(alpha - beta) < ROUNDOFFERR)
     {
-      if (fabs(alpha - beta) < ROUNDOFFERR)
-	{
-	  sol[0]=-0.25*A+0.5*m;
-	  sol[1]=-0.25*A+0.5*m;
-	  *numsol+=2;
-	}
+      sol[0]=-0.25*A+0.5*m;
+      sol[1]=-0.25*A+0.5*m;
+      *numsol+=2;
     }
 }
 
