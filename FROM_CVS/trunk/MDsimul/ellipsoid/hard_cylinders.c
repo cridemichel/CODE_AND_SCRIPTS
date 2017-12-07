@@ -256,7 +256,7 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
     }
 }
 #ifdef HC_ALGO_OPT
-#define MESH_PTS 8
+#define MESH_PTS 10000
 double meshptsGbl;
 struct brentOpt 
 {
@@ -356,19 +356,45 @@ struct maxminS {
 
 struct iniguessStruct { 
   int num;
-  double Pg[2][3];
+  int multmin;
+  double Pg[3][3];
   double thg[3];
+  double dist[3];
+  int which;
 } iniguess;
+int check_convergence_vec(double Told[3], double Tnew[3], double tol)
+{
+  double test=0.0;
+  int i;
+  for (i=0;i<3;i++) 
+    {
+      temp=(fabs(Tnew[i]-Told[i]))/FMAX(fabs(Tnew[i]),1.0); 
+      //temp=(fabs(x[i]-xold[i]))/fabs(x[i]); 
+      if (temp > test) 
+	test=temp; 
+    }
+  if (test < tol)
+    {
+      //printf("convergence reached! test=%.15G\n", test);
+      return 1;
+    }
+  else 
+    return 0;
+}
 
-double find_initial_linecircle(double diam, double Cip[3], double nip[3], struct iniguessStruct *ig)
+double rimdiskfunc(double th);
+double drimdiskfunc(double th);
+
+void find_initial_linecircle(double diam, double Cip[3], double nip[3], struct iniguessStruct *ig)
 {
   //static int firstcall=1;
   double m, q, xp[3], Ui[3], UiPj[3], dist, maxdist;
-  double normCipP, CipP[3], ab2, asq1, nipP[3], PgCip[3];
+  double normCipP, CipP[3], ab2, asq1, nipP[3], PgCip[3], sqrtdelta, PgOld[3];
+  double Pp[3];
   //static double *tharr;
   //static struct brentOpt *mesh;
   double sp, D2, lambda, aR, bR, delta, norm;
-  int k1, k2, nn, numsol=0;
+  int k1, k2, nn, numsol=0, iter;
   /* bracketing */
   maxdist = -1;
 
@@ -409,9 +435,14 @@ double find_initial_linecircle(double diam, double Cip[3], double nip[3], struct
     }
   else 
     {
-      m = nipGbl[2]/nipGbl[1];
-      q = CipP[2]-m*Cip[1];
+      m = nipP[2]/nipP[1];
+      q = CipP[2]-m*CipP[1];
+      
       delta = 4.0*(Sqr(m*q) - (Sqr(m)+1.0)*(Sqr(q)-Sqr(D2)));
+#if 1
+      printf("m=%.15G q=%.15G delta=%.15G\n", m, q, delta);
+      printf("Ci=%f %f %f ni=%f %f %f\n", Cip[0], Cip[1], Cip[2], nip[0], nip[1], nip[2]); 
+#endif
       if (delta==0)
 	{
 	  ig->num = 1;
@@ -420,53 +451,186 @@ double find_initial_linecircle(double diam, double Cip[3], double nip[3], struct
 	}
       else if (delta > 0.)
 	{
+	  printf("qui>>\n");
 	  ig->num = 2;
 	  ab2 = -2.0*m*q;
-	  asq1 = 2.0*(Sqr(m)+q);
-	  ig->Pg[0][1] = (ab2 + sqrt(delta))/asq1; 
+	  asq1 = 2.0*(Sqr(m)+1);
+	  sqrtdelta = sqrt(delta);
+	  ig->Pg[0][1] = (ab2 + sqrtdelta)/asq1; 
 	  ig->Pg[0][2] = m*ig->Pg[0][1]+q;
-	  ig->Pg[1][1] = (ab2 - sqrt(delta))/asq1;
+	  ig->Pg[1][1] = (ab2 - sqrtdelta)/asq1;
 	  ig->Pg[1][2] = m*ig->Pg[1][1]+q;
 	}
       else 
 	{
-	/* prende il pundo sulla circonferenza che minimizza la distanza 
+	  /* prende il punto sulla circonferenza che minimizza la distanza 
 	   con la retta proiettata sul piano del disco */
 	  ig->num = 1;
 	  sp = scalProd(CipP,nipP); 
 	  for (k1=0; k1 < 3; k1++)
 	    ig->Pg[0][k1] = CipP[k1] - sp*nipP[k1];
-	  norm = calc_norm(ig->Pg);
+	  norm = calc_norm(ig->Pg[0]);
 	  for (k1=0; k1 < 3; k1++)
 	   ig->Pg[0][k1] = D2*ig->Pg[0][k1]/norm; 
 	}
     }
   /* further refine the guessed points */
-  for (k2 = 1; k2 < ig->num; k2++)
-    { 
-      for (k1=0; k1 < 3; k1++)
-	{
-	  PgCip[k1] = ig->Pg[k2-1][k1] - Cip[k1];
-	}
-
-      sp = scalProd(PgCip,nipGbl);
-      for (k1=0; k1 < 3; k1++)
-	{
-	  PgCip[k1] -= sp*nip[k1]; 
-	}
-      for (k1=0; k1 < 3; k1++)
-	ig->Pg[k2-1][k1] = PgCip[k1];	
-      if (PgCip[0]>=D2)
-	ig->thg[k2-1] = 0.0;
-      else if (PgCip[0] <= -D2)
-	ig->thg[k2-1] = M_PI;
-      else if (PgCip[1] >= 0.0)
-  	ig->thg[k2-1] = acos(PgCip[0]);
-      else
-  	ig->thg[k2-1] = 2.0*M_PI-acos(PgCip[0]);
+#if 1
+  for (k2 = 0; k2 < ig->num; k2++)
+    {
+      printf("Prima sol # %d %.15G %15G %.15G\n", k2, ig->Pg[k2][0], ig->Pg[k2][1],ig->Pg[k2][2]);
+      printf("norm=%f\n", calc_norm(ig->Pg[k2]));
     }
-}
+#endif 
+ #if 1
+  for (k2 = 0; k2 < ig->num; k2++)
+    { 
+#if 0
+      for (k1=0; k1 < 3; k1++)
+	{
+	  //PgOld[k1] = ig->Pg[k2][k1];
+	  //PgCip[k1] = ig->Pg[k2][k1];
+	  PgCip[k1] = ig->Pg[k2][k1] - Cip[k1];
+	}
+      sp = scalProd(PgCip,nip);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  PgCip[k1] = Cip[k1] + sp*nip[k1]; 
+	}
+      PgCip[0] = 0.0;
+      norm = calc_norm(PgCip);
 
+      for (k1=0; k1 < 3; k1++)
+	ig->Pg[k2][k1] = D2*PgCip[k1]/norm;	
+      if (check_convergence_vec(PgOld, ig->Pg[k2]))
+	break;
+#endif
+      if (ig->Pg[k2][1]>=D2)
+	ig->thg[k2] = 0.0;
+      else if (ig->Pg[k2][1] <= -D2)
+	ig->thg[k2] = M_PI;
+      else if (ig->Pg[k2][2] >= 0.0)
+	ig->thg[k2] = acos(ig->Pg[k2][1]);
+      else
+	ig->thg[k2] = 2.0*M_PI-acos(ig->Pg[k2][1]);
+      //printf("thg[%d]=%.15G\n", k2, ig->thg[k2]);
+      //iter++;
+    }
+#endif
+  if (ig->num==2)
+    ig->multmin = 1;
+  else
+    ig->multmin = 0;
+  /* further refine the guessed points */
+  brentmsg.id = 0;
+  ig->dist[0]=rimdiskfunc(ig->thg[0]);
+  brentmsg.id = 0;
+  ig->dist[1]=rimdiskfunc(ig->thg[1]);
+  if (ig->num==1)
+    {
+      ig->which = 0;
+    }
+  else if (ig->dist[0] <= ig->dist[1])
+    {
+      //printf("1) qui?!? numsol=%d thg=%.15G\n", ig->num, ig->thg[0]);
+      ig->which = 0;
+    }
+  else
+    {
+      //printf("2) qui?!? numsol=%d thg=%.15G\n", ig->num, ig->thg[1]);
+      ig->which = 1;
+    }
+
+  /* infine considera l'intersezione della retta con il piano in cui giace il disco */
+  if (nip[0]!=0.0)
+    {
+      lambda = -Cip[0]/nip[0];
+      Pp[0]=  0.0;
+      Pp[1] = Cip[1]+lambda*nip[1];
+      Pp[2] = Cip[2]+lambda*nip[2];
+      norm = sqrt(Sqr(Pp[1]) + Sqr(Pp[2]));      
+      for (k1=0; k1 < 3; k1++)
+	Pp[k1] = D2*Pp[k1]/norm;
+#if MC_RIMDISK_NORMSQ
+      dist = Sqr(norm-D2);      
+#else
+      dist = norm-D2;      
+#endif
+      if (dist < ig->dist[ig->which])
+	{
+    	  for (k1=0; k1 < 3; k1++)
+	    ig->Pg[ig->num][k1] = Pp[k1];
+	  ig->which = 0;
+	  if (ig->Pg[ig->num][1]>=D2)
+	    ig->thg[ig->num] = 0.0;
+	  else if (ig->Pg[ig->num][1] <= -D2)
+	    ig->thg[ig->num] = M_PI;
+	  else if (ig->Pg[ig->num][2] >= 0.0)
+	    ig->thg[ig->num] = acos(ig->Pg[ig->num][1]);
+	  else
+	    ig->thg[ig->num] = 2.0*M_PI-acos(ig->Pg[ig->num][1]);
+	  ig->which = ig->num; 
+	  ig->num++;
+	  //brentmsg.id = 0;
+	  //printf("3) qui?!? dfx=%15G\n", drimdiskfunc(ig->thg[0]));
+	}
+    }
+  /* trova la distanza tra Pp e la circonferenza */
+#if 0
+  for (k2 = 0; k2 < ig->num; k2++)
+    {
+      printf("Dopo sol # %d %.15G %15G %.15G\n", k2, ig->Pg[k2][0], ig->Pg[k2][1],ig->Pg[k2][2]);
+    } 
+  printf("ig->num=%d\n", ig->num);
+#endif
+}
+double find_initial_guess_proj(double diam, double Cip[3], double nip[3], struct iniguessStruct *ig)
+{
+  int k1, k2, iter;
+  const int MAXNUMITER = 100;
+  double PgOld[3], D2, sp, PgCip[3], norm, Cold[3];
+
+  D2 = diam*0.5;
+  for (k1=0; k1 < 3; k1++)
+    {
+      ig->Pg[0][k1] = 0.0;
+      Cold[k1] = Cip[k1];
+    }
+  for (iter=0; iter < MAXNUMITER; iter++)
+    {
+      for (k1=0; k1 < 3; k1++)
+	PgOld[k1] = ig->Pg[0][k1];
+      for (k1=0; k1 < 3; k1++)
+	{
+	  //PgOld[k1] = ig->Pg[k2][k1];
+	  //PgCip[k1] = ig->Pg[k2][k1];
+	  PgCip[k1] = Cip[k1] - ig->Pg[0][k1];
+	}
+      sp = scalProd(PgCip,nip);
+      for (k1=0; k1 < 3; k1++)
+	{
+	  PgCip[k1] = Cip[k1] - sp*nip[k1]; 
+	}
+      PgCip[0] = 0.0;
+      norm = calc_norm(PgCip);
+
+      Cold[k1] = PgCip[k1];
+      
+      for (k1=0; k1 < 3; k1++)
+	ig->Pg[0][k1] = D2*PgCip[k1]/norm;	
+      if (check_convergence_vec(PgOld, ig->Pg[0], 1.0E-14))
+	break;
+    }
+  if (ig->Pg[0][1]>=D2)
+    ig->thg[0] = 0.0;
+  else if (ig->Pg[0][1] <= -D2)
+    ig->thg[0] = M_PI;
+  else if (ig->Pg[0][2] >= 0.0)
+    ig->thg[0] = acos(ig->Pg[0][1]);
+  else
+    ig->thg[0] = 2.0*M_PI-acos(ig->Pg[0][1]);
+  printf("iter=%d guessed=%.15G\n", iter, ig->thg[0]);
+}
 double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh, int *nnini, struct maxminS *maxmin)
 {
   //static int firstcall=1;
@@ -1057,11 +1221,11 @@ double ddrimdiskfunc(double th)
   //double UipPjp[3], Uip[3], fact, dUipPjp[3];
   double dfact, ddUipPjp[3];
   int k1, k2;
-  if (!(th==brentmsg.th) || brentmsg.id==0)
-    {
+  //if (!(th==brentmsg.th) || brentmsg.id==0)
+    //{
       calcdrimdisk(th);
       brentmsg.id = 3;
-    }
+   // }
 
   dfact = -nipGbl[1]*brentmsg.D2costh-nipGbl[2]*brentmsg.D2sinth;
   ddUipPjp[0] = nipGbl[0]*dfact;
@@ -1086,11 +1250,11 @@ double drimdiskfunc(double th)
   int k1, k2;
   D2 = 0.5*Dgbl;
 
-  if (!(th==brentmsg.th) || brentmsg.id==0)
-    {
+  //if (!(th==brentmsg.th) || brentmsg.id==0)
+    //{
       calcdrimdisk(th);
       brentmsg.id = 2;
-    }
+   // }
 #ifdef MC_RIMDISK_NORMSQ
   return signGbl*2.0*scalProd(brentmsg.dUipPjp,brentmsg.UipPjp);
 #else
@@ -1110,11 +1274,11 @@ double rimdiskfunc(double th)
   int k1;
   //double sinth, costh;
 
-  if (!(th == brentmsg.th) || brentmsg.id==0)
-    {
+  //if (!(th == brentmsg.th) || brentmsg.id==0)
+    //{
       calcrimdisk(th);
       brentmsg.id = 1;
-    }
+    //}
   for (k1=0; k1 < 3; k1++)
     minPgbl[k1] = brentmsg.minPgbl[k1];
 #ifdef MC_RIMDISK_NORMSQ
@@ -1164,6 +1328,85 @@ void versor_to_R_opt(double ox, double oy, double oz, double R[3][3])
 }
 double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk);
 extern double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin);
+void solve_quadratic(double coeff[3], int *numsol, double *sol)
+{
+  double delta;
+  delta = Sqr(coeff[1]) - 4.0*coeff[2]*coeff[0];
+	     
+}
+void solve_cubic(double coeff, int *numsol, double sol[3])
+{
+  const double sqrt3=sqrt(3.0);
+  /* solution from Zwillinger, D. "CRC Standard Mathematical Tables and Formulae", 32nd Edition */
+  double F, G, H, R, S, I, J, K, M, N, P, a, b, c, d, Gh, sqrtH, T, U;
+  if (coeff[3]==0)
+    {
+      printf("orca troia...coeff[3] è zero!\n");
+      exit(-1);
+    }
+  a = coeff[3];
+  b = coeff[2];
+  c = coeff[1];
+  d = coeff[0];
+  F=(3.0*c - Sqr(b))/3.0;
+  G=(2.0*Sqr(b)*b-9.0*b*c+27.0*d)/27.0;
+  H= Sqr(G)/4.0+Sqr(F)*F/27.0; 
+  if (H <= 0.0)
+    {
+      /* 3 real roots */
+      I = sqrt(Sqr(G)/4.0-H);
+      J = cbrt(I);
+      K = a*cos(-G/2.0/I);
+      M = cos(K/3.0);
+      N = sqrt3*sin(K/3.0);
+      P = -b/3.0;
+      sol[0] = P + 2.0*J*M;
+      sol[1] = P - J*(M+M);
+      sol[2] = P - J*(M-N); 
+      *numsol = 3;
+    }
+  else
+    {
+      Gh= G/2.0;
+      sqrtH=sqrt(H);
+      R = -Gh + sqrtH; /* notare che se H > 0 allora R > 0 */
+      if (R < 0.0)
+	{
+	  printf("orca troia...R < 0!\n");
+	  exit(-1);
+	}
+      S = cbrt(R);
+      T = -Gh - sqrtH;
+      U = -cbrt(-T);
+      numsol=1;
+      sol[0] = S + U - b/3.0;
+    }
+}
+void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
+{
+  /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
+  double a0, a1, a2, a3;
+  double R, D, E, Rsq, a3sq;
+  if (coeff[4]==0)
+    {
+      printf("[ERROR: solve_fourth_deg] coeff[4] must be different from 0!\n");
+      exit(-1);
+    }
+  a0 = coeff[0]/coeff[4];
+  a1 = coeff[1]/coeff[4];
+  a2 = coeff[2]/coeff[4];
+  a3 = coeff[3]/coeff[4];
+  a3sq = Sqr(a3);
+  
+  R = sqrt(0.25*a);
+  Rsq = Sqr(R);
+  D = ; 
+  E = ;
+  sol[0] = 0.25*a3+0.5*R+0.5*D;
+  sol[1] = 0.25*a3+0.5*R-0.5*D;
+  sol[2] = 0.25*a3-0.5*R+0.5*E;
+  sol[3] = 0.25*a3-0.5*R-0.5*E;
+}
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
@@ -1175,8 +1418,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   static struct brentOpt *mesh;
   int it, kk1, kk2, k2, k1, nz, nl, nn, nng;
   double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist, maxmind[2];
-  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
-  double dthg, distleft, distcenter, distright, mindistb, maxdist;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], nEy[3], nEz[3];
+  double dthg, distleft, distcenter, distright, mindistb, maxdist, semmaxE, semminE, sp1, sp2;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
@@ -1187,9 +1430,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
-  double normCiCj;	
+  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3];
-  int kk, j1, j2;
+  int kk, j1, j2, numsol;
   
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
@@ -1449,9 +1692,159 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      nipGbl[kk1] = nip[kk1];
 	    }
 	  Dgbl = D;
+	  /* se l'asse del rim è parallelo al piano del disco bisogna considerare un caso a parte */
+	  semminE=D*0.5;
+	  if (nip[0]==0.0)
+	    {
+	      /* devo considerare l'intersezione di due rette (che si ottengono intersecando 
+		 il rim con il piano del disco) con il disco */	 
+	    }
+	  else
+	    {
+	      /* determina l'ellisse che si ottiene intersecando il rim con il piano del disco */ 
+	      lambda =  -Cip[0]/nip[0];
+	      /* centro dell'ellisse */
+	      rE[0] = 0.0;
+	      rE[1] = Cip[1]+lambda*nip[1];
+	      rE[2] = Cip[2]+lambda*nip[2];
+	      /* versore semiasse minore */
+	      if (np[1]==0.0)
+		{
+		  nEy[0]=0.0;
+		  nEy[1]=1.0;
+		  nEy[2]=0.0;
+		  nEz[0]=0.0;
+		  nEz[1]=0.0;
+		  nEz[2]=1.0;
+		}
+	      else
+		{
+		  nEy[0]=0.0;
+		  nEy[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
+		  nEy[1]=nEy[2]*nip[2]/nip[1];
+		  assex[0]=1.0;
+		  assex[1]=assex[2]=0.0;
+		  vectProdVec(assex,nEy,nEz);
+		}
+	    }
+	  semmaxE=D*0.5/fabs(scalProd(nEy,nip));
+	  /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
+	  rC[0] = 0.0;
+	  rC[1] = -rE[1];
+	  rC[2] = -rE[2];
+	  sp1 = scalProd(rC,nEy);
+	  sp2 = scalProd(rC,nEz);
+	  rC[1] = sp1;
+	  rC[2] = sp2;
+	  /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
+	  /* prima calcolo i coefficienti del polinomio */
+
+	  /* coeff è un array di 5 elemento ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
+	   * solarr un array con le numsol soluzioni 
+	   * */
+	   if (seminE==semaxE)
+	    {
+	      /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
+	      double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
+	      a=semminE;
+	      a2=Sqr(a);
+	      a4=Sqr(a2);
+	      R2=Sqr(D2);
+	      xC=rC[1];
+	      yC=rC[2];
+	      xC2=Sqr(xC);
+	      yC2=Sqr(yC);
+	      if (xC!=0)
+		{
+		  coeff[2] = 1.0 + yC2/xC2;
+		  coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
+		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) + 
+		    R2*R2/(4.0*xC2) + xC2/4.0 + yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) 
+		    + yC*yC2/(4.0*xC2);
+		  /* 0 vuol dire che sto risolvendo in 1 in y */
+		  solve_quadratic(coeff, &numsol, solcc, 1);
+		}
+	      else if (yC!=0)
+		{
+		  coeff[2] = 1.0 + xC2/yC2;
+		  coeff[1] = -xC - (a2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
+		  coeff[0] = -(a2/2.0) - R2/2.0 + xC2/2.0 + a4/(4.0*yC2) - 
+		    (a2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
+		    (a2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0;
+		  /* 0 vuol dire che sto risolvendo in 1 in y */
+		  solve_quadratic(coeff, &numsol, solcc, 0);
+		}
+	      else
+		{
+		  /* se semminE==D2 allora ho infinite soluzione */
+
+		}
+	    }
+	  else
+	    {
+	      double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD;
+	      a=semminE;
+	      b=semmaxE;
+	      a2=Sqr(a);
+	      b2=Sqr(b);
+	      a4=Sqr(a2);
+	      b4=Sqr(b2);
+	      R2=Sqr(D2);
+	      xC=rC[1];
+	      yC=rC[2];
+	      xC2=Sqr(xC);
+	      yC2=Sqr(yC);
+	      /* notare che coeff[4]=0 solo se a=b che però è un caso a parte! */
+	      if (xC!=0)
+		{
+		  coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
+		  coeff[3] = -(yC/xC2) + (a2*yC)/(b2*xC2);
+		  coeff[2] = 1.0/2.0 + a2/(2.0*b2) + a2/(2.0*xC2) - a4/(2.0*b2*xC2) - R2/(2.0*xC2) + 
+		    (a2*R2)/(2.0*b^2*xC2) + (3.0*yC2)/(2.0*xC2) - (a2*yC2)/(2.0*b2*xC2);
+		  coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
+		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) +
+		    R2*R2/(4.0*xC2) + xC2/4.0+ yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) + 
+		    yC2*yC2/(4.0*xC2) ;  
+		  /* 0 vuol dire che sto risolvendo in 1 in y */
+		  solve_fourth_deg(coeff, &numsol, solec, 1);
+		}
+	      else if (yC!=0)
+		{
+		  coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
+		  coeff[3] = -(xC/yC2) + (b2*xC)/(a2*yC2);
+		  coeff[2] = 1.0/2.0 + b2/(2.0*a2) + b2/(2.0*yC2) - b4/(2.0*a2*yC2) - R2/(2.0*yC2) + 
+		    (b2*R2)/(2.0*a2*yC2) + (3.0*xC2)/(2.0*yC2) - (b2*xC2)/(2.0*a2*yC2);
+		  coeff[1] = -xC - (b2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
+		  coeff[0] = -(b2/2.0) - R2/2.0 + xC2/2.0 + b4/(4.0*yC2) - (b2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
+		    (b2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0; 
+		  solve_fourth_deg(coeff, &numsol, solec, 0);
+		}
+	      else
+		{
+		  if (a <= D2 && b >= D2)
+		    {
+		      sqA = R2-a2;
+		      sqB = 1.0-a2/b2;
+		      sqC = a2*(b2-R2);
+		      sqD = b2 - a2;
+		      solec[0][0] = solec[1][0] = -sqrt(sC/sqD);
+	    	      solec[0][1] = -(sqrt(sqA/sqB));
+    		      solec[1][1] = -solec[0][1];
+		      solec[2][0] = solec[3][0] = -solec[0][0];
+		      solec[2][1] = solec[0][1];
+		      solec[3][1] = solec[1][1];
+		      numsol = 4;
+		    }
+		  else
+		    {
+		      numsol = 0;
+		    }
+		}
+	      /* in questo caso ho due circonferenze e quindi al più due soluzioni ossia ho un'equazione quadratica */
+	    }
 	  //printf("mindist=%f mindst from rimdisk=%.15G\n", mindist, rimdiskfunc(thg));
 	  //if (fabs(rimdiskfunc(thg)-mindist) > 1E-7)
-	    //exit(-1);
+	  //exit(-1);
 #if 0
 	  if (firstcall)
 	    {
@@ -1474,11 +1867,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	    }
 #endif
-  	  brentmsg.id = 0;
 #if 0
+  	  brentmsg.id = 0;
 	  maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh, &nng, &maxmin);
-#else
+	  //maxdist=find_initial_guess_bracket(&thg, MESH_PTS, mesh, &nng, &maxmin);
 	  find_initial_linecircle(Dgbl, CipGbl, nipGbl, &iniguess);
+	  //find_initial_guess_proj(Dgbl, CipGbl, nipGbl, &iniguess);
 #endif
        	  //printf("ax=%f bx(mindist)=%f cx=%f\n", rimdiskfunc(thg-2.0*M_PI/MESH_PTS), rimdiskfunc(thg), rimdiskfunc(thg+2.0*M_PI/MESH_PTS));
 #if 0
@@ -1499,26 +1893,121 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      if (nnL < MESH_PTS)
 	      if mesh[nn]   
 	    }
-#endif	 
+#endif	
+#if 0 
 	  /* at most one has two minima and two maxima... */
 	  signGbl= 1.0;
 	  /* left */
 	  //steepest1D(th-2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-3, &thg);
-	  thg = iniguess.thg[0];
+	  thg = iniguess.thg[iniguess.which];
+	  for (k1=0; k1 < iniguess.num; k1++)
+	    printf("iniguess[%d]:%.15G\n", k1, iniguess.thg[k1]);
+	  printf("best guess[%d]=%.15G\n", iniguess.which, iniguess.thg[iniguess.which]);
+	  printf("multmin=%d which=%d\n", iniguess.multmin, iniguess.which);
   	  brentmsg.id = 0;
-	  mindistL = newton1D(thg-2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-14, &th);
+	  if (iniguess.multmin == 0)
+	    {
+	      dthg = fabs(iniguess.thg[0]-iniguess.thg[1]);
+	      mindistL = dbrent(thg-dthg, thg, thg+dthg, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
+	    }
+	  else if (iniguess.multmin==1 && iniguess.which==2)
+	    {
+	      dthg = fabs(iniguess.thg[0]-iniguess.thg[2]);
+	      mindistL = dbrent(thg-dthg, thg, thg+dthg, rimdiskfunc, drimdiskfunc, 1.0E-14, &th);
+	    }
+	  else
+	    {
+	      dthg = fabs(iniguess.thg[0]-iniguess.thg[1])*0.5;
+	      thg = iniguess.thg[0];
+	      brentmsg.id = 0;
+	      mindistL = dbrent(thg-dthg, thg, thg+dthg, rimdiskfunc, drimdiskfunc, 1.0E-14, &thL);
+	      thg = iniguess.thg[1];
+	      brentmsg.id = 0;
+	      mindistR = dbrent(thg-dthg, thg, thg+dthg, rimdiskfunc, drimdiskfunc, 1.0E-14, &thR);
+	      if (fabs(mindistR - mindistL) > 1E-7)
+		{
+		  printf("mindistL=%.15G th=%.15G mindistR=%.15G th=%.15G\n", mindistL, thL, mindistR, thR);
+		  mindistL = -1;
+		}
+	      //mindistL = newton1D(thg, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-14, &th);
+	    }
+#if 1
+	  if (mindistL < 0)
+	    {
+	      FILE *f;
+	      printf(">>>>>>>>>>>>>>>><<<<<<<<<<<<<<\n");
+	      f=fopen("dtheta.dat", "w+");
+	      th = 0;
+	      for (k1 = 0; k1 < MESH_PTS; k1++)
+		{
+		  for (k2=0; k2 < 3; k2++)
+		    brentmsg.PjCi[k2] = mesh[k1].Pjp[k2] - CipGbl[k2]; 
+		  brentmsg.lambda = scalProd(brentmsg.PjCi,nipGbl);
+		  for (k2=0; k2 < 3; k2++)
+		    {
+		      brentmsg.Uip[k2] = CipGbl[k2] + brentmsg.lambda*nipGbl[k2];
+		      brentmsg.UipPjp[k2] = brentmsg.Uip[k2] - mesh[k1].Pjp[k2];
+		      //PjPi[k1] = Pjp[k1] - (CipGbl[k1] + lambda*nipGbl[k1]);
+		    }
+		  dist = calc_norm(brentmsg.UipPjp);
+		  fprintf(f, "%.15G %.15G\n", th, Sqr(dist));
+		  //printf("bracket 2 (%f,%d)=%.15G\n", th, k1, dist);
+		  if (k1==0 || dist < mindist)
+		    {
+		      mindist = dist;
+		      thg = th;
+		    }
+		  th+=dth;
+		}
+	      fclose(f); 
+	      exit(-1);
+	    }
+#endif 
 	  //printf("maxdist=%f th=%f mindistL=%f\n", maxdist, thg, mindistL);
 	  for (k1=0; k1 < 3; k1++)
 	    {
-	      PminCipL[k1] = minPgbl[k1] - Cip[k1];
+	      PminCip[k1] = minPgbl[k1] - Cip[k1];
 	    }
+#if 0
 	  /* right */
 	  //steepest1D(th+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-3, &thg);
 	  if (iniguess.num == 2)
 	    {
 	      brentmsg.id = 0;
-	      mindistR = newton1D(th+2.0*M_PI/MESH_PTS, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-14, &th);
-
+	      thg = iniguess.thg[1];
+	      mindistR = newton1D(thg, rimdiskfunc, drimdiskfunc, ddrimdiskfunc, 1E-10, &th);
+#if 1
+	      if (mindistR < 0)
+		{
+		  FILE *f;
+		  printf("RRRRRRRR>>>>>>>>>>>>>>>><<<<<<<<<<<<<<\n");
+		  f=fopen("dtheta.dat", "w+");
+		  th = 0;
+		  for (k1 = 0; k1 < MESH_PTS; k1++)
+		    {
+		      for (k2=0; k2 < 3; k2++)
+			brentmsg.PjCi[k2] = mesh[k1].Pjp[k2] - CipGbl[k2]; 
+		      brentmsg.lambda = scalProd(brentmsg.PjCi,nipGbl);
+		      for (k2=0; k2 < 3; k2++)
+			{
+			  brentmsg.Uip[k2] = CipGbl[k2] + brentmsg.lambda*nipGbl[k2];
+			  brentmsg.UipPjp[k2] = brentmsg.Uip[k2] - mesh[k1].Pjp[k2];
+			  //PjPi[k1] = Pjp[k1] - (CipGbl[k1] + lambda*nipGbl[k1]);
+			}
+		      dist = calc_norm(brentmsg.UipPjp);
+		      fprintf(f, "%.15G %.15G\n", th, Sqr(dist));
+		      //printf("bracket 2 (%f,%d)=%.15G\n", th, k1, dist);
+		      if (k1==0 || dist < mindist)
+			{
+			  mindist = dist;
+			  thg = th;
+			}
+		      th+=dth;
+		    }
+		  fclose(f); 
+		  exit(-1);
+		}
+#endif
 	      for (k1=0; k1 < 3; k1++)
 		{
 		  PminCipR[k1] = minPgbl[k1] - Cip[k1];
@@ -1545,7 +2034,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  PminCip[k1] = PminCipL[k1];
 		}
 	    }
-
+#endif
 	  //printf("mindist=%f dist=%.15G step=%d\n", mindist, dist, Oparams.curStep);
 #if 0
 	  brentmsg.id = 0;
@@ -1608,6 +2097,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    {
 	      return -1;
 	    }
+#endif
 	  //printf("dist=%f th=%.15G (min=%f max=%f)\n", dist, th, thg-M_PI/MESH_PTS, thg+M_PI/MESH_PTS);
 	  //if (dist < D2)
 	  //return -1;
@@ -2827,6 +3317,5 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
   return 1;
 }
 #endif
-
 #endif
 #endif

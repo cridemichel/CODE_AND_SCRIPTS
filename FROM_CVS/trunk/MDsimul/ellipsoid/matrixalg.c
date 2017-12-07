@@ -481,28 +481,33 @@ double steepest1D(double ax, double (*f)(double), double (*df)(double), double (
 }
 double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin)
 {
-  const double ZEPSDBR = 1E-20;
+  const double ZEPSDBR = 1E-10;
+  const double GOLD=0.3819660;
   const int ITMAXDBR=1000;
-  double x, dfx, dx;
+  double xold, x, fx, fxold, dfx, ddfx, dx, dxold, dfxold;
   int iter; 
   x=ax;
   //printf("maxdf=%f\n", maxdf);
   for (iter=0; iter < ITMAXDBR; iter++)
     {
-      dfx= df(x);
-      dx = dfx/ddf(x);
-      //printf("f=%.15G df=%.15G ddf=%.15G\n", f(x), df(x), ddf(x));
-      x = x-dx; 
-      if (dx <= tol) 
+      dfx = df(x);
+      ddfx = ddf(x);
+      //printf("dfx=%.15G\n", dfx);
+      dx = dfx/ddfx;
+      x -= dx;
+      //printf("iter=%d x=%.15G fx=%.15G fxold=%.15G dfx=%.15G ddfx=%.15G\n", iter, x, fx, fxold, dfx, ddfx);      
+      if (fabs(dx) <= tol) 
 	{ 
 	  //printf("number of iterations=%d\n", iter);
 	  *xmin=x; 
-	  //printf("iterations=%d\n", iter);
+	  printf("iterations=%d ax=%.15G x=%.15G dx=%.15G\n", iter, ax, x, dx);
 	  return f(x); 
-	} 
+	}
+       
     }
   /* if here NR did not converge ...*/
   printf("[NR] I did not converge, sorry...\n");
+  return -1;
   exit(-1);
 }
 #endif
