@@ -1530,9 +1530,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
-  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solcub[2];	
+  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solquad[2];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3], dsc[3];
   double rC[3], rE[3];
+  double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD;
   int kk, j1, j2, numsol;
   
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
@@ -1793,6 +1794,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      nipGbl[kk1] = nip[kk1];
 	    }
 	  Dgbl = D;
+	  D2=D*0.5;
 	  /* se l'asse del rim è parallelo al piano del disco bisogna considerare un caso a parte */
 	  semminE=D*0.5;
 	  if (nip[0]==0.0)
@@ -1804,7 +1806,6 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    {
 	      /* determina l'ellisse che si ottiene intersecando il rim con il piano del disco */ 
 	      lambda =  -Cip[0]/nip[0];
-	      printf("lambda=%f\n", lambda);
 	      /* centro dell'ellisse */
 	      rE[0] = 0.0;
 	      rE[1] = Cip[1]+lambda*nip[1];
@@ -1847,7 +1848,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	   if (semminE==semmaxE)
 	    {
 	      /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
-	      double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
+	      //double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
 	      a=semminE;
 	      a2=Sqr(a);
 	      a4=Sqr(a2);
@@ -1864,12 +1865,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    R2*R2/(4.0*xC2) + xC2/4.0 + yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) 
 		    + yC*yC2/(4.0*xC2);
 		  /* sto risolvendo in y */
-		  solve_quadratic(coeff, &numsol, solcub);
+		  solve_quadratic(coeff, &numsol, solquad);
 		  /* assegno solcc e calcolo x */
 		  for (kk1=0; kk1 < numsol; kk1++)
 		    {
-		      solcc[kk1][0] = (a2 - R2 + xC2 - 2.0*solcub[kk1]*yC + yC2)/(2.0*xC);
-		      solcc[kk1][1] = solcub[kk1];
+		      solcc[kk1][0] = (a2 - R2 + xC2 - 2.0*solquad[kk1]*yC + yC2)/(2.0*xC);
+		      solcc[kk1][1] = solquad[kk1];
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
@@ -1883,12 +1884,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    (a2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
 		    (a2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0;
 		  /* sto risolvendo in x */
-		  solve_quadratic(coeff, &numsol, solcub);
+		  solve_quadratic(coeff, &numsol, solquad);
 		  /* assegno solcc e calcolo y */
 		   for (kk1=0; kk1 < numsol; kk1++)
 		    {
-		      solcc[kk1][0] = solcub[kk1];
-		      solcc[kk1][1] = (a2 - R2 - 2.0*solcub[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
+		      solcc[kk1][0] = solquad[kk1];
+		      solcc[kk1][1] = (a2 - R2 - 2.0*solquad[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
 		    }
 		   /* torno al sistema di coordinate del disco */
 		   for (kk1=0; kk1 < numsol; kk1++)
@@ -1902,7 +1903,6 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    }
 	  else
 	    {
-	      double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD;
 	      a=semminE;
 	      b=semmaxE;
 	      a2=Sqr(a);
@@ -1918,6 +1918,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      if (xC!=0)
 		{
 		  coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
+#if 0
+		  if (coeff[4]==0)
+		    {
+		      printf("xCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
+		    }
+#endif
 		  coeff[3] = -(yC/xC2) + (a2*yC)/(b2*xC2);
 		  coeff[2] = 1.0/2.0 + a2/(2.0*b2) + a2/(2.0*xC2) - a4/(2.0*b2*xC2) - R2/(2.0*xC2) + 
 		    (a2*R2)/(2.0*b2*xC2) + (3.0*yC2)/(2.0*xC2) - (a2*yC2)/(2.0*b2*xC2);
@@ -1941,6 +1947,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      else if (yC!=0)
 		{
 		  coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
+#if 0
+		  if (coeff[4]==0)
+		    {
+		      printf("yCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
+		    }
+#endif
 		  coeff[3] = -(xC/yC2) + (b2*xC)/(a2*yC2);
 		  coeff[2] = 1.0/2.0 + b2/(2.0*a2) + b2/(2.0*yC2) - b4/(2.0*a2*yC2) - R2/(2.0*yC2) + 
 		    (b2*R2)/(2.0*a2*yC2) + (3.0*xC2)/(2.0*yC2) - (b2*xC2)/(2.0*a2*yC2);
@@ -1987,8 +1999,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      /* in questo caso ho due circonferenze e quindi al più due soluzioni ossia ho un'equazione quadratica */
 	    }
 	  /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
-
-	  for (kk1=0; kk1 < numsol; kk1)
+	  for (kk1=0; kk1 < numsol; kk1++)
 	    {
 	      for (kk2=0; kk2 < 3; kk2++)
 		dsc[kk2] = solarr[kk1][kk2] - Cip[kk2]; 
