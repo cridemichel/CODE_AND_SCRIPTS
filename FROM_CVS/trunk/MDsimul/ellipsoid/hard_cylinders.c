@@ -1424,7 +1424,12 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       beta = 4.0*np-A*mp;
       rho = sqrt(Sqr(alpha)+Sqr(beta));
       gamma = sqrt((alpha + rho)/2.0); /* notare che alpha + rho è sempre positivo */
-      delta  = beta/gamma/2.0;
+      if (gamma == 0.0)
+	{
+	  delta = sqrt(-alpha); 
+	}
+      else
+	delta  = beta/gamma/2.0;
       if (mp + delta == 0.0) /* in questo caso la parte immaginaria è zero e ho due soluzioni reali coincidenti */
 	{
 	  *numsol = 1;
