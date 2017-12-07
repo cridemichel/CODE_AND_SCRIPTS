@@ -1499,7 +1499,14 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       *numsol+=2;
     }
 }
-
+void ellips2disk(double *solE, double *solD, double *ny, double *nz)
+{
+  int k;
+  for (k=0; k < 3; k++)
+    {
+      solD[k] = solE[0]*ny[k] + solE[1]*nz[k];
+    }
+}
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
@@ -1524,7 +1531,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
   double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solcub[2];	
-  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3];
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3], dsc[3];
   int kk, j1, j2, numsol;
   
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
@@ -1864,7 +1871,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solcc[kk1],solarr[kk1]);
+		    ellips2disk(solcc[kk1],solarr[kk1], nEy, nEz);
 		}
 	      else if (yC!=0)
 		{
@@ -1883,7 +1890,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		   /* torno al sistema di coordinate del disco */
 		   for (kk1=0; kk1 < numsol; kk1++)
-		     ellips2disk(solcc[kk1],solarr[kk1]);
+		     ellips2disk(solcc[kk1],solarr[kk1], nEy, nEz);
 		}
 	      else
 		{
@@ -1927,7 +1934,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solec[kk1],solarr[kk1]);
+		    ellips2disk(solec[kk1],solarr[kk1], nEy, nEz);
 		}
 	      else if (yC!=0)
 		{
@@ -1949,7 +1956,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solec[kk1],solarr[kk1]);
+		    ellips2disk(solec[kk1],solarr[kk1], nEy, nEz);
 		}
 	      else
 		{
@@ -1968,7 +1975,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      numsol = 4;
 		      /* torno al sistema di coordinate del disco */
     		      for (kk1=0; kk1 < numsol; kk1++)
-			ellips2disk(solec[kk1],solarr[kk1]);
+			ellips2disk(solec[kk1],solarr[kk1], nEy, nEz);
 		    }
 		  else
 		    {
@@ -1981,7 +1988,15 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 
 	  for (kk1=0; kk1 < numsol; kk1)
 	    {
-
+	      for (kk2=0; kk1 < 3; kk1++)
+		dsc[kk2] = solarr[kk2] - Cip[kk2]; 
+	      sp = scalProd(solarr[kk1], nip);
+	      for (kk2=0; kk2 < 3; kk2++)
+		dsc[kk2] = dsc[kk2]-sp*nip[kk2];
+	      if (calc_norm(dsc[kk2]) < L*0.5)
+		{
+		  return -1;
+		}
 	    }
 	  /* =========================================================================== */
 	  //printf("mindist=%f mindst from rimdisk=%.15G\n", mindist, rimdiskfunc(thg));
