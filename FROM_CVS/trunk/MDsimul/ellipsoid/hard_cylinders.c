@@ -1804,6 +1804,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    {
 	      /* determina l'ellisse che si ottiene intersecando il rim con il piano del disco */ 
 	      lambda =  -Cip[0]/nip[0];
+	      printf("lambda=%f\n", lambda);
 	      /* centro dell'ellisse */
 	      rE[0] = 0.0;
 	      rE[1] = Cip[1]+lambda*nip[1];
