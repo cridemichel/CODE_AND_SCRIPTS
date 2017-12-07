@@ -1383,6 +1383,7 @@ void solve_cubic(double *coeff, int *numsol, double sol[3], int justone)
 void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 {
   /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
+  const double ROUNDOFFERR = 1E-12;
   double x1, A, B, C, D, solc[3], cb[4], m, n;
   double Asq, alpha, beta, gamma, delta, rho, mp, np, m2;
   int nsc;
@@ -1406,8 +1407,10 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
   x1=solc[0];
   m2 = Asq/4.0-B+x1;
   //printf("solc=%.15G numsol=%d m2=%.15G\n", solc[0], nsc, m2);
+  
   if (m2 > 0)
     {
+      printf("qui\n");
       m = sqrt(m2);
       n = (A*x1 - 2.0*C)/(4.0*m);
     }
@@ -1430,12 +1433,12 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 	}
       else
 	delta  = beta/gamma/2.0;
-      if (mp + delta == 0.0) /* in questo caso la parte immaginaria è zero e ho due soluzioni reali coincidenti */
+      if (fabs(mp + delta) < ROUNDOFFERR) /* in questo caso la parte immaginaria è zero e ho due soluzioni reali coincidenti */
 	{
 	  *numsol = 1;
 	  sol[0] = (-A/2.0 + gamma)/2.0;
 	}
-      if (mp - delta == 0.0)
+      if (fabs(mp - delta) < ROUNDOFFERR)
 	{
 	  *numsol += 1;
 	  sol[1] = (-A/2.0 - gamma)/2.0;
@@ -1444,21 +1447,45 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
     }
   alpha=0.5*Asq-x1-B;
   beta=4*n-A*m;
-  if (alpha+beta >= 0)
+  //printf("alpha+beta=%.15G alpha-beta=%.15G gamma=%.15G\n", alpha+beta, alpha-beta,sqrt(alpha+beta));
+  //printf("A=%.15G m=%.15G\n", A, m);
+  if (alpha+beta > 0)
     {
       /* pair of real solutions */
       gamma = sqrt(alpha+beta);
       sol[0]=-0.25*A+0.5*m+0.5*gamma;
       sol[1]=-0.25*A+0.5*m-0.5*gamma;
+      //printf("A=%.15G\n",-0.25*A+0.5*m+0.5*gamma);
       *numsol=2;
     }
-  if (alpha-beta >= 0)
+  else     
+    {
+      /* nel caso che alpha+beta è minore di zero ma di poco (entro gli errori di roundoff) 
+       * allora significa che abbiamo zeri degeneri e quindi faccio il calcolo con i numeri complessi
+       * e se la parte immaginaria è piccola allora considero la soluzione reale */
+      if (fabs(alpha+beta) < ROUNDOFFERR)
+	{
+	  sol[0]=-0.25*A+0.5*m;
+	  sol[1]=-0.25*A+0.5*m;
+	  *numsol=2;
+	}
+    }
+  if (alpha-beta > 0)
     {    
       /* another pair or real solutions */
       delta = sqrt(alpha-beta);
       sol[2]=-0.25*A-0.5*m+0.5*delta;
       sol[3]=-0.25*A-0.5*m-0.5*delta;
       *numsol+=2;
+    }
+  else
+    {
+      if (fabs(alpha - beta) < ROUNDOFFERR)
+	{
+	  sol[0]=-0.25*A+0.5*m;
+	  sol[1]=-0.25*A+0.5*m;
+	  *numsol+=2;
+	}
     }
 }
 
