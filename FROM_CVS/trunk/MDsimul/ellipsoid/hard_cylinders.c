@@ -1440,8 +1440,8 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 	}
       if (fabs(mp - delta) < ROUNDOFFERR)
 	{
+	  sol[*numsol] = (-A/2.0 - gamma)/2.0;
 	  *numsol += 1;
-	  sol[1] = (-A/2.0 - gamma)/2.0;
 	}
       return;
     }
@@ -1472,14 +1472,14 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
     {    
       /* another pair or real solutions */
       delta = sqrt(alpha-beta);
-      sol[2]=-0.25*A-0.5*m+0.5*delta;
-      sol[3]=-0.25*A-0.5*m-0.5*delta;
+      sol[*numsol]=-0.25*A-0.5*m+0.5*delta;
+      sol[*numsol+1]=-0.25*A-0.5*m-0.5*delta;
       *numsol+=2;
     }
   else if (fabs(alpha - beta) < ROUNDOFFERR)
     {
-      sol[0]=-0.25*A+0.5*m;
-      sol[1]=-0.25*A+0.5*m;
+      sol[*numsol]=-0.25*A+0.5*m;
+      sol[*numsol+1]=-0.25*A+0.5*m;
       *numsol+=2;
     }
 }
