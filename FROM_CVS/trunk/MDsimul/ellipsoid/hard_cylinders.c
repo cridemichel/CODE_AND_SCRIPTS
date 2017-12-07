@@ -1331,9 +1331,25 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk);
 extern double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin);
 void solve_quadratic(double coeff[3], int *numsol, double *sol)
 {
-  double delta;
+  double delta, a2inv, sqrtd;
   delta = Sqr(coeff[1]) - 4.0*coeff[2]*coeff[0];
-	     
+  if (delta > 0.0)
+    {
+      sqrtd = sqrt(delta);
+      a2inv = 1.0/(2.0*coeff[2]);
+      sol[0] = (-coeff[1]+sqrtd)*a2inv;
+      sol[1] = (-coeff[1]-sqrtd)*a2inv; 
+      *numsol = 2;
+    } 
+  else if (delta == 0)
+    {
+      sol[0] = -coeff[1]/(2.0*coeff[2]);
+      *numsol = 1;
+    }
+  else
+    {
+      *numsol = 0;
+    }
 }
 void solve_cubic(double *coeff, int *numsol, double sol[3], int justone)
 {
@@ -1414,7 +1430,7 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       m = sqrt(m2);
       n = (A*x1 - 2.0*C)/(4.0*m);
     }
-  else if (m==0.0)
+  else if (m2==0.0)
     {
       m = 0.0;
       n = sqrt(Sqr(x1)/4.0 - D);
@@ -1507,7 +1523,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
-  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2];	
+  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solcub[2];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3];
   int kk, j1, j2, numsol;
   
@@ -1816,7 +1832,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
 	  /* prima calcolo i coefficienti del polinomio */
 
-	  /* coeff è un array di 5 elemento ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
+	  /* coeff è un array di 5 elementi ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
 	   * solarr un array con le numsol soluzioni 
 	   * */
 	   if (seminE==semaxE)
@@ -1838,8 +1854,15 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) + 
 		    R2*R2/(4.0*xC2) + xC2/4.0 + yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) 
 		    + yC*yC2/(4.0*xC2);
-		  /* 0 vuol dire che sto risolvendo in 1 in y */
-		  solve_quadratic(coeff, &numsol, solcc, 1);
+		  /* sto risolvendo in y */
+		  solve_quadratic(coeff, &numsol, solcub);
+		  /* assegno solcc e calcolo x */
+		  for (kk1=0; kk1 < numsol; kk1++)
+		    {
+		      solec[kk1][0] = (a2 - R2 + xC2 - 2.0*solcub[kk1]*yC + yC2)/(2.0*xC);
+		      solec[kk1][1] = solcub[kk1];
+		    }
+		  /* torno al sistema di coordinate del disco */
 		}
 	      else if (yC!=0)
 		{
@@ -1848,12 +1871,19 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  coeff[0] = -(a2/2.0) - R2/2.0 + xC2/2.0 + a4/(4.0*yC2) - 
 		    (a2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
 		    (a2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0;
-		  /* 0 vuol dire che sto risolvendo in 1 in y */
-		  solve_quadratic(coeff, &numsol, solcc, 0);
+		  /* sto risolvendo in x */
+		  solve_quadratic(coeff, &numsol, solcub);
+		  /* assegno solcc e calcolo y */
+		   for (kk1=0; kk1 < numsol; kk1++)
+		    {
+		      solec[kk1][0] = solcub[kk1];
+		      solec[kk1][1] = (a2 - R2 - 2.0*solcub[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
+		    }
+		   /* torno al sistema di coordinate del disco */
 		}
 	      else
 		{
-		  /* se semminE==D2 allora ho infinite soluzione */
+		  /* se semminE==D2 allora ho infinite soluzioni */
 
 		}
 	    }
@@ -1882,8 +1912,16 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) +
 		    R2*R2/(4.0*xC2) + xC2/4.0+ yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) + 
 		    yC2*yC2/(4.0*xC2) ;  
-		  /* 0 vuol dire che sto risolvendo in 1 in y */
-		  solve_fourth_deg(coeff, &numsol, solec, 1);
+		  /* qui risolvo in y */
+		  solve_fourth_deg(coeff, &numsol, solqua);
+		  /* ora assegno a solec[][] e calcolo x */
+		  for (kk1=0; kk1 < numsol; kk1++)
+		    {
+		      solec[kk1][0] = (a2*b2 - b2*R2 + b2*xC2 + (-a2 + b2)*Sqr(solqua[0]) - 
+				       2.0*b2*solqua[0]*yC + b2*yC2)/(2.0*b2*xC) ;
+		      solec[kk1][1] = solqua[kk1];
+		    }
+		  /* torno al sistema di coordinate del disco */
 		}
 	      else if (yC!=0)
 		{
@@ -1894,7 +1932,16 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  coeff[1] = -xC - (b2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
 		  coeff[0] = -(b2/2.0) - R2/2.0 + xC2/2.0 + b4/(4.0*yC2) - (b2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
 		    (b2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0; 
-		  solve_fourth_deg(coeff, &numsol, solec, 0);
+		  /* qui risolvo in x */
+		  solve_fourth_deg(coeff, &numsol, solqua);
+		  /* ora assegno solec[][] e calcolo y */
+		  for (kk1=0; kk1 < numsol; kk1++)
+		    {
+		      solec[kk1][0] = solqua[kk1];
+		      solec[kk1][1] = (a2*b2 - a2*R2 + (a2 - b2)*Sqr(solqua[kk1]) -
+				       2.0*a2*solqua[kk1]*xC + a2*xC2 + a2*yC2)/(2.0*a2*yC);
+		    }
+		  /* torno al sistema di coordinate del disco */
 		}
 	      else
 		{
