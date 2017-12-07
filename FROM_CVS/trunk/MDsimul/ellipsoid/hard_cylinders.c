@@ -1966,6 +1966,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      solec[2][1] = solec[0][1];
 		      solec[3][1] = solec[1][1];
 		      numsol = 4;
+		      /* torno al sistema di coordinate del disco */
+    		      for (kk1=0; kk1 < numsol; kk1++)
+			ellips2disk(solec[kk1],solarr[kk1]);
 		    }
 		  else
 		    {
@@ -1976,7 +1979,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    }
 	  /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
 
+	  for (kk1=0; kk1 < numsol; kk1)
+	    {
 
+	    }
 	  /* =========================================================================== */
 	  //printf("mindist=%f mindst from rimdisk=%.15G\n", mindist, rimdiskfunc(thg));
 	  //if (fabs(rimdiskfunc(thg)-mindist) > 1E-7)
