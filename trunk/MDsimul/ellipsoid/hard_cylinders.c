@@ -2,6 +2,7 @@
 #undef DEBUG_HCMC
 #undef MC_HC_SPHERO_OPT
 #include<mdsimul.h>
+#include<complex.h>
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
 extern const double saxfactMC_QC[3];
@@ -1334,78 +1335,124 @@ void solve_quadratic(double coeff[3], int *numsol, double *sol)
   delta = Sqr(coeff[1]) - 4.0*coeff[2]*coeff[0];
 	     
 }
-void solve_cubic(double coeff, int *numsol, double sol[3])
+void solve_cubic(double *coeff, int *numsol, double sol[3], int justone)
 {
   const double sqrt3=sqrt(3.0);
-  /* solution from Zwillinger, D. "CRC Standard Mathematical Tables and Formulae", 32nd Edition */
-  double F, G, H, R, S, I, J, K, M, N, P, a, b, c, d, Gh, sqrtH, T, U;
+  /* solution from Abramovitz */
+  double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
+  double complex cs1, cs2, s1ps2, s1ms2;
   if (coeff[3]==0)
     {
       printf("orca troia...coeff[3] è zero!\n");
       exit(-1);
     }
-  a = coeff[3];
-  b = coeff[2];
-  c = coeff[1];
-  d = coeff[0];
-  F=(3.0*c - Sqr(b))/3.0;
-  G=(2.0*Sqr(b)*b-9.0*b*c+27.0*d)/27.0;
-  H= Sqr(G)/4.0+Sqr(F)*F/27.0; 
+  a2 = coeff[2]/coeff[3];
+  a1 = coeff[1]/coeff[3];
+  a0 = coeff[0]/coeff[3];
+  a2sq=Sqr(a2);
+  q = (1.0/3.0)*a1-(1.0/9.0)*a2sq;
+  r = (1.0/6.0)*(a1*a2 - 3.0*a0)-a2sq*a2/27.0; 
+  q3 = Sqr(q)*q;
+  r2 = Sqr(r);
+  H = r2 + q3;
+  //printf("H=%.15G\n", H);
   if (H <= 0.0)
     {
-      /* 3 real roots */
-      I = sqrt(Sqr(G)/4.0-H);
-      J = cbrt(I);
-      K = a*cos(-G/2.0/I);
-      M = cos(K/3.0);
-      N = sqrt3*sin(K/3.0);
-      P = -b/3.0;
-      sol[0] = P + 2.0*J*M;
-      sol[1] = P - J*(M+M);
-      sol[2] = P - J*(M-N); 
+      cs1 = cpow(r + csqrt(H),1.0/3.0);
+      cs2 = cpow(r - csqrt(H),1.0/3.0);
+      sol[0] = creal(cs1 + cs2) - a2/3.0;
+      if (!(justone==1))
+	{
+	  /* per il calcolo degli zeri di una quartica basta uno zero reale qualsiasi quindi 
+	   * con questo flag si puo' ottimizzare calcolandone solo uno */
+	  s1ps2 = (cs1+cs2)/2.0; 
+	  s1ms2 = (cs1-cs2)/2.0;
+	  sol[1] = creal(-s1ps2 - a2/3.0 + I*sqrt3*s1ms2);
+	  sol[2] = creal(-s1ps2 - a2/3.0 - I*sqrt3*s1ms2);
+	}
       *numsol = 3;
     }
   else
     {
-      Gh= G/2.0;
-      sqrtH=sqrt(H);
-      R = -Gh + sqrtH; /* notare che se H > 0 allora R > 0 */
-      if (R < 0.0)
-	{
-	  printf("orca troia...R < 0!\n");
-	  exit(-1);
-	}
-      S = cbrt(R);
-      T = -Gh - sqrtH;
-      U = -cbrt(-T);
-      numsol=1;
-      sol[0] = S + U - b/3.0;
+      s1 = cbrt(r + sqrt(H));
+      s2 = cbrt(r - sqrt(H));
+      sol[0] = s1 + s2 - a2/3.0;
+      *numsol = 1;
     }
 }
+
 void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 {
   /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
-  double a0, a1, a2, a3;
-  double R, D, E, Rsq, a3sq;
+  double x1, A, B, C, D, solc[3], nsc, cb[4], m, n;
+  double Asq, alpha, beta, gamma, delta, rho;
   if (coeff[4]==0)
     {
       printf("[ERROR: solve_fourth_deg] coeff[4] must be different from 0!\n");
       exit(-1);
     }
-  a0 = coeff[0]/coeff[4];
-  a1 = coeff[1]/coeff[4];
-  a2 = coeff[2]/coeff[4];
-  a3 = coeff[3]/coeff[4];
-  a3sq = Sqr(a3);
-  
-  R = sqrt(0.25*a);
-  Rsq = Sqr(R);
-  D = ; 
-  E = ;
-  sol[0] = 0.25*a3+0.5*R+0.5*D;
-  sol[1] = 0.25*a3+0.5*R-0.5*D;
-  sol[2] = 0.25*a3-0.5*R+0.5*E;
-  sol[3] = 0.25*a3-0.5*R-0.5*E;
+  *numsol = 0;
+  A = coeff[3]/coeff[4];
+  B = coeff[2]/coeff[4];
+  C = coeff[1]/coeff[4];
+  D = coeff[0]/coeff[4];
+  Asq = Sqr(A);
+  cb[3] = 1.0;
+  cb[2] = -B;
+  cb[1] = A*C-4*D;
+  cb[0] = D(4.0*B - Asq)-Sqr(C);
+  solve_cubic(cb, solc, &nsc, 1);
+  m2 = Asq/4.0-B+x1;
+  x1=solc[0];
+  if (m2 > 0)
+    {
+      m = sqrt(m2);
+      n = (A*x1 - 2.0*C)/(4.0*m);
+    }
+  else if (m==0.0)
+    {
+      m = 0.0;
+      n = sqrt(Sqr(x1)/4.0 - D);
+    }
+  else 
+    {
+      mp = sqrt(-m2);
+      np = (A*x1 - 2.0*C)/(4.0*mp);
+      alpha=0.5*Asq-x1-B;
+      beta = 4.0*np-A*mp;
+      rho = sqrt(Sqr(alpha)+Sqr(beta));
+      gamma = sqrt((alpha + rho)/2.0); /* notare che alpha + rho è sempre positivo */
+      delta  = beta/gamma/2.0;
+      if (mp + delta == 0.0) /* in questo caso la parte immaginaria è zero e ho due soluzioni reali coincidenti */
+	{
+	  *numsol = 1;
+	  sol[0] = (-A/2.0 + gamma)/2.0;
+	}
+      if (mp - delta == 0.0)
+	{
+	  *numsol += 1;
+	  sol[1] = (-A/2.0 - gamma)/2.0;
+	}
+      return;
+    }
+  alpha=0.5*Asq-x1-B;
+  beta=4*n-A*m;
+  if (alpha+beta >= 0)
+    {
+      /* pair of real solutions */
+      gamma = sqrt(alpha+beta);
+      sol[0]=-0.25*A+0.5*m+0.5*gamma;
+      sol[1]=-0.25*A+0.5*m-0.5*gamma;
+      *numsol=2;
+    }
+  if (alpha-beta >= 0)
+    {    
+      /* another pair or real solutions */
+      delta = sqrt(alpha-beta);
+      sol[2]=-0.25*A-0.5*m+0.5*delta;
+      sol[3]=-0.25*A-0.5*m-0.5*delta;
+      *numsol+=2;
+    }
 }
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
