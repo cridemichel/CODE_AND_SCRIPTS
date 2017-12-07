@@ -1410,7 +1410,7 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
   
   if (m2 > 0)
     {
-      printf("qui\n");
+      //printf("qui\n");
       m = sqrt(m2);
       n = (A*x1 - 2.0*C)/(4.0*m);
     }
