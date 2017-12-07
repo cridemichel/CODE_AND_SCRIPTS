@@ -38,7 +38,7 @@ extern void fdjacSE(int n, double x[], double fvec[], double **df, void (*vecfun
 #endif
 #ifdef MD_ASYM_ITENS
 extern void calc_omega(int i, double *wwx, double *wwy, double *wwz);
-extern void calc_angmom(int i, double **I);
+extern void calc_angmom(int i, double **);
 extern void upd_refsysM(int i);
 #endif
 #if defined(MPI)
@@ -1532,6 +1532,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
   double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solcub[2];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3], dsc[3];
+  double rC[3], rE[3];
   int kk, j1, j2, numsol;
   
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
@@ -1808,7 +1809,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      rE[1] = Cip[1]+lambda*nip[1];
 	      rE[2] = Cip[2]+lambda*nip[2];
 	      /* versore semiasse minore */
-	      if (np[1]==0.0)
+	      if (nip[1]==0.0)
 		{
 		  nEy[0]=0.0;
 		  nEy[1]=1.0;
@@ -1842,7 +1843,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  /* coeff è un array di 5 elementi ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
 	   * solarr un array con le numsol soluzioni 
 	   * */
-	   if (seminE==semaxE)
+	   if (semminE==semmaxE)
 	    {
 	      /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
 	      double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
@@ -1918,7 +1919,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
 		  coeff[3] = -(yC/xC2) + (a2*yC)/(b2*xC2);
 		  coeff[2] = 1.0/2.0 + a2/(2.0*b2) + a2/(2.0*xC2) - a4/(2.0*b2*xC2) - R2/(2.0*xC2) + 
-		    (a2*R2)/(2.0*b^2*xC2) + (3.0*yC2)/(2.0*xC2) - (a2*yC2)/(2.0*b2*xC2);
+		    (a2*R2)/(2.0*b2*xC2) + (3.0*yC2)/(2.0*xC2) - (a2*yC2)/(2.0*b2*xC2);
 		  coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
 		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) +
 		    R2*R2/(4.0*xC2) + xC2/4.0+ yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) + 
@@ -1966,7 +1967,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      sqB = 1.0-a2/b2;
 		      sqC = a2*(b2-R2);
 		      sqD = b2 - a2;
-		      solec[0][0] = solec[1][0] = -sqrt(sC/sqD);
+		      solec[0][0] = solec[1][0] = -sqrt(sqC/sqD);
 	    	      solec[0][1] = -(sqrt(sqA/sqB));
     		      solec[1][1] = -solec[0][1];
 		      solec[2][0] = solec[3][0] = -solec[0][0];
@@ -1988,12 +1989,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 
 	  for (kk1=0; kk1 < numsol; kk1)
 	    {
-	      for (kk2=0; kk1 < 3; kk1++)
-		dsc[kk2] = solarr[kk2] - Cip[kk2]; 
+	      for (kk2=0; kk2 < 3; kk2++)
+		dsc[kk2] = solarr[kk1][kk2] - Cip[kk2]; 
 	      sp = scalProd(solarr[kk1], nip);
 	      for (kk2=0; kk2 < 3; kk2++)
 		dsc[kk2] = dsc[kk2]-sp*nip[kk2];
-	      if (calc_norm(dsc[kk2]) < L*0.5)
+	      if (calc_norm(dsc) < L*0.5)
 		{
 		  return -1;
 		}
