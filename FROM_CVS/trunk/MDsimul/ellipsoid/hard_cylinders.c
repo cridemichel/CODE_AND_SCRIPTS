@@ -1499,12 +1499,12 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       *numsol+=2;
     }
 }
-void ellips2disk(double *solE, double *solD, double *ny, double *nz)
+void ellips2disk(double *solE, double *solD, double *rO, double *ny, double *nz)
 {
   int k;
   for (k=0; k < 3; k++)
     {
-      solD[k] = solE[0]*ny[k] + solE[1]*nz[k];
+      solD[k] = rO[k] + solE[0]*ny[k] + solE[1]*nz[k];
     }
 }
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
@@ -1531,7 +1531,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
   double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solquad[2];	
-  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], PminCipR[3], dsc[3];
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], 
+	 PminCipR[3], dsc[3], dscperp[3];
   double rC[3], rE[3];
   double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD;
   int kk, j1, j2, numsol;
@@ -1794,9 +1795,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      nipGbl[kk1] = nip[kk1];
 	    }
 	  Dgbl = D;
-	  D2=D*0.5;
+	  D2 = D*0.5;
 	  /* se l'asse del rim è parallelo al piano del disco bisogna considerare un caso a parte */
-	  semminE=D*0.5;
+	  semminE=D2;
 	  if (nip[0]==0.0)
 	    {
 	      /* devo considerare l'intersezione di due rette (che si ottengono intersecando 
@@ -1830,7 +1831,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  vectProdVec(assex,nEy,nEz);
 		}
 	    }
-	  semmaxE=D*0.5/fabs(scalProd(nEy,nip));
+	  semmaxE=D2/fabs(scalProd(nEy,nip));
 	  /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
 	  rC[0] = 0.0;
 	  rC[1] = -rE[1];
@@ -1874,7 +1875,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solcc[kk1],solarr[kk1], nEy, nEz);
+		    ellips2disk(solcc[kk1],solarr[kk1], rE, nEy, nEz);
 		}
 	      else if (yC!=0)
 		{
@@ -1893,7 +1894,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		   /* torno al sistema di coordinate del disco */
 		   for (kk1=0; kk1 < numsol; kk1++)
-		     ellips2disk(solcc[kk1],solarr[kk1], nEy, nEz);
+		     ellips2disk(solcc[kk1],solarr[kk1], rE, nEy, nEz);
 		}
 	      else
 		{
@@ -1942,7 +1943,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solec[kk1],solarr[kk1], nEy, nEz);
+		    ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
 		}
 	      else if (yC!=0)
 		{
@@ -1970,7 +1971,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    }
 		  /* torno al sistema di coordinate del disco */
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solec[kk1],solarr[kk1], nEy, nEz);
+		    ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
 		}
 	      else
 		{
@@ -1989,7 +1990,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      numsol = 4;
 		      /* torno al sistema di coordinate del disco */
     		      for (kk1=0; kk1 < numsol; kk1++)
-			ellips2disk(solec[kk1],solarr[kk1], nEy, nEz);
+			ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
 		    }
 		  else
 		    {
@@ -2005,8 +2006,11 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      for (kk2=0; kk2 < 3; kk2++)
 		dsc[kk2] = solarr[kk1][kk2] - Cip[kk2]; 
 	      sp = scalProd(dsc, nip);
-	      //for (kk2=0; kk2 < 3; kk2++)
-		//dsc[kk2] = dsc[kk2]-sp*nip[kk2];
+#if 1
+	      for (kk2=0; kk2 < 3; kk2++)
+		dscperp[kk2] = dsc[kk2]-sp*nip[kk2];
+	      printf("norm perp=%.15G\n", calc_norm(dscperp));
+#endif
 	      if (fabs(sp) < L*0.5)
 		{
 		  return -1;
