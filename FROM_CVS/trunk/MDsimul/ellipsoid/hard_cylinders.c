@@ -1831,7 +1831,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  vectProdVec(assex,nEy,nEz);
 		}
 	    }
-	  semmaxE=D2/fabs(scalProd(nEy,nip));
+	  semmaxE=D2/sqrt(1.0-Sqr(scalProd(nEz,nip)));
+	  //printf("semiassi=%f %f\n", semminE, semmaxE);
 	  /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
 	  rC[0] = 0.0;
 	  rC[1] = -rE[1];
@@ -1840,6 +1841,20 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  sp2 = scalProd(rC,nEz);
 	  rC[1] = sp1;
 	  rC[2] = sp2;
+	  printf("vers ell= nEy %f %f %f nEz %f %f %f\n", nEy[0], nEy[1], nEy[2], nEz[0], nEz[1], nEz[2]);
+	    {
+	      double t[3];
+	      for (kk=0; kk < 3; kk++)
+		{
+		  t[kk] = nEz[kk]*semmaxE;
+		}
+	      sp = scalProd(t, nip);
+	      for (kk=0; kk < 3; kk++)
+		{
+	  	 t[kk] -= nip[kk]*sp;
+		}
+	      printf(">>>> semiax=%.15G norm=%.15G\n", semmaxE, calc_norm(t));
+	    }
 	  /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
 	  /* prima calcolo i coefficienti del polinomio */
 
@@ -2003,6 +2018,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
 	  for (kk1=0; kk1 < numsol; kk1++)
 	    {
+	      printf("solarr[%d]=(%f,%f,%f)\n", kk1, solarr[kk1][0],solarr[kk1][1],solarr[kk1][2]);
+	      printf("norm solarr=%.15G\n", calc_norm(solarr[kk1]));
 	      for (kk2=0; kk2 < 3; kk2++)
 		dsc[kk2] = solarr[kk1][kk2] - Cip[kk2]; 
 	      sp = scalProd(dsc, nip);
