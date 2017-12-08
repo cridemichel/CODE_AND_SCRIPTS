@@ -1507,6 +1507,18 @@ void ellips2disk(double *solE, double *solD, double *rO, double *ny, double *nz)
       solD[k] = rO[k] + solE[0]*ny[k] + solE[1]*nz[k];
     }
 }
+
+double perpcomp(double *V, double *C, double *n)
+{
+  int kk2;
+  double dsc[3], sp, dscperp[3];
+  for (kk2=0; kk2 < 3; kk2++)
+    dsc[kk2] = V[kk2] - C[kk2]; 
+  sp = scalProd(dsc, n);
+  for (kk2=0; kk2 < 3; kk2++)
+    dscperp[kk2] = dsc[kk2]-sp*n[kk2];
+  return calc_norm(dscperp);
+}
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
@@ -1825,16 +1837,19 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		{
 		  nEy[0]=0.0;
 		  nEy[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
-		  nEy[1]=nEy[2]*nip[2]/nip[1];
+		  nEy[1]=-nEy[2]*nip[2]/nip[1];
 		  assex[0]=1.0;
 		  assex[1]=assex[2]=0.0;
 		  vectProdVec(assex,nEy,nEz);
 		}
 	    }
 	  semmaxE=D2/sqrt(1.0-Sqr(scalProd(nEz,nip)));
+#if 0
 	  printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
 	  printf("nEz=%.15G %.15G %.15G\n", nEz[0], nEz[1], nEz[2]);
-	  
+	  printf("nEy=%.15G %.15G %.15G\n", nEy[0], nEy[1], nEy[2]);
+	  printf("calcnorm nEy=%.15G\n", calc_norm(nEy));
+#endif	     
 	  //printf("semiassi=%f %f\n", semminE, semmaxE);
 	  /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
 	  rC[0] = 0.0;
@@ -1844,7 +1859,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  sp2 = scalProd(rC,nEz);
 	  rC[1] = sp1;
 	  rC[2] = sp2;
+#if 0
 	  printf("vers ell= nEy %f %f %f nEz %f %f %f\n", nEy[0], nEy[1], nEy[2], nEz[0], nEz[1], nEz[2]);
+	  printf("prima rE=%f %f %f\n", rE[0], rE[1], rE[2]);
 	    {
 	      double t[3];
 	      for (kk=0; kk < 3; kk++)
@@ -1858,6 +1875,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      printf(">>>> semiax=%.15G semmin=%.15G norm=%.15G\n", semmaxE, semminE, calc_norm(t));
 	    }
+#endif
 	  /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
 	  /* prima calcolo i coefficienti del polinomio */
 
@@ -1902,7 +1920,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    {
 	      /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
 	      //double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
-	      printf("doing circle\n");
+	      //printf("doing circle\n");
+#if 0
 	      a=semminE;
 	      a2=Sqr(a);
 	      a4=Sqr(a2);
@@ -1911,6 +1930,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      yC=rC[2];
 	      xC2=Sqr(xC);
 	      yC2=Sqr(yC);
+#endif
 	      if (xC!=0)
 		{
 		  coeff[2] = 1.0 + yC2/xC2;
@@ -1957,6 +1977,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	    }
 	  else
 	    {
+#if 0
 	      a=semminE;
 	      b=semmaxE;
 	      a2=Sqr(a);
@@ -1968,6 +1989,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      yC=rC[2];
 	      xC2=Sqr(xC);
 	      yC2=Sqr(yC);
+#endif
 	      /* notare che coeff[4]=0 solo se a=b che però è un caso a parte! */
 	      if (xC!=0)
 		{
@@ -1997,10 +2019,37 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      solec[kk1][0] = (a2*b2 - b2*R2 + b2*xC2 + (-a2 + b2)*Sqr(solqua[kk1]) - 
 				       2.0*b2*solqua[kk1]*yC + b2*yC2)/(2.0*b2*xC) ;
 		      solec[kk1][1] = solqua[kk1];
+#if 0
+		      printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
+			     coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
+			     coeff[1]*solqua[kk1]+coeff[0]);
+		      printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
+#endif
 		    }
 		  /* torno al sistema di coordinate del disco */
+#if 0
+		  printf("dopo rE=%f %f %f\n", rE[0], rE[1], rE[2]);
+		  printf("perp rE=%.15G\n", perpcomp(rE, Cip, nip));
+#endif
 		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
+		    {
+		      ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
+		      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
+			printf("B2 perpcom=%.15G semmaxE=%.15G\n", perpcomp(solarr[kk1], Cip, nip),semmaxE);
+
+#if 0
+		    {
+		      double VV[3];
+		      double y, x;
+		      x = sqrt(1.0-Sqr(solec[kk1][1]/semmaxE))*0.55;
+		      for (kk2=0; kk2 < 3; kk2++)
+			VV[kk2] = rE[kk2]+x*nEy[kk2]+solec[kk1][1]*nEz[kk2];
+		      printf("ellips(solsol)=%.15G\n", Sqr(0.5/a)+Sqr(y/b)-1.0);
+		      printf("BOH x=0.5 y=%.15G perpcom=%.15G\n", y, perpcomp(VV, Cip, nip)); 
+		      printf("BOH2              perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
+		    }
+#endif
+		    }
 		}
 	      else if (yC!=0)
 		{
@@ -2061,16 +2110,17 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
 	  for (kk1=0; kk1 < numsol; kk1++)
 	    {
+#if 0
 	      printf("solarr[%d]=(%f,%f,%f)\n", kk1, solarr[kk1][0],solarr[kk1][1],solarr[kk1][2]);
 	      printf("norm solarr=%.15G\n", calc_norm(solarr[kk1]));
-	      for (kk2=0; kk2 < 3; kk2++)
-		dsc[kk2] = solarr[kk1][kk2] - Cip[kk2]; 
-	      sp = scalProd(dsc, nip);
-#if 1
-	      for (kk2=0; kk2 < 3; kk2++)
-		dscperp[kk2] = dsc[kk2]-sp*nip[kk2];
-	      printf("norm perp=%.15G\n", calc_norm(dscperp));
 #endif
+	      for (kk2=0; kk2 < 3; kk2++)
+		{
+		  dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
+		}
+	      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
+		printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
+	      sp = scalProd(dsc, nip);
 	      if (fabs(sp) < L*0.5)
 		{
 		  return -1;
