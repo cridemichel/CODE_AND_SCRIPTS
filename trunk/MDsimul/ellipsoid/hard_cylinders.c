@@ -257,7 +257,7 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
     }
 }
 #ifdef HC_ALGO_OPT
-#define MESH_PTS 10000
+#define MESH_PTS 8 
 double meshptsGbl;
 struct brentOpt 
 {
@@ -1516,7 +1516,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double sphov;
 #endif
   static struct brentOpt *mesh;
-  int it, kk1, kk2, k2, k1, nz, nl, nn, nng;
+  int it, kk1, kk2, k2, k1, nz, nl, nn, nng, docirc;
   double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist, maxmind[2];
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], nEy[3], nEz[3];
   double dthg, distleft, distcenter, distright, mindistb, maxdist, semmaxE, semminE, sp1, sp2;
@@ -1832,6 +1832,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	    }
 	  semmaxE=D2/sqrt(1.0-Sqr(scalProd(nEz,nip)));
+	  printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
+	  printf("nEz=%.15G %.15G %.15G\n", nEz[0], nEz[1], nEz[2]);
+	  
 	  //printf("semiassi=%f %f\n", semminE, semmaxE);
 	  /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
 	  rC[0] = 0.0;
@@ -1853,7 +1856,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		{
 	  	 t[kk] -= nip[kk]*sp;
 		}
-	      printf(">>>> semiax=%.15G norm=%.15G\n", semmaxE, calc_norm(t));
+	      printf(">>>> semiax=%.15G semmin=%.15G norm=%.15G\n", semmaxE, semminE, calc_norm(t));
 	    }
 	  /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
 	  /* prima calcolo i coefficienti del polinomio */
@@ -1861,10 +1864,45 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  /* coeff è un array di 5 elementi ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
 	   * solarr un array con le numsol soluzioni 
 	   * */
-	   if (semminE==semmaxE)
+	  docirc=0;
+	  a=semminE;
+	  b=semmaxE;
+	  a2=Sqr(a);
+	  b2=Sqr(b);
+	  a4=Sqr(a2);
+	  b4=Sqr(b2);
+	  R2=Sqr(D2);
+	  xC=rC[1];
+	  yC=rC[2];
+	  xC2=Sqr(xC);
+	  yC2=Sqr(yC);
+	
+ 	  if (xC!=0)
+	    {
+	      coeff[4] = 1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
+	      if (coeff[4]==0)
+		docirc=1;
+	    }
+	  else if (yC!=0)
+	    {
+	      coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
+	      if (coeff[4]==0)
+		docirc=1;
+	    }
+	  else if (semminE <= D2 && semmaxE >= D2)
+	    {
+	      sqB = 1.0-a2/b2;
+	      if (sqB==0)
+		docirc=1;
+	    }
+	  
+	  if (docirc) 
+	     /* equivale a semminE=semmaxE ma assicura che non si tenti di risolvere una quartica con
+		coefficiente quartico nullo */
 	    {
 	      /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
 	      //double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
+	      printf("doing circle\n");
 	      a=semminE;
 	      a2=Sqr(a);
 	      a4=Sqr(a2);
@@ -1933,11 +1971,15 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      /* notare che coeff[4]=0 solo se a=b che però è un caso a parte! */
 	      if (xC!=0)
 		{
-		  coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
+		  //coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
 #if 0
 		  if (coeff[4]==0)
 		    {
 		      printf("xCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
+		      printf("coeff[4]=%.15G\n", coeff[4]);
+		      printf("coeff[3]=%.15G\n", coeff[3]);
+		      printf("ni=%.15G %.15G %.15G\n", nip[0], nip[1], nip[2]);
+		      printf("a4/b4=%.15G a2/b2 %.15G xC2=%.15G\n", a4/b4, a2/b2, xC2);
 		    }
 #endif
 		  coeff[3] = -(yC/xC2) + (a2*yC)/(b2*xC2);
@@ -1952,8 +1994,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  /* ora assegno a solec[][] e calcolo x */
 		  for (kk1=0; kk1 < numsol; kk1++)
 		    {
-		      solec[kk1][0] = (a2*b2 - b2*R2 + b2*xC2 + (-a2 + b2)*Sqr(solqua[0]) - 
-				       2.0*b2*solqua[0]*yC + b2*yC2)/(2.0*b2*xC) ;
+		      solec[kk1][0] = (a2*b2 - b2*R2 + b2*xC2 + (-a2 + b2)*Sqr(solqua[kk1]) - 
+				       2.0*b2*solqua[kk1]*yC + b2*yC2)/(2.0*b2*xC) ;
 		      solec[kk1][1] = solqua[kk1];
 		    }
 		  /* torno al sistema di coordinate del disco */
@@ -1962,7 +2004,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      else if (yC!=0)
 		{
-		  coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
+		  //printf("QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n");
+		  //coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
 #if 0
 		  if (coeff[4]==0)
 		    {
@@ -1993,7 +2036,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  if (a <= D2 && b >= D2)
 		    {
 		      sqA = R2-a2;
-		      sqB = 1.0-a2/b2;
+		      //sqB = 1.0-a2/b2;
 		      sqC = a2*(b2-R2);
 		      sqD = b2 - a2;
 		      solec[0][0] = solec[1][0] = -sqrt(sqC/sqD);
