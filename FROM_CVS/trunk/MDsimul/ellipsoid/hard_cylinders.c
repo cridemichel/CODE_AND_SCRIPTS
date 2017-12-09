@@ -1530,8 +1530,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   static struct brentOpt *mesh;
   int it, kk1, kk2, k2, k1, nz, nl, nn, nng, docirc;
   double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist, maxmind[2];
-  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], nEy[3], nEz[3];
-  double dthg, distleft, distcenter, distright, mindistb, maxdist, semmaxE, semminE, sp1, sp2;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3];
+  double dthg, distleft, distcenter, distright, mindistb, maxdist, sp1, sp2;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
@@ -1541,12 +1541,13 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
   double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
-  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, nip[3], Cip[3], Aip[3];	
+  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, Aip[3];	
   double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solquad[2];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], 
 	 PminCipR[3], dsc[3], dscperp[3];
-  double rC[3], rE[3];
-  double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD;
+  double rC[3], rEdp[3], rErp[3], aEr, bEr, aEd, bEd, nEdxp[3], nEdyp[3], nEdzp[3], nErxp[3], nEryp[3], nErzp[3];
+  double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD, Cpl[3], npl[3], nip[3], Cip[3], 
+	 njp[3], Cjp[3], nplp[3];
   int kk, j1, j2, numsol;
   
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
@@ -1753,6 +1754,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      Ai[kk] = Ui[kk];  
 	    }
 #endif
+#if 0
 	  versor_to_R(nj[0], nj[1], nj[2], Rl);
 	  for (kk1=0; kk1 < 3; kk1++)
 	    {
@@ -1766,6 +1768,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
 		} 
 	    }
+#endif
 	  //printf("norm Aip=%f\n", calc_norm(Aip));
 	  //printf("NormAip=%f\n", sqrt(Sqr(Aip[0])+Sqr(Aip[1]))/(D/2));
 	  //printf("thgmin found=%f\n", thg);
@@ -1800,6 +1803,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  //printf("Ai=%f %f %f Dj=%f %f %f\n", Ai[0], Ai[1], Ai[2], Dj[j2][0], Dj[j2][1], Dj[j2][2]);
 	  //printf("thg=%f Aip=%f %f %f D=%f\n", thg, Aip[0], Aip[1], Aip[2], D);
 	  //	  for (kk1=0; kk1 < 3; kk1++)
+#if 0
 
 	  for (kk1=0; kk1 < 3; kk1++)
 	    {
@@ -1807,43 +1811,69 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      nipGbl[kk1] = nip[kk1];
 	    }
 	  Dgbl = D;
-	  D2 = D*0.5;
-	  /* se l'asse del rim è parallelo al piano del disco bisogna considerare un caso a parte */
-	  semminE=D2;
-	  if (nip[0]==0.0)
+#endif
+	  /* >>> scelgo un piano che sia la "media" dei piano del disco e quello perperdincolare al rim <<< */
+	  for (kk1=0; kk1 < 3; kk1++)
 	    {
-	      /* devo considerare l'intersezione di due rette (che si ottengono intersecando 
-		 il rim con il piano del disco) con il disco */	 
-	    }
-	  else
-	    {
-	      /* determina l'ellisse che si ottiene intersecando il rim con il piano del disco */ 
-	      lambda =  -Cip[0]/nip[0];
-	      /* centro dell'ellisse */
-	      rE[0] = 0.0;
-	      rE[1] = Cip[1]+lambda*nip[1];
-	      rE[2] = Cip[2]+lambda*nip[2];
-	      /* versore semiasse minore */
-	      if (nip[1]==0.0)
-		{
-		  nEy[0]=0.0;
-		  nEy[1]=1.0;
-		  nEy[2]=0.0;
-		  nEz[0]=0.0;
-		  nEz[1]=0.0;
-		  nEz[2]=1.0;
-		}
+	      Cpl[kk1] = (Dj[j2][kk1] + Ci[kk1])*0.5;
+	      if (scalprod(ni,nj) < 0.0)
+		npl[kk1] = (-ni[kk1]+nj[kk1])*0.5;
 	      else
-		{
-		  nEy[0]=0.0;
-		  nEy[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
-		  nEy[1]=-nEy[2]*nip[2]/nip[1];
-		  assex[0]=1.0;
-		  assex[1]=assex[2]=0.0;
-		  vectProdVec(assex,nEy,nEz);
-		}
+		npl[kk1] = (ni[kk1]+nj[kk1])*0.5;
 	    }
-	  semmaxE=D2/sqrt(1.0-Sqr(scalProd(nEz,nip)));
+	  D2 = D*0.5;
+	  /* passo al sistema di riferimento del piano medio */
+	  versor_to_R(npl[0], npl[1], npl[2], Rl);
+	  for (kk1=0; kk1 < 3; kk1++)
+	    {
+	      nip[kk1] = njp[kk1]=npl[kk1]=0;
+	      Cip[kk1] = Cjp[kk1]=0;
+	      for (kk2=0; kk2 < 3; kk2++)
+		{
+		  /* rim */
+		  nip[kk1] += Rl[kk1][kk2]*ni[kk2];
+		  Cip[kk1] += Rl[kk1][kk2]*(Ci[kk2]-Cpl[kk2]);
+		  /* disk */
+		  njp[kk1] += Rl[kk1][kk2]*nj[kk2];
+		  Cjp[kk1] += Rl[kk1][kk2]*(Dj[j2][kk2]-Cpl[kk2]);
+		} 
+	    }
+	  nplp[1]=nplp[2]=0.0;
+	  nplp[0]=1.0;
+	  /* >>> determino le ellissi che si ottengono intersecando il rim ed il disco con il piano scelto <<< */ 
+	  /* >> rim ellipse <<< */
+	  /* notare che prendendo il piano medio non potrà mai essere ni.np = 0 */
+	  lambda = -Cip[0]/nip[0];
+	  /* centro dell'ellisse del rim*/
+	  rErp[0] = Cip[0]+lambda*nip[0];
+	  rErp[1] = Cip[1]+lambda*nip[1];
+	  rErp[2] = Cip[2]+lambda*nip[2];
+
+	  for (kk1=0; kk1 < 3; kk1++)
+	    nErx[kk1] = nplp[kk1];
+	  nEryp[0]=0.0;
+      	  nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
+	  nEryp[1]=-nEryp[2]*nip[2]/nip[1];
+	  vectProdVec(nErxp,nEryp,nErzp);
+	  aEr=D2;	
+	  bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
+	  /* >>> disk ellipse <<< */
+	  lambda = -scalprod(Cjp,nplp)/scalprod(njp,nplp);
+	  /* centro dell'ellisse del rim*/
+	  rEdp[0] = Cjp[0]+lambda*njp[0];
+	  rEdp[1] = Cjp[1]+lambda*njp[1];
+	  rEdp[2] = Cjp[2]+lambda*njp[2];
+
+	  for (kk1=0; kk1 < 3; kk1++)
+	    nEdx[kk1] = nplp[kk1];
+	  nEdyp[0]=0.0;
+      	  nEdyp[2]=1.0/sqrt(1.0+Sqr(njp[2]/njp[1]));
+	  nEdyp[1]=-nEdyp[2]*njp[2]/njp[1];
+	  vectProdVec(nEdxp,nEdyp,nEdzp);
+	  aEd=D2;	
+	  bEd=D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
+	  /* passo al sistema di riferimento dell'ellisse del rim */	  
+
 #if 0
 	  printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
 	  printf("nEz=%.15G %.15G %.15G\n", nEz[0], nEz[1], nEz[2]);
