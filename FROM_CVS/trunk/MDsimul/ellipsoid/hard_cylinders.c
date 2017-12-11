@@ -1920,6 +1920,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      Cjpp[kk1] += Rl[kk1][kk2]*(Cjp[kk2]-rEdp[kk2]);
 		    } 
 		}
+	      printf(">>>>nxp=%f %f %f\n", nErxp[0], nErxp[1], nErxp[2]);
 	      /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
 	      nEry1sq=Sqr(nErypp[1]);
 	      nEry2sq=Sqr(nErypp[2]);
@@ -1978,6 +1979,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		-2*c02*yC2 - 2*c0*c3*yC2 + 2*c02*xC2*yC2 + c02*yC2*yC2;
 	      solve_fourth_deg(coeff, &numsol, solqua);
 	      /* ora assegno a solec[][] e calcolo x */
+	      printf("numsol=%d\n", numsol);
 	      for (kk1=0; kk1 < numsol; kk1++)
 		{
 
@@ -2274,11 +2276,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #endif
 		  for (kk2=0; kk2 < 3; kk2++)
 		    {
-		      dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
+		      dsc[kk2] = solarr[kk1][kk2] - Cipp[kk2];
 		    }
-		  if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
-		    printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
-		  sp = scalProd(dsc, nip);
+		  printf("norma punto=%.15G\n", calc_norm(solarr[kk1]));
+		  if (fabs(perpcomp(solarr[kk1], Cipp, nipp)-D2) > 1E-4)
+		    printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cipp, nipp));
+		  sp = scalProd(dsc, nipp);
 		  if (fabs(sp) < L*0.5)
 		    {
 		      return -1;
