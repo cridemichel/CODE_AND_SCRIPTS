@@ -1499,13 +1499,16 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
       *numsol+=2;
     }
 }
-void ellips2disk(double *solE, double *solD, double *rO, double *ny, double *nz)
+void ellips2disk(double *solE, double *solD, double xEr, double yEr, double a, double b)
 {
   int k;
-  for (k=0; k < 3; k++)
-    {
-      solD[k] = rO[k] + solE[0]*ny[k] + solE[1]*nz[k];
-    }
+  solD[0] = 0;
+  solD[1] = rO[1] + solE[0];
+  solD[2] = rO[2] + solE[1];
+
+  solD[1]*=a;
+  solD[2]*=b;
+  /* here we are again in the ppp reference system */
 }
 
 double perpcomp(double *V, double *C, double *n)
@@ -1547,9 +1550,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	 PminCipR[3], dsc[3], dscperp[3];
   double rC[3], rEdp[3], rErp[3], aEr, bEr, aEd, bEd, nEdxp[3], nEdyp[3], nEdzp[3], nErxp[3], nEryp[3], nErzp[3];
   double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD, Cpl[3], npl[3], nip[3], Cip[3], 
-	 njp[3], Cjp[3], nplp[3];
+	 njp[3], Cjp[3], nplp[3], nplpx[3], nplpy[3], nplpz[3], nErxpp[3], nErypp[3], nErzpp[3], rErpp[3], 
+	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
   int kk, j1, j2, numsol;
-  
+  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22;  
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
@@ -1742,418 +1746,536 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #endif	
 	      return -1;
 	    }
-#if 1
-	  //mindist=find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, D, &thg);
+	  /* se asse del rim e asse del disco sono paralleli si deve considerare un caso a parte */
 
-	  //printf("Ai-Dj=%f\n", sqrt(Sqr(Ai[0]-Dj[j2][0]) + Sqr(Ai[1]-Dj[j2][1]) +Sqr(Ai[2]-Dj[j2][2])));
-	  //printf("Ai=%f %f %f\n", Ai[0], Ai[1], Ai[2]);
-#else
-	  for (kk=0; kk < 3; kk++)
+	  if (scalProd(ni,nj)==1)
 	    {
-	      //Ai[kk] = Ci[kk];
-	      Ai[kk] = Ui[kk];  
+	      printf("per ora esco...\n");
+	      exit(-1);
 	    }
-#endif
-#if 0
-	  versor_to_R(nj[0], nj[1], nj[2], Rl);
-	  for (kk1=0; kk1 < 3; kk1++)
-	    {
-	      nip[kk1] = 0;
-	      //Aip[kk1] = 0;
-	      Cip[kk1] = 0;
-	      for (kk2=0; kk2 < 3; kk2++)
-		{
-		  nip[kk1] += Rl[kk1][kk2]*ni[kk2];
-		  Cip[kk1] += Rl[kk1][kk2]*(Ci[kk2]-Dj[j2][kk2]);
-		  //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
-		} 
-	    }
-#endif
-	  //printf("norm Aip=%f\n", calc_norm(Aip));
-	  //printf("NormAip=%f\n", sqrt(Sqr(Aip[0])+Sqr(Aip[1]))/(D/2));
-	  //printf("thgmin found=%f\n", thg);
-#if 0
-	  if (Aip[0] >= D/2.)
-	    thg = 0;
-	  else if (Aip[0] <= -D/2.0)
-	    thg = M_PI;
-	  else if (Aip[1] < 0.0)
-	    thg = 2.0*M_PI-acos(2.0*Aip[0]/D);
 	  else
-	    thg = acos(2.0*Aip[0]/D);
-	  printf("thgcalc=%f\n", thg);
+	    {
+	      /* =================================================================================== */
+#if 1
+	      //mindist=find_initial_guess_opt(Ai, Ci, ni, Dj[j2], nj, D, &thg);
+
+	      //printf("Ai-Dj=%f\n", sqrt(Sqr(Ai[0]-Dj[j2][0]) + Sqr(Ai[1]-Dj[j2][1]) +Sqr(Ai[2]-Dj[j2][2])));
+	      //printf("Ai=%f %f %f\n", Ai[0], Ai[1], Ai[2]);
+#else
+	      for (kk=0; kk < 3; kk++)
+		{
+		  //Ai[kk] = Ci[kk];
+		  Ai[kk] = Ui[kk];  
+		}
 #endif
 #if 0
-	    {
-	      double PP[3];
+	      versor_to_R(nj[0], nj[1], nj[2], Rl);
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
-		  PP[kk1] = 0;
+		  nip[kk1] = 0;
+		  //Aip[kk1] = 0;
+		  Cip[kk1] = 0;
 		  for (kk2=0; kk2 < 3; kk2++)
 		    {
-		      PP[kk1] += Rl[kk2][kk1]*Aip[kk2];
+		      nip[kk1] += Rl[kk1][kk2]*ni[kk2];
+		      Cip[kk1] += Rl[kk1][kk2]*(Ci[kk2]-Dj[j2][kk2]);
+		      //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
 		    } 
 		}
-	      PP[0] += Dj[j2][0];
-	      PP[1] += Dj[j2][1];
-	      PP[2] += Dj[j2][2];
-	      printf("PP=%f %f %f\n", PP[0], PP[1], PP[2]);
-	    }
 #endif
-	  //printf("Ai=%f %f %f Dj=%f %f %f\n", Ai[0], Ai[1], Ai[2], Dj[j2][0], Dj[j2][1], Dj[j2][2]);
-	  //printf("thg=%f Aip=%f %f %f D=%f\n", thg, Aip[0], Aip[1], Aip[2], D);
-	  //	  for (kk1=0; kk1 < 3; kk1++)
+	      //printf("norm Aip=%f\n", calc_norm(Aip));
+	      //printf("NormAip=%f\n", sqrt(Sqr(Aip[0])+Sqr(Aip[1]))/(D/2));
+	      //printf("thgmin found=%f\n", thg);
 #if 0
-
-	  for (kk1=0; kk1 < 3; kk1++)
-	    {
-	      CipGbl[kk1] = Cip[kk1];
-	      nipGbl[kk1] = nip[kk1];
-	    }
-	  Dgbl = D;
-#endif
-	  /* >>> scelgo un piano che sia la "media" dei piano del disco e quello perperdincolare al rim <<< */
-	  for (kk1=0; kk1 < 3; kk1++)
-	    {
-	      Cpl[kk1] = (Dj[j2][kk1] + Ci[kk1])*0.5;
-	      if (scalprod(ni,nj) < 0.0)
-		npl[kk1] = (-ni[kk1]+nj[kk1])*0.5;
+	      if (Aip[0] >= D/2.)
+		thg = 0;
+	      else if (Aip[0] <= -D/2.0)
+		thg = M_PI;
+	      else if (Aip[1] < 0.0)
+		thg = 2.0*M_PI-acos(2.0*Aip[0]/D);
 	      else
-		npl[kk1] = (ni[kk1]+nj[kk1])*0.5;
-	    }
-	  D2 = D*0.5;
-	  /* passo al sistema di riferimento del piano medio */
-	  versor_to_R(npl[0], npl[1], npl[2], Rl);
-	  for (kk1=0; kk1 < 3; kk1++)
-	    {
-	      nip[kk1] = njp[kk1]=npl[kk1]=0;
-	      Cip[kk1] = Cjp[kk1]=0;
-	      for (kk2=0; kk2 < 3; kk2++)
-		{
-		  /* rim */
-		  nip[kk1] += Rl[kk1][kk2]*ni[kk2];
-		  Cip[kk1] += Rl[kk1][kk2]*(Ci[kk2]-Cpl[kk2]);
-		  /* disk */
-		  njp[kk1] += Rl[kk1][kk2]*nj[kk2];
-		  Cjp[kk1] += Rl[kk1][kk2]*(Dj[j2][kk2]-Cpl[kk2]);
-		} 
-	    }
-	  nplp[1]=nplp[2]=0.0;
-	  nplp[0]=1.0;
-	  /* >>> determino le ellissi che si ottengono intersecando il rim ed il disco con il piano scelto <<< */ 
-	  /* >> rim ellipse <<< */
-	  /* notare che prendendo il piano medio non potrà mai essere ni.np = 0 */
-	  lambda = -Cip[0]/nip[0];
-	  /* centro dell'ellisse del rim*/
-	  rErp[0] = Cip[0]+lambda*nip[0];
-	  rErp[1] = Cip[1]+lambda*nip[1];
-	  rErp[2] = Cip[2]+lambda*nip[2];
-
-	  for (kk1=0; kk1 < 3; kk1++)
-	    nErx[kk1] = nplp[kk1];
-	  nEryp[0]=0.0;
-      	  nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
-	  nEryp[1]=-nEryp[2]*nip[2]/nip[1];
-	  vectProdVec(nErxp,nEryp,nErzp);
-	  aEr=D2;	
-	  bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
-	  /* >>> disk ellipse <<< */
-	  lambda = -scalprod(Cjp,nplp)/scalprod(njp,nplp);
-	  /* centro dell'ellisse del rim*/
-	  rEdp[0] = Cjp[0]+lambda*njp[0];
-	  rEdp[1] = Cjp[1]+lambda*njp[1];
-	  rEdp[2] = Cjp[2]+lambda*njp[2];
-
-	  for (kk1=0; kk1 < 3; kk1++)
-	    nEdx[kk1] = nplp[kk1];
-	  nEdyp[0]=0.0;
-      	  nEdyp[2]=1.0/sqrt(1.0+Sqr(njp[2]/njp[1]));
-	  nEdyp[1]=-nEdyp[2]*njp[2]/njp[1];
-	  vectProdVec(nEdxp,nEdyp,nEdzp);
-	  aEd=D2;	
-	  bEd=D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
-	  /* passo al sistema di riferimento dell'ellisse del rim */	  
-
-#if 0
-	  printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
-	  printf("nEz=%.15G %.15G %.15G\n", nEz[0], nEz[1], nEz[2]);
-	  printf("nEy=%.15G %.15G %.15G\n", nEy[0], nEy[1], nEy[2]);
-	  printf("calcnorm nEy=%.15G\n", calc_norm(nEy));
-#endif	     
-	  //printf("semiassi=%f %f\n", semminE, semmaxE);
-	  /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
-	  rC[0] = 0.0;
-	  rC[1] = -rE[1];
-	  rC[2] = -rE[2];
-	  sp1 = scalProd(rC,nEy);
-	  sp2 = scalProd(rC,nEz);
-	  rC[1] = sp1;
-	  rC[2] = sp2;
-#if 0
-	  printf("vers ell= nEy %f %f %f nEz %f %f %f\n", nEy[0], nEy[1], nEy[2], nEz[0], nEz[1], nEz[2]);
-	  printf("prima rE=%f %f %f\n", rE[0], rE[1], rE[2]);
-	    {
-	      double t[3];
-	      for (kk=0; kk < 3; kk++)
-		{
-		  t[kk] = nEz[kk]*semmaxE;
-		}
-	      sp = scalProd(t, nip);
-	      for (kk=0; kk < 3; kk++)
-		{
-	  	 t[kk] -= nip[kk]*sp;
-		}
-	      printf(">>>> semiax=%.15G semmin=%.15G norm=%.15G\n", semmaxE, semminE, calc_norm(t));
-	    }
+		thg = acos(2.0*Aip[0]/D);
+	      printf("thgcalc=%f\n", thg);
 #endif
-	  /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
-	  /* prima calcolo i coefficienti del polinomio */
-
-	  /* coeff è un array di 5 elementi ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
-	   * solarr un array con le numsol soluzioni 
-	   * */
-	  docirc=0;
-	  a=semminE;
-	  b=semmaxE;
-	  a2=Sqr(a);
-	  b2=Sqr(b);
-	  a4=Sqr(a2);
-	  b4=Sqr(b2);
-	  R2=Sqr(D2);
-	  xC=rC[1];
-	  yC=rC[2];
-	  xC2=Sqr(xC);
-	  yC2=Sqr(yC);
-	
- 	  if (xC!=0)
-	    {
-	      coeff[4] = 1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
-	      if (coeff[4]==0)
-		docirc=1;
-	    }
-	  else if (yC!=0)
-	    {
-	      coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
-	      if (coeff[4]==0)
-		docirc=1;
-	    }
-	  else if (semminE <= D2 && semmaxE >= D2)
-	    {
-	      sqB = 1.0-a2/b2;
-	      if (sqB==0)
-		docirc=1;
-	    }
-	  
-	  if (docirc) 
-	     /* equivale a semminE=semmaxE ma assicura che non si tenti di risolvere una quartica con
-		coefficiente quartico nullo */
-	    {
-	      /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
-	      //double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
-	      //printf("doing circle\n");
 #if 0
-	      a=semminE;
-	      a2=Sqr(a);
-	      a4=Sqr(a2);
-	      R2=Sqr(D2);
-	      xC=rC[1];
-	      yC=rC[2];
+		{
+		  double PP[3];
+		  for (kk1=0; kk1 < 3; kk1++)
+		    {
+		      PP[kk1] = 0;
+		      for (kk2=0; kk2 < 3; kk2++)
+			{
+			  PP[kk1] += Rl[kk2][kk1]*Aip[kk2];
+			} 
+		    }
+		  PP[0] += Dj[j2][0];
+		  PP[1] += Dj[j2][1];
+		  PP[2] += Dj[j2][2];
+		  printf("PP=%f %f %f\n", PP[0], PP[1], PP[2]);
+		}
+#endif
+	      //printf("Ai=%f %f %f Dj=%f %f %f\n", Ai[0], Ai[1], Ai[2], Dj[j2][0], Dj[j2][1], Dj[j2][2]);
+	      //printf("thg=%f Aip=%f %f %f D=%f\n", thg, Aip[0], Aip[1], Aip[2], D);
+	      //	  for (kk1=0; kk1 < 3; kk1++)
+#if 0
+
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  CipGbl[kk1] = Cip[kk1];
+		  nipGbl[kk1] = nip[kk1];
+		}
+	      Dgbl = D;
+#endif
+	      /* >>> scelgo un piano che sia la "media" dei piano del disco e quello perperdincolare al rim <<< */
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  Cpl[kk1] = (Dj[j2][kk1] + Ci[kk1])*0.5;
+		  if (scalprod(ni,nj) < 0.0)
+		    npl[kk1] = (-ni[kk1]+nj[kk1])*0.5;
+		  else
+		    npl[kk1] = (ni[kk1]+nj[kk1])*0.5;
+		}
+	      D2 = D*0.5;
+	      /* passo al sistema di riferimento del piano medio (l'asse perpendicolare è x) (p) */
+	      versor_to_R(npl[0], npl[1], npl[2], Rl);
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  nplpx[kk1] = Rl[0][kk1];
+		  nplpy[kk1] = Rl[1][kk1];
+		  nplpz[kk1] = Rl[2][kk1];
+		  nip[kk1] = njp[kk1]=0;
+		  Cip[kk1] = Cjp[kk1]=0;
+		  for (kk2=0; kk2 < 3; kk2++)
+		    {
+		      /* rim */
+		      nip[kk1] += Rl[kk1][kk2]*ni[kk2];
+		      Cip[kk1] += Rl[kk1][kk2]*(Ci[kk2]-Cpl[kk2]);
+		      /* disk */
+		      njp[kk1] += Rl[kk1][kk2]*nj[kk2];
+		      Cjp[kk1] += Rl[kk1][kk2]*(Dj[j2][kk2]-Cpl[kk2]);
+		    } 
+		}
+	      /* >>> determino le ellissi che si ottengono intersecando il rim ed il disco con il piano scelto <<< */ 
+	      /* >> rim ellipse <<< */
+	      /* notare che prendendo il piano medio non potrà mai essere ni.np = 0 */
+	      lambda = -Cip[0]/nip[0];
+	      /* centro dell'ellisse del rim*/
+	      rErp[0] = 0;
+	      rErp[1] = Cip[1]+lambda*nip[1];
+	      rErp[2] = Cip[2]+lambda*nip[2];
+
+	      for (kk1=0; kk1 < 3; kk1++)
+		nErxp[kk1] = nplpx[kk1];
+	      nEryp[0]=0.0;
+	      nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
+	      nEryp[1]=-nEryp[2]*nip[2]/nip[1];
+	      vectProdVec(nErxp,nEryp,nErzp);
+	      aEr=D2;	
+	      bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
+	      /* >>> disk ellipse <<< */
+	      lambda = -Cjp[0]/njp[0];
+	      /* centro dell'ellisse del rim*/
+	      rEdp[0] = 0;
+	      rEdp[1] = Cjp[1]+lambda*njp[1];
+	      rEdp[2] = Cjp[2]+lambda*njp[2];
+
+	      for (kk1=0; kk1 < 3; kk1++)
+		nEdxp[kk1] = nplpx[kk1];
+	      nEdyp[0]=0.0;
+	      nEdyp[2]=1.0/sqrt(1.0+Sqr(njp[2]/njp[1]));
+	      nEdyp[1]=-nEdyp[2]*njp[2]/njp[1];
+	      vectProdVec(nEdxp,nEdyp,nEdzp);
+	      aEd=D2;	
+	      bEd=D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
+	      /* passo al sistema di riferimento dell'ellisse del disk (pp) */	  
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  Rl[0][kk1] = nEdxp[kk1];
+		  Rl[1][kk1] = nEdyp[kk1];
+		  Rl[2][kk1] = nEdzp[kk1];
+		}
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  nErxpp[kk1] = nErypp[kk1]=nErzpp[kk1]=0;
+		  Cipp[kk1] = Cjpp[kk1]=0;
+		  nipp[kk1] = njpp[kk1]=0;
+		  rErpp[kk1] = 0;
+		  for (kk2=0; kk2 < 3; kk2++)
+		    {
+		      /* rim ellipse */
+		      nErxpp[kk1] += Rl[kk1][kk2]*nErxp[kk1];
+		      nErypp[kk1] += Rl[kk1][kk2]*nEryp[kk1];
+		      nErzpp[kk1] += Rl[kk1][kk2]*nErzp[kk1];
+		      rErpp[kk1] +=  Rl[kk1][kk2]*(rErp[kk1]-rEdp[kk2]);
+		      /* cylinder */
+		      nipp[kk1] += Rl[kk1][kk2]*nip[kk2];
+		      Cipp[kk1] += Rl[kk1][kk2]*(Cip[kk2]-rEdp[kk2]);
+		      /* disk */
+		      njpp[kk1] += Rl[kk1][kk2]*njp[kk2];
+		      Cjpp[kk1] += Rl[kk1][kk2]*(Cjp[kk2]-rEdp[kk2]);
+		    } 
+		}
+	      /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
+	      nEry1sq=Sqr(nErypp[1]);
+	      nEry2sq=Sqr(nErypp[2]);
+	      aErsq = Sqr(aEr);
+	      bErsq = Sqr(bEr);
+	      nErz1sq=Sqr(nErzpp[1]);
+	      nErz2sq=Sqr(nErzpp[2]);
+
+	      coeffEr[0] = nEry1sq/aErsq + nErz1sq/bErsq;
+	      coeffEr[1] = nEry2sq/aErsq + nErz2sq/bErsq;
+	      coeffEr[2] = (2.0*nErypp[1]*nErypp[2])/aErsq + (2.0*nErzpp[1]*nErzpp[2])/bErsq;
+	      coeffEr[3] = -1.0 + (nEry1sq*rErpp1sq)/aErsq + (nErz1sq*rErpp1sq)/bErsq + 
+		(2.0*nErypp[1]*nErypp[2]*rErpp[1]*rErpp[2])/aErsq + (2.0*nErzpp[1]*nErzpp[2]*rErpp[1]*rErpp[2])/bErsq + 
+		(nEry2sq*rErpp2sq)/aErsq + (nErz2sq*rErpp2sq)/bErsq;
+	      coeffEr[4] = -((2.0*nEry1sq*rErpp[1])/aErsq) - (2.0*nErz1sq*rErpp[1])/bErsq - 
+		(2.0*nErypp[1]*nErypp[2]*rErpp[2])/aErsq - (2.0*nErzpp[1]*nErzpp[2]*rErpp[2])/bErsq;
+	      coeffEr[5] = -((2.0*nErypp[1]*nErypp[2]*rErpp[1])/aErsq) - (2.0*nErzpp[1]*nErzpp[2]*rErpp[1])/bErsq - 
+		(2.0*nEry2sq*rErpp[2])/aErsq - (2.0*nErz2sq*rErpp[2])/bErsq;
+	      /* ora faccio un'affinità (x'=x/aEd; y'=y/bEd) per far diventare la prima ellisse un cerchio (e trasformo conseguentemente
+	       * i coefficienti coeffEr[...] dell'ellisse del rim) */ 
+	      coeffEr[0] *= Sqr(aEd);
+	      coeffEr[1] *= Sqr(bEd); 
+	      coeffEr[2] *= aEd*bEd;
+	      coeffEr[4] *= aEd;
+	      coeffEr[5] *= bEd;
+	      /* mi metto nel centro dell'ellisse del rim (vedi pagina wolfram su ellisse)
+	       * x' = x - xEr; y' = y - yEr dove (xEr, yEr) è il centro dell'ellisse ottenuta dopo aver
+	       * applicato l'affinità */
+	      delta = 4.0*coeffEr[0]*coeffEr[1] - Sqr(coeffEr[2]);
+	      xEr = -((2.0*coeffEr[1]*coeffEr[4] - coeffEr[2]*coeffEr[5])/delta);
+	      yEr = (coeffEr[2]*coeffEr[4] - 2.0*coeffEr[0]*coeffEr[5])/delta; 
+	      /* calcolo i nuovi coeffEricienti a seguito della traslazione (notare che c0, c1 e c2 non cambiano per traslazione) */
+	      coeffEr[3] = -((Sqr(coeffEr[2])*coeffEr[3] + coeffEr[1]*Sqr(coeffEr[4]) - coeffEr[2]*coeffEr[4]*coeffEr[5] 
+			      + coeffEr[0]*(-4.0*coeffEr[1]*coeffEr[3] + Sqr(coeffEr[5])))/delta);
+	      coeffEr[4] = 0.0;
+	      coeffEr[5] = 0.0;
+	      c0 = coeffEr[0];
+	      c1 = coeffEr[1];
+	      c2 = coeffEr[2];
+	      c3 = coeffEr[3];
+	      c02 = Sqr(c0);
+	      c12 = Sqr(c1);
+	      c22 = Sqr(c2);
+	      xC = -xEr;
+	      yC = -yEr;
 	      xC2=Sqr(xC);
 	      yC2=Sqr(yC);
-#endif
-	      if (xC!=0)
+	      coeff[4] = c02 - 2*c0*c1 + c12 + c22;
+	      coeff[3] =2*c0*c2*xC + 2*c1*c2*xC - 4*c02*yC + 4*c0*c1*yC - 2*c22*yC;
+	      coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + 2*c02*xC2 + 2*c0*c1*xC2 + 
+		c22*xC2 - 4*c0*c2*xC*yC + 6*c02*yC2 - 2*c0*c1*yC2 + c22*yC2;
+	      coeff[1] = -2*c0*c2*xC + 2*c2*c3*xC + 2*c0*c2*xC2*xC + 4*c02*yC + 4*c0*c3*yC - 
+		4*c02*xC2*yC + 2*c0*c2*xC*yC2 - 4*c02*yC2*yC;
+	      coeff[0] = c02 + 2*c0*c3 + c32 - 2*c02*xC2 + 2*c0*c3*xC2 + c02*xC2*xC2 
+		-2*c02*yC2 - 2*c0*c3*yC2 + 2*c02*xC2*yC2 + c02*yC2*yC2;
+	      solve_fourth_deg(coeff, &numsol, solqua);
+	      /* ora assegno a solec[][] e calcolo x */
+	      for (kk1=0; kk1 < numsol; kk1++)
 		{
-		  coeff[2] = 1.0 + yC2/xC2;
-		  coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
-		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) + 
-		    R2*R2/(4.0*xC2) + xC2/4.0 + yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) 
-		    + yC*yC2/(4.0*xC2);
-		  /* sto risolvendo in y */
-		  solve_quadratic(coeff, &numsol, solquad);
-		  /* assegno solcc e calcolo x */
-		  for (kk1=0; kk1 < numsol; kk1++)
-		    {
-		      solcc[kk1][0] = (a2 - R2 + xC2 - 2.0*solquad[kk1]*yC + yC2)/(2.0*xC);
-		      solcc[kk1][1] = solquad[kk1];
-		    }
-		  /* torno al sistema di coordinate del disco */
-		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solcc[kk1],solarr[kk1], rE, nEy, nEz);
-		}
-	      else if (yC!=0)
-		{
-		  coeff[2] = 1.0 + xC2/yC2;
-		  coeff[1] = -xC - (a2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
-		  coeff[0] = -(a2/2.0) - R2/2.0 + xC2/2.0 + a4/(4.0*yC2) - 
-		    (a2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
-		    (a2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0;
-		  /* sto risolvendo in x */
-		  solve_quadratic(coeff, &numsol, solquad);
-		  /* assegno solcc e calcolo y */
-		   for (kk1=0; kk1 < numsol; kk1++)
-		    {
-		      solcc[kk1][0] = solquad[kk1];
-		      solcc[kk1][1] = (a2 - R2 - 2.0*solquad[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
-		    }
-		   /* torno al sistema di coordinate del disco */
-		   for (kk1=0; kk1 < numsol; kk1++)
-		     ellips2disk(solcc[kk1],solarr[kk1], rE, nEy, nEz);
-		}
-	      else
-		{
-		  /* se semminE==D2 allora ho infinite soluzioni */
 
-		}
-	    }
-	  else
-	    {
+		  solec[kk1][0] = (-c0 - c3 + c0*xC2 + (c0 - c1)*Sqr(solqua[kk1]) - 
+				   2*c0*solqua[kk1]*yC + c0*yC2)/(2*c0*xC + c2*solqua[kk1]);
+		  solec[kk1][1] = solqua[kk1];
 #if 0
-	      a=semminE;
-	      b=semmaxE;
+		  printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
+			 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
+			 coeff[1]*solqua[kk1]+coeff[0]);
+		  printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
+#endif
+		}
+	      for (kk1=0; kk1 < numsol; kk1++)
+		{
+		  ellips2disk(solec[kk1], solarr[kk1], xEr, yEr, aEd, bEd);
+		  projectback(solarr, solarrDisk);
+		}
+#if 0
+	      printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
+	      printf("nEz=%.15G %.15G %.15G\n", nEz[0], nEz[1], nEz[2]);
+	      printf("nEy=%.15G %.15G %.15G\n", nEy[0], nEy[1], nEy[2]);
+	      printf("calcnorm nEy=%.15G\n", calc_norm(nEy));
+#endif	     
+	      //printf("semiassi=%f %f\n", semminE, semmaxE);
+	      /* determino le coordinate del centro del cerchio rispetto al riferimento dell'ellisse */
+#if 0
+	      rC[0] = 0.0;
+	      rC[1] = -rE[1];
+	      rC[2] = -rE[2];
+	      sp1 = scalProd(rC,nEy);
+	      sp2 = scalProd(rC,nEz);
+	      rC[1] = sp1;
+	      rC[2] = sp2;
+#endif
+#if 0
+	      printf("vers ell= nEy %f %f %f nEz %f %f %f\n", nEy[0], nEy[1], nEy[2], nEz[0], nEz[1], nEz[2]);
+	      printf("prima rE=%f %f %f\n", rE[0], rE[1], rE[2]);
+		{
+		  double t[3];
+		  for (kk=0; kk < 3; kk++)
+		    {
+		      t[kk] = nEz[kk]*semmaxE;
+		    }
+		  sp = scalProd(t, nip);
+		  for (kk=0; kk < 3; kk++)
+		    {
+		      t[kk] -= nip[kk]*sp;
+		    }
+		  printf(">>>> semiax=%.15G semmin=%.15G norm=%.15G\n", semmaxE, semminE, calc_norm(t));
+		}
+#endif
+#if 0
+	      /* ora trovo l'intersezione dell'ellisse con il cerchio risolvendo l'equazione di quarto grado */
+	      /* prima calcolo i coefficienti del polinomio */
+
+	      /* coeff è un array di 5 elementi ossia a,b,c,d,e (coeff. del polinomio c0+c1*x+c2*x^2... )
+	       * solarr un array con le numsol soluzioni 
+	       * */
+	      docirc=0;
+	      a=aErp;
+	      b=bErp;
 	      a2=Sqr(a);
 	      b2=Sqr(b);
 	      a4=Sqr(a2);
 	      b4=Sqr(b2);
-	      R2=Sqr(D2);
-	      xC=rC[1];
-	      yC=rC[2];
-	      xC2=Sqr(xC);
-	      yC2=Sqr(yC);
-#endif
-	      /* notare che coeff[4]=0 solo se a=b che però è un caso a parte! */
+	      R2=Sqr(D2); 
+	      //xC=rC[1];
+	      //yC=rC[2];
+	      xC = -rErpp[1];
+	      yC = -rErpp[2];
+
 	      if (xC!=0)
 		{
-		  //coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
-#if 0
+		  coeff[4] = 1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
 		  if (coeff[4]==0)
-		    {
-		      printf("xCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
-		      printf("coeff[4]=%.15G\n", coeff[4]);
-		      printf("coeff[3]=%.15G\n", coeff[3]);
-		      printf("ni=%.15G %.15G %.15G\n", nip[0], nip[1], nip[2]);
-		      printf("a4/b4=%.15G a2/b2 %.15G xC2=%.15G\n", a4/b4, a2/b2, xC2);
-		    }
-#endif
-		  coeff[3] = -(yC/xC2) + (a2*yC)/(b2*xC2);
-		  coeff[2] = 1.0/2.0 + a2/(2.0*b2) + a2/(2.0*xC2) - a4/(2.0*b2*xC2) - R2/(2.0*xC2) + 
-		    (a2*R2)/(2.0*b2*xC2) + (3.0*yC2)/(2.0*xC2) - (a2*yC2)/(2.0*b2*xC2);
-		  coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
-		  coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) +
-		    R2*R2/(4.0*xC2) + xC2/4.0+ yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) + 
-		    yC2*yC2/(4.0*xC2) ;  
-		  /* qui risolvo in y */
-		  solve_fourth_deg(coeff, &numsol, solqua);
-		  /* ora assegno a solec[][] e calcolo x */
-		  for (kk1=0; kk1 < numsol; kk1++)
-		    {
-		      solec[kk1][0] = (a2*b2 - b2*R2 + b2*xC2 + (-a2 + b2)*Sqr(solqua[kk1]) - 
-				       2.0*b2*solqua[kk1]*yC + b2*yC2)/(2.0*b2*xC) ;
-		      solec[kk1][1] = solqua[kk1];
-#if 0
-		      printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
-			     coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
-			     coeff[1]*solqua[kk1]+coeff[0]);
-		      printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
-#endif
-		    }
-		  /* torno al sistema di coordinate del disco */
-#if 0
-		  printf("dopo rE=%f %f %f\n", rE[0], rE[1], rE[2]);
-		  printf("perp rE=%.15G\n", perpcomp(rE, Cip, nip));
-#endif
-		  for (kk1=0; kk1 < numsol; kk1++)
-		    {
-		      ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
-		      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
-			printf("B2 perpcom=%.15G semmaxE=%.15G\n", perpcomp(solarr[kk1], Cip, nip),semmaxE);
-
-#if 0
-		    {
-		      double VV[3];
-		      double y, x;
-		      x = sqrt(1.0-Sqr(solec[kk1][1]/semmaxE))*0.55;
-		      for (kk2=0; kk2 < 3; kk2++)
-			VV[kk2] = rE[kk2]+x*nEy[kk2]+solec[kk1][1]*nEz[kk2];
-		      printf("ellips(solsol)=%.15G\n", Sqr(0.5/a)+Sqr(y/b)-1.0);
-		      printf("BOH x=0.5 y=%.15G perpcom=%.15G\n", y, perpcomp(VV, Cip, nip)); 
-		      printf("BOH2              perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
-		    }
-#endif
-		    }
+		    docirc=1;
 		}
 	      else if (yC!=0)
 		{
-		  //printf("QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n");
-		  //coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
-#if 0
+		  coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
 		  if (coeff[4]==0)
-		    {
-		      printf("yCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
-		    }
-#endif
-		  coeff[3] = -(xC/yC2) + (b2*xC)/(a2*yC2);
-		  coeff[2] = 1.0/2.0 + b2/(2.0*a2) + b2/(2.0*yC2) - b4/(2.0*a2*yC2) - R2/(2.0*yC2) + 
-		    (b2*R2)/(2.0*a2*yC2) + (3.0*xC2)/(2.0*yC2) - (b2*xC2)/(2.0*a2*yC2);
-		  coeff[1] = -xC - (b2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
-		  coeff[0] = -(b2/2.0) - R2/2.0 + xC2/2.0 + b4/(4.0*yC2) - (b2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
-		    (b2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0; 
-		  /* qui risolvo in x */
-		  solve_fourth_deg(coeff, &numsol, solqua);
-		  /* ora assegno solec[][] e calcolo y */
-		  for (kk1=0; kk1 < numsol; kk1++)
-		    {
-		      solec[kk1][0] = solqua[kk1];
-		      solec[kk1][1] = (a2*b2 - a2*R2 + (a2 - b2)*Sqr(solqua[kk1]) -
-				       2.0*a2*solqua[kk1]*xC + a2*xC2 + a2*yC2)/(2.0*a2*yC);
-		    }
-		  /* torno al sistema di coordinate del disco */
-		  for (kk1=0; kk1 < numsol; kk1++)
-		    ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
+		    docirc=1;
 		}
-	      else
+	      else if (semminE <= D2 && semmaxE >= D2)
 		{
-		  if (a <= D2 && b >= D2)
+		  sqB = 1.0-a2/b2;
+		  if (sqB==0)
+		    docirc=1;
+		}
+
+	      if (docirc) 
+		/* equivale a semminE=semmaxE ma assicura che non si tenti di risolvere una quartica con
+		   coefficiente quartico nullo */
+		{
+		  /* se a=b si ha un equazione quadratica poiché si tratta di due circonferenze */
+		  //double a,a2,a4,b4,R2,xC,yC,xC2,yC2;
+		  //printf("doing circle\n");
+#if 0
+		  a=semminE;
+		  a2=Sqr(a);
+		  a4=Sqr(a2);
+		  R2=Sqr(D2);
+		  xC=rC[1];
+		  yC=rC[2];
+		  xC2=Sqr(xC);
+		  yC2=Sqr(yC);
+#endif
+		  if (xC!=0)
 		    {
-		      sqA = R2-a2;
-		      //sqB = 1.0-a2/b2;
-		      sqC = a2*(b2-R2);
-		      sqD = b2 - a2;
-		      solec[0][0] = solec[1][0] = -sqrt(sqC/sqD);
-	    	      solec[0][1] = -(sqrt(sqA/sqB));
-    		      solec[1][1] = -solec[0][1];
-		      solec[2][0] = solec[3][0] = -solec[0][0];
-		      solec[2][1] = solec[0][1];
-		      solec[3][1] = solec[1][1];
-		      numsol = 4;
+		      coeff[2] = 1.0 + yC2/xC2;
+		      coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
+		      coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) + 
+			R2*R2/(4.0*xC2) + xC2/4.0 + yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) 
+			+ yC*yC2/(4.0*xC2);
+		      /* sto risolvendo in y */
+		      solve_quadratic(coeff, &numsol, solquad);
+		      /* assegno solcc e calcolo x */
+		      for (kk1=0; kk1 < numsol; kk1++)
+			{
+			  solcc[kk1][0] = (a2 - R2 + xC2 - 2.0*solquad[kk1]*yC + yC2)/(2.0*xC);
+			  solcc[kk1][1] = solquad[kk1];
+			}
+		      /* torno al sistema di coordinate dell'ellisse del disco e individuo i punti
+		       * sul disco che metto in solarr */
+		      for (kk1=0; kk1 < numsol; kk1++)
+			ellips2disk(solcc[kk1],solarr[kk1], rErpp, nErypp, nErzpp, aEd, bEd);
+		    }
+		  else if (yC!=0)
+		    {
+		      coeff[2] = 1.0 + xC2/yC2;
+		      coeff[1] = -xC - (a2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
+		      coeff[0] = -(a2/2.0) - R2/2.0 + xC2/2.0 + a4/(4.0*yC2) - 
+			(a2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
+			(a2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0;
+		      /* sto risolvendo in x */
+		      solve_quadratic(coeff, &numsol, solquad);
+		      /* assegno solcc e calcolo y */
+		      for (kk1=0; kk1 < numsol; kk1++)
+			{
+			  solcc[kk1][0] = solquad[kk1];
+			  solcc[kk1][1] = (a2 - R2 - 2.0*solquad[kk1]*xC + xC2 + yC2)/(2.0*yC) ;
+			}
 		      /* torno al sistema di coordinate del disco */
-    		      for (kk1=0; kk1 < numsol; kk1++)
-			ellips2disk(solec[kk1],solarr[kk1], rE, nEy, nEz);
+		      for (kk1=0; kk1 < numsol; kk1++)
+			ellips2disk(solcc[kk1],solarr[kk1], rErpp, nErypp, nErzpp, aEd, bEd);
 		    }
 		  else
 		    {
-		      /* se non ci sono soluzioni verificare che il disco o l'ellisse non sia l'uno dentro l'altro */
-		      numsol = 0;
+		      /* se semminE==D2 allora ho infinite soluzioni */
+
 		    }
 		}
-	      /* in questo caso ho due circonferenze e quindi al più due soluzioni ossia ho un'equazione quadratica */
-	    }
-	  /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
-	  for (kk1=0; kk1 < numsol; kk1++)
-	    {
+	      else
+		{
 #if 0
-	      printf("solarr[%d]=(%f,%f,%f)\n", kk1, solarr[kk1][0],solarr[kk1][1],solarr[kk1][2]);
-	      printf("norm solarr=%.15G\n", calc_norm(solarr[kk1]));
+		  a=semminE;
+		  b=semmaxE;
+		  a2=Sqr(a);
+		  b2=Sqr(b);
+		  a4=Sqr(a2);
+		  b4=Sqr(b2);
+		  R2=Sqr(D2);
+		  xC=rC[1];
+		  yC=rC[2];
+		  xC2=Sqr(xC);
+		  yC2=Sqr(yC);
 #endif
-	      for (kk2=0; kk2 < 3; kk2++)
-		{
-		  dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
+		  /* notare che coeff[4]=0 solo se a=b che però è un caso a parte! */
+		  if (xC!=0)
+		    {
+		      //coeff[4] =1.0/(4.0*xC2) + a4/(4.0*b4*xC2) - a2/(2.0*b2*xC2); 
+#if 0
+		      if (coeff[4]==0)
+			{
+			  printf("xCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
+			  printf("coeff[4]=%.15G\n", coeff[4]);
+			  printf("coeff[3]=%.15G\n", coeff[3]);
+			  printf("ni=%.15G %.15G %.15G\n", nip[0], nip[1], nip[2]);
+			  printf("a4/b4=%.15G a2/b2 %.15G xC2=%.15G\n", a4/b4, a2/b2, xC2);
+			}
+#endif
+		      coeff[3] = -(yC/xC2) + (a2*yC)/(b2*xC2);
+		      coeff[2] = 1.0/2.0 + a2/(2.0*b2) + a2/(2.0*xC2) - a4/(2.0*b2*xC2) - R2/(2.0*xC2) + 
+			(a2*R2)/(2.0*b2*xC2) + (3.0*yC2)/(2.0*xC2) - (a2*yC2)/(2.0*b2*xC2);
+		      coeff[1] = -yC - (a2*yC)/xC2 + (R2*yC)/xC2 - yC2*yC/xC2;
+		      coeff[0] = -(a2/2.0) - R2/2.0 + a4/(4.0*xC2) - (a2*R2)/(2.0*xC2) +
+			R2*R2/(4.0*xC2) + xC2/4.0+ yC2/2.0 + (a2*yC2)/(2.0*xC2) - (R2*yC2)/(2.0*xC2) + 
+			yC2*yC2/(4.0*xC2) ;  
+		      /* qui risolvo in y */
+		      solve_fourth_deg(coeff, &numsol, solqua);
+		      /* ora assegno a solec[][] e calcolo x */
+		      for (kk1=0; kk1 < numsol; kk1++)
+			{
+			  solec[kk1][0] = (a2*b2 - b2*R2 + b2*xC2 + (-a2 + b2)*Sqr(solqua[kk1]) - 
+					   2.0*b2*solqua[kk1]*yC + b2*yC2)/(2.0*b2*xC) ;
+			  solec[kk1][1] = solqua[kk1];
+#if 0
+			  printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
+				 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
+				 coeff[1]*solqua[kk1]+coeff[0]);
+			  printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
+#endif
+			}
+		      /* torno al sistema di coordinate del disco */
+#if 0
+		      printf("dopo rE=%f %f %f\n", rE[0], rE[1], rE[2]);
+		      printf("perp rE=%.15G\n", perpcomp(rE, Cip, nip));
+#endif
+		      for (kk1=0; kk1 < numsol; kk1++)
+			{
+			  ellips2disk(solec[kk1],solarr[kk1], rErpp, nErypp, nErzpp, aEd, bEd);
+			  if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
+			    printf("B2 perpcom=%.15G semmaxE=%.15G\n", perpcomp(solarr[kk1], Cip, nip),semmaxE);
+
+#if 0
+			    {
+			      double VV[3];
+			      double y, x;
+			      x = sqrt(1.0-Sqr(solec[kk1][1]/semmaxE))*0.55;
+			      for (kk2=0; kk2 < 3; kk2++)
+				VV[kk2] = rE[kk2]+x*nEy[kk2]+solec[kk1][1]*nEz[kk2];
+			      printf("ellips(solsol)=%.15G\n", Sqr(0.5/a)+Sqr(y/b)-1.0);
+			      printf("BOH x=0.5 y=%.15G perpcom=%.15G\n", y, perpcomp(VV, Cip, nip)); 
+			      printf("BOH2              perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
+			    }
+#endif
+			}
+		    }
+		  else if (yC!=0)
+		    {
+		      //printf("QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n");
+		      //coeff[4] = 1.0/(4.0*yC2) - b2/(2.0*a2*yC2) + b4/(4.0*a4*yC2);
+#if 0
+		      if (coeff[4]==0)
+			{
+			  printf("yCnot0 xC2=%.15G a4=%.15G b4=%.15G a2=%.15G b2=%.15G\n", xC2, a4, b4, a2, b2);
+			}
+#endif
+		      coeff[3] = -(xC/yC2) + (b2*xC)/(a2*yC2);
+		      coeff[2] = 1.0/2.0 + b2/(2.0*a2) + b2/(2.0*yC2) - b4/(2.0*a2*yC2) - R2/(2.0*yC2) + 
+			(b2*R2)/(2.0*a2*yC2) + (3.0*xC2)/(2.0*yC2) - (b2*xC2)/(2.0*a2*yC2);
+		      coeff[1] = -xC - (b2*xC)/yC2 + (R2*xC)/yC2 - xC2*xC/yC2;
+		      coeff[0] = -(b2/2.0) - R2/2.0 + xC2/2.0 + b4/(4.0*yC2) - (b2*R2)/(2.0*yC2) + R2*R2/(4.0*yC2) + 
+			(b2*xC2)/(2.0*yC2) - (R2*xC2)/(2.0*yC2) + xC2*xC2/(4.0*yC2) + yC2/4.0; 
+		      /* qui risolvo in x */
+		      solve_fourth_deg(coeff, &numsol, solqua);
+		      /* ora assegno solec[][] e calcolo y */
+		      for (kk1=0; kk1 < numsol; kk1++)
+			{
+			  solec[kk1][0] = solqua[kk1];
+			  solec[kk1][1] = (a2*b2 - a2*R2 + (a2 - b2)*Sqr(solqua[kk1]) -
+					   2.0*a2*solqua[kk1]*xC + a2*xC2 + a2*yC2)/(2.0*a2*yC);
+			}
+		      /* torno al sistema di coordinate del disco */
+		      for (kk1=0; kk1 < numsol; kk1++)
+			ellips2disk(solec[kk1],solarr[kk1], rErpp, nErypp, nErzpp, aEd, bEd);
+		    }
+		  else
+		    {
+		      if (a <= D2 && b >= D2)
+			{
+			  sqA = R2-a2;
+			  //sqB = 1.0-a2/b2;
+			  sqC = a2*(b2-R2);
+			  sqD = b2 - a2;
+			  solec[0][0] = solec[1][0] = -sqrt(sqC/sqD);
+			  solec[0][1] = -(sqrt(sqA/sqB));
+			  solec[1][1] = -solec[0][1];
+			  solec[2][0] = solec[3][0] = -solec[0][0];
+			  solec[2][1] = solec[0][1];
+			  solec[3][1] = solec[1][1];
+			  numsol = 4;
+			  /* torno al sistema di coordinate del disco */
+			  for (kk1=0; kk1 < numsol; kk1++)
+			    ellips2disk(solec[kk1],solarr[kk1], rErpp, nErypp, nErzpp, aEd, bEd);
+			}
+		      else
+			{
+			  /* se non ci sono soluzioni verificare che il disco o l'ellisse non sia l'uno dentro l'altro */
+			  numsol = 0;
+			}
+		    }
+		  /* in questo caso ho due circonferenze e quindi al più due soluzioni ossia ho un'equazione quadratica */
 		}
-	      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
-		printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
-	      sp = scalProd(dsc, nip);
-	      if (fabs(sp) < L*0.5)
+#endif
+	      /* verifico che le soluzioni siano nella parte di rim che fa parte del cilindro */
+	      for (kk1=0; kk1 < numsol; kk1++)
 		{
-		  return -1;
+#if 0
+		  printf("solarr[%d]=(%f,%f,%f)\n", kk1, solarr[kk1][0],solarr[kk1][1],solarr[kk1][2]);
+		  printf("norm solarr=%.15G\n", calc_norm(solarr[kk1]));
+#endif
+		  for (kk2=0; kk2 < 3; kk2++)
+		    {
+		      dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
+		    }
+		  if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
+		    printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
+		  sp = scalProd(dsc, nip);
+		  if (fabs(sp) < L*0.5)
+		    {
+		      return -1;
+		    }
 		}
 	    }
 	  /* =========================================================================== */
