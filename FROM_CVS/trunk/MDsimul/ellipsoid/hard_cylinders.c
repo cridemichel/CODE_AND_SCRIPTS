@@ -1513,7 +1513,7 @@ void ellips2disk(double *solE, double *solD, double xEr, double yEr, double a, d
 
 void projectback(double solarr[3], double rD[3], double nD[3])
 {
-  solarr[0] =  (nD[0]*rD[0] + n[D1]*rD[1] + nD[2]*rD[2] - nD[1]*solarr[1] - nD[2]*solarr[2])/nD[0]; 
+  solarr[0] =  (nD[0]*rD[0] + nD[1]*rD[1] + nD[2]*rD[2] - nD[1]*solarr[1] - nD[2]*solarr[2])/nD[0]; 
 }
 
 double perpcomp(double *V, double *C, double *n)
@@ -1558,7 +1558,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	 njp[3], Cjp[3], nplp[3], nplpx[3], nplpy[3], nplpz[3], nErxpp[3], nErypp[3], nErzpp[3], rErpp[3], 
 	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
   int kk, j1, j2, numsol;
-  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22;  
+  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, delta;  
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
@@ -1835,7 +1835,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
 		  Cpl[kk1] = (Dj[j2][kk1] + Ci[kk1])*0.5;
-		  if (scalprod(ni,nj) < 0.0)
+		  if (scalProd(ni,nj) < 0.0)
 		    npl[kk1] = (-ni[kk1]+nj[kk1])*0.5;
 		  else
 		    npl[kk1] = (ni[kk1]+nj[kk1])*0.5;
@@ -1927,7 +1927,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      bErsq = Sqr(bEr);
 	      nErz1sq=Sqr(nErzpp[1]);
 	      nErz2sq=Sqr(nErzpp[2]);
-
+	      rErpp1sq=Sqr(rErpp[1]);
+	      rErpp2sq=Sqr(rErpp[2]);
 	      coeffEr[0] = nEry1sq/aErsq + nErz1sq/bErsq;
 	      coeffEr[1] = nEry2sq/aErsq + nErz2sq/bErsq;
 	      coeffEr[2] = (2.0*nErypp[1]*nErypp[2])/aErsq + (2.0*nErzpp[1]*nErzpp[2])/bErsq;
@@ -1973,7 +1974,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		c22*xC2 - 4*c0*c2*xC*yC + 6*c02*yC2 - 2*c0*c1*yC2 + c22*yC2;
 	      coeff[1] = -2*c0*c2*xC + 2*c2*c3*xC + 2*c0*c2*xC2*xC + 4*c02*yC + 4*c0*c3*yC - 
 		4*c02*xC2*yC + 2*c0*c2*xC*yC2 - 4*c02*yC2*yC;
-	      coeff[0] = c02 + 2*c0*c3 + c32 - 2*c02*xC2 + 2*c0*c3*xC2 + c02*xC2*xC2 
+	      coeff[0] = c02 + 2*c0*c3 + Sqr(c3) - 2*c02*xC2 + 2*c0*c3*xC2 + c02*xC2*xC2 
 		-2*c02*yC2 - 2*c0*c3*yC2 + 2*c02*xC2*yC2 + c02*yC2*yC2;
 	      solve_fourth_deg(coeff, &numsol, solqua);
 	      /* ora assegno a solec[][] e calcolo x */
@@ -1983,11 +1984,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  solec[kk1][0] = (-c0 - c3 + c0*xC2 + (c0 - c1)*Sqr(solqua[kk1]) - 
 				   2*c0*solqua[kk1]*yC + c0*yC2)/(2*c0*xC + c2*solqua[kk1]);
 		  solec[kk1][1] = solqua[kk1];
-#if 0
+#if 1
 		  printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
 			 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
 			 coeff[1]*solqua[kk1]+coeff[0]);
-		  printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
+		  //printf("semiaxes=%f %f %f %f\n", aEd, bEd, aEr, bEr);
+		  //printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
 #endif
 		}
 	      for (kk1=0; kk1 < numsol; kk1++)
