@@ -1503,12 +1503,17 @@ void ellips2disk(double *solE, double *solD, double xEr, double yEr, double a, d
 {
   int k;
   solD[0] = 0;
-  solD[1] = rO[1] + solE[0];
-  solD[2] = rO[2] + solE[1];
+  solD[1] = xEr + solE[0];
+  solD[2] = yEr + solE[1];
 
   solD[1]*=a;
   solD[2]*=b;
   /* here we are again in the ppp reference system */
+}
+
+void projectback(double solarr[3], double rD[3], double nD[3])
+{
+  solarr[0] =  (nD[0]*rD[0] + n[D1]*rD[1] + nD[2]*rD[2] - nD[1]*solarr[1] - nD[2]*solarr[2])/nD[0]; 
 }
 
 double perpcomp(double *V, double *C, double *n)
@@ -1545,7 +1550,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, Aip[3];	
-  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solquad[2];	
+  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solquad[2], solarrDisk[4][3];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], 
 	 PminCipR[3], dsc[3], dscperp[3];
   double rC[3], rEdp[3], rErp[3], aEr, bEr, aEd, bEd, nEdxp[3], nEdyp[3], nEdzp[3], nErxp[3], nEryp[3], nErzp[3];
@@ -1987,8 +1992,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      for (kk1=0; kk1 < numsol; kk1++)
 		{
-		  ellips2disk(solec[kk1], solarr[kk1], xEr, yEr, aEd, bEd);
-		  projectback(solarr, solarrDisk);
+		  ellips2disk(solec[kk1], solarr[kk1], xEr, yEr, aEd, bEd);/* torno al sistema di riferimento pp dell'ellisse del disco */
+		  projectback(solarr[kk1], Cjpp, njpp) /* ottengo i punti sul disco che corrispondonoa alle intersezioni calcolate */;
 		}
 #if 0
 	      printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
