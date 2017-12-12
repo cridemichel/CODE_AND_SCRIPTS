@@ -1527,6 +1527,16 @@ double perpcomp(double *V, double *C, double *n)
     dscperp[kk2] = dsc[kk2]-sp*n[kk2];
   return calc_norm(dscperp);
 }
+double calc_distance(double *A, double *B)
+{
+  int k;
+  double d[3];
+  for (k=0; k < 3; k++)
+    {
+      d[k] = A[k] - B[k];
+    }
+  return calc_norm(d);
+}
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
@@ -1558,7 +1568,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	 njp[3], Cjp[3], nplp[3], nplpx[3], nplpy[3], nplpz[3], nErxpp[3], nErypp[3], nErzpp[3], rErpp[3], 
 	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
   int kk, j1, j2, numsol;
-  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, delta;  
+  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, delta, norm;  
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
@@ -1840,7 +1850,11 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  else
 		    npl[kk1] = (ni[kk1]+nj[kk1])*0.5;
 		}
+	      norm = calc_norm(npl);
+	      for (kk1=0; kk1 < 3; kk1++)
+		npl[kk1] /= norm;
 	      D2 = D*0.5;
+	      
 	      /* passo al sistema di riferimento del piano medio (l'asse perpendicolare è x) (p) */
 	      versor_to_R(npl[0], npl[1], npl[2], Rl);
 	      for (kk1=0; kk1 < 3; kk1++)
@@ -1860,39 +1874,53 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      Cjp[kk1] += Rl[kk1][kk2]*(Dj[j2][kk2]-Cpl[kk2]);
 		    } 
 		}
+	      
 	      /* >>> determino le ellissi che si ottengono intersecando il rim ed il disco con il piano scelto <<< */ 
 	      /* >> rim ellipse <<< */
 	      /* notare che prendendo il piano medio non potrà mai essere ni.np = 0 */
 	      lambda = -Cip[0]/nip[0];
-	      /* centro dell'ellisse del rim*/
+	      /* centro dell'ellisse del rim */
 	      rErp[0] = 0;
 	      rErp[1] = Cip[1]+lambda*nip[1];
 	      rErp[2] = Cip[2]+lambda*nip[2];
 
-	      for (kk1=0; kk1 < 3; kk1++)
-		nErxp[kk1] = nplpx[kk1];
+	      nErxp[0] = 1.0;
+	      nErxp[1] = 0.0;
+	      nErxp[2] = 0.0;
 	      nEryp[0]=0.0;
 	      nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
 	      nEryp[1]=-nEryp[2]*nip[2]/nip[1];
 	      vectProdVec(nErxp,nEryp,nErzp);
 	      aEr=D2;	
 	      bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
-	      /* >>> disk ellipse <<< */
-	      lambda = -Cjp[0]/njp[0];
-	      /* centro dell'ellisse del rim*/
+	      /* >>> disk ellipse (ottenuta proiettando il disco sul piano) <<< */
+	      //lambda = -Cjp[0]/njp[0];
+	      /* centro dell'ellisse del disk*/
 	      rEdp[0] = 0;
-	      rEdp[1] = Cjp[1]+lambda*njp[1];
-	      rEdp[2] = Cjp[2]+lambda*njp[2];
+	      rEdp[1] = Cjp[1];//+lambda*njp[1];
+	      rEdp[2] = Cjp[2];//+lambda*njp[2];
 
-	      for (kk1=0; kk1 < 3; kk1++)
-		nEdxp[kk1] = nplpx[kk1];
+	      nEdxp[0] = 1.0;
+	      nEdxp[1]=nEdxp[2] = 0.0;
 	      nEdyp[0]=0.0;
 	      nEdyp[2]=1.0/sqrt(1.0+Sqr(njp[2]/njp[1]));
 	      nEdyp[1]=-nEdyp[2]*njp[2]/njp[1];
 	      vectProdVec(nEdxp,nEdyp,nEdzp);
 	      aEd=D2;	
-	      bEd=D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
+	      bEd=D2*scalProd(nEdxp,njp);//D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
+#if 1
+		{
+		  double p[3];
+		  for (kk1=0; kk1 < 3; kk1++)
+		    p[kk1] = rEdp[kk1]+bEd*nEdzp[kk1];
+		  printf("rEdp=%f %f %f\n", rEdp[0], rEdp[1], rEdp[2]);
+		  projectback(p, Cjp, njp);
+		  printf("DISTANCE=%.15G\n", calc_distance(p, Cjp));
+		}
+#endif
+
 	      /* passo al sistema di riferimento dell'ellisse del disk (pp) */	  
+	      //printf("distance rEdp-rErp=%.15G\n",calc_distance(rErp, rEdp));
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
 		  Rl[0][kk1] = nEdxp[kk1];
@@ -1911,7 +1939,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      nErxpp[kk1] += Rl[kk1][kk2]*nErxp[kk1];
 		      nErypp[kk1] += Rl[kk1][kk2]*nEryp[kk1];
 		      nErzpp[kk1] += Rl[kk1][kk2]*nErzp[kk1];
-		      rErpp[kk1] +=  Rl[kk1][kk2]*(rErp[kk1]-rEdp[kk2]);
+		      rErpp[kk1] +=  Rl[kk1][kk2]*(rErp[kk2]-rEdp[kk2]);
 		      /* cylinder */
 		      nipp[kk1] += Rl[kk1][kk2]*nip[kk2];
 		      Cipp[kk1] += Rl[kk1][kk2]*(Cip[kk2]-rEdp[kk2]);
@@ -1920,7 +1948,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      Cjpp[kk1] += Rl[kk1][kk2]*(Cjp[kk2]-rEdp[kk2]);
 		    } 
 		}
-	      printf(">>>>nxp=%f %f %f\n", nErxp[0], nErxp[1], nErxp[2]);
+
+	      //printf("Dnorm rEpp=%.15G\n",calc_norm(rErpp));
+	      //printf(">>>>nxp=%f %f %f\n", nErxp[0], nErxp[1], nErxp[2]);
 	      /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
 	      nEry1sq=Sqr(nErypp[1]);
 	      nEry2sq=Sqr(nErypp[2]);
@@ -1997,6 +2027,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      for (kk1=0; kk1 < numsol; kk1++)
 		{
 		  ellips2disk(solec[kk1], solarr[kk1], xEr, yEr, aEd, bEd);/* torno al sistema di riferimento pp dell'ellisse del disco */
+		  //printf("norm solarr[%d]=%.15G solec[]=%.15G\n", kk1, calc_norm(solarr[kk1]), solec[kk1][1]);
+		  //printf("solarr=%f %f %f\n", solarr[kk1][0],solarr[kk1][1], solarr[kk1][2]);
 		  projectback(solarr[kk1], Cjpp, njpp) /* ottengo i punti sul disco che corrispondonoa alle intersezioni calcolate */;
 		}
 #if 0
@@ -2278,7 +2310,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    {
 		      dsc[kk2] = solarr[kk1][kk2] - Cipp[kk2];
 		    }
-		  printf("norma punto=%.15G\n", calc_norm(solarr[kk1]));
+		  printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 		  if (fabs(perpcomp(solarr[kk1], Cipp, nipp)-D2) > 1E-4)
 		    printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cipp, nipp));
 		  sp = scalProd(dsc, nipp);
