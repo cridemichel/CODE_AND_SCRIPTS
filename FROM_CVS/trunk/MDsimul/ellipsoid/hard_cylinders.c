@@ -1908,7 +1908,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      vectProdVec(nEdxp,nEdyp,nEdzp);
 	      aEd=D2;	
 	      bEd=D2*scalProd(nEdxp,njp);//D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
-#if 1
+#if 0
 		{
 		  double p[3];
 		  for (kk1=0; kk1 < 3; kk1++)
