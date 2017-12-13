@@ -1956,6 +1956,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      if (delta < 0)
 		{
 		  printf("Huston abbiamo un problema...\n");
+		  printf("delta=%.15G\n", delta);
 		  exit(-1);
 		} invm10 = -1.0/2.0/m10;
 	      AA0 = -m00+m11;
