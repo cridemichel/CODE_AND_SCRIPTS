@@ -1569,6 +1569,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
   int kk, j1, j2, numsol;
   double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, delta, norm;  
+  double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
+  double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, M[3][3], nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
+  double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112;
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
@@ -1783,7 +1786,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  Ai[kk] = Ui[kk];  
 		}
 #endif
-#if 0
+#if 1
+	      /* mi metto nel riferimento del disco (p) */
 	      versor_to_R(nj[0], nj[1], nj[2], Rl);
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
@@ -1841,6 +1845,39 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      Dgbl = D;
 #endif
+	      /* calcolo i semiassi ed il centro dell'ellisse che si ottiene tagliando il rim con il piano del disco */
+	      lambda = -Cip[0]/nip[0];
+	      /* centro dell'ellisse del rim */
+	      rErp[0] = 0;
+	      rErp[1] = Cip[1]+lambda*nip[1];
+	      rErp[2] = Cip[2]+lambda*nip[2];
+
+	      nErxp[0] = 1.0;
+	      nErxp[1] = 0.0;
+	      nErxp[2] = 0.0;
+	      nEryp[0]=0.0;
+	      nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
+	      nEryp[1]=-nEryp[2]*nip[2]/nip[1];
+	      aErcut=D2;	
+	      bErcut=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
+	    
+	      vectProdVec(nErxp,nEryp,nErzp);
+	      /* torno al riferimento del laboratorio */
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  nErcutx[kk1] = nErcuty[kk1]=nErcutz[kk1]=0.0;
+		  //Aip[kk1] = 0;
+		  rErcut[kk1] = Dj[j2][kk1];
+		  for (kk2=0; kk2 < 3; kk2++)
+		    {
+		      nErcutx[kk1] += Rl[kk2][kk1]*nErxp[kk2];
+		      nErcuty[kk1] += Rl[kk2][kk1]*nEryp[kk2];
+		      nErcutz[kk1] += Rl[kk2][kk1]*nErzp[kk2];
+		      rErcut[kk1]  += Rl[kk2][kk1]*rErp[kk2];
+		      //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
+		    } 
+		}
+	   
 	      /* >>> scelgo un piano che sia la "media" dei piano del disco e quello perperdincolare al rim <<< */
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
@@ -1864,6 +1901,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  nplpz[kk1] = Rl[2][kk1];
 		  nip[kk1] = njp[kk1]=0;
 		  Cip[kk1] = Cjp[kk1]=0;
+		  rErcutp[kk1]=0;
+		  nErcutxp[kk1] = 0;
+		  nErcutyp[kk1] = 0;
+		  nErcutzp[kk1] = 0;
 		  for (kk2=0; kk2 < 3; kk2++)
 		    {
 		      /* rim */
@@ -1872,32 +1913,93 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      /* disk */
 		      njp[kk1] += Rl[kk1][kk2]*nj[kk2];
 		      Cjp[kk1] += Rl[kk1][kk2]*(Dj[j2][kk2]-Cpl[kk2]);
+		      rErcutp[kk1] += Rl[kk1][kk2]*(rErcutp[kk2]-Cpl[kk2]);
+		      nErcutxp[kk1] += Rl[kk1][kk2]*nErcutx[kk2];
+		      nErcutyp[kk1] += Rl[kk1][kk2]*nErcuty[kk2];
+		      nErcutzp[kk1] += Rl[kk1][kk2]*nErcutz[kk2];
 		    } 
 		}
 	      
-	      /* >>> determino le ellissi che si ottengono intersecando il rim ed il disco con il piano scelto <<< */ 
-	      /* >> rim ellipse <<< */
+	      /* >> rim ellipse (ottenuta proiettando l'ellisse ottenuta in precedenza sul piano) <<< */
 	      /* notare che prendendo il piano medio non potrà mai essere ni.np = 0 */
-	      lambda = -Cip[0]/nip[0];
+	      //lambda = -Cip[0]/nip[0];
 	      /* centro dell'ellisse del rim */
 	      rErp[0] = 0;
-	      rErp[1] = Cip[1]+lambda*nip[1];
-	      rErp[2] = Cip[2]+lambda*nip[2];
-
+	      rErp[1] = rErcutp[1];//Cip[1]+lambda*nip[1];
+	      rErp[2] = rErcutp[2];//Cip[2]+lambda*nip[2];
+	      aErcut2 = Sqr(aErcut);
+	      bErcut2 = Sqr(bErcut);
+#if 0
+	      nErcutyp12 = Sqr(nErcutyp[1]);
+	      nErcutyp22 = Sqr(nErcutyp[2]);
+	      nErcutzp12 = Sqr(nErcutzp[1]);
+	      nErcutzp22 = Sqr(nErcutzp[2]);
+#endif
+	      fact = 1.0/(-nErcutyp[2]*nErcutzp[1] + nErcutyp[1]*nErcutzp[2]);
+	      ia00=nErcutzp[2]*fact;
+	      ia01=-nErcutzp[1]*fact;
+	      ia10=-nErcutyp[2]*fact;
+	      ia11=nErcutyp[1]*fact;
+	      ia002=Sqr(ia00);
+	      ia102=Sqr(ia10);
+	      /* e ora basta determinare autovalori e autovettori di M */
+	      m00 =ia002/aErcut2 + ia102/bErcut2 ;
+	      m01 = (ia00*ia01)/aErcut2 + (ia10*ia11)/bErcut2;
+	      m10 = (ia00*ia01)/aErcut2 + (ia10*ia11)/bErcut2;
+	      m11 = ia012/aErcut2 + ia112/bErcut2;
+	      m002 = Sqr(m00);
+	      m112 = Sqr(m112);
 	      nErxp[0] = 1.0;
 	      nErxp[1] = 0.0;
 	      nErxp[2] = 0.0;
-	      nEryp[0]=0.0;
-	      nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
-	      nEryp[1]=-nEryp[2]*nip[2]/nip[1];
+	      delta = m002 + 4*m01*m10 - 2*m00*m11 + m112;
+	      if (delta < 0)
+		{
+		  printf("Huston abbiamo un problema...\n");
+		  exit(-1);
+		} invm10 = -1.0/2.0/m10;
+	      AA0 = -m00+m11;
+	      BB0 = sqrt(delta);
+	      AA = AA0*invm10;
+	      BB = BB0*invm10;
+	      nEryp[0] = 0.0;
+	      nEryp[1] =AA+BB;
+	      nEryp[2] = 1.0;
+	      norm = calc_norm(nEryp);
+	      for (kk1=0; kk1 < 3; kk1)
+	       nEryp[kk1]/=norm;
+	      nErzp[0] = 0.0;
+	      nErzp[1] =AA-BB;
+	      nErzp[2] = 1.0;
+	      norm = calc_norm(nEryp);
+	      for (kk1=0; kk1 < 3; kk1)
+	       nEryp[kk1]/=norm;
+	      ev0 = 0.5*(AA0-BB0);
+	      ev1 = 0.5*(AA0+BB0);
+	      aEr = 1.0/sqrt(ev0);
+	      bEr = 1.0/sqrt(ev1);   
+      	      printf("semiaxes of projectd rim ellipse: %.15G %.15G\n", aEr, bEr);
+#if 0
+	      aEr=D2;	
+	      bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
+	       nEryp[0]=0.0;
+	      nEryp[2]=1.0/sqrt(1.0+Sqr(nrcutzp[2]/nrcutzp[1]));
+	      nEryp[1]=-nEryp[2]*nrcutzp[2]/nrcutzp[1];
 	      vectProdVec(nErxp,nEryp,nErzp);
+#endif
+	      /*
+	       * c'è un modo per calcolare i semiassi e i vettori degli assi che ho trovato in rete (da verificare) 
+	       */
+
+	      //spy=scalProd(nEryp,nrcutyp);
+	      //spz=scalProd(nErzp,nrcutzp);
+	      //aEr = sqrt(1.0/(Sqr(spy/aErcut)+Sqr(spz/bErcut)));
+	      //bEr;
 	      printf("?!?rErp=%f %f %f nErzp= %f %f %f\n", rErp[0], rErp[1], rErp[2], nErzp[0], nErzp[1], nErzp[2]);
 	      printf("?!?rEdp=%f %f %f nEdzp= %f %f %f\n", rEdp[0], rEdp[1], rEdp[2], nEdzp[0], nEdzp[1], nEdzp[2]);
 	      printf("ni=%f %f f%f nj=%f %f %f\n", ni[0], ni[1], ni[2], nj[0], nj[1], nj[2]);
 	      printf("nip=%f %f f%f njp=%f %f %f\n", nip[0], nip[1], nip[2], njp[0], njp[1], njp[2]);
-	      aEr=D2;	
-	      bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
-	      /* >>> disk ellipse (ottenuta proiettando il disco sul piano) <<< */
+	     /* >>> disk ellipse (ottenuta proiettando il disco sul piano) <<< */
 	      //lambda = -Cjp[0]/njp[0];
 	      /* centro dell'ellisse del disk*/
 	      rEdp[0] = 0;
