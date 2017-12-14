@@ -1602,32 +1602,34 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double sphov;
 #endif
   static struct brentOpt *mesh;
-  int it, kk1, kk2, k2, k1, nz, nl, nn, nng, docirc;
-  double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, thg, Pjp[3], PiCi[3], lambda, dist, maxmind[2];
+  int it, kk1, kk2, k2, k1, nz, nl, nn, nng;// docirc;
+  double th, dth, normNSq, ViVj[3], lambdai, lambdaj, Rl[3][3], PjPi[3], PjCi[3], D2, Pjp[3], PiCi[3];//thg, lambda, dist, maxmind[2];
   double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3];
   double dthg, distleft, distcenter, distright, mindistb, maxdist, sp1, sp2;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
   double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
-  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
-  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
-  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
-  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
-  double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
-  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, Aip[3];	
-  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solcc[2][2], solqua[4], solquad[2], solarrDisk[4][3];	
+  //double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
+  //double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
+  //double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
+  //double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
+  //double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp, Tj_para, Tj_perp[3];
+  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, Aip[3], Cip[3], nip[3];	
+  double CiCjni, CiCj[3], Dini, CiCjnj, ninj, Vi[3], Vj[3], DjCini, detA;
+  double normCiCj, thL, thR, solarr[4][3], coeff[5], solec[4][2], solqua[4];//solcc[2][2], solqua[4], solquad[2], solarrDisk[4][3];	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], mindist, PminCip[3], mindistL, mindistR, PminCipL[3], 
 	 PminCipR[3], dsc[3], dscperp[3];
-  double rC[3], rEdp[3], rErp[3], aEr, bEr, aEd, bEd, nEdxp[3], nEdyp[3], nEdzp[3], nErxp[3], nEryp[3], nErzp[3];
-  double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD, Cpl[3], npl[3], nip[3], Cip[3], 
-	 njp[3], Cjp[3], nplp[3], nplpx[3], nplpy[3], nplpz[3], nErxpp[3], nErypp[3], nErzpp[3], rErpp[3], 
-	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
+  double rC[3]; //rEdp[3], rErp[3], aEr, bEr, aEd, bEd, nEdxp[3], nEdyp[3], nEdzp[3], nErxp[3], nEryp[3], nErzp[3];
+  //double a,b,b2,a2,a4,b4,R2,xC,yC,xC2,yC2, sqA, sqB, sqC, sqD, Cpl[3], npl[3], nip[3], Cip[3], 
+//	 njp[3], Cjp[3], nplp[3], nplpx[3], nplpy[3], nplpz[3], nErxpp[3], nErypp[3], nErzpp[3], rErpp[3], 
+//	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
   int kk, j1, j2, numsol;
-  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
-  double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
-  double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
-  double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112, delta;
+  //double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq; 
+  double c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
+  //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
+  //double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
+  //double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112, delta;
   double Cip0, Cip1, Cip2, nip0, nip1 , nip2;
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
@@ -1899,7 +1901,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	  c32 = Sqr(c3);
 	  c42 = Sqr(c4);
 	  c52 = Sqr(c5);
-	  xC=yC=0;
+	  //xC=yC=0;
       	  coeff[4] = c02 - 2*c0*c1 + c12 + c22;
 	  coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
 	  coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
@@ -1943,7 +1945,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 #if 0
-	      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) < 1E-20)
+	      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-5)
 		{
 		  printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
 		  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
