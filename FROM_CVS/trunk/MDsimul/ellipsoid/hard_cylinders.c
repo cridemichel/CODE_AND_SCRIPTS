@@ -1568,10 +1568,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	 njp[3], Cjp[3], nplp[3], nplpx[3], nplpy[3], nplpz[3], nErxpp[3], nErypp[3], nErzpp[3], rErpp[3], 
 	 Cjpp[3], njpp[3], aErp, bErp, xEr, yEr, aff[3], nErxppp[3], nEryppp[3], nErzppp[3], rErppp[3];
   int kk, j1, j2, numsol;
-  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, delta, norm;  
+  double nEry1sq, nEry2sq, aErsq, bErsq, nErz1sq, nErz2sq, c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm;  
   double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
-  double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, M[3][3], nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
-  double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112;
+  double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
+  double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112, delta;
   /* if we have two cylinder with different L or D use calcDistNegHCdiff() function
    * which is able to handle this! */
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
@@ -1845,6 +1845,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		}
 	      Dgbl = D;
 #endif
+	      D2 = D*0.5;
 	      /* calcolo i semiassi ed il centro dell'ellisse che si ottiene tagliando il rim con il piano del disco */
 	      lambda = -Cip[0]/nip[0];
 	      /* centro dell'ellisse del rim */
@@ -1858,10 +1859,14 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      nEryp[0]=0.0;
 	      nEryp[2]=1.0/sqrt(1.0+Sqr(nip[2]/nip[1]));
 	      nEryp[1]=-nEryp[2]*nip[2]/nip[1];
+	      vectProdVec(nErxp,nEryp,nErzp);
 	      aErcut=D2;	
 	      bErcut=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
-	    
-	      vectProdVec(nErxp,nEryp,nErzp);
+#if 0
+	      printf("scalprod nErx.nip=%.15G\n", scalProd(nErzp,nip)); 
+	      printf("nip=%.15G %.15G %.15G\n", nip[0], nip[1], nip[2]);
+	      printf("Erzp=%.15G %.15G %.15G\n", nErzp[0], nErzp[1], nErzp[2]);
+#endif
 	      /* torno al riferimento del laboratorio */
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
@@ -1890,7 +1895,6 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      norm = calc_norm(npl);
 	      for (kk1=0; kk1 < 3; kk1++)
 		npl[kk1] /= norm;
-	      D2 = D*0.5;
 	      
 	      /* passo al sistema di riferimento del piano medio (l'asse perpendicolare è x) (p) */
 	      versor_to_R(npl[0], npl[1], npl[2], Rl);
@@ -1942,44 +1946,56 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      ia11=nErcutyp[1]*fact;
 	      ia002=Sqr(ia00);
 	      ia102=Sqr(ia10);
+	      ia112=Sqr(ia11);
+	      ia012=Sqr(ia01);
 	      /* e ora basta determinare autovalori e autovettori di M */
-	      m00 =ia002/aErcut2 + ia102/bErcut2 ;
+	      m00 =ia002/aErcut2 + ia102/bErcut2;
 	      m01 = (ia00*ia01)/aErcut2 + (ia10*ia11)/bErcut2;
 	      m10 = (ia00*ia01)/aErcut2 + (ia10*ia11)/bErcut2;
 	      m11 = ia012/aErcut2 + ia112/bErcut2;
+	      //printf("aErcut2=%f bErcut2=%f m00=%.15G m01=%.15G m10=%.15G, m11=%.15G\n", aErcut2, bErcut2,
+		//     m00, m01, m10, m11);
 	      m002 = Sqr(m00);
-	      m112 = Sqr(m112);
+	      m112 = Sqr(m11);
 	      nErxp[0] = 1.0;
 	      nErxp[1] = 0.0;
 	      nErxp[2] = 0.0;
 	      delta = m002 + 4*m01*m10 - 2*m00*m11 + m112;
+	      //printf("BOH ANCORA PRIMA delta=%.15G m10=%.15G\n", delta, m10);
+	      //printf("m002=%.15G m01=%.15G, m10=%.15G m00=%.15G m11=%.15G, m112=%.15G\n",
+		//     m002, m01, m10, m00, m11, m112);
 	      if (delta < 0)
 		{
 		  printf("Huston abbiamo un problema...\n");
 		  printf("delta=%.15G\n", delta);
 		  exit(-1);
-		} invm10 = -1.0/2.0/m10;
+		} 
+	      invm10 = -1.0/2.0/m10;
 	      AA0 = -m00+m11;
 	      BB0 = sqrt(delta);
+	      //printf("BOH PRIMA delta=%.15G AA0=%.15G BB0=%.15G\n", delta, AA0, BB0);
 	      AA = AA0*invm10;
 	      BB = BB0*invm10;
 	      nEryp[0] = 0.0;
 	      nEryp[1] =AA+BB;
 	      nEryp[2] = 1.0;
 	      norm = calc_norm(nEryp);
-	      for (kk1=0; kk1 < 3; kk1)
+	      for (kk1=0; kk1 < 3; kk1++)
 	       nEryp[kk1]/=norm;
 	      nErzp[0] = 0.0;
 	      nErzp[1] =AA-BB;
 	      nErzp[2] = 1.0;
-	      norm = calc_norm(nEryp);
-	      for (kk1=0; kk1 < 3; kk1)
-	       nEryp[kk1]/=norm;
+	      norm = calc_norm(nErzp);
+	      for (kk1=0; kk1 < 3; kk1++)
+	       nErzp[kk1]/=norm;
+	      //printf("BOH DOPO delta=%.15G AA0=%.15G BB0=%.15G\n", delta, AA0, BB0);
+	      AA0=m00+m11;
 	      ev0 = 0.5*(AA0-BB0);
 	      ev1 = 0.5*(AA0+BB0);
 	      aEr = 1.0/sqrt(ev0);
 	      bEr = 1.0/sqrt(ev1);   
-      	      printf("semiaxes of projectd rim ellipse: %.15G %.15G\n", aEr, bEr);
+	      //printf("fact=%.15G aErcut2=%.15G bErcut2=%.15G\n", fact, aErcut2, bErcut2);
+	      //printf("ev0=%f ev1=%f semi-axes=%f %f\n", ev0, ev1, 1.0/sqrt(ev0), 1.0/sqrt(ev1));
 #if 0
 	      aEr=D2;	
 	      bEr=D2/sqrt(1.0-Sqr(scalProd(nErzp,nip)));
@@ -1996,10 +2012,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      //spz=scalProd(nErzp,nrcutzp);
 	      //aEr = sqrt(1.0/(Sqr(spy/aErcut)+Sqr(spz/bErcut)));
 	      //bEr;
+#if 0
 	      printf("?!?rErp=%f %f %f nErzp= %f %f %f\n", rErp[0], rErp[1], rErp[2], nErzp[0], nErzp[1], nErzp[2]);
 	      printf("?!?rEdp=%f %f %f nEdzp= %f %f %f\n", rEdp[0], rEdp[1], rEdp[2], nEdzp[0], nEdzp[1], nEdzp[2]);
 	      printf("ni=%f %f f%f nj=%f %f %f\n", ni[0], ni[1], ni[2], nj[0], nj[1], nj[2]);
 	      printf("nip=%f %f f%f njp=%f %f %f\n", nip[0], nip[1], nip[2], njp[0], njp[1], njp[2]);
+#endif
 	     /* >>> disk ellipse (ottenuta proiettando il disco sul piano) <<< */
 	      //lambda = -Cjp[0]/njp[0];
 	      /* centro dell'ellisse del disk*/
@@ -2015,7 +2033,14 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      vectProdVec(nEdxp,nEdyp,nEdzp);
 	      aEd=D2;	
 	      bEd=D2*scalProd(nEdxp,njp);//D2/sqrt(1.0-Sqr(scalProd(nEdzp,njp)));
-#if 1
+	      
+#if 0
+	      printf("semiaxes cut ellipse: %.15G %.15G\n", aErcut, bErcut);
+	      printf("ni= %.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
+	      printf("semiaxes of projectd rim ellipse: %.15G %.15G\n", aEr, bEr);
+	      printf("semiaxes of projectd disk ellipse: %.15G %,.15G\n", aEd, bEd);
+#endif
+#if 0
 		{
 		  double p[3];
 		  for (kk1=0; kk1 < 3; kk1++)
@@ -2057,7 +2082,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    } 
 		}
 
-	      printf("rErpp=%f %f %f nErzpp= %f %f %f\n", rErpp[0], rErpp[1], rErpp[2], nErzpp[0], nErzpp[1], nErzpp[2]);
+	      //printf("rErpp=%f %f %f nErzpp= %f %f %f\n", rErpp[0], rErpp[1], rErpp[2], nErzpp[0], nErzpp[1], nErzpp[2]);
 	      //printf("Dnorm rEpp=%.15G\n",calc_norm(rErpp));
 	      //printf(">>>>nxp=%f %f %f\n", nErxp[0], nErxp[1], nErxp[2]);
 	      /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
@@ -2069,7 +2094,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      nErz2sq=Sqr(nErzpp[2]);
 	      rErpp1sq=Sqr(rErpp[1]);
 	      rErpp2sq=Sqr(rErpp[2]);
-	      printf("rErpp=%f %f %f nErzpp= %f %f %f\n", rErpp[0], rErpp[1], rErpp[2], nErzpp[0], nErzpp[1], nErzpp[2]);
+	      //printf("rErpp=%f %f %f nErzpp= %f %f %f\n", rErpp[0], rErpp[1], rErpp[2], nErzpp[0], nErzpp[1], nErzpp[2]);
 	      coeffEr[0] = nEry1sq/aErsq + nErz1sq/bErsq;
 	      coeffEr[1] = nEry2sq/aErsq + nErz2sq/bErsq;
 	      coeffEr[2] = (2.0*nErypp[1]*nErypp[2])/aErsq + (2.0*nErzpp[1]*nErzpp[2])/bErsq;
@@ -2099,18 +2124,19 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 			      + coeffEr[0]*(-4.0*coeffEr[1]*coeffEr[3] + Sqr(coeffEr[5])))/delta);
 	      coeffEr[4] = 0.0;
 	      coeffEr[5] = 0.0;
-#if 1
+#if 0
 		{
 		  double p[3],xx, cq[3], solqa[2];
+		  int numsolL;
 		  /* prendo un punto sull'ellisse del rim e verfico che il punto
 		   * appartiene al rim */
 		  xx= D2/2.;
 
-		  printf("xx=%f semi-axes=%f %f\n", xx, aEr, bEr);
+		  printf("xx=%f semi-axes=%f %f\n", xx, aErcut, bErcut);
 		  cq[2] = coeffEr[1];
 		  cq[1] = coeffEr[2]*xx;
 		  cq[0] = coeffEr[3]+coeffEr[0]*Sqr(xx);
-		  solve_quadratic(cq, &numsol, solqa);
+		  solve_quadratic(cq, &numsolL, solqa);
 		  printf("QQQnumsol=%d\n", numsol);
 		  p[1] = (xEr+xx)*aEd;
 		  p[2] = (yEr+solqa[0])*bEd;
@@ -2144,7 +2170,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		-2*c02*yC2 - 2*c0*c3*yC2 + 2*c02*xC2*yC2 + c02*yC2*yC2;
 	      solve_fourth_deg(coeff, &numsol, solqua);
 	      /* ora assegno a solec[][] e calcolo x */
-	      printf("numsol=%d\n", numsol);
+	      
+	      //printf("numsol=%d\n", numsol);
 	      for (kk1=0; kk1 < numsol; kk1++)
 		{
 
@@ -2162,10 +2189,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      for (kk1=0; kk1 < numsol; kk1++)
 		{
 		  ellips2disk(solec[kk1], solarr[kk1], xEr, yEr, aEd, bEd);/* torno al sistema di riferimento pp dell'ellisse del disco */
-		  printf("DISTDISTDIST*****=%.15G\n", perpcomp(solarr[kk1],Cipp,nipp));
 		  //printf("norm solarr[%d]=%.15G solec[]=%.15G\n", kk1, calc_norm(solarr[kk1]), solec[kk1][1]);
 		  //printf("solarr=%f %f %f\n", solarr[kk1][0],solarr[kk1][1], solarr[kk1][2]);
 		  projectback(solarr[kk1], Cjpp, njpp) /* ottengo i punti sul disco che corrispondonoa alle intersezioni calcolate */;
+		  printf("DISTDISTDIST*****=%.15G\n", perpcomp(solarr[kk1],Cipp,nipp));
 		}
 #if 0
 	      printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
