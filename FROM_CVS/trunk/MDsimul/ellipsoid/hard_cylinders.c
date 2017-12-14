@@ -1882,7 +1882,6 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
 		    } 
 		}
-	   
 	      /* >>> scelgo un piano che sia la "media" dei piano del disco e quello perperdincolare al rim <<< */
 	      for (kk1=0; kk1 < 3; kk1++)
 		{
@@ -1917,13 +1916,24 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      /* disk */
 		      njp[kk1] += Rl[kk1][kk2]*nj[kk2];
 		      Cjp[kk1] += Rl[kk1][kk2]*(Dj[j2][kk2]-Cpl[kk2]);
-		      rErcutp[kk1] += Rl[kk1][kk2]*(rErcutp[kk2]-Cpl[kk2]);
+		      rErcutp[kk1] += Rl[kk1][kk2]*(rErcut[kk2]-Cpl[kk2]);
 		      nErcutxp[kk1] += Rl[kk1][kk2]*nErcutx[kk2];
 		      nErcutyp[kk1] += Rl[kk1][kk2]*nErcuty[kk2];
 		      nErcutzp[kk1] += Rl[kk1][kk2]*nErcutz[kk2];
 		    } 
 		}
-	      
+#if 0
+		{
+		  double p[3];
+		  for (kk1=0; kk1 < 3; kk1++)
+		    p[kk1] = rErcutp[kk1]+bErcut*nErcutzp[kk1];
+		  printf("rErp=%f %f %f\n", rErcutp[0], rErcutp[1], rErcutp[2]);
+		  //projectback(p, Cjp, njp);
+		  printf("PRIMA DISTANCE=%.15G\n", perpcomp(p, Cip, nip));
+		}
+#endif
+
+      
 	      /* >> rim ellipse (ottenuta proiettando l'ellisse ottenuta in precedenza sul piano) <<< */
 	      /* notare che prendendo il piano medio non potrà mai essere ni.np = 0 */
 	      //lambda = -Cip[0]/nip[0];
@@ -1933,6 +1943,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      rErp[2] = rErcutp[2];//Cip[2]+lambda*nip[2];
 	      aErcut2 = Sqr(aErcut);
 	      bErcut2 = Sqr(bErcut);
+
+
 #if 0
 	      nErcutyp12 = Sqr(nErcutyp[1]);
 	      nErcutyp22 = Sqr(nErcutyp[2]);
@@ -2040,14 +2052,14 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      printf("semiaxes of projectd rim ellipse: %.15G %.15G\n", aEr, bEr);
 	      printf("semiaxes of projectd disk ellipse: %.15G %,.15G\n", aEd, bEd);
 #endif
-#if 0
+#if 1
 		{
 		  double p[3];
 		  for (kk1=0; kk1 < 3; kk1++)
 		    p[kk1] = rErp[kk1]+bEr*nErzp[kk1];
 		  printf("rErp=%f %f %f\n", rErp[0], rErp[1], rErp[2]);
 		  //projectback(p, Cjp, njp);
-		  printf("PRIMA DISTANCE=%.15G\n", perpcomp(p, Cip, nip));
+		  printf("DOPO DISTANCE=%.15G\n", perpcomp(p, Cip, nip));
 		}
 #endif
 
@@ -2193,6 +2205,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  //printf("solarr=%f %f %f\n", solarr[kk1][0],solarr[kk1][1], solarr[kk1][2]);
 		  projectback(solarr[kk1], Cjpp, njpp) /* ottengo i punti sul disco che corrispondonoa alle intersezioni calcolate */;
 		  printf("DISTDISTDIST*****=%.15G\n", perpcomp(solarr[kk1],Cipp,nipp));
+		  printf("DIST SOL-DISK=%.15G\n", calc_distance(solarr[kk1], Cjpp));
 		}
 #if 0
 	      printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
@@ -2473,9 +2486,9 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		    {
 		      dsc[kk2] = solarr[kk1][kk2] - Cipp[kk2];
 		    }
-		  printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
-		  if (fabs(perpcomp(solarr[kk1], Cipp, nipp)-D2) > 1E-4)
-		    printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cipp, nipp));
+		  //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
+		  //if (fabs(perpcomp(solarr[kk1], Cipp, nipp)-D2) > 1E-4)
+		  //printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cipp, nipp));
 		  sp = scalProd(dsc, nipp);
 		  if (fabs(sp) < L*0.5)
 		    {
