@@ -2052,7 +2052,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 	      printf("semiaxes of projectd rim ellipse: %.15G %.15G\n", aEr, bEr);
 	      printf("semiaxes of projectd disk ellipse: %.15G %,.15G\n", aEd, bEd);
 #endif
-#if 1
+#if 0
 		{
 		  double p[3];
 		  for (kk1=0; kk1 < 3; kk1++)
@@ -2190,7 +2190,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  solec[kk1][0] = (-c0 - c3 + c0*xC2 + (c0 - c1)*Sqr(solqua[kk1]) - 
 				   2*c0*solqua[kk1]*yC + c0*yC2)/(2*c0*xC + c2*solqua[kk1]);
 		  solec[kk1][1] = solqua[kk1];
-#if 1
+#if 0
 		  printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
 			 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
 			 coeff[1]*solqua[kk1]+coeff[0]);
@@ -2204,8 +2204,8 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  //printf("norm solarr[%d]=%.15G solec[]=%.15G\n", kk1, calc_norm(solarr[kk1]), solec[kk1][1]);
 		  //printf("solarr=%f %f %f\n", solarr[kk1][0],solarr[kk1][1], solarr[kk1][2]);
 		  projectback(solarr[kk1], Cjpp, njpp) /* ottengo i punti sul disco che corrispondonoa alle intersezioni calcolate */;
-		  printf("DISTDISTDIST*****=%.15G\n", perpcomp(solarr[kk1],Cipp,nipp));
-		  printf("DIST SOL-DISK=%.15G\n", calc_distance(solarr[kk1], Cjpp));
+		  //printf("DISTDISTDIST*****=%.15G\n", perpcomp(solarr[kk1],Cipp,nipp));
+		  //printf("DIST SOL-DISK=%.15G\n", calc_distance(solarr[kk1], Cjpp));
 		}
 #if 0
 	      printf("cos theta=%.15G acos=%.15G\n", scalProd(nEz, nip), 180.0*acos(scalProd(nEz,nip))/M_PI);
@@ -2487,8 +2487,12 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		      dsc[kk2] = solarr[kk1][kk2] - Cipp[kk2];
 		    }
 		  //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
-		  //if (fabs(perpcomp(solarr[kk1], Cipp, nipp)-D2) > 1E-4)
-		  //printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cipp, nipp));
+		  if (fabs(perpcomp(solarr[kk1], Cipp, nipp)-D2) > 1E-4)
+		    {
+		      printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cipp, nipp));
+		      printf("semi axes=%f %f\n", aEr, bEr);
+		      printf("rcut axes=%f %f\n", aErcut, bErcut);
+		    }
 		  sp = scalProd(dsc, nipp);
 		  if (fabs(sp) < L*0.5)
 		    {
