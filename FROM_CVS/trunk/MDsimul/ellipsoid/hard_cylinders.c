@@ -1939,7 +1939,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 #endif
 	      for (kk2=0; kk2 < 3; kk2++)
 		{
-		  dsc[kk2] = solarr[kk1][kk2] - Cipp[kk2];
+		  dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
 		}
 	      //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 #if 0
@@ -1959,7 +1959,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 		  //printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
 		}
 #endif
-	      sp = scalProd(dsc, nipp);
+	      sp = scalProd(dsc, nip);
 	      if (fabs(sp) < L*0.5)
 		{
 		  return -1;
