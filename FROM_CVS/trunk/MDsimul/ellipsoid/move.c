@@ -5734,6 +5734,14 @@ void calc_grad(double *rC, double *rA, double **Xa, double *grad)
 	grad[k1] += 2.0*Xa[k1][k2]*(rC[k2]-rA[k2]); 
     }
 }
+long double lcalc_norm(long double *vec)
+{
+  int k1;
+  long double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
 double calc_norm(double *vec)
 {
   int k1;
