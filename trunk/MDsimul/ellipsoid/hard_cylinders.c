@@ -2,7 +2,13 @@
 #undef DEBUG_HCMC
 #undef MC_HC_SPHERO_OPT
 #include<mdsimul.h>
+#include<float.h>
 #include<complex.h>
+//#define POLY_SOLVE_GSL
+#define USE_LAPACK
+#ifdef POLY_SOLVE_GSL
+#include <gsl/gsl_poly.h>
+#endif
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
 extern const double saxfactMC_QC[3];
@@ -13,6 +19,10 @@ extern void init_rng(int mdseed, int mpi, int my_rank);
 #ifdef MC_STORELL
 int *cellListMC;
 #endif
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+#define MAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+        (maxarg1) : (maxarg2))
+
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
@@ -1427,7 +1437,36 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
 #endif
 double solcgbl[3];
 int nscgbl;
+#ifdef POLY_SOLVE_GSL
+int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
+{
+  static gsl_poly_complex_workspace * w;
+  double z[8];
+  static int first=1;
+  int k;
+  if (first)
+    {
+      w  = gsl_poly_complex_workspace_alloc (5);
+      first=0;
+    }
+  gsl_poly_complex_solve (c, 5, w, z);
 
+ *numrealsol=0;
+ for (k=0; k < 4; k++)
+   {
+     //printf("csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
+     if (z[2*k+1] == 0.0)
+       {
+	 //printf("cimag(csol[%d])=%.15G\n", k, cimag(csol[k]));
+	 rsol[*numrealsol] = z[2*k];
+	 (*numrealsol)++;
+       }
+   }
+  //gsl_poly_complex_workspace_free (w);
+
+  return 0;
+}
+#endif
 #if 1
 void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
 {
@@ -1448,7 +1487,7 @@ void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
   cb[1] = a1*a3-4.0*a0;
   cb[0] = 4.0*a2*a0-a12-a32*a0;
   solve_cubic(cb, &nsc, solc);
-#if 0
+#if 1
   y1 = solc[0];
 #else
   /* se ce n'è più d'una * scelgo la soluzione reale più vicina
@@ -1504,7 +1543,6 @@ void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
 	  (*numrealsol)++;
 	}
     }
-
 }
 #endif
 
@@ -1926,10 +1964,367 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
     }
   return 1;
 }
+
+void balance(double a[4][4])
+{
+  const double RADIX=FLT_RADIX;// numeric_limits<Doub>::radix;
+  int i, j;
+  double scale[4]={1.0,1.0,1.0,1.0};
+  int done=0;
+  double r, c, g, f, s, sqrdx=RADIX*RADIX;
+  const int n=4;
+  while (!done) 
+    {
+      done=1;
+      for (i=0;i<n;i++) 
+	{
+	  //Calculate row and column norms.
+	  //If both are nonzero,
+	  //find the integer power of the machine radix that comes closest to balancing the matrix.
+	  r=0.0;
+	  c=0.0;
+	  for (j=0;j<n;j++)
+	    if (j != i) 
+	      {
+		c += fabs(a[j][i]);
+		r += fabs(a[i][j]);
+	      }
+	  if (c != 0.0 && r != 0.0) 
+	    {
+	      g=r/RADIX;
+	      f=1.0;
+	      s=c+r;
+	      while (c<g) {
+		f *= RADIX;
+		c *= sqrdx;
+	      }
+	      g=r*RADIX;
+	      while (c>g) 
+		{
+		  f /= RADIX;
+		  c /= sqrdx; 
+		}
+	      if ((c+r)/f < 0.95*s) 
+		{
+		  done=0;
+		  g=1.0/f;
+		  scale[i] *= f;
+		  for (j=0;j<n;j++) a[i][j] *= g; //Apply similarity transformation
+		  for (j=0;j<n;j++) a[j][i] *= f;
+		}
+	    }
+	}
+    }
+}
+void hqr(double a[4][4], complex double wri[4])
+{
+  int nn,m,l,k,j,its,i,mmin;
+  double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
+  const double EPS=3.0E-8;//numeric_limits<Doub >::epsilon();
+  const int n=4;
+  for (i=0;i<n;i++)
+    //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
+    for (j=MAX(i-1,0);j<n;j++)
+      anorm += fabs(a[i][j]);
+  nn=n-1;
+  t=0.0;
+  //Gets changed only by an exceptional shift.
+  while (nn >= 0) 
+    {
+      //Begin search for next eigenvalue.
+      its=0;
+      do 
+	{
+	  for (l=nn;l>0;l--)
+	    {
+	      //Begin iteration: look for single small sub di- agonal element.
+	      s=fabs(a[l-1][l-1])+fabs(a[l][l]);
+	      if (s == 0.0)
+		s=anorm;
+	
+	      if (fabs(a[l][l-1]) <= EPS*s)
+		{
+		  a[l][l-1] = 0.0;
+		  break;
+		}
+	    }
+	  x=a[nn][nn];
+	  if (l == nn)
+	    {
+	      //One root found.  
+	      wri[nn--]=x+t;
+	    } 
+	  else
+	    {
+	      y=a[nn-1][nn-1];
+	      w=a[nn][nn-1]*a[nn-1][nn];
+	      if (l == nn-1)
+		{
+		  //Two roots found...
+		  p=0.5*(y-x);
+		  q=p*p+w;
+		  z=sqrt(fabs(q));
+		  x += t;
+		  if (q >= 0.0)
+		    {
+		      //...a real pair.
+		      z=p+SIGN(z,p);
+		      wri[nn-1]=wri[nn]=x+z;
+		      if (z != 0.0)
+			wri[nn]=x-w/z;
+		    } 
+		  else
+		    {
+		      //...a complex pair.
+		      wri[nn]=CMPLX(x+p,-z);
+		      wri[nn-1]=conj(wri[nn]);
+		    }
+		  nn -= 2;
+		} 
+	      else
+		{
+		  //No roots found.  Continue iteration.
+		  if (its == 30)
+		    {
+		      printf("Too many iterations in hqr");
+		      exit(-1);
+		    }
+		  if (its == 10 || its == 20)
+		    {
+		      //Form exceptional shift.
+		      t += x;
+		      for (i=0;i<nn+1;i++)
+			a[i][i] -= x;
+		      s=fabs(a[nn][nn-1])+fabs(a[nn-1][nn-2]);
+		      y=x=0.75*s;
+		      w = -0.4375*s*s;
+		    }
+		  ++its;
+		  for (m=nn-2;m>=l;m--)
+		    {
+		      //Form shift and then look for 2 consecutive small sub- diagonal elements.
+		      z=a[m][m];
+		      r=x-z;
+		      s=y-z;
+		      p=(r*s-w)/a[m+1][m]+a[m][m+1];
+		      //Equation (W ebnote 16.21).
+		      q=a[m+1][m+1]-z-r-s;
+		      r=a[m+2][m+1];
+		      s=fabs(p)+fabs(q)+fabs(r);
+		      //Scale to prevent over flow or under flow.
+		      p /= s;
+		      q /= s;
+		      r /= s;
+		      if (m == l) 
+			break;
+		      u=fabs(a[m][m-1])*(fabs(q)+ fabs(r));
+		      v=fabs(p)*(fabs(a[m-1][m-1])+fabs(z)+fabs(a [m+1][m +1]));
+		      if (u <= EPS*v)
+			break;
+		      //Equation (W ebnote 16.24).
+		    }
+		  for (i=m;i<nn-1;i++)
+		    {
+		      a[i+2][i]=0.0;
+		      if (i != m) a[i+2][i-1]=0.0;
+		    }
+		  for (k=m;k<nn;k++)
+		    {
+		      //Double QR step on rows l to nn and columns m to nn .
+		      if (k != m) 
+			{
+			  p=a[k][k-1];
+			  //Begin setup of Householder vector.
+			  q=a[k+1][k-1];
+			  r=0.0;
+			  if (k+1 != nn) 
+			    r=a[k+2][k-1];
+			  if ((x=fabs(p)+fabs(q)+fabs(r)) != 0.0)
+			    {
+			      p /= x;
+			      //Scale to prevent over flow or under flow.
+			      q /= x;
+			      r /= x;
+			    }
+			}
+		      if ((s=SIGN(sqrt(p*p+q*q+ r*r),p)) != 0.0)
+			{
+			  if (k == m) 
+			    {
+			      if (l != m)
+				a[k][k-1] = -a[k][k-1];
+			    } 
+			  else
+			    a[k][k-1] = -s*x;
+			  p += s;
+			  //Equations (Webnote 16.22).
+			  x=p/s;
+			  y=q/s;
+			  z=r/s;
+			  q /= p;
+			  r /= p;
+			  for (j=k;j<nn+1;j++)
+			    {
+			      //Row mo di cation.
+			      p=a[k][j]+q*a[k+1][j];
+			      if (k+1 != nn)
+				{
+				  p += r*a[k+2][j];
+				  a[k+2][j] -= p*z;
+				}
+			      a[k+1][j] -= p*y;
+			      a[k][j] -= p*x;
+			    }
+			  mmin = nn < k+3 ? nn : k+3;
+			  for (i=l;i<mmin+1;i++)
+			    {
+			      //Column modification.
+			      p=x*a[i][k]+y*a[i][k+1 ];
+			      if (k+1 != nn) {
+				p += z*a[i][k+2];
+				a[i][k+2]
+				  -= p*r;
+			      }
+			      a[i][k+1] -= p*q;
+			      a[i][k] -= p;
+			    }
+			}
+		    }
+		}
+	    }
+	} 
+      while (l+1 < nn);
+    }
+}
+
+
+
+#ifdef USE_LAPACK
+void wrap_dgebal(double a[4][4], int *ilo, int *ihi, int n, int *ok)
+{
+  char JOB='S', COMPZ='N';
+  double AT[4*4], z[4*4],  work[4];
+  double wwr[4], wwi[4], x;
+  int i, j, c1, c2, k, pivot[4], lwork, N;
+  for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
+    }						
+  c1 = 4;
+  c2 = 4;
+  lwork=4;
+  N=n;
+ //dgesv_(&c1, &c2, AT, &c1, pivot, &x, &c1, ok); 
+  dgebal_(&JOB, &N, AT, &c1, ilo, ihi, z, ok);      
+  for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<n; j++) a[j][i] = AT[j+n*i];		
+    }	
+}
+void wrap_hseqr(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi, int *ok)
+{
+  char JOB='E', COMPZ='N';
+  double AT[4*4], z[4*4],  work[4];
+  double wwr[4], wwi[4], x;
+  int i, j, c1, c2, k, pivot[4], lwork, N;
+  for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
+    }						
+  c1 = 4;
+  c2 = 4;
+  lwork=4;
+  N=n;
+  dhseqr_(&JOB, &COMPZ, &N, &ilo, &ihi, AT, &c1, wwr, wwi, z, &c2, work, &lwork, ok);      
+}
+void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi, int *ok)
+{
+  char JOB='N', COMPZ='N';
+  double AT[4*4], z[4*4], z2[4*4], work[4], work2[4];
+  double wwr[4], wwi[4], x;
+  int i, j, c1, c2, k, pivot[4], lwork, N;
+  for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
+    }						
+  c1 = 4;
+  c2 = 4;
+  lwork=100;
+  N=n;
+  dgeev_(&JOB, &COMPZ, &N, AT, &c1, wwr, wwi, z, &c2, z2, &c2, work, &lwork, ok);      
+}
+
+#endif
+void QRfactorization( double hess[4][4], complex double sol[4])
+{
+  int ok;
+  double zr[4], zi[4];
+  int ilo, ihi,k;
+  /* pagina 615 Num. Rec. */  
+#ifdef USE_LAPACK
+#if 1
+  wrap_dgebal(hess, &ilo, &ihi, 4, &ok);
+  wrap_hseqr(hess, zr, zi, 4, ilo, ihi, &ok);
+#else
+  /* questa per qualche motivo non funziona */
+  wrap_dgeev(hess, zr, zi, 4, ilo, ihi, &ok);
+#endif
+  for (k=0; k < 4; k++)
+    sol[k] =CMPLX(zr[k],zi[k]);
+#else
+  /* queste non funzionano ossia hqr non converge ... */
+  balance(hess);
+  hqr(hess, sol);
+  //sort(); 
+#endif
+}
+void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
+{
+//void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
+  /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
+   * given the coefficients a[0..m]. The method is to construct an upper Hessenberg matrix whose 
+   * eigenvalues are the desired roots and then use the routine Unsymmeig. The roots are returned 
+   * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
+  /* pagina 497 Num. Rec. */
+  complex double csol[4]; 
+  const int m=4;
+  double hess[4][4];
+  int j, k;
+  for (k=0;k<m;k++) { //Construct the matrix.
+    hess[0][k] = -coeff[m-k-1]/coeff[m];
+    for (j=1;j<m;j++) hess[j][k]=0.0;
+    if (k != m-1) hess[k+1][k]=1.0;
+  }
+  QRfactorization(hess, csol);
+  //for (j=0;j<m;j++)
+    //rt[j]=h.wri[j];
+  *numrealsol=0;
+  for (k=0; k < 4; k++)
+   {
+     //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
+     if (cimag(csol[k]) == 0.0)
+       {
+	 //printf("cimag(csol[%d])=%.15G\n", k, cimag(csol[k]));
+	 rsol[*numrealsol] = creal(csol[k]);
+	 (*numrealsol)++;
+       }
+   }
+  //gsl_poly_complex_workspace_free (w);
+}
+
+void solve_quartic(double coeff[5], int *numsol, double solqua[4])
+{
+#ifdef POLY_SOLVE_GSL
+  solve_gslpoly(coeff, numsol, solqua);
+#else
+  solve_numrec(coeff, numsol, solqua);
+  //csolve_quartic_abramovitz(coeff, &numsol, solqua);
+#endif
+}
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3])
 {
-  int kk1, kk2, numsol, nsc;
-
+  int kk1, kk2, numsol, nsc, fallback;
+  const double FALLBACK_THR = 1E-3;
   double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   double Cip[3], nip[3];
@@ -1982,7 +2377,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     nip12*nip22 + nip24;
   coeffEr[2] = -4*nip1*nip2 + 2*nip02*nip1*nip2 + 2*nip13*nip2 + 
     2*nip1*nip23;
-  coeffEr[3] = Cip02 + Cip12 + Cip22 - PowerM(D2,2) - 
+  coeffEr[3] = Cip02 + Cip12 + Cip22 - Sqr(D2) - 
     2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1 - 
     2*Cip12*nip12 + Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 + Cip12*nip14 - 
     4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2 - 4*Cip1*Cip2*nip1*nip2 + 2*Cip1*Cip2*nip02*nip1*nip2 + 
@@ -2022,7 +2417,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
-  csolve_quartic_abramovitz(coeff, &numsol, solqua);
+  solve_quartic(coeff, &numsol, solqua);
   //solve_fourth_deg(coeff, &numsol, solqua);
   /* ora assegno a solec[][] e calcolo x */
 #if 0
@@ -2075,11 +2470,20 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #endif
   //if (numsol > 0)
   //printf("numsol=%d\n", numsol);
+  fallback = 0;
   for (kk1=0; kk1 < numsol; kk1++)
     {
       temp = c4 + c2*solqua[kk1];
-      solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/(c4 + c2*solqua[kk1]);
+      solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
       solec[kk1][1] = solqua[kk1];
+      /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
+       * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
+       * per cui meglio se risolvo la quartica in x. */
+      if (fabs(temp) < FALLBACK_THR)
+	{
+	  fallback = 1;
+	  break;
+	}
 #if 0
       printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
 	     coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
@@ -2088,6 +2492,25 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       //printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
 #endif
     }
+  /* ora trovo i 5 coefficienti della quartica c4*x^4+c3*x^3....*/
+  if (fallback)
+    {
+      coeff[4] = c02 - 2*c0*c1 + c12 + c22;
+      coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
+      coeff[2] = 2*c0*c1 - 2*c12 - c22 + 2*c0*c3 - 2*c1*c3 + c42 + c52;
+      coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
+      coeff[0] = c12 + 2*c1*c3 + c32 - c52;
+      solve_quartic(coeff, &numsol, solqua);
+      for (kk1=0; kk1 < numsol; kk1++)
+	{
+	  temp = c5 + c2*solqua[kk1];
+	  //solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+	  solec[kk1][0] = solqua[kk1];
+	  //solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/(c4 + c2*solqua[kk1]);
+      	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+	}
+    }
+
   for (kk1=0; kk1 < numsol; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
@@ -2110,13 +2533,13 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-3)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 5E-8)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
 	  printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
 	  printf("Cip1=%15G Cip2=%.15G\n", Cip[1], Cip[2]);
-	  printf("numsol=%d\n", numsol);
+	  printf("numsol=%d fallback=%d\n", numsol, fallback);
 	  print_vec("ni=",ni);
 	  print_vec("nj=",nj);
 	  printf("c02=%.15G c0=%.15G c1=%.15G c12=%.15G c22=%.15G\n", c02, c0, c1, c12, c22);
@@ -2126,6 +2549,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  //solve_quadratic(coeff, &numsol2, solquad);
 	  //if (numsol2> 0)
 	  //printf("solqua=%.15G %.15G\n", solquad[0], solquad[1]); 
+	  printf("solqua[%d]=%.15G\n", kk1, solqua[kk1]);
 	  printf("ni.nj=%.15G\n", scalProd(ni,nj));
 	  printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
 	  printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
@@ -2245,6 +2669,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	}
 
     }
+  return 1;
 }
 double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], double nj[3])
 {
@@ -2327,20 +2752,33 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
     return 1;
 #endif
 
-  if (diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj) < 0.0)
-    return -1;
+  if (L < D) // oblate
+    {
+      if (rimrim(D, L, Ci, ni, Cj, nj) < 0.0)
+	return -1;
 
+      if (rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj) < 0.0)
+	return -1;
+
+      if (diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj) < 0.0)
+	return -1;
+    }
+  else
+    {
+      if (diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj) < 0.0)
+	return -1;
+      
+      if (rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj) < 0.0)
+	return -1;
+
+      if (rimrim(D, L, Ci, ni, Cj, nj) < 0.0)
+	return -1;
+    }
  /* case A.2 overlap of rim and disk */
   /* =================================== >>> Part A <<< ========================= */
-  if (rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj) < 0.0)
-    return -1;
-  /* =================================== >>> Part B <<< ========================= */
+ /* =================================== >>> Part B <<< ========================= */
   numcallsHC += 4.0; 
-
-  if (rimrim(D, L, Ci, ni, Cj, nj) < 0.0)
-    return -1;
   return 1;
-
 }
 double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 {
