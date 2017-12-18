@@ -2084,7 +2084,7 @@ void hqr(double a[4][4], complex double wri[4])
 	      else
 		{
 		  //No roots found.  Continue iteration.
-		  if (its == 100)
+		  if (its == 200)
 		    {
 		      printf("Too many iterations in hqr");
 		      exit(-1);
