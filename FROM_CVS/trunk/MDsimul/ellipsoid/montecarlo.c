@@ -14939,7 +14939,7 @@ void move(void)
 	}
 
 #endif
-#if defined(MC_HC) && !defined(MC_HELIX)
+#if defined(MC_HC) && !defined(MC_HELIX) && !defined(HC_ALGO_OPT)
       printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
 #endif
     }
