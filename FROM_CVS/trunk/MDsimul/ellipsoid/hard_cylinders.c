@@ -2210,7 +2210,7 @@ void laguer(double complex *a, double complex *x, int *its)
   const int MR=8,MT=500,MAXIT=MT*MR;
   const double EPS=4.0E-12;
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
-  static const double frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+  static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
   complex dx,x1,b,d,f,g,h,sq,gp,gm,g2,bx;
   int iter, j;
