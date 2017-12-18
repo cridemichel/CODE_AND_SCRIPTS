@@ -5,7 +5,7 @@
 #include<float.h>
 #include<complex.h>
 //#define POLY_SOLVE_GSL
-#define USE_LAPACK
+//#define USE_LAPACK
 #ifdef POLY_SOLVE_GSL
 #include <gsl/gsl_poly.h>
 #endif
@@ -2020,7 +2020,7 @@ void hqr(double a[4][4], complex double wri[4])
 {
   int nn,m,l,k,j,its,i,mmin;
   double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
-  const double EPS=3.0E-8;//numeric_limits<Doub >::epsilon();
+  const double EPS=1.0E-14;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2084,7 +2084,7 @@ void hqr(double a[4][4], complex double wri[4])
 	      else
 		{
 		  //No roots found.  Continue iteration.
-		  if (its == 30)
+		  if (its == 100)
 		    {
 		      printf("Too many iterations in hqr");
 		      exit(-1);
