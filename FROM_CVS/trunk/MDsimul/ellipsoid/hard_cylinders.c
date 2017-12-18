@@ -2020,7 +2020,8 @@ void hqr(double a[4][4], complex double wri[4])
 {
   int nn,m,l,k,j,its,i,mmin;
   double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
-  const double EPS=1.0E-14;//numeric_limits<Doub >::epsilon();
+  const int MAXITS = 1000;
+  const double EPS=3E-16;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2084,7 +2085,7 @@ void hqr(double a[4][4], complex double wri[4])
 	      else
 		{
 		  //No roots found.  Continue iteration.
-		  if (its == 200)
+		  if (its == MAXITS)// il valore era 30 ma l'ho aumentato a 200 altrimenti non ce la fa...boh
 		    {
 		      printf("Too many iterations in hqr");
 		      exit(-1);
@@ -2198,7 +2199,92 @@ void hqr(double a[4][4], complex double wri[4])
 }
 
 
+void laguer(double complex *a, double complex *x, int *its) 
+{
+  //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
+  const int MR=8,MT=10,MAXIT=MT*MR*50;
+  const double EPS=3E-16;
+  //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
+  static const double frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+  // Fractions used to break a limit cycle.
+  complex dx,x1,b,d,f,g,h,sq,gp,gm,g2,bx;
+  int iter, j;
+  double err, abx, abp, abm;
+  int m=4;
+  for (iter=1;iter<=MAXIT;iter++) { 
+    *its=iter;
+    b=a[m];
+    err=cabs(b);
+    d=f=0.0;
+    abx=cabs(*x);
+    for (j=m-1;j>=0;j--) {
+      f=*x*f+d;
+      d=*x*d+b;
+      b=*x*b+a[j];
+      err=cabs(b)+abx*err;
+      //Loop over iterations up to allowed maximum.
+      //Efficient computation of the polynomial and its first two derivatives. f stores P00=2.
+    }
+    err *= EPS;
+    //Estimate of roundoff error in evaluating polynomial.
+    if (cabs(b) <= err) return;
+    g=d/b;
+    g2=g*g;
+    h=g2-2.0*f/b;
+    sq=csqrt(((double)(m-1))*(((double)(m))*h-g2));
+    gp=g+sq;
+    //We are on the root.
+    //The generic case: Use Laguerre’s formula.
+    gm=g-sq;
+    abp=cabs(gp);
+    abm=cabs(gm);
+    if (abp < abm) gp=gm;
+    dx=MAX(abp,abm) > 0.0 ? ((double)(m))/gp : (1.0+abx)*CMPLX(cos((double)iter),sin((double)iter)); //polar(1+abx,((double)(iter)));
+    x1=*x-dx;
+    if (*x == x1) return; //Converged.
+    if (iter % MT != 0) *x=x1;
+    else *x -= frac[iter/MT]*dx;
+    //Every so often we take a fractional step, to break any limit cycle (itself a rare occur- rence).
+  }
+  printf("too many iterations in laguer");
+  //Very unusual; can occur only for complex roots. Try a different starting guess.
+}
 
+void zroots(complex double *a, complex double *roots, int polish) 
+{
+  const double EPS=1.0e-14;
+  int jj, i,its, j;
+  complex double x,b,c;
+  int m=4;
+
+  complex double ad[5], ad_v[5];
+  for(j=0;j<=m;j++) ad[j]=a[j];
+  for (j=m-1;j>=0;j--) {
+    x=0.0;
+    for(jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj]; 
+    laguer(ad_v,&x,&its);
+    if (fabs(cimag(x)) <= 2.0*EPS*fabs(creal(x)))
+      x=CMPLX(creal(x),0.0);
+    roots[j]=x;
+    b=ad[j+1];
+    for (jj=j;jj>=0;jj--) {
+      c=ad[jj];
+      ad[jj]=b;
+      b=x*b+c;
+    }
+  }
+  if (polish)
+    for (j=0;j<m;j++)
+      laguer(a,&roots[j],&its);
+  for (j=1;j<m;j++) {
+    x=roots[j];
+    for (i=j-1;i>=0;i--) {
+      if (creal(roots[i]) <= creal(x)) break;
+      roots[i+1]=roots[i];
+    }
+    roots[i+1]=x;
+  }
+}
 #ifdef USE_LAPACK
 void wrap_dgebal(double a[4][4], int *ilo, int *ihi, int n, int *ok)
 {
@@ -2272,7 +2358,7 @@ void QRfactorization( double hess[4][4], complex double sol[4])
   for (k=0; k < 4; k++)
     sol[k] =CMPLX(zr[k],zi[k]);
 #else
-  /* queste non funzionano ossia hqr non converge ... */
+  /* ora funziona si doveva solo aumentare il numero massimo d'iterazioni */
   balance(hess);
   hqr(hess, sol);
   //sort(); 
@@ -2286,7 +2372,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
    * eigenvalues are the desired roots and then use the routine Unsymmeig. The roots are returned 
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
-  complex double csol[4]; 
+  complex double csol[4], cc[5]; 
   const int m=4;
   double hess[4][4];
   int j, k;
@@ -2295,7 +2381,13 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
     for (j=1;j<m;j++) hess[j][k]=0.0;
     if (k != m-1) hess[k+1][k]=1.0;
   }
+#if 1
+  for(k=0; k < 5; k++)
+    cc[k]=CMPLX(coeff[k],0.0);
+  zroots(cc, csol, 1);
+#else
   QRfactorization(hess, csol);
+#endif
   //for (j=0;j<m;j++)
     //rt[j]=h.wri[j];
   *numrealsol=0;
