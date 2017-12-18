@@ -4,8 +4,14 @@
 #include<mdsimul.h>
 #include<float.h>
 #include<complex.h>
+
+/* NOTA SU RISOLUZIONE QUARTICA
+ * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
+ * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
+ * laguerre va come la routine gsl, mentre le lapack sono molto più lente */
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
+//#define USE_LAGUERRE
 #ifdef POLY_SOLVE_GSL
 #include <gsl/gsl_poly.h>
 #endif
@@ -1401,7 +1407,7 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
   if (coeff[3]==0)
     {
       solve_quadratic(coeff, numsol, sol);
-      exit(-1);
+      return;
     }
   a2 = coeff[2]/coeff[3];
   a1 = coeff[1]/coeff[3];
@@ -1962,7 +1968,7 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
 	    //return 1;
 	  }
     }
-  return 1;
+  return 0;
 }
 
 void balance(double a[4][4])
@@ -2198,12 +2204,11 @@ void hqr(double a[4][4], complex double wri[4])
     }
 }
 
-
 void laguer(double complex *a, double complex *x, int *its) 
 {
   //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
-  const int MR=8,MT=10,MAXIT=MT*MR*50;
-  const double EPS=3E-16;
+  const int MR=8,MT=500,MAXIT=MT*MR;
+  const double EPS=4.0E-12;
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
   static const double frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
@@ -2381,7 +2386,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
     for (j=1;j<m;j++) hess[j][k]=0.0;
     if (k != m-1) hess[k+1][k]=1.0;
   }
-#if 1
+#ifdef USE_LAGUERRE
   for(k=0; k < 5; k++)
     cc[k]=CMPLX(coeff[k],0.0);
   zroots(cc, csol, 1);
@@ -2406,6 +2411,11 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
 
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
+  if (coeff[4]==0)
+    {
+      solve_cubic(coeff, numsol, solqua);
+      return;
+    }
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
 #else
@@ -2416,7 +2426,7 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3])
 {
   int kk1, kk2, numsol, nsc, fallback;
-  const double FALLBACK_THR = 1E-3;
+  const double FALLBACK_THR = 1E-4;
   double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   double Cip[3], nip[3];
@@ -2596,9 +2606,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       for (kk1=0; kk1 < numsol; kk1++)
 	{
 	  temp = c5 + c2*solqua[kk1];
-	  //solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 	  solec[kk1][0] = solqua[kk1];
-	  //solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/(c4 + c2*solqua[kk1]);
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 	}
     }
@@ -2625,7 +2633,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 5E-8)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
@@ -2761,7 +2769,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	}
 
     }
-  return 1;
+  return 0;
 }
 double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], double nj[3])
 {
@@ -2809,7 +2817,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   double sphov;
 #endif
   int kk;
-  double Ci[3], Cj[3], L, D, Di[2][3], Dj[2][3], ni[3], nj[3];
+  double Ci[3], Cj[3], L, D, Di[2][3], Dj[2][3], ni[3], nj[3], ret;
   if (typesArr[typeOfPart[i]].sax[0]!=typesArr[typeOfPart[j]].sax[0]
       || typesArr[typeOfPart[i]].sax[1] != typesArr[typeOfPart[j]].sax[1])
     return calcDistNegHCdiffbrent(i, j, shift, retchk);
@@ -2844,27 +2852,27 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
     return 1;
 #endif
 
-  if (L < D) // oblate
+  if (L >= D) // prolate
     {
-      if (rimrim(D, L, Ci, ni, Cj, nj) < 0.0)
-	return -1;
+      if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
+	return ret;
 
-      if (rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj) < 0.0)
-	return -1;
-
-      if (diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj) < 0.0)
-	return -1;
-    }
-  else
-    {
-      if (diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj) < 0.0)
-	return -1;
+      if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
+	return ret;
       
-      if (rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj) < 0.0)
-	return -1;
+      if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
+	return ret;
+    }
+  else // oblate
+    {
+      if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
+	return ret;
+      
+      if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
+	return ret;
 
-      if (rimrim(D, L, Ci, ni, Cj, nj) < 0.0)
-	return -1;
+      if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
+	return ret;
     }
  /* case A.2 overlap of rim and disk */
   /* =================================== >>> Part A <<< ========================= */
