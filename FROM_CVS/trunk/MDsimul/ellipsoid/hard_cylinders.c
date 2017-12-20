@@ -273,6 +273,16 @@ void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
       x[k1] += rO[k1];
     }
 }
+double calc_distance(double *A, double *B)
+{
+  int k;
+  double d[3];
+  for (k=0; k < 3; k++)
+    {
+      d[k] = A[k] - B[k];
+    }
+  return calc_norm(d);
+}
 #ifdef HC_ALGO_OPT
 #define MESH_PTS 8 
 double meshptsGbl;
@@ -772,17 +782,8 @@ void find_initial_guess_simpler(double *Ai, double Ci[3], double ni[3], double D
   for (kk2=0; kk2 < 3; kk2++)
     dsc[kk2] = Ci[kk2] - Dj[kk2]; 
   sp = scalProd(dsc, ni);
-  for (kk2=0; kk2 < 3; kk2++)
-    dscperp[kk2] = dsc[kk2]-sp*ni[kk2];
-
-  sp = scalProd(dscperp, nj);
   for (kk1=0; kk1 < 3; kk1++)
-    dscpara[kk1]= dscperp[kk1] - nj[kk1]*sp;
-  norm = calc_norm(dscperp);
-  for (kk1=0; kk1 < 3; kk1++)
-    dscperp[kk1] *= 0.5*D/norm;
-  for (kk1=0; kk1 < 3; kk1++)
-    Ai[kk1] = Dj[kk1] + dscpara[kk1];
+    Ai[kk1] = Ci[kk1] - sp*ni[kk1];
 } 
 void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
@@ -1751,16 +1752,7 @@ double perpcomp(double *V, double *C, double *n)
     dscperp[kk2] = dsc[kk2]-sp*n[kk2];
   return calc_norm(dscperp);
 }
-double calc_distance(double *A, double *B)
-{
-  int k;
-  double d[3];
-  for (k=0; k < 3; k++)
-    {
-      d[k] = A[k] - B[k];
-    }
-  return calc_norm(d);
-}
+
 double PowerM(double x, int n)
 {
   double xsq;
@@ -2842,7 +2834,7 @@ double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], doubl
 //	printf("boh\n");
       return -1;
     }
-  return 1;
+  return 0;
 }
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
@@ -2893,21 +2885,21 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
       if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
 	return ret;
 
-      if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
-	return ret;
-      
       if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
 	return ret;
-    }
+
+      if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
+	return ret;
+     }
   else // oblate
     {
       if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
 	return ret;
-      
-      if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
-	return ret;
 
       if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
+	return ret;
+
+      if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
 	return ret;
     }
  /* case A.2 overlap of rim and disk */
@@ -3255,9 +3247,9 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   int rim;
   double sphov;
 #endif
-  int it, k2;
-  double normNSq, ViVj[3], lambdai, lambdaj;
-  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  int it, k2, kk1, kk2, k;
+  double ragg, ragg2, norm, normNSq, ViVj[3], lambdai, lambdaj, Aiold[3], TnCi[3], Tnew[3], Told[3];
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, AiOld[3];
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
   double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
   double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
@@ -3269,7 +3261,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
   double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
   double normCiCj;	
-  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], dsc[3], dscperp[3], dscpara[3];
   int kk, j1, j2;
 
 #ifdef HC_ALGO_OPT
@@ -3467,6 +3459,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif	
 	      return -1;
 	    }
+#ifndef MC_IBARRA_SIMPLER
 #if 0
 	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
 
@@ -3478,6 +3471,54 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 //	      Ai[kk] = Ui[kk];  
 //	    }
 #endif
+#endif
+#ifdef MC_IBARRA_SIMPLER
+	  for (kk1 = 0; kk1 < 3; kk1++)
+	    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
+	  //printf("distance=%.15G\n", calc_distance(Ai, Dj[j2]));
+	  for (it = 0; it < MAX_ITERATIONS; it++)
+	    {
+	      for(k=0;k<3;k++)
+		Told[k] = Tnew[k];
+	      for (kk1=0; kk1 < 3; kk1++)
+		AiDj[kk1] = Ai[kk1] - Dj[j2][kk1]; 
+	      AiDjnj = scalProd(AiDj, nj);
+	      for (kk1=0; kk1 < 3; kk1++)
+		{
+		  VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+		}
+	      for (kk1=0; kk1 < 3; kk1++)
+		dscpara[kk1] = dscperp[kk1] - Dj[j2][kk1];
+	      ragg = calc_norm(VV);
+
+	      for(k=0;k<3;k++)
+		{
+   		  VV[k] = VV[k]/ragg;
+		  Tnew[k] = Dj[j2][k] + VV[k]*D*0.5;
+		  TnCi[k] = Tnew[k]-Ci[k];
+		}
+
+    	      ragg = scalProd(TnCi,ni);
+	      for (k=0;k<3;k++)
+	      	Ai[k] = Ci[k] + ragg*ni[k];	
+	      if ( it > 0 && check_convergence(Told,Tnew) ) 
+		break;
+	    } 
+
+	  for(k=0;k<3;k++)
+	    TnCi[k] = Tnew[k]-Ci[k];
+
+
+    	  ragg = scalProd(TnCi,ni);
+
+    	  for (k=0;k<3;k++)
+	    Ai[k] = Tnew[k]-Ci[k]-ragg*ni[k];
+
+    	  ragg2 = calc_norm(Ai);
+
+    	  if ((fabs(ragg)<L*0.5) && ((ragg2)<D*0.5))
+	    return -1;
+#else
 	  for (it = 0; it < MAX_ITERATIONS; it++)
 	    {
 	      for (kk=0; kk < 3; kk++)
@@ -3535,7 +3576,6 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      if ( it > 0 && check_convergence(TjOld,TjNew) ) 
 		break;
 	    }
-	  totitsHC += it;
 #ifdef DEBUG_HCMC
 	  printf("A #1 number of iterations=%d Tjold=%.15G %.15G %.15G Tjnew=%.15G %.15G %.15G\n",it, 
 		 TjOld[0], TjOld[1], TjOld[2], TjNew[0], TjNew[1], TjNew[2]);
@@ -3555,6 +3595,8 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif	   
 	      return -1;
 	    }
+#endif
+	  totitsHC += it;
 	}
       if (j1==1)
 	{
