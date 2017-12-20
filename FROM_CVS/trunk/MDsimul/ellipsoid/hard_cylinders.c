@@ -1073,7 +1073,7 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
 #if 0
 	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
 #else
-	  find_initial_guess_simpler(Ai, Ci, ni, Dj, nj, Diamj);
+	  find_initial_guess_simpler(Ai, Ci, ni, Dj[j2], nj, Diamj);
 #if 0
 	  for (kk=0; kk < 3; kk++)
 	    {
