@@ -44,6 +44,7 @@ int *cellListMC;
 #define MD_DEBUG39(x) 
 #define MD_DEBUG40(x) 
 extern double calc_norm(double *vec);
+extern double calc_normsq(double *vec);
 extern void vectProdVec(double *A, double *B, double *C);
 extern void print_matrix(double **M, int n);
 extern void update_MSDrot(int i);
@@ -1705,6 +1706,17 @@ void print_vec(char *lbl, double *V)
 {
   printf("%s(%.15G,%.15G,%.15G)\n", lbl, V[0], V[1], V[2]);
 }
+double perpcompsq(double *V, double *C, double *n)
+{
+  int kk2;
+  double dsc[3], sp, dscperp[3];
+  for (kk2=0; kk2 < 3; kk2++)
+    dsc[kk2] = V[kk2] - C[kk2]; 
+  sp = scalProd(dsc, n);
+  for (kk2=0; kk2 < 3; kk2++)
+    dscperp[kk2] = dsc[kk2]-sp*n[kk2];
+  return calc_normsq(dscperp);
+}
 double perpcomp(double *V, double *C, double *n)
 {
   int kk2;
@@ -2125,7 +2137,7 @@ void hqr(double a[4][4], complex double wri[4])
 		      if (m == l) 
 			break;
 		      u=fabs(a[m][m-1])*(fabs(q)+ fabs(r));
-		      v=fabs(p)*(fabs(a[m-1][m-1])+fabs(z)+fabs(a [m+1][m +1]));
+		      v=fabs(p)*(fabs(a[m-1][m-1])+fabs(z)+fabs(a[m+1][m+1]));
 		      if (u <= EPS*v)
 			break;
 		      //Equation (W ebnote 16.24).
@@ -2212,7 +2224,7 @@ void laguer(double complex *a, double complex *x, int *its)
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
   static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
-  complex dx,x1,b,d,f,g,h,sq,gp,gm,g2,bx;
+  complex double dx,x1,b,d,f,g,h,sq,gp,gm,g2,bx;
   int iter, j;
   double err, abx, abp, abm;
   int m=4;
@@ -2346,7 +2358,7 @@ void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi,
 }
 
 #endif
-void QRfactorization( double hess[4][4], complex double sol[4])
+void QRfactorization(double hess[4][4], complex double sol[4])
 {
   int ok;
   double zr[4], zi[4];
@@ -2418,6 +2430,7 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
     }
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
+  
 #else
   solve_numrec(coeff, numsol, solqua);
   //csolve_quartic_abramovitz(coeff, &numsol, solqua);
@@ -2452,7 +2465,6 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
 	} 
     }
-
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
   nip0 = nip[0];
   nip1 = nip[1];
@@ -2500,7 +2512,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   coeffEr[2] *= Sqr(D2);
   coeffEr[4] *= D2;
   coeffEr[5] *= D2;
-  //printf("coeffEr=%.15G %.15G\n", coeffEr[4], coeffEr[5]);
+  //printf("coeffEr=%.15G %.15G\n", coeffEr[0], coeffEr[1]);
   c0 = coeffEr[0];
   c1 = coeffEr[1];
   c2 = coeffEr[2];
@@ -2525,7 +2537,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 0
   if (numsol > 1)
     {
-      //printf("PRIMA solqua=%.15G %.15G\n", solqua[0], solqua[1]);
+      printf("PRIMA solqua=%.15G %.15G\n", solqua[0], solqua[1]);
       qsort(solqua, numsol, sizeof(double), compare_func);
       //printf("numsol=%d\n", numsol);
       //printf("DOPO solqua=%.15G %.15G\n", solqua[0], solqua[1]);
@@ -2633,10 +2645,11 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-12)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
+	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[kk1]), Sqr(D2));
 	  printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
 	  printf("Cip1=%15G Cip2=%.15G\n", Cip[1], Cip[2]);
 	  printf("numsol=%d fallback=%d\n", numsol, fallback);
@@ -4576,7 +4589,7 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
 		      for (kk1=0; kk1 < numsol; kk1++)
 			{
 			  ellips2disk(solec[kk1],solarr[kk1], rErpp, nErypp, nErzpp, aEd, bEd);
-			  if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-4)
+			  if (fabs(perpcompsq(solarr[kk1], Cip, nip)-D2) > 1E-4)
 			    printf("B2 perpcom=%.15G semmaxE=%.15G\n", perpcomp(solarr[kk1], Cip, nip),semmaxE);
 
 #if 0
