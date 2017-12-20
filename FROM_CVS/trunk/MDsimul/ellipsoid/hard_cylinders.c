@@ -2902,7 +2902,7 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
       if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
 	return ret;
     }
- /* case A.2 overlap of rim and disk */
+  /* case A.2 overlap of rim and disk */
   /* =================================== >>> Part A <<< ========================= */
  /* =================================== >>> Part B <<< ========================= */
   numcallsHC += 4.0; 
