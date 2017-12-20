@@ -4575,7 +4575,6 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
      Rout[k1][k2] = Ro[k1][k2]; 
 }
 #endif
-
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
   int k;

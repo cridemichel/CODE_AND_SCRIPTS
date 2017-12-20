@@ -5742,6 +5742,14 @@ long double lcalc_norm(long double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
+double calc_normsq(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return norm;
+}
 double calc_norm(double *vec)
 {
   int k1;
