@@ -2451,7 +2451,63 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
   //csolve_quartic_abramovitz(coeff, &numsol, solqua);
 #endif
 }
-double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3])
+#ifdef MC_IBARRA_SIMPLER
+double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
+{
+  int kk1, kk2, it, k;
+  const int MAX_ITERATIONS=1000;
+  double Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dscpara[3], dsc[3];
+  double dscperp[3], ragg, ragg2, TnCi[3]; 
+
+  for (kk1 = 0; kk1 < 3; kk1++)
+    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
+  //printf("distance=%.15G\n", calc_distance(Ai, Dj[j2]));
+  for (it = 0; it < MAX_ITERATIONS; it++)
+    {
+      for(k=0;k<3;k++)
+	Told[k] = Tnew[k];
+      for (kk1=0; kk1 < 3; kk1++)
+	AiDj[kk1] = Ai[kk1] - Dj[kk1]; 
+      AiDjnj = scalProd(AiDj, nj);
+      for (kk1=0; kk1 < 3; kk1++)
+	{
+	  VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+	}
+      for (kk1=0; kk1 < 3; kk1++)
+	dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+      ragg = calc_norm(VV);
+
+      for(k=0;k<3;k++)
+	{
+	  VV[k] = VV[k]/ragg;
+	  Tnew[k] = Dj[k] + VV[k]*D*0.5;
+	  TnCi[k] = Tnew[k]-Ci[k];
+	}
+
+      ragg = scalProd(TnCi,ni);
+      for (k=0;k<3;k++)
+	Ai[k] = Ci[k] + ragg*ni[k];	
+      if ( it > 0 && check_convergence(Told,Tnew) ) 
+	break;
+    } 
+
+  for(k=0;k<3;k++)
+    TnCi[k] = Tnew[k]-Ci[k];
+
+  ragg = scalProd(TnCi,ni);
+
+  for (k=0;k<3;k++)
+    Ai[k] = Tnew[k]-Ci[k]-ragg*ni[k];
+
+  ragg2 = calc_norm(Ai);
+
+  if ((fabs(ragg) < L*0.5) && ((ragg2) < D*0.5))
+    return -1;
+
+  return 1;
+}
+#else 
+double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol, nsc, fallback;
   const double FALLBACK_THR = 1E-4;
@@ -2705,6 +2761,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
   return 1;  
 }
+#endif
 
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
@@ -2780,7 +2837,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      return -1;
 	    }
 
-	  if (rimdiskone(D, L, Ci, ni, Dj[j2], nj) < 0.0)
+	  if (rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
 	    return -1;
 	}
       if (j1==1)
@@ -3459,7 +3516,6 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif	
 	      return -1;
 	    }
-#ifndef MC_IBARRA_SIMPLER
 #if 0
 	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
 
@@ -3471,54 +3527,6 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 //	      Ai[kk] = Ui[kk];  
 //	    }
 #endif
-#endif
-#ifdef MC_IBARRA_SIMPLER
-	  for (kk1 = 0; kk1 < 3; kk1++)
-	    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
-	  //printf("distance=%.15G\n", calc_distance(Ai, Dj[j2]));
-	  for (it = 0; it < MAX_ITERATIONS; it++)
-	    {
-	      for(k=0;k<3;k++)
-		Told[k] = Tnew[k];
-	      for (kk1=0; kk1 < 3; kk1++)
-		AiDj[kk1] = Ai[kk1] - Dj[j2][kk1]; 
-	      AiDjnj = scalProd(AiDj, nj);
-	      for (kk1=0; kk1 < 3; kk1++)
-		{
-		  VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
-		}
-	      for (kk1=0; kk1 < 3; kk1++)
-		dscpara[kk1] = dscperp[kk1] - Dj[j2][kk1];
-	      ragg = calc_norm(VV);
-
-	      for(k=0;k<3;k++)
-		{
-   		  VV[k] = VV[k]/ragg;
-		  Tnew[k] = Dj[j2][k] + VV[k]*D*0.5;
-		  TnCi[k] = Tnew[k]-Ci[k];
-		}
-
-    	      ragg = scalProd(TnCi,ni);
-	      for (k=0;k<3;k++)
-	      	Ai[k] = Ci[k] + ragg*ni[k];	
-	      if ( it > 0 && check_convergence(Told,Tnew) ) 
-		break;
-	    } 
-
-	  for(k=0;k<3;k++)
-	    TnCi[k] = Tnew[k]-Ci[k];
-
-
-    	  ragg = scalProd(TnCi,ni);
-
-    	  for (k=0;k<3;k++)
-	    Ai[k] = Tnew[k]-Ci[k]-ragg*ni[k];
-
-    	  ragg2 = calc_norm(Ai);
-
-    	  if ((fabs(ragg)<L*0.5) && ((ragg2)<D*0.5))
-	    return -1;
-#else
 	  for (it = 0; it < MAX_ITERATIONS; it++)
 	    {
 	      for (kk=0; kk < 3; kk++)
@@ -3595,7 +3603,6 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif	   
 	      return -1;
 	    }
-#endif
 	  totitsHC += it;
 	}
       if (j1==1)
