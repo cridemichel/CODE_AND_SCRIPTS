@@ -764,6 +764,26 @@ double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[
 #endif 
 }
 #endif
+void find_initial_guess_simpler(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
+{
+  int kk1, kk2;
+  double sp, dsc[3], dscperp[3], dscpara[3], norm;
+  
+  for (kk2=0; kk2 < 3; kk2++)
+    dsc[kk2] = Ci[kk2] - Dj[kk2]; 
+  sp = scalProd(dsc, ni);
+  for (kk2=0; kk2 < 3; kk2++)
+    dscperp[kk2] = dsc[kk2]-sp*ni[kk2];
+
+  sp = scalProd(dscperp, nj);
+  for (kk1=0; kk1 < 3; kk1++)
+    dscpara[kk1]= dscperp[kk1] - nj[kk1]*sp;
+  norm = calc_norm(dscperp);
+  for (kk1=0; kk1 < 3; kk1++)
+    dscperp[kk1] *= 0.5*D/norm;
+  for (kk1=0; kk1 < 3; kk1++)
+    Ai[kk1] = Dj[kk1] + dscpara[kk1];
+} 
 void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
   const int meshpts = 8;
@@ -1050,14 +1070,17 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
 #endif	
 	      return -1;
 	    }
-#if 1
+#if 0
 	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, Diamj);
 #else
+	  find_initial_guess_simpler(Ai, Ci, ni, Dj, nj, Diamj);
+#if 0
 	  for (kk=0; kk < 3; kk++)
 	    {
 	      //Ai[kk] = Ci[kk];
 	      Ai[kk] = Ui[kk];  
 	    }
+#endif
 #endif
 	  for (it = 0; it < MAX_ITERATIONS; it++)
 	    {
@@ -2645,7 +2668,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-12)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
@@ -3444,15 +3467,16 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 #endif	
 	      return -1;
 	    }
-#if 1
+#if 0
 	  find_initial_guess(Ai, Ci, ni, Dj[j2], nj, D);
 
 #else
-	  for (kk=0; kk < 3; kk++)
-	    {
+	  find_initial_guess_simpler(Ai, Ci, ni, Dj[j2], nj, D);
+ //	  for (kk=0; kk < 3; kk++)
+//	    {
 	      //Ai[kk] = Ci[kk];
-	      Ai[kk] = Ui[kk];  
-	    }
+//	      Ai[kk] = Ui[kk];  
+//	    }
 #endif
 	  for (it = 0; it < MAX_ITERATIONS; it++)
 	    {
