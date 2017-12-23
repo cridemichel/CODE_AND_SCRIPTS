@@ -2053,8 +2053,8 @@ void hqr(double a[4][4], complex double wri[4])
 {
   int nn,m,l,k,j,its,i,mmin;
   double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
-  const int MAXITS = 1000;
-  const double EPS=3E-16;//numeric_limits<Doub >::epsilon();
+  const int MAXITS = 100000;
+  const double EPS=2.2204460492503130808E-16;//3E-16;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2451,14 +2451,73 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
   //csolve_quartic_abramovitz(coeff, &numsol, solqua);
 #endif
 }
+void newt2Dquartic(double c[6], double sol[3], double D2)
+{
+  double M[2][2], invM[2][2], detM;
+  double x[2], dx[2], fnew[2], f[2], fini[2], D2sq;
+  int i, j, it;
+  D2sq = Sqr(D2);
+  x[0] = sol[1]/D2;
+  x[1] = sol[2]/D2;
+
+#if 0
+  c[0] /= D2sq;
+  c[1] /= D2sq;
+  c[2] /= D2sq;
+  c[4] /= D2;
+  c[5] /= D2;
+#endif
+  fini[0]= f[0] = x[0]*x[0] + x[1]*x[1] - 1.0;
+  fini[1]= f[1] = c[0]*x[0]*x[0] + c[1]*x[1]*x[1] + c[2]*x[0]*x[1] + c[3] + c[4]*x[0] + c[5]*x[1];
+
+  for (it = 0; it < 1; it++)
+    {
+      M[0][0] = 2.0*x[0];
+      M[0][1] = 2.0*x[1];
+      M[1][0] = c[4] + 2*c[0]*x[0];
+      M[1][1] = c[5] + 2*c[1]*x[1];
+
+      detM = -M[0][1]*M[1][1] + M[0][0]*M[1][2];
+      if (detM==0)
+	return;
+      invM[0][0] =  M[1][2]/detM;
+      invM[0][1] = -M[0][1]/detM;
+      invM[1][0] = -M[1][1]/detM;
+      invM[1][1] =  M[0][0]/detM;
+      f[0] = x[0]*x[0] + x[1]*x[1] - 1.0;
+      f[1] = c[0]*x[0]*x[0] + c[1]*x[1]*x[1] + c[2]*x[0]*x[1] + c[3] + c[4]*x[0] + c[5]*x[1];
+
+      for (i = 0; i < 2; i++)
+	{ 
+	  dx[i] = 0;
+	  for (j = 0; j < 2; j++)
+	    {
+	      dx[i] += -invM[i][j]*f[j];
+	    }
+	}
+      printf("dx=%.18G %.18G x=%.18G %.18G\n", dx[0], dx[1], x[0], x[1]);
+      for (i = 0; i < 2; i++)
+	x[i] += dx[i];
+    }
+  f[0] = x[0]*x[0] + x[1]*x[1] - 1.0;
+  f[1] = c[0]*x[0]*x[0] + c[1]*x[1]*x[1] + c[2]*x[0]*x[1] + c[3] + c[4]*x[0] + c[5]*x[1];
+
+      printf("fold=%.18G %.18G fnew=%.18G %.18G\n", fini[0], fini[1], f[0], f[1]);
+  if (fabs(f[0]) < fabs(fini[0]) && fabs(f[1] < fabs(fini[1])))
+    {
+      sol[1] = x[0]*D2;
+      sol[2] = x[1]*D2;
+      //printf("fold=%.18G %.18G fnew=%.18G %.18G\n", fini[0], fini[1], f[0], f[1]);
+   //   printf("fold=%.15G %.15G fnew=%.18G %.18G\n", fini[0], fini[1], f[0], f[1]);
+    }
+}
 #ifdef MC_IBARRA_SIMPLER
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, it, k;
   const int MAX_ITERATIONS=1000;
-  double Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dscpara[3], dsc[3];
+  double Bi[3], Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dscpara[3], dsc[3];
   double dscperp[3], ragg, ragg2, TnCi[3]; 
-
   for (kk1 = 0; kk1 < 3; kk1++)
     Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
   //printf("distance=%.15G\n", calc_distance(Ai, Dj[j2]));
@@ -2487,10 +2546,18 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       ragg = scalProd(TnCi,ni);
       for (k=0;k<3;k++)
 	Ai[k] = Ci[k] + ragg*ni[k];	
+#if 0
+      for (k=0;k<3;k++)
+	Bi[k] = Tnew[k]-Ci[k]-ragg*ni[k];
+
+      ragg2 = calc_norm(Bi);
+
+      if ((fabs(ragg) < L*0.5) && ((ragg2) < D*0.5))
+	return -1;
+#endif
       if ( it > 0 && check_convergence(Told,Tnew) ) 
 	break;
     } 
-
   for(k=0;k<3;k++)
     TnCi[k] = Tnew[k]-Ci[k];
 
@@ -2510,7 +2577,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol, nsc, fallback;
-  const double FALLBACK_THR = 1E-4;
+  const double FALLBACK_THR = 1E-4, NEWT_THR=1E-12;
   double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   double Cip[3], nip[3];
@@ -2703,6 +2770,9 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       solarr[kk1][2] = D2*solec[kk1][1];
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
+#if 0
+  construct_inner_points(solarr, Ci, ni, Dj, nj, D);
+#endif
   for (kk1=0; kk1 < numsol; kk1++)
     {
 #if 0
@@ -2715,6 +2785,12 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
+#if 0
+      if (calc_normsq(solarr[kk1])-Sqr(D2) > NEWT_THR)
+	{
+	  newt2Dquartic(coeffEr, solarr[kk1], D2);
+	}
+#endif
 #if 1
       if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
 	{
