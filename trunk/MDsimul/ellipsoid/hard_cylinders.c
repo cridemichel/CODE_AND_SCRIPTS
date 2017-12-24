@@ -2,6 +2,9 @@
 #undef DEBUG_HCMC
 #undef MC_HC_SPHERO_OPT
 #include<mdsimul.h>
+#ifdef MD_MAC
+#include <Accelerate/Accelerate.h>
+#endif
 #include<float.h>
 #include<complex.h>
 
@@ -9,11 +12,12 @@
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl, mentre le lapack sono molto più lente */
-//#define POLY_SOLVE_GSL
+#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
 #ifdef POLY_SOLVE_GSL
 #include <gsl/gsl_poly.h>
+#include <gsl/gsl_errno.h>
 #endif
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
@@ -166,7 +170,11 @@ extern double invL[3];
 #else
 extern double invL;
 #endif
+#ifdef MD_MAC
+extern double Vz;
+#else
 extern double pi, Vz;
+#endif
 #ifdef MD_LXYZ
 extern double L2[3];
 #else
@@ -1474,14 +1482,15 @@ int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
   static gsl_poly_complex_workspace * w;
   double z[8];
   static int first=1;
-  int k;
+  int k, status;
   if (first)
     {
       w  = gsl_poly_complex_workspace_alloc (5);
       first=0;
     }
-  gsl_poly_complex_solve (c, 5, w, z);
-
+ status=gsl_poly_complex_solve (c, 5, w, z);
+ if (status!=GSL_SUCCESS)
+   printf("[WARNING gsl_poly_complex_solve] probably not converging!\n");
  *numrealsol=0;
  for (k=0; k < 4; k++)
    {
@@ -2234,8 +2243,8 @@ void hqr(double a[4][4], complex double wri[4])
 void laguer(double complex *a, double complex *x, int *its) 
 {
   //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
-  const int MR=8,MT=500,MAXIT=MT*MR;
-  const double EPS=4.0E-12;
+  const int MR=8,MT=50000,MAXIT=MT*MR;
+  const double EPS=1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
   static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
@@ -2278,13 +2287,13 @@ void laguer(double complex *a, double complex *x, int *its)
     else *x -= frac[iter/MT]*dx;
     //Every so often we take a fractional step, to break any limit cycle (itself a rare occur- rence).
   }
-  printf("too many iterations in laguer");
+  printf("too many iterations in laguer\n");
   //Very unusual; can occur only for complex roots. Try a different starting guess.
 }
 
 void zroots(complex double *a, complex double *roots, int polish) 
 {
-  const double EPS=1.0e-14;
+  const double EPS=2.2204460492503130808E-16; //su linux funziona benissimo su mac no
   int jj, i,its, j;
   complex double x,b,c;
   int m=4;
@@ -2445,7 +2454,6 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
     }
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
-  
 #else
   solve_numrec(coeff, numsol, solqua);
   //csolve_quartic_abramovitz(coeff, &numsol, solqua);
@@ -2470,19 +2478,19 @@ void newt2Dquartic(double c[6], double sol[3], double D2)
   fini[0]= f[0] = x[0]*x[0] + x[1]*x[1] - 1.0;
   fini[1]= f[1] = c[0]*x[0]*x[0] + c[1]*x[1]*x[1] + c[2]*x[0]*x[1] + c[3] + c[4]*x[0] + c[5]*x[1];
 
-  for (it = 0; it < 1; it++)
+  for (it = 0; it < 3; it++)
     {
       M[0][0] = 2.0*x[0];
       M[0][1] = 2.0*x[1];
       M[1][0] = c[4] + 2*c[0]*x[0];
       M[1][1] = c[5] + 2*c[1]*x[1];
 
-      detM = -M[0][1]*M[1][1] + M[0][0]*M[1][2];
+      detM = -M[0][1]*M[1][0] + M[0][0]*M[1][1];
       if (detM==0)
 	return;
-      invM[0][0] =  M[1][2]/detM;
+      invM[0][0] =  M[1][1]/detM;
       invM[0][1] = -M[0][1]/detM;
-      invM[1][0] = -M[1][1]/detM;
+      invM[1][0] = -M[1][0]/detM;
       invM[1][1] =  M[0][0]/detM;
       f[0] = x[0]*x[0] + x[1]*x[1] - 1.0;
       f[1] = c[0]*x[0]*x[0] + c[1]*x[1]*x[1] + c[2]*x[0]*x[1] + c[3] + c[4]*x[0] + c[5]*x[1];
@@ -2495,15 +2503,15 @@ void newt2Dquartic(double c[6], double sol[3], double D2)
 	      dx[i] += -invM[i][j]*f[j];
 	    }
 	}
-      printf("dx=%.18G %.18G x=%.18G %.18G\n", dx[0], dx[1], x[0], x[1]);
+      //printf("dx=%.18G %.18G x=%.18G %.18G\n", dx[0], dx[1], x[0], x[1]);
       for (i = 0; i < 2; i++)
 	x[i] += dx[i];
     }
   f[0] = x[0]*x[0] + x[1]*x[1] - 1.0;
   f[1] = c[0]*x[0]*x[0] + c[1]*x[1]*x[1] + c[2]*x[0]*x[1] + c[3] + c[4]*x[0] + c[5]*x[1];
 
-      printf("fold=%.18G %.18G fnew=%.18G %.18G\n", fini[0], fini[1], f[0], f[1]);
-  if (fabs(f[0]) < fabs(fini[0]) && fabs(f[1] < fabs(fini[1])))
+  //printf("fold=%.18G %.18G fnew=%.18G %.18G\n", fini[0], fini[1], f[0], f[1]);
+  if (fabs(f[0]) < fabs(fini[0]) && fabs(f[1]) < fabs(fini[1]))
     {
       sol[1] = x[0]*D2;
       sol[2] = x[1]*D2;
@@ -2511,8 +2519,7 @@ void newt2Dquartic(double c[6], double sol[3], double D2)
    //   printf("fold=%.15G %.15G fnew=%.18G %.18G\n", fini[0], fini[1], f[0], f[1]);
     }
 }
-#ifdef MC_IBARRA_SIMPLER
-double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
+double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, it, k;
   const int MAX_ITERATIONS=1000;
@@ -2573,7 +2580,6 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 
   return 1;
 }
-#else 
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol, nsc, fallback;
@@ -2837,7 +2843,6 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
   return 1;  
 }
-#endif
 
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
@@ -2913,8 +2918,13 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      return -1;
 	    }
 
+#ifdef MC_IBARRA_SIMPLER
+  	  if (rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
+	    return -1;
+#else
 	  if (rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
 	    return -1;
+#endif
 	}
       if (j1==1)
 	{
