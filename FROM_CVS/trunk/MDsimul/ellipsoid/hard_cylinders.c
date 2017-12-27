@@ -7,13 +7,15 @@
 #endif
 #include<float.h>
 #include<complex.h>
-
+#ifndef CMPLX
+#define CMPLX(x,y) (x)+I*(y)
+#endif
 /* NOTA SU RISOLUZIONE QUARTICA
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl, mentre le lapack sono molto più lente */
-#define POLY_SOLVE_GSL
-//#define USE_LAPACK
+//#define POLY_SOLVE_GSL
+#define USE_LAPACK
 //#define USE_LAGUERRE
 #ifdef POLY_SOLVE_GSL
 #include <gsl/gsl_poly.h>
@@ -170,11 +172,7 @@ extern double invL[3];
 #else
 extern double invL;
 #endif
-#ifdef MD_MAC
 extern double Vz;
-#else
-extern double pi, Vz;
-#endif
 #ifdef MD_LXYZ
 extern double L2[3];
 #else
@@ -2063,7 +2061,7 @@ void hqr(double a[4][4], complex double wri[4])
   int nn,m,l,k,j,its,i,mmin;
   double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
   const int MAXITS = 100000;
-  const double EPS=2.2204460492503130808E-16;//3E-16;//numeric_limits<Doub >::epsilon();
+  const double EPS=3E-16;//3E-16;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2244,7 +2242,7 @@ void laguer(double complex *a, double complex *x, int *its)
 {
   //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
   const int MR=8,MT=50000,MAXIT=MT*MR;
-  const double EPS=1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
+  const double EPS=3E-16;//1E-15;//1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
   static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
@@ -2293,7 +2291,7 @@ void laguer(double complex *a, double complex *x, int *its)
 
 void zroots(complex double *a, complex double *roots, int polish) 
 {
-  const double EPS=2.2204460492503130808E-16; //su linux funziona benissimo su mac no
+  const double EPS=1.0E-15;//2.2204460492503130808E-16; //su linux funziona benissimo su mac no
   int jj, i,its, j;
   complex double x,b,c;
   int m=4;
@@ -2327,19 +2325,30 @@ void zroots(complex double *a, complex double *roots, int polish)
   }
 }
 #ifdef USE_LAPACK
+#ifndef MD_MAC
+extern void dgebal_(char *, int *, double *, int *, int *, int *, double *, int *);
+extern void dhseqr_(char *, char*, int *, int *, int *, double *, int *, double *, double *, double *,
+		    int *, double *, int *, int *);
+#endif
+/* int dhseqr_(char *__job, char *__compz, __CLPK_integer *__n,
+        __CLPK_integer *__ilo, __CLPK_integer *__ihi, __CLPK_doublereal *__h__,
+        __CLPK_integer *__ldh, __CLPK_doublereal *__wr, __CLPK_doublereal *__wi,
+        __CLPK_doublereal *__z__, __CLPK_integer *__ldz,
+        __CLPK_doublereal *__work, __CLPK_integer *__lwork,
+        __CLPK_integer *__info) __OSX_AVAILABLE_STARTING(__MAC_10_2,
+        __IPHONE_4_0); */
+
 void wrap_dgebal(double a[4][4], int *ilo, int *ihi, int n, int *ok)
 {
   char JOB='S', COMPZ='N';
-  double AT[4*4], z[4*4],  work[4];
-  double wwr[4], wwi[4], x;
-  int i, j, c1, c2, k, pivot[4], lwork, N;
+  double AT[4*4], z[4*4];
+  int i, j, c1, c2, k, N;
   for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
     {				/* have to transform the matrix */
       for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
     }						
   c1 = 4;
   c2 = 4;
-  lwork=4;
   N=n;
  //dgesv_(&c1, &c2, AT, &c1, pivot, &x, &c1, ok); 
   dgebal_(&JOB, &N, AT, &c1, ilo, ihi, z, ok);      
@@ -2352,7 +2361,6 @@ void wrap_hseqr(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi,
 {
   char JOB='E', COMPZ='N';
   double AT[4*4], z[4*4],  work[4];
-  double wwr[4], wwi[4], x;
   int i, j, c1, c2, k, pivot[4], lwork, N;
   for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
     {				/* have to transform the matrix */
@@ -2362,7 +2370,7 @@ void wrap_hseqr(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi,
   c2 = 4;
   lwork=4;
   N=n;
-  dhseqr_(&JOB, &COMPZ, &N, &ilo, &ihi, AT, &c1, wwr, wwi, z, &c2, work, &lwork, ok);      
+  dhseqr_(&JOB, &COMPZ, &N, &ilo, &ihi, AT, &c1, wr, wi, z, &c2, work, &lwork, ok);      
 }
 void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi, int *ok)
 {
@@ -2396,8 +2404,12 @@ void QRfactorization(double hess[4][4], complex double sol[4])
   /* questa per qualche motivo non funziona */
   wrap_dgeev(hess, zr, zi, 4, ilo, ihi, &ok);
 #endif
+  //printf("hess=%.15G %.15G %.15G %.15G\n", hess[0][0], hess[0][1], hess[0][2], hess[0][3]);
   for (k=0; k < 4; k++)
-    sol[k] =CMPLX(zr[k],zi[k]);
+    {
+      //printf("PRIMA QRDECOMP csol[k=%d]=%.15G+%.15G I\n", k, zr[k], zi[k]);
+      sol[k] =CMPLX(zr[k],zi[k]);
+    }
 #else
   /* ora funziona si doveva solo aumentare il numero massimo d'iterazioni */
   balance(hess);
@@ -2432,6 +2444,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
   //for (j=0;j<m;j++)
     //rt[j]=h.wri[j];
   *numrealsol=0;
+  //printf("{%.16G,%.16G,%.16G,%.16G,%.16G}\n", coeff[0],coeff[1], coeff[2], coeff[3], coeff[4]);
   for (k=0; k < 4; k++)
    {
      //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
@@ -2798,7 +2811,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
 #endif
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 5E-7)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
