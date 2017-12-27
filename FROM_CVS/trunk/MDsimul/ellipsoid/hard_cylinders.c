@@ -17,10 +17,8 @@
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
-#ifdef POLY_SOLVE_GSL
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
-#endif
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
 extern const double saxfactMC_QC[3];
@@ -1474,7 +1472,6 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
 #endif
 double solcgbl[3];
 int nscgbl;
-#ifdef POLY_SOLVE_GSL
 int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
 {
   static gsl_poly_complex_workspace * w;
@@ -1504,7 +1501,6 @@ int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
 
   return 0;
 }
-#endif
 #if 1
 void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
 {
@@ -2056,12 +2052,12 @@ void balance(double a[4][4])
 	}
     }
 }
-void hqr(double a[4][4], complex double wri[4])
+void hqr(double a[4][4], complex double wri[4], int *ok)
 {
   int nn,m,l,k,j,its,i,mmin;
   double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
-  const int MAXITS = 100000;
-  const double EPS=3E-16;//3E-16;//numeric_limits<Doub >::epsilon();
+  const int MAXITS = 120;
+  const double EPS=2.2204460492503131E-16;//3E-16;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2069,6 +2065,7 @@ void hqr(double a[4][4], complex double wri[4])
       anorm += fabs(a[i][j]);
   nn=n-1;
   t=0.0;
+  *ok = 1;
   //Gets changed only by an exceptional shift.
   while (nn >= 0) 
     {
@@ -2128,9 +2125,11 @@ void hqr(double a[4][4], complex double wri[4])
 		  if (its == MAXITS)// il valore era 30 ma l'ho aumentato a 200 altrimenti non ce la fa...boh
 		    {
 		      printf("Too many iterations in hqr");
-		      exit(-1);
+		      *ok = 0;
+		      return;
+		      //exit(-1);
 		    }
-		  if (its == 10 || its == 20)
+		  if (its % 10 == 0 && its > 0)
 		    {
 		      //Form exceptional shift.
 		      t += x;
@@ -2160,6 +2159,9 @@ void hqr(double a[4][4], complex double wri[4])
 			break;
 		      u=fabs(a[m][m-1])*(fabs(q)+ fabs(r));
 		      v=fabs(p)*(fabs(a[m-1][m-1])+fabs(z)+fabs(a[m+1][m+1]));
+		      /*  if (a1 * (fabs (q) + fabs (r)) <= GSL_DBL_EPSILON * fabs (p) * (a2 + a3))
+			  break; */
+ 
 		      if (u <= EPS*v)
 			break;
 		      //Equation (W ebnote 16.24).
@@ -2390,16 +2392,17 @@ void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi,
 }
 
 #endif
-void QRfactorization(double hess[4][4], complex double sol[4])
+void QRfactorization(double hess[4][4], complex double sol[4], int *ok)
 {
-  int ok;
+  //int ok;
   double zr[4], zi[4];
   int ilo, ihi,k;
   /* pagina 615 Num. Rec. */  
 #ifdef USE_LAPACK
 #if 1
-  wrap_dgebal(hess, &ilo, &ihi, 4, &ok);
-  wrap_hseqr(hess, zr, zi, 4, ilo, ihi, &ok);
+  wrap_dgebal(hess, &ilo, &ihi, 4, ok);
+  wrap_hseqr(hess, zr, zi, 4, ilo, ihi, ok);
+  *ok = 1;
 #else
   /* questa per qualche motivo non funziona */
   wrap_dgeev(hess, zr, zi, 4, ilo, ihi, &ok);
@@ -2413,11 +2416,11 @@ void QRfactorization(double hess[4][4], complex double sol[4])
 #else
   /* ora funziona si doveva solo aumentare il numero massimo d'iterazioni */
   balance(hess);
-  hqr(hess, sol);
+  hqr(hess, sol, ok);
   //sort(); 
 #endif
 }
-void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
+void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
   /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
@@ -2439,8 +2442,9 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
     cc[k]=CMPLX(coeff[k],0.0);
   zroots(cc, csol, 1);
 #else
-  QRfactorization(hess, csol);
+  QRfactorization(hess, csol, ok);
 #endif
+  
   //for (j=0;j<m;j++)
     //rt[j]=h.wri[j];
   *numrealsol=0;
@@ -2460,6 +2464,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4])
 
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
+  int ok;
   if (coeff[4]==0)
     {
       solve_cubic(coeff, numsol, solqua);
@@ -2468,7 +2473,12 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
 #else
-  solve_numrec(coeff, numsol, solqua);
+  solve_numrec(coeff, numsol, solqua, &ok);
+  if (!ok)
+    {
+      /* if hqr() fails fallback to GSL */
+      solve_gslpoly(coeff, numsol, solqua);
+    }
   //csolve_quartic_abramovitz(coeff, &numsol, solqua);
 #endif
 }
