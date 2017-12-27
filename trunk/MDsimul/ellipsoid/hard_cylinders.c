@@ -15,7 +15,7 @@
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl, mentre le lapack sono molto più lente */
 //#define POLY_SOLVE_GSL
-#define USE_LAPACK
+//#define USE_LAPACK
 //#define USE_LAGUERRE
 #ifdef POLY_SOLVE_GSL
 #include <gsl/gsl_poly.h>
@@ -2811,7 +2811,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
 #endif
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 5E-7)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
