@@ -1433,11 +1433,13 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
   /* solution from Abramovitz */
   double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
   double complex cs1, cs2, s1ps2, s1ms2;
-  if (coeff[3]==0)
+  if (coeff[3] == 0.0)
     {
+      printf("[WARNING] fallback to quadratic from cubic");
       solve_quadratic(coeff, numsol, sol);
       return;
     }
+  //printf("qu?????????????????????????????\n");
   a2 = coeff[2]/coeff[3];
   a1 = coeff[1]/coeff[3];
   a0 = coeff[0]/coeff[3];
@@ -2466,8 +2468,9 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok)
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   int ok;
-  if (coeff[4]==0)
+  if (coeff[4]==0.0)
     {
+      printf("[WARNING] fallback to cubic from quartic\n");
       solve_cubic(coeff, numsol, solqua);
       return;
     }
@@ -2674,6 +2677,29 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     4*Cip1*nip1*nip2 - 2*Cip1*nip02*nip1*nip2 - 2*Cip0*nip0*nip12*nip2 - 2*Cip1*nip13*nip2 + 
     4*Cip2*nip22 - 2*Cip2*nip02*nip22 - 2*Cip2*nip12*nip22 - 2*Cip0*nip0*nip23 - 2*Cip1*nip1*nip23 
     - 2*Cip2*nip24;
+  /* check ellipse */
+#if 0
+  {
+  /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
+    double cq[3], x, lam, solq[2], p[3];
+    int numsol;
+    lam = -Cip0/nip0;
+    x = Cip1 + lam*nip1;
+    cq[0] = coeffEr[3]+coeffEr[4]*x+coeffEr[0]*x*x;
+    cq[1] = coeffEr[5]+coeffEr[2]*x;
+    cq[2] = coeffEr[1];
+    solve_quadratic(cq, &numsol, solq);
+    p[0] = 0.0;
+    p[1] = x;
+    p[2] = solq[0];
+    if (fabs(perpcomp(p, Cip, nip) - D2) > 3E-8)
+      {
+	printf("coeff quad=%.16G %.16G %.16G\n", cq[2], cq[1], cq[0]);
+      	printf("distance punto ellipse axis=%.16G\n", perpcomp(p, Cip, nip));
+	printf("nip.njp=%.15G lam=%.15G\n", nip0, lam);
+      }
+  }
+#endif
   /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
   coeffEr[0] *= Sqr(D2);
   coeffEr[1] *= Sqr(D2); 
@@ -2822,7 +2848,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
 #endif
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 3E-8)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-8)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
