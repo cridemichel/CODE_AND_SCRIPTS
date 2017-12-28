@@ -13,7 +13,7 @@
 /* NOTA SU RISOLUZIONE QUARTICA
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
- * laguerre va come la routine gsl, mentre le lapack sono molto più lente */
+ * laguerre va come la routine gsl ma sembra molto inaccurate, mentre le lapack sono un po più lente.*/
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
@@ -2129,6 +2129,9 @@ void hqr(double a[4][4], complex double wri[4], int *ok)
 		      return;
 		      //exit(-1);
 		    }
+		  /* NOTA: con questa modifica (ossia ho messo its % 10 invece di its==10 e its==20 come in Numerical Recipe) 
+		   * mutuata dalle GSL l'algoritmo diventa un multishift e non si rischia
+		   * che raggiunga MAXITS */
 		  if (its % 10 == 0 && its > 0)
 		    {
 		      //Form exceptional shift.
@@ -2374,21 +2377,20 @@ void wrap_hseqr(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi,
   N=n;
   dhseqr_(&JOB, &COMPZ, &N, &ilo, &ihi, AT, &c1, wr, wi, z, &c2, work, &lwork, ok);      
 }
-void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int ilo, int ihi, int *ok)
+void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int *ok)
 {
   char JOB='N', COMPZ='N';
-  double AT[4*4], z[4*4], z2[4*4], work[4], work2[4];
-  double wwr[4], wwi[4], x;
-  int i, j, c1, c2, k, pivot[4], lwork, N;
+  double AT[4*4], z[4*4], z2[4*4], work[40], work2[4];
+  int i, j, c1, c2, k, lwork, N;
   for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
     {				/* have to transform the matrix */
       for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
     }						
   c1 = 4;
   c2 = 4;
-  lwork=100;
+  lwork=40;
   N=n;
-  dgeev_(&JOB, &COMPZ, &N, AT, &c1, wwr, wwi, z, &c2, z2, &c2, work, &lwork, ok);      
+  dgeev_(&JOB, &COMPZ, &N, AT, &c1, wr, wi, z, &c2, z2, &c2, work, &lwork, ok);      
 }
 
 #endif
@@ -2404,8 +2406,7 @@ void QRfactorization(double hess[4][4], complex double sol[4], int *ok)
   wrap_hseqr(hess, zr, zi, 4, ilo, ihi, ok);
   *ok = 1;
 #else
-  /* questa per qualche motivo non funziona */
-  wrap_dgeev(hess, zr, zi, 4, ilo, ihi, &ok);
+  wrap_dgeev(hess, zr, zi, 4, &ok);
 #endif
   //printf("hess=%.15G %.15G %.15G %.15G\n", hess[0][0], hess[0][1], hess[0][2], hess[0][3]);
   for (k=0; k < 4; k++)
@@ -2606,7 +2607,7 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol, nsc, fallback;
-  const double FALLBACK_THR = 1E-4, NEWT_THR=1E-12;
+  const double FALLBACK_THR = 5E-4, NEWT_THR=1E-12;
   double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   double Cip[3], nip[3];
@@ -2821,7 +2822,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
 #endif
 #if 1
-      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-7)
+      if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 3E-8)
 	{
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
 #if 1
