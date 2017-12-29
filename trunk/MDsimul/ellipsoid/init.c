@@ -8070,10 +8070,10 @@ void writeAllCor(FILE* fs, int saveAll)
   const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
 #endif
 #endif
-  const char tipodat[] = "%.15G %.15G %.15G %.15G %.15G %.15G\n";
-  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G\n";
+  const char tipodat[] = "%.16G %.16G %.16G %.16G %.16G %.16G\n";
+  const char tipodat2[]= "%.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G\n";
 #ifdef EDHE_FLEX
-  const char tipodat2_flex[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %d\n";
+  const char tipodat2_flex[]= "%.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %d\n";
   int j;
 #ifdef MC_BENT_DBLCYL
   double xi[3], Ri[3][3];
@@ -8323,12 +8323,12 @@ void writeAllCor(FILE* fs, int saveAll)
 	  //fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], OprogStatus.radhelix, 
 	  //     colsFlex[typeOfPart[i]%numcols]);
 #else
-	  //printf("sax= %.15G %.15G %.15G\n",  typesArr[typeOfPart[i]].sax[0],  typesArr[typeOfPart[i]].sax[1],
+	  //printf("sax= %.16G %.16G %.16G\n",  typesArr[typeOfPart[i]].sax[0],  typesArr[typeOfPart[i]].sax[1],
  //typesArr[typeOfPart[i]].sax[2]   );
 	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
 	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
 	  {
-	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
+	    fprintf(fs, "%.16G %.16G %.16G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
 		    colsFlex[typeOfPart[i]%numcols]);
 	  }
 	else
@@ -8379,7 +8379,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
 	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
 	  {
-	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
+	    fprintf(fs, "%.16G %.16G %.16G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
 		    colsFlex[typeOfPart[i]%numcols]);
 	  }
 	else
@@ -8392,7 +8392,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
 	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
 	  {
-	    fprintf(fs, "%.15G %.15G %.15G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
+	    fprintf(fs, "%.16G %.16G %.16G @ %.8G C[%s]\n",rx[i], ry[i], rz[i], typesArr[typeOfPart[i]].sax[0], 
 		    colsFlex[typeOfPart[i]%numcols]);
 	  }
 	else

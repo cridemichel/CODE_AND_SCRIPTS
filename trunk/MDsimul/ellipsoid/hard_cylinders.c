@@ -2610,7 +2610,7 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 
 int test_for_fallback(double *P, double *Cip, double *nip, double D2)
 {
-  const double DIST_THR=1E-9;
+  const double DIST_THR=5E-9;
   if (fabs(perpcomp(P, Cip, nip)-D2) > DIST_THR*D2)
     return 1;
   else 
