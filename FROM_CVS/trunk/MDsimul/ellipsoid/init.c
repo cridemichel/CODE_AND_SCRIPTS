@@ -2669,8 +2669,11 @@ extern double costhrNR;
 #ifdef MD_ASYM_ITENS
 extern void calc_euler_angles(int i, double **M, double *phi, double *theta, double *psi);
 extern double scalProd(double *A, double *B);
+extern long double scalProdl(long double *A, long double *B);
 double calc_norm(double *vec);
+long double calc_norml(long double *vec);
 extern void vectProdVec(double *A, double *B, double *C);
+extern void vectProdVecl(long double *A, long double *B, long double *C);
 void calc_angmom(int i, double **I)
 {
   double wv[3], Mvec[3];
@@ -4575,6 +4578,36 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
      Rout[k1][k2] = Ro[k1][k2]; 
 }
 #endif
+void versor_to_Rl(long double ox, long double oy, long double oz, long double R[3][3])
+{
+  int k;
+  long double angle, u[3], sp, norm, up[3], xx, yy;
+  /* first row vector */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = 1.0; u[1] = 0.0; u[2] = 0.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norml(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+  /* third row vector */
+  vectProdVecl(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+}
 void versor_to_R(double ox, double oy, double oz, double R[3][3])
 {
   int k;
