@@ -1166,6 +1166,14 @@ double polintfuncRyck(double x)
     polinterrRyck = 0;
   return y;
 }
+long double scalProdl(long double *A, long double *B)
+{
+  int kk;
+  long double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -1173,6 +1181,12 @@ double scalProd(double *A, double *B)
   for (kk=0; kk < 3; kk++)
     R += A[kk]*B[kk];
   return R;
+}
+void vectProdVecl(long double *A, long double *B, long double *C)
+{
+  C[0] = A[1] * B[2] - A[2] * B[1]; 
+  C[1] = A[2] * B[0] - A[0] * B[2];
+  C[2] = A[0] * B[1] - A[1] * B[0];
 }
 void vectProdVec(double *A, double *B, double *C)
 {
