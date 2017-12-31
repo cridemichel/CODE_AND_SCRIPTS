@@ -14,7 +14,7 @@
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl ma sembra molto inaccurate, mentre le lapack sono un po più lente.*/
-#define MC_QUART_LONG_DOUBLE
+//#define MC_QUART_LONG_DOUBLE
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
@@ -2140,7 +2140,7 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok)
   int nn,m,l,k,j,its,i,mmin;
   long double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
   const int MAXITS = 120;
-  const long double EPS=1.0E-20;//3E-16;//numeric_limits<Doub >::epsilon();
+  const long double EPS=1E-30;//3E-16;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2989,7 +2989,7 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 }
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2)
 {
-  const long double DIST_THR=1E-12;
+  const long double DIST_THR=5E-13;
   if (fabsl(perpcompl(P, Cip, nip)-D2) > DIST_THR*D2)
     return 1;
   else 
@@ -3427,7 +3427,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   double Cip[3], nip[3];
-  double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22;
+  double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
   //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
   //double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
