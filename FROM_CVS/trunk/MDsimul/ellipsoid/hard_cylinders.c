@@ -1380,6 +1380,28 @@ void versor_to_R_opt(double ox, double oy, double oz, double R[3][3])
 }
 double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk);
 extern double newton1D(double ax, double (*f)(double), double (*df)(double), double (*ddf)(double), double tol, double *xmin);
+void solve_quadraticl(long double coeff[3], int *numsol, long double *sol)
+{
+  long double delta, a2inv, sqrtd;
+  delta = Sqr(coeff[1]) - 4.0*coeff[2]*coeff[0];
+  if (delta > 0.0)
+    {
+      sqrtd = sqrtl(delta);
+      a2inv = 1.0/(2.0*coeff[2]);
+      sol[0] = (-coeff[1]+sqrtd)*a2inv;
+      sol[1] = (-coeff[1]-sqrtd)*a2inv; 
+      *numsol = 2;
+    } 
+  else if (delta == 0)
+    {
+      sol[0] = -coeff[1]/(2.0*coeff[2]);
+      *numsol = 1;
+    }
+  else
+    {
+      *numsol = 0;
+    }
+}
 void solve_quadratic(double coeff[3], int *numsol, double *sol)
 {
   double delta, a2inv, sqrtd;
@@ -1433,6 +1455,50 @@ void csolve_cubic(double *coeff, double complex sol[3])
   sol[2] = -s1ps2 - a2/3.0 - I*sqrt3*s1ms2;
 }
 #if 1
+void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
+{
+  const long double sqrt3=sqrtl(3.0);
+  /* solution from Abramovitz */
+  long double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
+  long double complex cs1, cs2, s1ps2, s1ms2;
+  if (coeff[3] == 0.0)
+    {
+      printf("[WARNING] fallback to quadratic from cubic\n");
+      solve_quadraticl(coeff, numsol, sol);
+      return;
+    }
+  //printf("qu?????????????????????????????\n");
+  a2 = coeff[2]/coeff[3];
+  a1 = coeff[1]/coeff[3];
+  a0 = coeff[0]/coeff[3];
+  a2sq=Sqr(a2);
+  q = (1.0/3.0)*a1-(1.0/9.0)*a2sq;
+  r = (1.0/6.0)*(a1*a2 - 3.0*a0)-a2sq*a2/27.0; 
+  q3 = Sqr(q)*q;
+  r2 = Sqr(r);
+  H = r2 + q3;
+  //printf("H=%.15G\n", H);
+  if (H <= 0.0)
+    {
+      cs1 = cpowl(r + csqrtl(H),1.0/3.0);
+      cs2 = cpowl(r - csqrtl(H),1.0/3.0);
+      sol[0] = creall(cs1 + cs2) - a2/3.0;
+      /* per il calcolo degli zeri di una quartica basta uno zero reale qualsiasi quindi 
+       * con questo flag si puo' ottimizzare calcolandone solo uno */
+      s1ps2 = (cs1+cs2)/2.0; 
+      s1ms2 = (cs1-cs2)/2.0;
+      sol[1] = creall(-s1ps2 - a2/3.0 + I*sqrt3*s1ms2);
+      sol[2] = creall(-s1ps2 - a2/3.0 - I*sqrt3*s1ms2);
+      *numsol = 3;
+    }
+  else
+    {
+      s1 = cbrtl(r + sqrtl(H));
+      s2 = cbrtl(r - sqrtl(H));
+      sol[0] = s1 + s2 - a2/3.0;
+      *numsol = 1;
+    }
+}
 void solve_cubic(double *coeff, int *numsol, double sol[3])
 {
   const double sqrt3=sqrt(3.0);
@@ -2074,7 +2140,7 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok)
   int nn,m,l,k,j,its,i,mmin;
   long double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
   const int MAXITS = 120;
-  const long double EPS=1.0E-26;//3E-16;//numeric_limits<Doub >::epsilon();
+  const long double EPS=1.0E-20;//3E-16;//numeric_limits<Doub >::epsilon();
   const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
@@ -2773,7 +2839,7 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
   if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
-      solve_cubic(coeff, numsol, solqua);
+      solve_cubicl(coeff, numsol, solqua);
       return;
     }
   solve_numrecl(coeff, numsol, solqua, &ok);
@@ -2923,7 +2989,7 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 }
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2)
 {
-  const long double DIST_THR=1E-14;
+  const long double DIST_THR=1E-12;
   if (fabsl(perpcompl(P, Cip, nip)-D2) > DIST_THR*D2)
     return 1;
   else 
@@ -2942,7 +3008,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   long double D, L, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
   int kk1, kk2, numsol, nsc, fallback;
   const long double FALLBACK_THR = 1E-4;
-  double coeffs[5], solquas[4];
+//  double coeffs[5], solquas[4];
   long double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   long double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   long double Cip[3], nip[3];
