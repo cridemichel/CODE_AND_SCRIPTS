@@ -2834,7 +2834,14 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
 void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 {
   int ok;
-  if (coeff[4]==0.0)
+  if (coeff[4]==0.0 && coeff[3]==0.0)
+    {
+      printf("[WARNING] fallback to quadratic from quartic\n");
+      solve_numrecl(coeff, numsol, solqua, &ok, 2);
+      //solve_cubicl(coeff, numsol, solqua);
+      return;
+    }
+  else if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
       /* N.B. una cubica non puo' essere, i primi due coefficienti devono essere
@@ -2849,7 +2856,14 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   int ok;
-  if (coeff[4]==0.0)
+  if (coeff[4] == 0.0 && coeff[3]==0.0)
+    {
+      printf("[WARNING] fallback to quadratic from quartic\n");
+      //solve_quadratic(coeff, numsol, solqua);
+      solve_numrec(coeff, numsol, solqua, &ok, 2);
+      return;
+    }
+  else if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
       //solve_quadratic(coeff, numsol, solqua);
