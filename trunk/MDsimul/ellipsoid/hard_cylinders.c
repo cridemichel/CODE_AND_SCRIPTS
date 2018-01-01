@@ -2243,7 +2243,7 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok)
 		      r /= s;
 		      if (m == l) 
 			break;
-		      u=fabsl(a[m][m-1])*(fabsl(q)+ fabsl(r));
+		      u=fabsl(a[m][m-1])*(fabsl(q)+fabsl(r));
 		      v=fabsl(p)*(fabsl(a[m-1][m-1])+fabsl(z)+fabsl(a[m+1][m+1]));
 		      /*  if (a1 * (fabs (q) + fabs (r)) <= GSL_DBL_EPSILON * fabs (p) * (a2 + a3))
 			  break; */
@@ -2276,7 +2276,7 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok)
 			      r /= x;
 			    }
 			}
-		      if ((s=SIGNL(sqrtl(p*p+q*q+ r*r),p)) != 0.0)
+		      if ((s=SIGNL(sqrtl(p*p+q*q+r*r),p)) != 0.0)
 			{
 			  if (k == m) 
 			    {
@@ -2308,7 +2308,7 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok)
 			  for (i=l;i<mmin+1;i++)
 			    {
 			      //Column modification.
-			      p=x*a[i][k]+y*a[i][k+1 ];
+			      p=x*a[i][k]+y*a[i][k+1];
 			      if (k+1 != nn) {
 				p += z*a[i][k+2];
 				a[i][k+2]
@@ -2839,7 +2839,10 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
   if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
-      solve_cubicl(coeff, numsol, solqua);
+      /* N.B. una cubica non puo' essere, i primi due coefficienti devono essere
+       * simultaneamente nulli  */
+      solve_quadraticl(coeff, numsol, solqua);
+      //solve_cubicl(coeff, numsol, solqua);
       return;
     }
   solve_numrecl(coeff, numsol, solqua, &ok);
@@ -2851,7 +2854,8 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
   if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
-      solve_cubic(coeff, numsol, solqua);
+      solve_quadratic(coeff, numsol, solqua);
+      //solve_cubic(coeff, numsol, solqua);
       return;
     }
 #ifdef POLY_SOLVE_GSL
@@ -2989,7 +2993,7 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 }
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2)
 {
-  const long double DIST_THR=5E-13;
+  const long double DIST_THR=1E-11;
   if (fabsl(perpcompl(P, Cip, nip)-D2) > DIST_THR*D2)
     return 1;
   else 
@@ -2997,7 +3001,7 @@ int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long 
 }
 int test_for_fallback(double *P, double *Cip, double *nip, double D2)
 {
-  const double DIST_THR=5E-9;
+  const double DIST_THR=1E-8;
   if (fabs(perpcomp(P, Cip, nip)-D2) > DIST_THR*D2)
     return 1;
   else 
