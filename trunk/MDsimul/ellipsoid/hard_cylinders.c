@@ -14,7 +14,7 @@
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl ma sembra molto inaccurate, mentre le lapack sono un po più lente.*/
-//#define MC_QUART_LONG_DOUBLE
+#define MC_QUART_LONG_DOUBLE
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
@@ -2991,29 +2991,33 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 
   return 1;
 }
-int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2)
+int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2, long double *diff)
 {
   const long double DIST_THR=1E-11;
-  if (fabsl(perpcompl(P, Cip, nip)-D2) > DIST_THR*D2)
+  
+  if ((*diff=fabsl(perpcompl(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
     return 0;
 }
-int test_for_fallback(double *P, double *Cip, double *nip, double D2)
+int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
   const double DIST_THR=1E-8;
-  if (fabs(perpcomp(P, Cip, nip)-D2) > DIST_THR*D2)
+  if ((*diff=fabs(perpcomp(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
     return 0;
 }
+extern void versor_to_Rl(long double ox, long double oy, long double oz, long double R[3][3]);
+
 double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Djs[3], double njs[3], double DjCinis)
 {
   long double D, L, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
-  int kk1, kk2, numsol, nsc, fallback;
+  int kk1, kk2, numsol, nsc, fallback, solset;
   const long double FALLBACK_THR = 1E-4;
+  long double diff[2][4], sumdiff[2], tmp;
 //  double coeffs[5], solquas[4];
-  long double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
+  long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   long double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
   long double Cip[3], nip[3];
   long double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22;
@@ -3291,18 +3295,19 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 	}
     }
 #endif
+  sumdiff[0]=0;
   for (kk1=0; kk1 < numsol; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
-      solarr[kk1][0] = 0.0;
-      solarr[kk1][1] = D2*solec[kk1][0];
-      solarr[kk1][2] = D2*solec[kk1][1];
-      if (test_for_fallbackl(solarr[kk1], Cip, nip, D2))
+      solarr[0][kk1][0] = 0.0;
+      solarr[0][kk1][1] = D2*solec[kk1][0];
+      solarr[0][kk1][2] = D2*solec[kk1][1];
+      if (test_for_fallbackl(solarr[0][kk1], Cip, nip, D2, &(diff[0][kk1])))
 	{
 	  fallback=1;
-	  break; 
-	}	  
+	}	
+      sumdiff[0] += diff[0][kk1];  
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
 #if 1
@@ -3341,15 +3346,22 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
 	}
+      sumdiff[1]=0;
       for (kk1=0; kk1 < numsol; kk1++)
 	{
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
 	   * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
-	  solarr[kk1][0] = 0.0;
-	  solarr[kk1][1] = D2*solec[kk1][0];
-	  solarr[kk1][2] = D2*solec[kk1][1];
-      //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
+	  solarr[1][kk1][0] = 0.0;
+	  solarr[1][kk1][1] = D2*solec[kk1][0];
+	  solarr[1][kk1][2] = D2*solec[kk1][1];
+	  test_for_fallbackl(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
+	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
+	  sumdiff[1] += diff[1][kk1];
 	}
+      if (sumdiff[1] < sumdiff[0])
+	solset = 1;
+      else 
+	solset = 0;
     }
 #endif
 
@@ -3364,7 +3376,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 #endif
       for (kk2=0; kk2 < 3; kk2++)
 	{
-	  dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
+	  dsc[kk2] = solarr[solset][kk1][kk2] - Cip[kk2];
 	}
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
@@ -3376,12 +3388,12 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 #endif
 #if 1
       //if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-11)
-      if (test_for_fallbackl(solarr[kk1], Cip, nip, D2)) 
+      if (test_for_fallbackl(solarr[solset][kk1], Cip, nip, D2, &tmp)) 
 	{
-	  printf("distanza punto-centro disk: %.15LG\n", calc_norml(solarr[kk1]));
+	  printf("distanza punto-centro disk: %.15LG\n", calc_norml(solarr[solset][kk1]));
 #if 1
-	  printf("distanza punto-centro disksq: %.15LG D2^2=%.15LG\n", calc_norml(solarr[kk1]), Sqr(D2));
-	  printf("BOH2BOH2 perpcom=%.15LG\n", perpcompl(solarr[kk1], Cip, nip));
+	  printf("distanza punto-centro disksq: %.15LG D2^2=%.15LG\n", calc_norml(solarr[solset][kk1]), Sqr(D2));
+	  printf("BOH2BOH2 perpcom=%.15LG\n", perpcompl(solarr[solset][kk1], Cip, nip));
 	  printf("Cip1=%15LG Cip2=%.15LG\n", Cip[1], Cip[2]);
 	  printf("numsol=%d fallback=%d\n", numsol, fallback);
 	  //print_vec("ni=",ni);
@@ -3426,10 +3438,11 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 }
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol, nsc, fallback;
+  int kk1, kk2, numsol, nsc, fallback, solset;
   const double FALLBACK_THR = 1E-4;
-  double sp, coeff[5],solarr[4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
+  double diff[2][4], sumdiff[2];
   double Cip[3], nip[3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -3682,18 +3695,19 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
     }
 #endif
+  sumdiff[0] = 0;
   for (kk1=0; kk1 < numsol; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
-      solarr[kk1][0] = 0.0;
-      solarr[kk1][1] = D2*solec[kk1][0];
-      solarr[kk1][2] = D2*solec[kk1][1];
-      if (test_for_fallback(solarr[kk1], Cip, nip, D2))
+      solarr[0][kk1][0] = 0.0;
+      solarr[0][kk1][1] = D2*solec[kk1][0];
+      solarr[0][kk1][2] = D2*solec[kk1][1];
+      if (test_for_fallback(solarr[0][kk1], Cip, nip, D2, &(diff[0][kk1])))
 	{
 	  fallback=1;
-	  break; 
-	}	  
+	}
+      sumdiff[0] += diff[0][kk1];
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
 #if 1
@@ -3724,15 +3738,23 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
 	}
+      sumdiff[1] = 0;
       for (kk1=0; kk1 < numsol; kk1++)
 	{
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
 	   * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
-	  solarr[kk1][0] = 0.0;
-	  solarr[kk1][1] = D2*solec[kk1][0];
-	  solarr[kk1][2] = D2*solec[kk1][1];
-      //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
+	  solarr[1][kk1][0] = 0.0;
+	  solarr[1][kk1][1] = D2*solec[kk1][0];
+	  solarr[1][kk1][2] = D2*solec[kk1][1];
+	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
+	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
+	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
+	  sumdiff[1] += diff[1][kk1];
 	}
+      if (sumdiff[1] < sumdiff[0])
+	solset = 1;
+      else 
+	solset = 0;
     }
 #endif
 
@@ -3747,7 +3769,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #endif
       for (kk2=0; kk2 < 3; kk2++)
 	{
-	  dsc[kk2] = solarr[kk1][kk2] - Cip[kk2];
+	  dsc[kk2] = solarr[solset][kk1][kk2] - Cip[kk2];
 	}
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
@@ -3759,12 +3781,12 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #endif
 #if 1
       //if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-11)
-      if (test_for_fallback(solarr[kk1], Cip, nip, D2)) 
+      if (test_for_fallback(solarr[solset][kk1], Cip, nip, D2, &tmp)) 
 	{
-	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[kk1]));
+	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[solset][kk1]));
 #if 1
-	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[kk1]), Sqr(D2));
-	  printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[kk1], Cip, nip));
+	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
+	  printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[solset][kk1], Cip, nip));
 	  printf("Cip1=%15G Cip2=%.15G\n", Cip[1], Cip[2]);
 	  printf("numsol=%d fallback=%d\n", numsol, fallback);
 	  print_vec("ni=",ni);
