@@ -14,7 +14,7 @@
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl ma sembra molto inaccurate, mentre le lapack sono un po più lente.*/
-#define MC_QUART_LONG_DOUBLE
+//#define MC_QUART_LONG_DOUBLE
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
@@ -2084,14 +2084,13 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
     }
   return 0;
 }
-void balancel(long double a[4][4])
+void balancel(long double a[4][4], int n)
 {
   const long double RADIX=FLT_RADIX;// numeric_limits<Doub>::radix;
   int i, j;
   long double scale[4]={1.0,1.0,1.0,1.0};
   int done=0;
   long double r, c, g, f, s, sqrdx=RADIX*RADIX;
-  const int n=4;
   while (!done) 
     {
       done=1;
@@ -2135,13 +2134,13 @@ void balancel(long double a[4][4])
 	}
     }
 }
-void hqrl(long double a[4][4], complex long double wri[4], int *ok)
+void hqrl(long double a[4][4], complex long double wri[4], int *ok, int n)
 {
   int nn,m,l,k,j,its,i,mmin;
   long double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
   const int MAXITS = 120;
   const long double EPS=1E-30;//3E-16;//numeric_limits<Doub >::epsilon();
-  const int n=4;
+  //const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
     for (j=MAX(i-1,0);j<n;j++)
@@ -2327,14 +2326,14 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok)
 }
 
 
-void balance(double a[4][4])
+void balance(double a[4][4], int n)
 {
   const double RADIX=FLT_RADIX;// numeric_limits<Doub>::radix;
   int i, j;
   double scale[4]={1.0,1.0,1.0,1.0};
   int done=0;
   double r, c, g, f, s, sqrdx=RADIX*RADIX;
-  const int n=4;
+  //const int n=4;
   while (!done) 
     {
       done=1;
@@ -2378,13 +2377,13 @@ void balance(double a[4][4])
 	}
     }
 }
-void hqr(double a[4][4], complex double wri[4], int *ok)
+void hqr(double a[4][4], complex double wri[4], int *ok, int n)
 {
   int nn,m,l,k,j,its,i,mmin;
   double z,y,x,w,v,u,t,s,r,q,p, anorm=0.0;
   const int MAXITS = 120;
   const double EPS=2.2204460492503131E-16;//3E-16;//numeric_limits<Doub >::epsilon();
-  const int n=4;
+  //const int n=4;
   for (i=0;i<n;i++)
     //Compute matrix no rm for possible use in lo- cating single small sub diagonal element.
     for (j=MAX(i-1,0);j<n;j++)
@@ -2569,7 +2568,7 @@ void hqr(double a[4][4], complex double wri[4], int *ok)
     }
 }
 
-void laguer(double complex *a, double complex *x, int *its) 
+void laguer(double complex *a, double complex *x, int *its, int m) 
 {
   //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
   const int MR=8,MT=50000,MAXIT=MT*MR;
@@ -2580,7 +2579,7 @@ void laguer(double complex *a, double complex *x, int *its)
   complex double dx,x1,b,d,f,g,h,sq,gp,gm,g2,bx;
   int iter, j;
   double err, abx, abp, abm;
-  int m=4;
+  //int m=4;
   for (iter=1;iter<=MAXIT;iter++) { 
     *its=iter;
     b=a[m];
@@ -2620,19 +2619,19 @@ void laguer(double complex *a, double complex *x, int *its)
   //Very unusual; can occur only for complex roots. Try a different starting guess.
 }
 
-void zroots(complex double *a, complex double *roots, int polish) 
+void zroots(complex double *a, complex double *roots, int polish, int m) 
 {
   const double EPS=1.0E-15;//2.2204460492503130808E-16; //su linux funziona benissimo su mac no
   int jj, i,its, j;
   complex double x,b,c;
-  int m=4;
+  //int m=4;
 
   complex double ad[5], ad_v[5];
   for(j=0;j<=m;j++) ad[j]=a[j];
   for (j=m-1;j>=0;j--) {
     x=0.0;
     for(jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj]; 
-    laguer(ad_v,&x,&its);
+    laguer(ad_v,&x,&its,m);
     if (fabs(cimag(x)) <= 2.0*EPS*fabs(creal(x)))
       x=CMPLX(creal(x),0.0);
     roots[j]=x;
@@ -2645,7 +2644,7 @@ void zroots(complex double *a, complex double *roots, int polish)
   }
   if (polish)
     for (j=0;j<m;j++)
-      laguer(a,&roots[j],&its);
+      laguer(a,&roots[j],&its,m);
   for (j=1;j<m;j++) {
     x=roots[j];
     for (i=j-1;i>=0;i--) {
@@ -2720,17 +2719,17 @@ void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int *ok)
 }
 
 #endif
-void QRfactorizationl(long double hess[4][4], complex long double sol[4], int *ok)
+void QRfactorizationl(long double hess[4][4], complex long double sol[4], int *ok, int n)
 {
   //int ok;
   long double zr[4], zi[4];
   int ilo, ihi,k;
   /* pagina 615 Num. Rec. */  
   /* ora funziona si doveva solo aumentare il numero massimo d'iterazioni */
-  balancel(hess);
-  hqrl(hess, sol, ok);
+  balancel(hess, n);
+  hqrl(hess, sol, ok, n);
 }
-void QRfactorization(double hess[4][4], complex double sol[4], int *ok)
+void QRfactorization(double hess[4][4], complex double sol[4], int *ok, int n)
 {
   //int ok;
   double zr[4], zi[4];
@@ -2738,26 +2737,26 @@ void QRfactorization(double hess[4][4], complex double sol[4], int *ok)
   /* pagina 615 Num. Rec. */  
 #ifdef USE_LAPACK
 #if 1
-  wrap_dgebal(hess, &ilo, &ihi, 4, ok);
-  wrap_hseqr(hess, zr, zi, 4, ilo, ihi, ok);
+  wrap_dgebal(hess, &ilo, &ihi, n, ok);
+  wrap_hseqr(hess, zr, zi, n, ilo, ihi, ok);
   *ok = 1;
 #else
   wrap_dgeev(hess, zr, zi, 4, &ok);
 #endif
   //printf("hess=%.15G %.15G %.15G %.15G\n", hess[0][0], hess[0][1], hess[0][2], hess[0][3]);
-  for (k=0; k < 4; k++)
+  for (k=0; k < n; k++)
     {
       //printf("PRIMA QRDECOMP csol[k=%d]=%.15G+%.15G I\n", k, zr[k], zi[k]);
       sol[k] =CMPLX(zr[k],zi[k]);
     }
 #else
   /* ora funziona si doveva solo aumentare il numero massimo d'iterazioni */
-  balance(hess);
-  hqr(hess, sol, ok);
+  balance(hess, n);
+  hqr(hess, sol, ok, n);
   //sort(); 
 #endif
 }
-void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], int *ok)
+void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], int *ok, int m)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
   /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
@@ -2766,7 +2765,7 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
   complex long double csol[4], cc[5]; 
-  const int m=4;
+  //const int m=4;
   long double hess[4][4];
   int j, k;
   for (k=0;k<m;k++) { //Construct the matrix.
@@ -2774,13 +2773,13 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
     for (j=1;j<m;j++) hess[j][k]=0.0;
     if (k != m-1) hess[k+1][k]=1.0;
   }
-  QRfactorizationl(hess, csol, ok);
+  QRfactorizationl(hess, csol, ok, m);
   
   //for (j=0;j<m;j++)
     //rt[j]=h.wri[j];
   *numrealsol=0;
   //printf("{%.16G,%.16G,%.16G,%.16G,%.16G}\n", coeff[0],coeff[1], coeff[2], coeff[3], coeff[4]);
-  for (k=0; k < 4; k++)
+  for (k=0; k < m; k++)
    {
      //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
      if (cimagl(csol[k]) == 0.0)
@@ -2792,7 +2791,7 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
    }
   //gsl_poly_complex_workspace_free (w);
 }
-void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok)
+void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, int m)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
   /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
@@ -2801,7 +2800,6 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok)
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
   complex double csol[4], cc[5]; 
-  const int m=4;
   double hess[4][4];
   int j, k;
   for (k=0;k<m;k++) { //Construct the matrix.
@@ -2810,18 +2808,18 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok)
     if (k != m-1) hess[k+1][k]=1.0;
   }
 #ifdef USE_LAGUERRE
-  for(k=0; k < 5; k++)
+  for(k=0; k < m+1; k++)
     cc[k]=CMPLX(coeff[k],0.0);
-  zroots(cc, csol, 1);
+  zroots(cc, csol, 1, m);
 #else
-  QRfactorization(hess, csol, ok);
+  QRfactorization(hess, csol, ok, m);
 #endif
   
   //for (j=0;j<m;j++)
     //rt[j]=h.wri[j];
   *numrealsol=0;
   //printf("{%.16G,%.16G,%.16G,%.16G,%.16G}\n", coeff[0],coeff[1], coeff[2], coeff[3], coeff[4]);
-  for (k=0; k < 4; k++)
+  for (k=0; k < m-1; k++)
    {
      //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
      if (cimag(csol[k]) == 0.0)
@@ -2841,11 +2839,11 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
       printf("[WARNING] fallback to cubic from quartic\n");
       /* N.B. una cubica non puo' essere, i primi due coefficienti devono essere
        * simultaneamente nulli  */
-      solve_quadraticl(coeff, numsol, solqua);
+      solve_numrecl(coeff, numsol, solqua, &ok, 3);
       //solve_cubicl(coeff, numsol, solqua);
       return;
     }
-  solve_numrecl(coeff, numsol, solqua, &ok);
+  solve_numrecl(coeff, numsol, solqua, &ok, 4);
 }
 
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
@@ -2854,14 +2852,14 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
   if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
-      solve_quadratic(coeff, numsol, solqua);
-      //solve_cubic(coeff, numsol, solqua);
+      //solve_quadratic(coeff, numsol, solqua);
+      solve_numrec(coeff, numsol, solqua, &ok, 3);
       return;
     }
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
 #else
-  solve_numrec(coeff, numsol, solqua, &ok);
+  solve_numrec(coeff, numsol, solqua, &ok, 4);
   if (!ok)
     {
       /* if hqr() fails fallback to GSL */
@@ -3062,9 +3060,11 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   printf("Rl=%.15LG %.15LG %.15LG\n", Rl[1][0], Rl[1][1], Rl[1][2]);
   printf("Rl=%.15LG %.15LG %.15LG\n", Rl[2][0], Rl[2][1], Rl[2][2]);
 #endif
-  nip0 = nip[0];
-  nip1 = nip[1];
-  nip2 = nip[2];
+  norm = calc_norml(nip);
+  nip0 = nip[0]/norm;
+  nip1 = nip[1]/norm;
+  nip2 = nip[2]/norm;
+  //printf("norm=%.16G\n", sqrt(nip0*nip0+nip1*nip1+nip2*nip2));
   Cip0 = Cip[0];
   Cip1 = Cip[1];
   Cip2 = Cip[2];
@@ -3262,6 +3262,8 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
+      if (temp==0)
+	fallback = 1;
 #if 0
       if (fabs(temp) < FALLBACK_THR)
 	{
@@ -3469,9 +3471,10 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	} 
     }
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-  nip0 = nip[0];
-  nip1 = nip[1];
-  nip2 = nip[2];
+  norm = calc_norm(nip);
+  nip0 = nip[0]/norm;
+  nip1 = nip[1]/norm;
+  nip2 = nip[2]/norm;
   Cip0 = Cip[0];
   Cip1 = Cip[1];
   Cip2 = Cip[2];
@@ -3662,6 +3665,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
+      if (temp==0.0)
+	fallback=1;
 #if 0
       if (fabs(temp) < FALLBACK_THR)
 	{
