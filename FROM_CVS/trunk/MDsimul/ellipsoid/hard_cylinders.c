@@ -2572,7 +2572,7 @@ void laguer(double complex *a, double complex *x, int *its, int m)
 {
   //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
   const int MR=8,MT=50000,MAXIT=MT*MR;
-  const double EPS=3E-16;//1E-15;//1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
+  const double EPS=2.2204460492503130808E-16;//1E-15;//1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
   static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
