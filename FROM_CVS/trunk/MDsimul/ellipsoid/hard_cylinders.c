@@ -32,9 +32,10 @@ int *cellListMC;
 #endif
 #define SIGNL(a,b) ((b) >= 0.0 ? fabsl(a) : -fabsl(a))
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+#ifndef MAX
 #define MAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
-
+#endif
 #define SignR(x,y) (((y) >= 0) ? (x) : (- (x)))
 #define MD_DEBUG10(x) 
 #define MD_DEBUG11(x) 
@@ -2571,8 +2572,8 @@ void hqr(double a[4][4], complex double wri[4], int *ok, int n)
 void laguer(double complex *a, double complex *x, int *its, int m) 
 {
   //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
-  const int MR=8,MT=50000,MAXIT=MT*MR;
-  const double EPS=2.2204460492503130808E-16;//1E-15;//1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
+  const int MR=8,MT=500,MAXIT=MT*MR;
+  const double EPS=3E-16;//1E-15;//1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
   //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
   static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
   // Fractions used to break a limit cycle.
@@ -2621,7 +2622,7 @@ void laguer(double complex *a, double complex *x, int *its, int m)
 
 void zroots(complex double *a, complex double *roots, int polish, int m) 
 {
-  const double EPS=1.0E-15;//2.2204460492503130808E-16; //su linux funziona benissimo su mac no
+  const double EPS=1.0E-14;//2.2204460492503130808E-16; //su linux funziona benissimo su mac no
   int jj, i,its, j;
   complex double x,b,c;
   //int m=4;
@@ -2819,7 +2820,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
     //rt[j]=h.wri[j];
   *numrealsol=0;
   //printf("{%.16G,%.16G,%.16G,%.16G,%.16G}\n", coeff[0],coeff[1], coeff[2], coeff[3], coeff[4]);
-  for (k=0; k < m-1; k++)
+  for (k=0; k < m; k++)
    {
      //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
      if (cimag(csol[k]) == 0.0)
@@ -3003,18 +3004,63 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 
   return 1;
 }
+void discard_spuriousl(long double *solqua, int *numsol)
+{
+  /* each solution x must be such that |x| <= 1 */
+  int k, nsol;
+  const long double EPS=5E-11;
+  long double solL[4];
+  nsol=0;
+  for (k=0; k < *numsol; k++)
+    solL[k] = solqua[k];
+  for (k=0; k < *numsol; k++)
+    {
+      if (fabsl(solL[k]) < 1.0+EPS)
+	{
+	  solqua[nsol] = solL[k];
+	  nsol++;
+	}
+    }
+  //printf("numsol=%d nsol=%d\n", *numsol, nsol);
+  *numsol = nsol;
+}
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2, long double *diff)
 {
-  const long double DIST_THR=1E-11;
+  const long double DIST_THR=5E-11;
   
   if ((*diff=fabsl(perpcompl(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
     return 0;
 }
+
+void discard_spurious(double *solqua, int *numsol)
+{
+  /* each solution x must be such that |x| <= 1 */
+  int k, nsol;
+  const double EPS=5E-8; // it should be at least not greater than DIST_THR below
+  double solL[4];
+  nsol=0;
+  for (k=0; k < *numsol; k++)
+    solL[k] = solqua[k];
+  for (k=0; k < *numsol; k++)
+    {
+      if (fabs(solL[k]) < 1.0+EPS)
+	{
+	  solqua[nsol] = solL[k];
+	  nsol++;
+	}
+    }
+#if 0
+  if (numsol==4)
+    printf("numsol=%d nsol=%d\n", *numsol, nsol);
+#endif
+  *numsol = nsol;
+}
+
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
-  const double DIST_THR=1E-8;
+  const double DIST_THR=5E-8;
   if ((*diff=fabs(perpcomp(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
@@ -3198,6 +3244,9 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
     coeffs[kk1] = ((double)coeff[kk1]);
 #endif
   solve_quarticl(coeff, &numsol, solqua);
+  discard_spuriousl(solqua, &numsol);
+
+
 #if 0
   for (kk1=0; kk1 < numsol; kk1++)
     solqua[kk1] = (long double)solquas[kk1];
@@ -3326,6 +3375,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       sumdiff[0] += diff[0][kk1];  
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
+  solset=0;
 #if 1
   if (fallback)
     {
@@ -3339,6 +3389,8 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 	coeffs[kk1] = (double)coeff[kk1];
 #endif
       solve_quarticl(coeff, &numsol, solqua);
+      discard_spuriousl(solqua, &numsol);
+
 #if 0
       for (kk1=0; kk1 < numsol; kk1++)
 	solqua[kk1] = (long double)solquas[kk1];
@@ -3452,6 +3504,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
     }
   return 1;  
 }
+
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol, nsc, fallback, solset;
@@ -3504,7 +3557,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   Cip02=Sqr(Cip0);
   Cip12=Sqr(Cip1);
   Cip22=Sqr(Cip2);   
-#if 0
+#if 1
   coeffEr[0] = 1 - 2*nip12 + nip02*nip12 + nip14 + 
     nip12*nip22;
   coeffEr[1] = 1 - 2*nip22 + nip02*nip22 + 
@@ -3605,6 +3658,17 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
   solve_quartic(coeff, &numsol, solqua);
+#if 0
+  if (numsol==1)
+    {
+      printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
+      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+      printf("sol=%.15G\n", solqua[0]);
+      printf("BOH\n");
+    }
+#endif
+  discard_spurious(solqua, &numsol);
+
   //solve_fourth_deg(coeff, &numsol, solqua);
   /* ora assegno a solec[][] e calcolo x */
 #if 0
@@ -3658,6 +3722,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   //if (numsol > 0)
   //printf("numsol=%d\n", numsol);
   fallback = 0;
+
   for (kk1=0; kk1 < numsol; kk1++)
     {
 #if 0
@@ -3729,6 +3794,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       sumdiff[0] += diff[0][kk1];
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
+  solset=0;
 #if 1
   if (fallback)
     {
@@ -3738,6 +3804,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
       coeff[0] = c12 + 2*c1*c3 + c32 - c52;
       solve_quartic(coeff, &numsol, solqua);
+      discard_spurious(solqua, &numsol);
+
       for (kk1=0; kk1 < numsol; kk1++)
 	{
 #if 0
@@ -3909,6 +3977,12 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
 
 */
+	  /* se sono quasi paralleli... */
+	  if (fabs(scalProd(ni,nj)) < 1E-12)
+	    {
+	      if (normDjUi <= D && fabs(DjCini) <= L)
+		return -1;
+	    }
 	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
 	    continue;
 
