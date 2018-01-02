@@ -3044,7 +3044,7 @@ void discard_spurious(double *solqua, int *numsol)
 {
   /* each solution x must be such that |x| <= 1 */
   int k, nsol;
-  const double EPS=1.5E-8; // it should be at least not greater than DIST_THR below
+  const double EPS=5E-8; // it should be at least not greater than DIST_THR below
   double solL[4];
   nsol=0;
   for (k=0; k < *numsol; k++)
@@ -3066,7 +3066,7 @@ void discard_spurious(double *solqua, int *numsol)
 
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
-  const double DIST_THR=1.5E-8;
+  const double DIST_THR=5E-8;
   if ((*diff=fabs(perpcomp(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
@@ -4021,6 +4021,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
 
 */
+#ifndef MC_IBARRA_SIMPLER
 	  /* se sono quasi paralleli... */
 	  if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
 	    {
@@ -4029,6 +4030,16 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      else
 		continue;
 	    }
+#else
+	  /* se sono quasi paralleli... */
+	  if (1.0-fabs(scalProd(ni,nj)) < 3E-16)
+	    {
+	      if (normDjUi <= D && fabs(DjCini) <= L)
+		return -1;
+	      else
+		continue;
+	    }
+#endif
 	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
 	    continue;
 
