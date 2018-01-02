@@ -3038,7 +3038,7 @@ void discard_spurious(double *solqua, int *numsol)
 {
   /* each solution x must be such that |x| <= 1 */
   int k, nsol;
-  const double EPS=5E-8; // it should be at least not greater than DIST_THR below
+  const double EPS=1.5E-8; // it should be at least not greater than DIST_THR below
   double solL[4];
   nsol=0;
   for (k=0; k < *numsol; k++)
@@ -3060,7 +3060,7 @@ void discard_spurious(double *solqua, int *numsol)
 
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
-  const double DIST_THR=5E-14;
+  const double DIST_THR=1.5E-8;
   if ((*diff=fabs(perpcomp(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
