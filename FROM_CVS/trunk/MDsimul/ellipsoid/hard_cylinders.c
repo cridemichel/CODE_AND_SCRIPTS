@@ -2835,13 +2835,15 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
 void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 {
   int ok;
-  if (coeff[4]==0.0 && coeff[3]==0.0)
+  long double EPS=2.2204460492503131E-32;
+  if (fabsl(coeff[4]) < EPS*fabsl(coeff[2]))
     {
       printf("[WARNING] fallback to quadratic from quartic\n");
       solve_numrecl(coeff, numsol, solqua, &ok, 2);
       //solve_cubicl(coeff, numsol, solqua);
       return;
     }
+#if 0
   else if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
@@ -2851,6 +2853,7 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
       //solve_cubicl(coeff, numsol, solqua);
       return;
     }
+#endif
   solve_numrecl(coeff, numsol, solqua, &ok, 4);
 }
 
@@ -2858,13 +2861,14 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   int ok;
   double EPS=2.2204460492503131E-16;
-  if (fabs(coeff[4]) < EPS && fabs(coeff[3]) < EPS)
+  if (fabs(coeff[4]) < EPS*fabs(coeff[2]))
     {
       printf("[WARNING] fallback to quadratic from quartic\n");
       //solve_quadratic(coeff, numsol, solqua);
       solve_numrec(coeff, numsol, solqua, &ok, 2);
       return;
     }
+#if 0
   else if (fabs(coeff[4]) < EPS)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
@@ -2872,6 +2876,7 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
       solve_numrec(coeff, numsol, solqua, &ok, 3);
       return;
     }
+#endif
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
 #else
