@@ -2857,14 +2857,15 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   int ok;
-  if (coeff[4] == 0.0 && coeff[3]==0.0)
+  double EPS=2.2204460492503131E-16;
+  if (fabs(coeff[4]) < EPS && fabs(coeff[3]) < EPS)
     {
       printf("[WARNING] fallback to quadratic from quartic\n");
       //solve_quadratic(coeff, numsol, solqua);
       solve_numrec(coeff, numsol, solqua, &ok, 2);
       return;
     }
-  else if (coeff[4]==0.0)
+  else if (fabs(coeff[4]) < EPS)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
       //solve_quadratic(coeff, numsol, solqua);
@@ -4016,7 +4017,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 
 */
 	  /* se sono quasi paralleli... */
-	  if (1.0-fabs(scalProd(ni,nj)) < 1.0E-12)
+	  if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
 	    {
 	      if (normDjUi <= D && fabs(DjCini) <= L)
 		return -1;
