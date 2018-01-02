@@ -3060,7 +3060,7 @@ void discard_spurious(double *solqua, int *numsol)
 
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
-  const double DIST_THR=5E-8;
+  const double DIST_THR=5E-14;
   if ((*diff=fabs(perpcomp(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
@@ -3790,6 +3790,22 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       if (test_for_fallback(solarr[0][kk1], Cip, nip, D2, &(diff[0][kk1])))
 	{
 	  fallback=1;
+#if 0
+	  if (numsol==4)
+	    {
+	      printf("%d [solset=0] numsol=%d ===================== <<<< \n", kk1, numsol);
+	      printf("solqua[%d]=%.15G\n", kk1, solqua[kk1]);
+	      printf("ni.nj=%.15G\n", scalProd(ni,nj));
+	      printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
+	      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+	      printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
+		     coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
+		     coeff[1]*solqua[kk1]+coeff[0]);
+	      printf("temp=%.15G\n", temp);
+	      printf("diff=%.16G\n", diff[0][kk1]);
+	      printf(">>>> =====================\n");
+	    }
+#endif
 	}
       sumdiff[0] += diff[0][kk1];
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
@@ -3837,6 +3853,23 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
 	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
 	  sumdiff[1] += diff[1][kk1];
+#if 0
+  	  if (numsol==4)
+  	    {
+  	      printf("FALLBACK %d [solset=0] numsol=%d ===================== <<<< \n", kk1, numsol);
+  	      printf("solqua[%d]=%.15G\n", kk1, solqua[kk1]);
+  	      printf("ni.nj=%.15G\n", scalProd(ni,nj));
+  	      printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
+  	      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+  	      printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
+  		     coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
+  		     coeff[1]*solqua[kk1]+coeff[0]);
+  	      printf("temp=%.15G\n", temp);
+	      printf("diff=%.16G\n", diff[1][kk1]);
+	      printf(">>>> =====================\n");
+	  }
+#endif
+	
 	}
       if (sumdiff[1] < sumdiff[0])
 	solset = 1;
@@ -3844,7 +3877,10 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	solset = 0;
     }
 #endif
-
+#if 0
+  if (fallback && numsol==4)
+    printf("CHOSEN SOLSET IS N. %d\n", solset);
+#endif
 #if 0
   construct_inner_points(solarr, Ci, ni, Dj, nj, D);
 #endif
@@ -3870,6 +3906,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       //if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-11)
       if (test_for_fallback(solarr[solset][kk1], Cip, nip, D2, &tmp)) 
 	{
+	  printf("# %d ===================== <<<< \n", kk1);
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[solset][kk1]));
 #if 1
 	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
@@ -3895,6 +3932,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 		 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
 		 coeff[1]*solqua[kk1]+coeff[0]);
 	  printf("temp=%.15G\n", temp);
+	  printf("# %d >>>> =====================  \n", kk1);
 	  //printf("semiaxes=%f %f %f %f\n", aEd, bEd, aEr, bEr);
 	  //printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
 #if 0
