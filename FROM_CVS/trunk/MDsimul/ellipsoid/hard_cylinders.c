@@ -14,11 +14,11 @@
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
  * laguerre va come la routine gsl ma sembra molto inaccurate, mentre le lapack sono un po più lente.*/
-#define MC_QUART_LONG_DOUBLE
+//#define MC_QUART_LONG_DOUBLE
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
-#define MC_DEBUG_HCALGO
+//#define MC_DEBUG_HCALGO
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 extern const double saxfactMC[3];
@@ -2772,7 +2772,7 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
   /* pagina 497 Num. Rec. */
   complex long double csol[4], cc[5]; 
   //const int m=4;
-  const double TINYEPS=1E-7;
+  const double TINYEPS=1E-5;
   long double hess[4][4];
   int j, k, smallimag;
   for (k=0;k<m;k++) { //Construct the matrix.
@@ -2791,7 +2791,9 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
    {
      //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
      if (cimagl(csol[k]) < TINYEPS*creall(csol[k]))
-       smallimag=1;
+       {
+	 smallimag=1;
+       }
      if (cimagl(csol[k]) == 0.0)
        {
 	 //printf("cimag(csol[%d])=%.15G\n", k, cimag(csol[k]));
@@ -2800,7 +2802,9 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
        }
    }
   if (smallimag==1 && *numrealsol==0)
-    tinyimagGBL=1;
+    {
+      tinyimagGBL=1;
+    }
   else
     tinyimagGBL=0;
   //gsl_poly_complex_workspace_free (w);
@@ -2837,8 +2841,8 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
   for (k=0; k < m; k++)
    {
 #ifdef MC_DEBUG_HCALGO
-     if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-       printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
+     //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+       //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
 #endif
      if (cimag(csol[k]) < TINYEPS*creal(csol[k]))
        smallimag=1;
@@ -3107,10 +3111,11 @@ int test_solution_xyl(long double *sol)
      return 0;
 }
 
-int test_solution_xy(double *sol)
+int test_solution_xy(double *sol, double *diff)
 {
-  const double EPS=3E-16;
-  if (fabs(1.0 - (Sqr(sol[0]) + Sqr(sol[1]))) > EPS)
+  const double EPS=1E-7;
+  //printf("diff=%.16G\n", fabs(1.0 - (Sqr(sol[0]) + Sqr(sol[1]))));
+  if ((*diff=fabs(1.0 - (Sqr(sol[0]) + Sqr(sol[1])))) > EPS)
      return 1;
    else 
      return 0;
@@ -3455,8 +3460,9 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
   if (tinyimagGBL)
-    fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
-
+    {
+      fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
+    }
   solset=0;
 #if 1
   if (fallback)
@@ -3598,7 +3604,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   const double FALLBACK_THR = 1E-4;
   double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], sumdiff[2];
+  double diff[2][4], sumdiff[2], diffxy[2][4];
   double Cip[3], nip[3], norm, Rl[3][3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -3839,8 +3845,14 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
-      if (temp==0.0 || test_solution_xy(solec[kk1]))
-	fallback=1;
+#if 0
+      if (test_solution_xy(solec[kk1], &(diffxy[0][kk1])))
+	  fallback=1;
+#endif
+      if (temp==0.0) 
+	{
+	  fallback=1;
+	}
 #if 0
       if (fabs(temp) < FALLBACK_THR)
 	{
@@ -3885,7 +3897,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
       if (test_for_fallback(solarr[0][kk1], Cip, nip, D2, &(diff[0][kk1])))
 	{
-	  //fallback=1;
+	  fallback=1;
 #if 0
 	  if (numsol==4)
 	    {
@@ -3907,8 +3919,10 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #endif
     }
   if (tinyimagGBL)
-    fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
-
+    {
+      //printf("BOHHHH\n");
+      fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
+    }
   solset=0;
 #if 1
   if (fallback)
@@ -3939,6 +3953,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  temp = c5 + c2*solqua[kk1];
 	  solec[kk1][0] = solqua[kk1];
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+	  //printf("fallback:");
+	  //test_solution_xy(solec[kk1], &(diff[1][kk1]));
 #if 0
 	  if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
 	    {
@@ -3960,7 +3976,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  printf("[fbprevsol]solarr[%d]=%.16G %.16G\n", kk1, solarr[1][kk1][1], solarr[1][kk1][2]);
 #endif
 #if 1
-	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
+	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diffxy[1][kk1]));
 	  sumdiff[1] += diff[1][kk1];
 #endif
 #if 0
@@ -3984,12 +4000,18 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
       if (fallback==2)
 	solset=1;
+      else if (numsol[1]==0 && numsol[0] > 0)
+	solset=0;
       else
 	{
 	  if (sumdiff[1] < sumdiff[0])
 	    solset = 1;
 	  else 
 	    solset = 0;
+#if 0
+	  if (fallback==3 && solset != 1)
+	    printf("CHOSEN SOLSET IS N. %d\n", solset);
+#endif
 	}
 #endif
     }
@@ -4174,8 +4196,8 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      double alg1, alg2; 
 	      alg1 = rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini);
 	      alg2 = rimdiskonel(D, L, Ci, ni, Dj[j2], nj, DjCini);
-	      if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
+	      //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+		  //printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
 	      if (alg1!=alg2)
 		{
 		  store_bump(iGbl, jGbl);
@@ -4197,8 +4219,8 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      double alg1, alg2; 
 	      alg1 = rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini);
 	      alg2 = rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini);
-	      if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
+	      //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+		  //printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
 	      if (alg1!=alg2)
 		{
 		  store_bump(iGbl, jGbl);
