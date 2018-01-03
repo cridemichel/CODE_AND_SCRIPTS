@@ -10259,7 +10259,7 @@ void store_bump(int i, int j)
 #endif
   double Drx, Dry, Drz, RCMx, RCMy, RCMz;
 #ifdef MC_HC
-  const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G C[%s]\n";
+  const char tipodat2[]= "%.32G %.32G %.32G %.32G %.32G %.32G @ %.15G %.15G C[%s]\n";
 #else
 #ifdef MD_SUPERELLIPSOID
   const char tipodat2[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s] Q %.15G %.15G %.15G\n";

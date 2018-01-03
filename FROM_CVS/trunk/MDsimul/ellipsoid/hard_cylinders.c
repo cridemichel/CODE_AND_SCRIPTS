@@ -18,6 +18,7 @@
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
+#define MC_DEBUG_HCALGO
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 extern const double saxfactMC[3];
@@ -58,6 +59,9 @@ extern void vectProdVecl(long double *A, long double *B, long double *C);
 extern void print_matrix(double **M, int n);
 extern void update_MSDrot(int i);
 extern void update_MSD(int i);
+#ifdef MC_DEBUG_HCALGO
+int iGbl, jGbl;
+#endif
 #ifdef MD_SUPERELLIPSOID
 extern int is_superellipse(int i);
 extern void fdjacSE(int n, double x[], double fvec[], double **df, void (*vecfunc)(int, double [], double []), int iA, int iB, double shift[3]);
@@ -2822,7 +2826,10 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
   //printf("{%.16G,%.16G,%.16G,%.16G,%.16G}\n", coeff[0],coeff[1], coeff[2], coeff[3], coeff[4]);
   for (k=0; k < m; k++)
    {
-     //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
+#ifdef MC_DEBUG_HCALGO
+     if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+       printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
+#endif
      if (cimag(csol[k]) == 0.0)
        {
 	 //printf("cimag(csol[%d])=%.15G\n", k, cimag(csol[k]));
@@ -3063,7 +3070,20 @@ void discard_spurious(double *solqua, int *numsol)
 #endif
   *numsol = nsol;
 }
-
+int test_solution_xyl(long double *sol)
+{
+  if (fabsl(1.0 - (Sqr(sol[0]) + Sqr(sol[1]))) > 1E-11)
+     return 1;
+   else 
+     return 0;
+}
+int test_solution_xy(double *sol)
+{
+  if (fabs(1.0 - (Sqr(sol[0]) + Sqr(sol[1]))) > 1E-8)
+     return 1;
+   else 
+     return 0;
+}
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
   const double DIST_THR=5E-8;
@@ -3077,7 +3097,7 @@ extern void versor_to_Rl(long double ox, long double oy, long double oz, long do
 double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Djs[3], double njs[3], double DjCinis)
 {
   long double D, L, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
-  int kk1, kk2, numsol, nsc, fallback, solset;
+  int kk1, kk2, numsol[2], nsc, fallback, solset;
   const long double FALLBACK_THR = 1E-4;
   long double diff[2][4], sumdiff[2], tmp;
 //  double coeffs[5], solquas[4];
@@ -3249,8 +3269,8 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   for (kk1=0; kk1 < 5; kk1++)
     coeffs[kk1] = ((double)coeff[kk1]);
 #endif
-  solve_quarticl(coeff, &numsol, solqua);
-  discard_spuriousl(solqua, &numsol);
+  solve_quarticl(coeff, &(numsol[0]), solqua);
+  discard_spuriousl(solqua, &(numsol[0]));
 
 
 #if 0
@@ -3310,7 +3330,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   //if (numsol > 0)
   //printf("numsol=%d\n", numsol);
   fallback = 0;
-  for (kk1=0; kk1 < numsol; kk1++)
+  for (kk1=0; kk1 < numsol[0]; kk1++)
     {
 #if 0
       c0l = c0;
@@ -3331,7 +3351,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
-      if (temp==0)
+      if (temp==0 || test_solution_xyl(solec[kk1]))
 	fallback = 1;
 #if 0
       if (fabs(temp) < FALLBACK_THR)
@@ -3367,7 +3387,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
     }
 #endif
   sumdiff[0]=0;
-  for (kk1=0; kk1 < numsol; kk1++)
+  for (kk1=0; kk1 < numsol[0]; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
@@ -3394,14 +3414,14 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       for (kk1=0; kk1 < 5; kk1++)
 	coeffs[kk1] = (double)coeff[kk1];
 #endif
-      solve_quarticl(coeff, &numsol, solqua);
-      discard_spuriousl(solqua, &numsol);
+      solve_quarticl(coeff, &(numsol[1]), solqua);
+      discard_spuriousl(solqua, &(numsol[1]));
 
 #if 0
       for (kk1=0; kk1 < numsol; kk1++)
 	solqua[kk1] = (long double)solquas[kk1];
 #endif
-      for (kk1=0; kk1 < numsol; kk1++)
+      for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
 #if 0
     	  c0l = c0;
@@ -3421,7 +3441,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 #endif
 	}
       sumdiff[1]=0;
-      for (kk1=0; kk1 < numsol; kk1++)
+      for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
 	   * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
@@ -3442,7 +3462,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 #if 0
   construct_inner_points(solarr, Ci, ni, Dj, nj, D);
 #endif
-  for (kk1=0; kk1 < numsol; kk1++)
+  for (kk1=0; kk1 < numsol[solset]; kk1++)
     {
 #if 0
       printf("solarr[%d]=(%f,%f,%f)\n", kk1, solarr[kk1][0],solarr[kk1][1],solarr[kk1][2]);
@@ -3469,7 +3489,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 	  printf("distanza punto-centro disksq: %.15LG D2^2=%.15LG\n", calc_norml(solarr[solset][kk1]), Sqr(D2));
 	  printf("BOH2BOH2 perpcom=%.15LG\n", perpcompl(solarr[solset][kk1], Cip, nip));
 	  printf("Cip1=%15LG Cip2=%.15LG\n", Cip[1], Cip[2]);
-	  printf("numsol=%d fallback=%d\n", numsol, fallback);
+	  printf("numsol=%d fallback=%d\n", numsol[solset], fallback);
 	  //print_vec("ni=",ni);
 	  //print_vec("nj=",nj);
 	  printf("c02=%.15LG c0=%.15LG c1=%.15LG c12=%.15LG c22=%.15LG\n", c02, c0, c1, c12, c22);
@@ -3513,7 +3533,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol, nsc, fallback, solset;
+  int kk1, kk2, numsol[2], nsc, fallback, solset;
   const double FALLBACK_THR = 1E-4;
   double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
@@ -3663,7 +3683,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
-  solve_quartic(coeff, &numsol, solqua);
+  solve_quartic(coeff, &(numsol[0]), solqua);
 #if 0
   if (numsol==1)
     {
@@ -3673,7 +3693,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       printf("BOH\n");
     }
 #endif
-  discard_spurious(solqua, &numsol);
+  discard_spurious(solqua, &(numsol[0]));
 
   //solve_fourth_deg(coeff, &numsol, solqua);
   /* ora assegno a solec[][] e calcolo x */
@@ -3729,7 +3749,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   //printf("numsol=%d\n", numsol);
   fallback = 0;
 
-  for (kk1=0; kk1 < numsol; kk1++)
+  for (kk1=0; kk1 < numsol[0]; kk1++)
     {
 #if 0
       c0l = c0;
@@ -3746,11 +3766,20 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       temp = c4 + c2*solqua[kk1];
       solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
       solec[kk1][1] = solqua[kk1];
+      //printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
+#if 0
+      if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+	{
+  	  printf("solec[%d]=%.16G %.16G temp=%.15G\n", kk1, solec[kk1][0], solec[kk1][1], temp);
+	  printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
+	  printf("numeratore=%.16G\n", -c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]));
+	}
+#endif
 #endif
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
-      if (temp==0.0)
+      if (temp==0.0 || test_solution_xy(solec[kk1]))
 	fallback=1;
 #if 0
       if (fabs(temp) < FALLBACK_THR)
@@ -3786,7 +3815,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
 #endif
   sumdiff[0] = 0;
-  for (kk1=0; kk1 < numsol; kk1++)
+  for (kk1=0; kk1 < numsol[0]; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
@@ -3820,15 +3849,16 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
   if (fallback)
     {
+      //printf("falling back\n");
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
       coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
       coeff[2] = 2*c0*c1 - 2*c12 - c22 + 2*c0*c3 - 2*c1*c3 + c42 + c52;
       coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
       coeff[0] = c12 + 2*c1*c3 + c32 - c52;
-      solve_quartic(coeff, &numsol, solqua);
-      discard_spurious(solqua, &numsol);
+      solve_quartic(coeff, &(numsol[1]), solqua);
+      discard_spurious(solqua, &(numsol[1]));
 
-      for (kk1=0; kk1 < numsol; kk1++)
+      for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
 #if 0
     	  c0l = c0;
@@ -3845,16 +3875,26 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  temp = c5 + c2*solqua[kk1];
 	  solec[kk1][0] = solqua[kk1];
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+#if 0
+	  if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+	    {
+	      printf("[fallback] solec[%d]=%.16G %.16G temp=%.15G\n", kk1, solec[kk1][0], solec[kk1][1], temp);
+	    }
+#endif
 #endif
 	}
       sumdiff[1] = 0;
-      for (kk1=0; kk1 < numsol; kk1++)
+      for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
 	   * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
 	  solarr[1][kk1][0] = 0.0;
 	  solarr[1][kk1][1] = D2*solec[kk1][0];
 	  solarr[1][kk1][2] = D2*solec[kk1][1];
+#if 0
+	  printf("[fallback] solarr[%d]=%.16G %.16G\n", kk1, solarr[0][kk1][1], solarr[0][kk1][2]);
+	  printf("[fbprevsol]solarr[%d]=%.16G %.16G\n", kk1, solarr[1][kk1][1], solarr[1][kk1][2]);
+#endif
 	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
 	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
 	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
@@ -3890,7 +3930,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 0
   construct_inner_points(solarr, Ci, ni, Dj, nj, D);
 #endif
-  for (kk1=0; kk1 < numsol; kk1++)
+  for (kk1=0; kk1 < numsol[solset]; kk1++)
     {
 #if 0
       printf("solarr[%d]=(%f,%f,%f)\n", kk1, solarr[kk1][0],solarr[kk1][1],solarr[kk1][2]);
@@ -3918,7 +3958,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
 	  printf("BOH2BOH2 perpcom=%.15G\n", perpcomp(solarr[solset][kk1], Cip, nip));
 	  printf("Cip1=%15G Cip2=%.15G\n", Cip[1], Cip[2]);
-	  printf("numsol=%d fallback=%d\n", numsol, fallback);
+	  printf("numsol=%d fallback=%d\n", numsol[solset], fallback);
 	  print_vec("ni=",ni);
 	  print_vec("nj=",nj);
 	  printf("c02=%.15G c0=%.15G c1=%.15G c12=%.15G c22=%.15G\n", c02, c0, c1, c12, c22);
@@ -3959,6 +3999,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
   return 1;  
 }
+
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, kk, j2, k2;
@@ -4060,8 +4101,29 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	  if (rimdiskonel(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
 	    return -1;
 #else
+#ifdef MC_DEBUG_HCALGO
+	    {
+	      double alg1, alg2; 
+	      alg1 = rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini);
+	      alg2 = rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini);
+	      if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
+		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
+	      if (alg1!=alg2)
+		{
+		  store_bump(iGbl, jGbl);
+		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
+		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
+		  saveCorAscii();
+		  exit(-1);
+		}
+	      if (alg2 < 0)
+		return -1;
+	    }
+#else
 	  if (rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
 	    return -1;
+
+#endif
 #endif
 #endif
 	}
@@ -4118,6 +4180,8 @@ double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], doubl
     }
   return 0;
 }
+
+
 double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
 {
   static int firstcall=1;
@@ -4161,7 +4225,10 @@ double calcDistNegHCbrent(int i, int j, double shift[3], int* retchk)
   if ((sphov=check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim)) > 0.0)
     return 1;
 #endif
-
+#ifdef MC_DEBUG_HCALGO
+  iGbl=i;
+  jGbl=j;
+#endif
   if (L >= D) // prolate
     {
       if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)

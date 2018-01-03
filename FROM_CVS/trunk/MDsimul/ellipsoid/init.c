@@ -4636,6 +4636,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
   //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
   for (k=0; k < 3 ; k++)
     R[1][k] = u[k]/norm;
+#if 0
   if (typesArr[0].nspots==3 && type==0)
     {
       for (k=0; k < 3 ; k++)
@@ -4649,6 +4650,7 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3])
 	R[1][k] = u[k]*xx + up[k]*yy;
       //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
     }
+#endif
   /* third row vector */
   vectProdVec(R[0], R[1], u);
  
