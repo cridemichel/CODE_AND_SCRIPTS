@@ -2818,7 +2818,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
   complex double csol[4], cc[5]; 
-  const double TINYEPS=1E-7;
+  const double TINYEPS=1E-5;
   double hess[4][4];
   int j, k, smallimag;
   for (k=0;k<m;k++) { //Construct the matrix.
