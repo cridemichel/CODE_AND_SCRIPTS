@@ -4893,6 +4893,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 	      if (dostorebump)
 		printf("A #2 disk-rim\n");
 #endif	   
+	      //printf("rimdisk overlap found i=%d j=%d\n", i, j);
 	      return -1;
 	    }
 	  totitsHC += it;
