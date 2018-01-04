@@ -3954,7 +3954,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  solec[kk1][0] = solqua[kk1];
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 	  //printf("fallback:");
-	  //test_solution_xy(solec[kk1], &(diff[1][kk1]));
+	  //test_solution_xy(solec[kk1], &(diffxy[1][kk1]));
 #if 0
 	  if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
 	    {
@@ -3976,7 +3976,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  printf("[fbprevsol]solarr[%d]=%.16G %.16G\n", kk1, solarr[1][kk1][1], solarr[1][kk1][2]);
 #endif
 #if 1
-	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diffxy[1][kk1]));
+	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
 	  sumdiff[1] += diff[1][kk1];
 #endif
 #if 0
@@ -4204,6 +4204,8 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
 		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
 		  saveCorAscii();
+		  saveCoord("test.cor");
+		  saveBakAscii("COORDTMPASCII-TEST");
 		  exit(-1);
 		}
 	      if (alg2 < 0)
@@ -4226,6 +4228,8 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 		  store_bump(iGbl, jGbl);
 		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
 		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
+		  saveBakAscii("COORDTMPASCII-TEST");
+		  saveCoord("test.cor");
 		  saveCorAscii();
 		  exit(-1);
 		}
