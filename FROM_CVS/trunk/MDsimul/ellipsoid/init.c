@@ -8105,10 +8105,19 @@ void writeAllCor(FILE* fs, int saveAll)
   const char tipodat2_mgl[]= "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G @ %.15G %.15G %.15G C[%s]\n";
 #endif
 #endif
+#ifdef MC_DEBUG_HCALGO
+  const char tipodat[] = "%.32G %.32G %.32G %.32G %.32G %.32G\n";
+  const char tipodat2[]= "%.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G\n";
+#else
   const char tipodat[] = "%.16G %.16G %.16G %.16G %.16G %.16G\n";
   const char tipodat2[]= "%.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G\n";
+#endif
 #ifdef EDHE_FLEX
+#ifdef MC_DEBUG_HCALGO
+  const char tipodat2_flex[]= "%.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %.32G %d\n";
+#else
   const char tipodat2_flex[]= "%.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %.16G %d\n";
+#endif
   int j;
 #ifdef MC_BENT_DBLCYL
   double xi[3], Ri[3][3];
