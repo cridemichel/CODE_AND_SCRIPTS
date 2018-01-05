@@ -18,7 +18,7 @@
 //#define POLY_SOLVE_GSL
 //#define USE_LAPACK
 //#define USE_LAGUERRE
-//#define MC_DEBUG_HCALGO
+#define MC_DEBUG_HCALGO
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 extern const double saxfactMC[3];
@@ -3143,13 +3143,26 @@ void discard_spurious(double *solqua, int *numsol)
 #endif
   *numsol = nsol;
 }
+/* nel caso di cilindri diversi bisogna passare i diametri del disco e del rim e non solo D2*/
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
+  const double DIST_THR=5E-8;
+  double diff1, diff2;
+  diff1=fabs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
+  diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
+
+  *diff=diff1+diff2;
+  if (diff1 > DIST_THR*D2 || diff2 > DIST_THR*D2)
+    return 1;
+  else
+    return 0;
+#if 0
   const double DIST_THR=5E-8;
   if ((*diff=fabs(perpcomp(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
     return 0;
+#endif
 }
 extern void versor_to_Rl(long double ox, long double oy, long double oz, long double R[3][3]);
 
@@ -3604,7 +3617,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   const double FALLBACK_THR = 1E-4;
   double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], sumdiff[2], diffxy[2][4];
+  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
   double Cip[3], nip[3], norm, Rl[3][3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -3886,7 +3899,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	}
     }
 #endif
-  sumdiff[0] = 0;
+  sumdiff[0] = maxdiff[0] = 0;
   for (kk1=0; kk1 < numsol[0]; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
@@ -3916,6 +3929,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #endif
 	}
       sumdiff[0] += diff[0][kk1];
+      if (diff[0][kk1] > maxdiff[0] || kk1==0)
+	maxdiff[0] = diff[0][kk1];  
 #endif
     }
   if (tinyimagGBL)
@@ -3963,7 +3978,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #endif
 #endif
 	}
-      sumdiff[1] = 0;
+      sumdiff[1] = maxdiff[1]=0;
       for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
@@ -3978,6 +3993,9 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
 	  test_for_fallback(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
 	  sumdiff[1] += diff[1][kk1];
+	  if (diff[1][kk1] > maxdiff[1] || kk1==0)
+	    maxdiff[1] = diff[1][kk1];  
+
 #endif
 #if 0
   	  if (numsol==4)
@@ -4004,7 +4022,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	solset=0;
       else
 	{
-	  if (sumdiff[1] < sumdiff[0])
+	  if (maxdiff[1] < maxdiff[0])
+	  //if (sumdiff[1] < sumdiff[0])
 	    solset = 1;
 	  else 
 	    solset = 0;
@@ -4095,8 +4114,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
-  int j1, kk, j2, k2;
-  double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3];
+  int j1, kk, j2, k2, ignore[2];
+  double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
   double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
   for (j1=0; j1 < 2; j1++)
     {
@@ -4118,8 +4137,26 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      nj[kk] = niTmp[kk];
 	    }
 	}
+      
+      for (k2=0; k2 < 2; k2++)
+	{
+  	  perpdist[k2]=perpcomp(Dj[k2], Ci, ni);
+	  ignore[k2] = 0;
+	}
+
+      if (perpdist[0] < perpdist[1])
+	{ 
+    	  ignore[1] = 1;
+	}
+      else
+	{
+	  ignore[0] = 1;
+	}
+
       for (j2=0; j2 < 2; j2++)
 	{
+	  if (ignore[j2])
+	    continue;
 	  for (kk=0; kk < 3; kk++)
 	    DjCi[kk] = Dj[j2][kk] - Ci[kk];
 	  normDjCi = calc_norm(DjCi);
