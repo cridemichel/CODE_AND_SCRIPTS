@@ -2772,7 +2772,7 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
   /* pagina 497 Num. Rec. */
   complex long double csol[4], cc[5]; 
   //const int m=4;
-  const double TINYEPS=1E-5;
+  const double TINYEPS=1E-7;
   long double hess[4][4];
   int j, k, smallimag;
   for (k=0;k<m;k++) { //Construct the matrix.
@@ -2818,7 +2818,7 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
   complex double csol[4], cc[5]; 
-  const double TINYEPS=1E-5;
+  const double TINYEPS=1E-7;
   double hess[4][4];
   int j, k, smallimag;
   for (k=0;k<m;k++) { //Construct the matrix.
@@ -3095,11 +3095,21 @@ void discard_spuriousl(long double *solqua, int *numsol)
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2, long double *diff)
 {
   const long double DIST_THR=1E-9;
-  
+  long double diff1, diff2;
+  diff1=fabs(perpcompl(P, Cip, nip)-D2); // qui D2 è il diametro del rim
+  diff2=fabs(sqrtl(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
+
+  *diff=diff1+diff2;
+  if (diff1 > DIST_THR*D2 || diff2 > DIST_THR*D2)
+    return 1;
+  else
+    return 0;
+#if 0
   if ((*diff=fabsl(perpcompl(P, Cip, nip)-D2)) > DIST_THR*D2)
     return 1;
   else 
     return 0;
+#endif
 }
 
 int test_solution_xyl(long double *sol)
@@ -3171,7 +3181,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   long double D, L, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
   int kk1, kk2, numsol[2], nsc, fallback, solset;
   const long double FALLBACK_THR = 1E-4;
-  long double diff[2][4], sumdiff[2], tmp;
+  long double diff[2][4], maxdiff[2], sumdiff[2], tmp;
 //  double coeffs[5], solquas[4];
   long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   long double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
@@ -3422,7 +3432,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
-      if (temp==0 || test_solution_xyl(solec[kk1]))
+      if (temp==0)// || test_solution_xyl(solec[kk1]))
 	fallback = 1;
 #if 0
       if (fabs(temp) < FALLBACK_THR)
@@ -3457,7 +3467,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 	}
     }
 #endif
-  sumdiff[0]=0;
+  sumdiff[0]=maxdiff[0]=0;
   for (kk1=0; kk1 < numsol[0]; kk1++)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
@@ -3470,6 +3480,8 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 	  fallback=1;
 	}	
       sumdiff[0] += diff[0][kk1];  
+      if (diff[0][kk1] > maxdiff[0] || kk1==0)
+	maxdiff[0] = diff[0][kk1];
       //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
     }
   if (tinyimagGBL)
@@ -3515,7 +3527,7 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
 	}
-      sumdiff[1]=0;
+      sumdiff[1]=maxdiff[1]=0;
       for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
@@ -3526,12 +3538,15 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 	  test_for_fallbackl(solarr[1][kk1], Cip, nip, D2, &(diff[1][kk1]));
 	  //ellips2disk(solec[kk1], solarr[kk1], 0, 0, D2, D2);
 	  sumdiff[1] += diff[1][kk1];
+	  if (diff[1][kk1] > maxdiff[1] || kk1==0)
+	    maxdiff[1] = diff[1][kk1]; 
 	}
       if (fallback==2)
 	solset=1;
       else
 	{
-    	  if (sumdiff[1] < sumdiff[0])
+    	  if (maxdiff[1] < maxdiff[0])
+	  //if (sumdiff[1] < sumdiff[0])
     	    solset = 1;
 	  else 
 	    solset = 0;
@@ -4115,6 +4130,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, kk, j2, k2, ignore[2];
+  char fileop2[512];
   double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
   double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
   for (j1=0; j1 < 2; j1++)
@@ -4240,10 +4256,12 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 		  store_bump(iGbl, jGbl);
 		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
 		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
-		  saveCorAscii();
-		  saveCoord("test.cor");
-		  saveBakAscii("COORDTMPASCII-TEST");
-		  exit(-1);
+		  //saveCorAscii();
+		  sprintf(fileop2 ,"coord-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
+		  saveCoord(fileop2);
+		  sprintf(fileop2 ,"coorbakascii-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
+		  saveBakAscii(fileop2);
+		  //exit(-1);
 		}
 	      if (alg2 < 0)
 		return -1;
@@ -4265,10 +4283,12 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 		  store_bump(iGbl, jGbl);
 		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
 		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
-		  saveBakAscii("COORDTMPASCII-TEST");
-		  saveCoord("test.cor");
-		  saveCorAscii();
-		  exit(-1);
+		  //saveCorAscii();
+		  sprintf(fileop2 ,"coord-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
+		  saveCoord(fileop2);
+		  sprintf(fileop2 ,"coorbakascii-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
+		  saveBakAscii(fileop2);
+		  //exit(-1);
 		}
 	      if (alg2 < 0)
 		return -1;
