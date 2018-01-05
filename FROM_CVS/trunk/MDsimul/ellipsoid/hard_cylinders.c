@@ -4212,7 +4212,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	  /* se sono quasi paralleli... */
 	  if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
 	    {
-	      if (normDjUi <= D && fabs(DjCini) <= L)
+	      if (normDjUi <= D && fabs(DjCini) <= L*0.5)
 		return -1;
 	      else
 		continue;
@@ -4221,7 +4221,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	  /* se sono quasi paralleli... */
 	  if (1.0-fabs(scalProd(ni,nj)) < 3E-16)
 	    {
-	      if (normDjUi <= D && fabs(DjCini) <= L)
+	      if (normDjUi <= D && fabs(DjCini) <= L*0.5)
 		return -1;
 	      else
 		continue;
