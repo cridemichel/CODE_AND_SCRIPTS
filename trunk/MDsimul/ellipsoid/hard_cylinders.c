@@ -3482,7 +3482,7 @@ double rimdiskoneldiff(double Diamis, double Diamjs, double Lis, double Ljs, dou
      Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 - 4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2
      + 2*Cip1*Cip2*nip02*nip1*nip2 + 2*Cip0*Cip2*nip0*nip12*nip2 + Cip02*nip02*nip22 + 
      Cip22*nip02*nip22 + 2*Cip0*Cip1*nip0*nip1*nip22 + 2*Cip0*Cip2*nip0*nip23 ) 
-    + Cip02 + Cip12 + Cip22 - Sqr(Dj2)  - 
+    + Cip02 + Cip12 + Cip22 - Sqr(Di2)  - 
     2*Cip12*nip12  + Cip12*nip14 - 4*Cip1*Cip2*nip1*nip2  + 2*Cip1*Cip2*nip13*nip2 - 2*Cip22*nip22  + Cip12*nip12*nip22 
     + Cip22*nip12*nip22  + 2*Cip1*Cip2*nip1*nip23 + Cip22*nip24;
  
@@ -4334,7 +4334,7 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
   coeffEr[2] = -4*nip1*nip2 + 2*nip02*nip1*nip2 + 2*nip13*nip2 + 
     2*nip1*nip23;
   /* sistemare quest con i giusti Dj2sq e Di2sq */
-  coeffEr[3] = Cip02 + Cip12 + Cip22 - Dj2sq - 
+  coeffEr[3] = Cip02 + Cip12 + Cip22 - Di2sq - 
     2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1 - 
     2*Cip12*nip12 + Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 + Cip12*nip14 - 
     4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2 - 4*Cip1*Cip2*nip1*nip2 + 2*Cip1*Cip2*nip02*nip1*nip2 + 
