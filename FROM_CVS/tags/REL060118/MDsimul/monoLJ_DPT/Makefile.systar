@@ -1,0 +1,97 @@
+#monoLJ Makefile
+SDHDR=mono_DPT.h
+PERC= $(HOME)/MDsimul
+
+# ======================================
+#export 
+COMM=$(PERC)/commSrc
+
+#export CC=gcc
+#export MPIDIR = $(HOME)/mpich-1.2.0
+#export CC= $(MPIDIR)/bin/mpicc
+#export CC= mpicc_mpich
+CC= $(LAMHOME)/bin/hcc
+#CFLAGS=-Wall -mcpu=i686 -O3\
+	-frerun-cse-after-loop -fstrength-reduce -fexpensive-optimizations\
+        -felide-constructors -malign-loops=2 -malign-jumps=2\
+	-malign-functions=2
+CFLAGS  = -O3
+#CFLAGS = -Wall -m486 -fomit-frame-pointer -finline-functions -O2
+#CFLAGS= -Wall -O3
+
+# MACROS passed to the pre-processor
+#export 
+MACROS=-DORIGIN -DXDISP -DATPTENS -UMOLPTENS -UATPRESS  -DMPI #-DPRINTER_PROC
+# ATPTENS defined(-DATPTENS -U... undefined)=>calculate atomic pressure tensor
+# MOLPTENS defined => calculate mlecular pressor tensor
+# ATPRESS defined => calculate atomic pressure(if ATPTENS defined the atomic
+# pressure is automatically calculate)
+
+#export 
+BIN = $(PERC)/bin
+
+#directories to search for #include
+#export 
+INCLUDES = -I$(PERC) -I$(LAMHOME)/h -I$(MPIDIR)/include  -I. -I$(PERC)/include -I$(COMM)
+
+UTIL = wtdutil heteroutil xvautil jumps corutil
+
+monoLJ_DPT: link measures.o forces_DPT.o move_DPT.o init_DPT.o basins # $(UTIL)
+
+link:
+	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/monoLJ_DPT/$(SDHDR) $(COMM)/mdsimdep.h 
+# rigidABdbLJ utilities 
+basins: basins.o forces_DPT.o init_DPT.o
+	$(CC) basins.o $(COMM)/mdarray_DPT.o forces_DPT.o init_DPT.o -o $(BIN)/basins -L$(LAMHOME)/lib -lmpi  $(LDFLAGS) -lm
+
+
+wtdutil: wtdutil.o
+	$(CC)  wtdutil.o -o $(BIN)/MOwtdutil -lm $(LDFLAGS)
+
+heteroutil: heteroutil.o
+	$(CC) heteroutil.o -o $(BIN)/MOheteroutil -lm $(LDFLAGS)
+
+xvautil: xvautil.o
+	$(CC) xvautil.o -o $(BIN)/MOxvautil -lm $(LDFLAGS)
+
+corutil: corutil.o
+	$(CC) corutil.o $(COMM)/scalProc_PT.o -o $(BIN)/MOcorutil -lm $(LDFLAGS)
+
+jumps: jump.o
+	$(CC) jumps.o -o $(BIN)/MOjumps	 $(LDFLAGS) -lm
+
+measures.o: measures.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o measures.o measures.c
+
+move_DPT.o: move_DPT.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o move_DPT.o move_DPT.c
+
+forces_DPT.o: forces_DPT.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o forces_DPT.o forces_DPT.c
+
+init_DPT.o: init_DPT.c  $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o init_DPT.o init_DPT.c
+
+basins.o: basins.c forces_DPT.c $(SDHDR) init_DPT.c
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o basins.o basins.c
+
+wtdutil.o: wtd.c wtd.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o wtdutil.o wtd.c
+
+heteroutil.o: hetero.c hetero.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o hetero.o hetero.c
+
+xvautil.o: xvautil.c xvautil.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o xvautil.o xvautil.c
+
+jumps.o: jumps.c jumps.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o jumps.o jumps.c
+
+corutil.o: corutil.c $(COMM)/mdsimul.h $(SDHDR) 
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o corutil.o corutil.c
+
+realclean: clean
+
+clean:
+	rm -f *.o
+

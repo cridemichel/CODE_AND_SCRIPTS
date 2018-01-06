@@ -1,0 +1,64 @@
+head	1.1;
+access;
+symbols;
+locks
+	root:1.1; strict;
+comment	@ * @;
+
+
+1.1
+date	97.04.26.15.51.55;	author root;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@/* vedere il file ShrMem.c per i dettagli delle varie procedure */
+void* getshmem(int nbloc,int size);
+void freeshmem(int nbloc);
+void createsem(int nsems);
+void removesem(void);
+void lock(ushort numersem);
+void unlock(ushort numerosem);
+void getsemval(ushort numerosem);
+
+/* FATHER = semaforo del processo padre dopo una fork 
+   CHILD = semaforo del processo figlio dopo una fork
+   
+   */
+#define FATHER 0
+#define CHILD  1
+
+#define BlockA 0
+#define BlockB 1
+#define BlockC 2
+#define BlockD 3
+#define BlockE 4
+#define BlockF 5
+#define BlockG 6
+#define BlockH 6
+#define BlockI 8
+#define BlockL 9
+#define BlockM 10
+#define BlockN 11
+#define BlockO 12
+#define BlockP 13
+#define BlockQ 14
+#define BlockR 15
+#define BlockS 16
+#define BlockT 17
+#define BlockU 18
+#define BlockV 19
+#define BlockZ 20
+
+
+
+@
