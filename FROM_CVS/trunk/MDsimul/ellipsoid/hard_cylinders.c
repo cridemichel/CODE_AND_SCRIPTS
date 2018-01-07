@@ -19,6 +19,8 @@
 //#define USE_LAPACK
 //#define USE_LAGUERRE
 //#define MC_DEBUG_HCALGO
+//#define MC_EXCHG_QUART_SOL
+
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 extern const double saxfactMC[3];
@@ -2857,7 +2859,7 @@ void QRfactorization(double hess[4][4], complex double sol[4], int *ok, int n)
 #endif
 }
 int tinyimagGBL=0;
-void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], int *ok, int m)
+void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], int *ok, int m)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
   /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
@@ -2885,15 +2887,15 @@ void solve_numrecl (long double coeff[5], int *numrealsol, long double rsol[4], 
   for (k=0; k < m; k++)
    {
      //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
-     if (cimagl(csol[k]) < TINYEPS*creall(csol[k]))
-       {
-	 smallimag=1;
-       }
      if (cimagl(csol[k]) == 0.0)
        {
 	 //printf("cimag(csol[%d])=%.15G\n", k, cimag(csol[k]));
 	 rsol[*numrealsol] = creall(csol[k]);
 	 (*numrealsol)++;
+       }
+     else if (fabsl(cimagl(csol[k])) < TINYEPS*fabsl(creall(csol[k])))
+       {
+	 smallimag=1;
        }
    }
   if (smallimag==1 && *numrealsol==0)
@@ -2939,19 +2941,23 @@ void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, in
      //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
        //printf("QRDECOMP csol[%d]=%.15G+%.15G I\n", k, creal(csol[k]), cimag(csol[k]));
 #endif
-     if (cimag(csol[k]) < TINYEPS*creal(csol[k]))
-       smallimag=1;
      if (cimag(csol[k]) == 0.0)
        {
 	 //printf("cimag(csol[%d])=%.15G\n", k, cimag(csol[k]));
 	 rsol[*numrealsol] = creal(csol[k]);
 	 (*numrealsol)++;
        }
+     else if (fabs(cimag(csol[k])) < TINYEPS*fabs(creal(csol[k])))
+       {
+	 smallimag=1;
+       }
    }
   if (smallimag==1 && *numrealsol==0)
     tinyimagGBL=1;
   else
-    tinyimagGBL=0;
+    {
+      tinyimagGBL=0;
+    }
   //gsl_poly_complex_workspace_free (w);
 }
 #if 1
@@ -5175,6 +5181,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
   if (tinyimagGBL)
     {
+      //printf("falling back [#%ld]\n", numfb++);
       //printf("BOHHHH\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
@@ -5182,7 +5189,6 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
   if (fallback)
     {
-      //printf("falling back [#%ld]\n", numfb++);
 #ifndef MC_EXCHG_QUART_SOL
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
       coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
