@@ -23,6 +23,7 @@
 
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
+void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D);
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
 extern const double saxfactMC_QC[3];
@@ -3411,7 +3412,9 @@ double rimdiskoneldiff(double Diamis, double Diamjs, double Lis, double Ljs, dou
       Ci[kk1] = ((long double)Cis[kk1]);
       Dj[kk1] = ((long double)Djs[kk1]);
     } 
-  Dj2 = Diamj*0.5; 
+  Di2 = Diami*0.5;
+  Dj2 = Diamj*0.5;
+  Di2sq = Sqr(Di2); 
   Dj2sq = Sqr(Dj2);
   /* mi metto nel riferimento del disco (p) */
   versor_to_Rl(nj[0], nj[1], nj[2], Rl);
@@ -3830,6 +3833,8 @@ double rimdiskoneldiff(double Diamis, double Diamjs, double Lis, double Ljs, dou
     }
   return 1;  
 }
+void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long double *nj, long double R[3][3], long double D);
+
 double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Djs[3], double njs[3], double DjCinis)
 {
   long double D, L, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
@@ -4302,6 +4307,7 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
   Dj2 = Diamj*0.5; 
   Di2 = Diami*0.5;
   Dj2sq = Sqr(Dj2);
+  Di2sq = Sqr(Di2);
   /* mi metto nel riferimento del disco (p) */
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
