@@ -3261,7 +3261,7 @@ void discard_spuriousl(long double *solqua, int *numsol)
 }
 int test_for_fallbackldiff(long double *P, long double *Cip, long double *nip, long double Di2, long double Dj2, long double *diff)
 {
-  const long double DIST_THR=1E-9;
+  const long double DIST_THR=1E-12;
   long double diff1, diff2;
   diff1=fabsl(perpcompl(P, Cip, nip)-Di2); // qui D2 è il diametro del rim
   diff2=fabsl(sqrtl(Sqr(P[1])+Sqr(P[2]))-Dj2);// qui D2 è il diametro del disco
@@ -3280,7 +3280,7 @@ int test_for_fallbackldiff(long double *P, long double *Cip, long double *nip, l
 }
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2, long double *diff)
 {
-  const long double DIST_THR=1E-15;
+  const long double DIST_THR=1E-12;
   long double diff1, diff2;
   diff1=fabsl(perpcompl(P, Cip, nip)-D2); // qui D2 è il diametro del rim
   diff2=fabsl(sqrtl(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
@@ -3344,7 +3344,7 @@ void discard_spurious(double *solqua, int *numsol)
 /* nel caso di cilindri diversi bisogna passare i diametri del disco e del rim e non solo D2*/
 int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, double Dj2, double *diff)
 {
-  const double DIST_THR=1E-12;
+  const double DIST_THR=1.0E-10;
   double diff1, diff2;
   diff1=fabs(perpcomp(P, Cip, nip)-Di2); // qui D2 è il diametro del rim
   diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-Dj2);// qui D2 è il diametro del disco
@@ -3364,7 +3364,7 @@ int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, doubl
 }
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
-  const double DIST_THR=1E-12;
+  const double DIST_THR=1E-10;
   double diff1, diff2;
   diff1=fabs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
   diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
