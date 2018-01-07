@@ -3276,7 +3276,7 @@ int test_for_fallbackldiff(long double *P, long double *Cip, long double *nip, l
 }
 int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long double D2, long double *diff)
 {
-  const long double DIST_THR=1E-9;
+  const long double DIST_THR=1E-15;
   long double diff1, diff2;
   diff1=fabsl(perpcompl(P, Cip, nip)-D2); // qui D2 è il diametro del rim
   diff2=fabsl(sqrtl(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
@@ -3294,6 +3294,7 @@ int test_for_fallbackl(long double *P, long double *Cip, long double *nip, long 
 #endif
 }
 
+#if 0
 int test_solution_xyl(long double *sol)
 {
   const double EPS=2.2204460492503131E-16;
@@ -3312,6 +3313,7 @@ int test_solution_xy(double *sol, double *diff)
    else 
      return 0;
 }
+#endif
 void discard_spurious(double *solqua, int *numsol)
 {
   /* each solution x must be such that |x| <= 1 */
@@ -3338,7 +3340,7 @@ void discard_spurious(double *solqua, int *numsol)
 /* nel caso di cilindri diversi bisogna passare i diametri del disco e del rim e non solo D2*/
 int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, double Dj2, double *diff)
 {
-  const double DIST_THR=5E-8;
+  const double DIST_THR=1E-12;
   double diff1, diff2;
   diff1=fabs(perpcomp(P, Cip, nip)-Di2); // qui D2 è il diametro del rim
   diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-Dj2);// qui D2 è il diametro del disco
@@ -4907,7 +4909,7 @@ void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3]
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
-  static long int numfb=0;
+  //static long int numfb=0;
   const double FALLBACK_THR = 1E-4;
   double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
@@ -5247,7 +5249,6 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
   if (tinyimagGBL)
     {
-      //printf("falling back [#%ld]\n", numfb++);
       //printf("BOHHHH\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
@@ -5255,6 +5256,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
   if (fallback)
     {
+      //printf("falling back [#%ld]\n", numfb++);
 #ifndef MC_EXCHG_QUART_SOL
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
       coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
