@@ -4858,6 +4858,9 @@ void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3]
   for (k=0; k < 3; k++)
     R[0][k] = nj[k];
 
+  /* N.B. qui faccio uno step dell'algorito di Ibarra semplificato per
+   * determinare l'asse y del riferimenti del disco (l'asse x è l'asse perpendicolare
+   * al disco e l'asse z si ottiene con il prodotto vettore dell'asse x e y) */
 #if 1
   for (kk=0; kk < 3; kk++)
     DjCi[kk] = Dj[kk] - Ci[kk];
@@ -4896,10 +4899,6 @@ void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3]
   for (k=0; k < 3; k++)
     R[1][k] = dsc[k] - sp*nj[k];
 #endif  
-  norm=calc_norm(R[1]);
-  for (k=0; k < 3; k++)
-    R[1][k]/=norm;
-
   //printf("scalProd=%.15G\n", scalProd(R[1],R[0]));
   vectProdVec(R[0], R[1], u);
   for (k=0; k < 3 ; k++)
