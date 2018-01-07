@@ -2911,7 +2911,7 @@ void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], i
     tinyimagGBL=0;
   //gsl_poly_complex_workspace_free (w);
 }
-void solve_numrec (double coeff[5], int *numrealsol, double rsol[4], int *ok, int m)
+void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int m)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
   /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
