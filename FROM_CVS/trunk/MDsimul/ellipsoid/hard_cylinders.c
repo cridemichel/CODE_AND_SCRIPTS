@@ -10,6 +10,10 @@
 #ifndef CMPLX
 #define CMPLX(x,y) (x)+I*(y)
 #endif
+#ifndef CMPLXL
+#define CMPLXL(x,y) (x)+I*(y)
+#endif
+
 /* NOTA SU RISOLUZIONE QUARTICA
  * la routine gsl è un 15% più lenta della routine hqr() di Numerical Recipe.
  * La routine di Numerical Recipe sembra essere più accurata di quella delle gsl.
