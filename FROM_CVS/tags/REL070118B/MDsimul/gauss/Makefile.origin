@@ -1,0 +1,87 @@
+#rigidABdbLJ Makefile
+HOME=/infm/cmprmk80
+PERC = $(HOME)/MDsimul
+
+# ======================================
+COMM = $(PERC)/commSrc
+
+CC=cc
+#CFLAGS  = -Wall -m486 -O3\
+	  -fstrength-reduce -fexpensive-optimizations -fcse-follow-jumps\
+          -felide-constructors -malign-loops=2 -malign-jumps=2\
+	  -malign-functions=2
+#CFLAGS = -Wall -m486 -fomit-frame-pointer -finline-functions -O2
+#CFLAGS= -O3 -n32 -mips4 -Ofast=ip27 -OPT:IEEE_arithmetic=3 -IPA 
+CFLAGS=-O3 -r10000 -n32 -mips4 -OPT:IEEE_arithmetic=3
+# MACROS passed to the pre-processor
+MACROS= -DORIGIN -DATPTENS -UMOLPTENS -UATPRESS  -DMPI
+# ATPTENS defined(-DATPTENS -U... undefined)=>calculate atomic pressure tensor
+# MOLPTENS defined => calculate mlecular pressor tensor
+# ATPRESS defined => calculate atomic pressure(if ATPTENS defined the atomic
+# pressure is automatically calculate)
+
+BIN = $(PERC)/bin
+
+#directories to search for #include
+INCLUDES = -I. -I$(PERC)/include -I$(COMM)
+
+SDHDR=mono.h
+
+UTIL = wtdutil heteroutil xvautil
+
+gauss:  link measures.o forces.o move.o init.o basins #basinsSerial $(UTIL)
+
+
+link:
+	rm $(COMM)/mdsimdep.h ; ln -s $(PERC)/gauss/$(SDHDR) $(COMM)/mdsimdep.h 
+# bimix utilities 
+wtdutil: wtdutil.o
+	$(CC) $(LDFLAGS) -lm wtdutil.o -o $(BIN)/wtdutil	
+
+heteroutil: heteroutil.o
+	$(CC) $(LDFLAGS) -lm heteroutil.o -o $(BIN)/heteroutil	
+
+xvautil: xvautil.o
+	$(CC) $(LDFLAGS) -lm xvautil.o -o $(BIN)/xvautil	
+
+jump: jump.o
+	$(CC) $(LDFLAGS) -lm jump.o -o $(BIN)/jump	
+
+measures.o: measures.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o measures.o measures.c
+
+move.o: move.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o move.o move.c
+
+forces.o: forces.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o forces.o forces.c
+
+init.o: init.c  $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o init.o init.c
+
+wtdutil.o: wtdconstr.c wtdconstr.h $(SDHDR) $(COMM)/mdsimul.h
+	echo -n "eccomi qua" $(INCLUDES)
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o wtdutil.o wtdconstr.c
+
+heteroutil.o: heteroconstr.c heteroconstr.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o heteroutil.o heteroconstr.c
+
+xvautil.o: constrxva.c constrxva.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o xvautil.o constrxva.c
+
+jump.o: jumpconstr.c jumpconstr.h $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) -c $(INCLUDES) -o jump.o jumpconstr.c
+
+basins: basins.o forces.o $(COMM)/mdarray.o init.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS)  basins.o $(COMM)/mdarray.o forces.o init.o -o $(BIN)/basins -lm -lfastm  -lmpi
+
+
+basins.o: basins.c $(COMM)/mdarray.c forces.c $(SDHDR) $(COMM)/mdsimul.h init.c
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o basins.o basins.c 
+	
+#mpicc_mpich $(CFLAGS) $(MACROS) -c $(INCLUDES) -o basins.o basins.c
+realclean: clean
+
+clean:
+	rm -f *.o
+
