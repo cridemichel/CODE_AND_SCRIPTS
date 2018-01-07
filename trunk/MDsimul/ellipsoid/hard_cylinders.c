@@ -3351,7 +3351,7 @@ int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, doubl
 }
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
-  const double DIST_THR=5E-8;
+  const double DIST_THR=1E-12;
   double diff1, diff2;
   diff1=fabs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
   diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
@@ -4775,9 +4775,67 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
     }
   return 1;  
 }
+void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D)
+{
+  int k, kk1, kk2, kk;
+  double u[3], norm, sp, dsc[3]; 
+  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
+  /* first row vector */
+  for (k=0; k < 3; k++)
+    R[0][k] = nj[k];
+
+#if 1
+  for (kk=0; kk < 3; kk++)
+    DjCi[kk] = Dj[kk] - Ci[kk];
+  normDjCi = calc_norm(DjCi);
+  DjCini = scalProd(DjCi,ni);
+
+  for (kk1 = 0; kk1 < 3; kk1++)
+    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
+  for (kk1=0; kk1 < 3; kk1++)
+    AiDj[kk1] = Ai[kk1] - Dj[kk1]; 
+  AiDjnj = scalProd(AiDj, nj);
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+    }
+  //for (kk1=0; kk1 < 3; kk1++)
+    //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+  ragg = calc_norm(VV);
+
+  for(k=0;k<3;k++)
+    {
+      R[1][k] = VV[k]/ragg;
+      //R[1][k] = VV[k];
+      //TnCi[k] = Tnew[k]-Ci[k];
+    }
+#if 0
+  ragg = scalProd(TnCi,ni);
+  for (k=0;k<3;k++)
+    Ai[k] = Ci[k] + ragg*ni[k];
+#endif
+#else
+
+ for (k=0; k < 3; k++)
+    dsc[k] = Ci[k] - Dj[k]; 
+  sp = scalProd(dsc, nj);
+  for (k=0; k < 3; k++)
+    R[1][k] = dsc[k] - sp*nj[k];
+#endif  
+  norm=calc_norm(R[1]);
+  for (k=0; k < 3; k++)
+    R[1][k]/=norm;
+
+  //printf("scalProd=%.15G\n", scalProd(R[1],R[0]));
+  vectProdVec(R[0], R[1], u);
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+}
+
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
+  static long int numfb=0;
   const double FALLBACK_THR = 1E-4;
   double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
@@ -4794,7 +4852,11 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   D2 = D*0.5; 
   D2sq = Sqr(D2);
   /* mi metto nel riferimento del disco (p) */
+#if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
+#else
+  versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
+#endif
   for (kk1=0; kk1 < 3; kk1++)
     {
       nip[kk1] = 0;
@@ -4922,11 +4984,19 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   c42 = Sqr(c4);
   c52 = Sqr(c5);
   //xC=yC=0;
+#ifndef MC_EXCHG_QUART_SOL
   coeff[4] = c02 - 2*c0*c1 + c12 + c22;
   coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
   coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
+#else
+  coeff[4] = c02 - 2*c0*c1 + c12 + c22;
+  coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
+  coeff[2] = 2*c0*c1 - 2*c12 - c22 + 2*c0*c3 - 2*c1*c3 + c42 + c52;
+  coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
+  coeff[0] = c12 + 2*c1*c3 + c32 - c52;
+#endif
   solve_quartic(coeff, &(numsol[0]), solqua);
 #if 0
   if (numsol==1)
@@ -5006,10 +5076,16 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       solec[kk1][0]=((double)((-c0l - c3l - c5l*solqual + (c0l - c1l)*Sqr(solqual))/templ));
       solec[kk1][1] = solqua[kk1];
 #else
+#ifndef MC_EXCHG_QUART_SOL
       temp = c4 + c2*solqua[kk1];
       solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
       solec[kk1][1] = solqua[kk1];
-      //printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
+#else
+      temp = c5 + c2*solqua[kk1];
+      solec[kk1][0] = solqua[kk1];
+      solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+#endif     
+ //printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
 #if 0
       if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
 	{
@@ -5106,12 +5182,20 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 #if 1
   if (fallback)
     {
-      //printf("falling back\n");
+      //printf("falling back [#%ld]\n", numfb++);
+#ifndef MC_EXCHG_QUART_SOL
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
       coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
       coeff[2] = 2*c0*c1 - 2*c12 - c22 + 2*c0*c3 - 2*c1*c3 + c42 + c52;
       coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
       coeff[0] = c12 + 2*c1*c3 + c32 - c52;
+#else
+      coeff[4] = c02 - 2*c0*c1 + c12 + c22;
+      coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
+      coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
+      coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
+      coeff[0] = c02 + 2*c0*c3 + c32 - c42;
+#endif
       solve_quartic(coeff, &(numsol[1]), solqua);
       discard_spurious(solqua, &(numsol[1]));
 
@@ -5129,9 +5213,15 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 	  solec[kk1][0] = solqua[kk1];
       	  solec[kk1][1] = ((double)((-c1l - c3l - c4l*solqual + (c1l - c0l)*Sqr(solqual))/templ)); 
 #else
+#ifndef MC_EXCHG_QUART_SOL
 	  temp = c5 + c2*solqua[kk1];
 	  solec[kk1][0] = solqua[kk1];
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+#else
+    	  temp = c4 + c2*solqua[kk1];
+	  solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
+	  solec[kk1][1] = solqua[kk1];
+#endif
 	  //printf("fallback:");
 	  //test_solution_xy(solec[kk1], &(diffxy[1][kk1]));
 #if 0
