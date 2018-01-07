@@ -3863,7 +3863,11 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   D2 = D*0.5; 
   D2sq = Sqr(D2);
   /* mi metto nel riferimento del disco (p) */
+#if 0
   versor_to_Rl(nj[0], nj[1], nj[2], Rl);
+#else
+  versor_to_R_altl(Ci, ni, Dj, nj, Rl, D); 
+#endif
   for (kk1=0; kk1 < 3; kk1++)
     {
       nip[kk1] = 0;
@@ -4299,7 +4303,11 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
   Di2 = Diami*0.5;
   Dj2sq = Sqr(Dj2);
   /* mi metto nel riferimento del disco (p) */
+#if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
+#else
+  versor_to_R_alt(Ci, ni, Dj, nj, Rl, Diamj); 
+#endif
   for (kk1=0; kk1 < 3; kk1++)
     {
       nip[kk1] = 0;
@@ -4780,6 +4788,58 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
 	}
     }
   return 1;  
+}
+void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long double *nj, long double R[3][3], long double D)
+{
+  int k, kk1, kk2, kk;
+  long double u[3], norm, sp, dsc[3]; 
+  long double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
+  /* first row vector */
+  for (k=0; k < 3; k++)
+    R[0][k] = nj[k];
+
+#if 1
+  for (kk=0; kk < 3; kk++)
+    DjCi[kk] = Dj[kk] - Ci[kk];
+  normDjCi = calc_norml(DjCi);
+  DjCini = scalProdl(DjCi,ni);
+
+  for (kk1 = 0; kk1 < 3; kk1++)
+    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
+  for (kk1=0; kk1 < 3; kk1++)
+    AiDj[kk1] = Ai[kk1] - Dj[kk1]; 
+  AiDjnj = scalProdl(AiDj, nj);
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+    }
+  //for (kk1=0; kk1 < 3; kk1++)
+    //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+  ragg = calc_norml(VV);
+
+  for(k=0;k<3;k++)
+    {
+      R[1][k] = VV[k]/ragg;
+      //R[1][k] = VV[k];
+      //TnCi[k] = Tnew[k]-Ci[k];
+    }
+#if 0
+  ragg = scalProd(TnCi,ni);
+  for (k=0;k<3;k++)
+    Ai[k] = Ci[k] + ragg*ni[k];
+#endif
+#else
+
+ for (k=0; k < 3; k++)
+    dsc[k] = Ci[k] - Dj[k]; 
+  sp = scalProd(dsc, nj);
+  for (k=0; k < 3; k++)
+    R[1][k] = dsc[k] - sp*nj[k];
+#endif  
+  //printf("scalProd=%.15G\n", scalProd(R[1],R[0]));
+  vectProdVecl(R[0], R[1], u);
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
 }
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D)
 {
@@ -5525,6 +5585,7 @@ double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2
 		return -1;
 	    }
 #else
+	  /* N.B. NON ANCORA IMPLEMENTATA */
 	  if (rimdiskonediffl(Diami, Diamj, Li, Lj, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
 	    return -1;
 #endif
