@@ -5837,10 +5837,10 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
 
 */
-#if 0
 #ifndef MC_IBARRA_SIMPLER
-	  /* se sono quasi paralleli... */
-	  if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
+	  /* se sono paralleli... */
+	  if (1.0-fabs(scalProd(ni,nj)) == 0)
+	  //if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
 	    {
 	      if (normDjUi <= D && fabs(DjCini) <= L*0.5)
 		return -1;
@@ -5848,15 +5848,15 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 		continue;
 	    }
 #else
-	  /* se sono quasi paralleli... */
-	  if (1.0-fabs(scalProd(ni,nj)) < 3E-16)
+	  /* se sono paralleli... */
+	  if (1.0-fabs(scalProd(ni,nj)) == 0)
+	  //if (1.0-fabs(scalProd(ni,nj)) < 3E-16)
 	    {
 	      if (normDjUi <= D && fabs(DjCini) <= L*0.5)
 		return -1;
 	      else
 		continue;
 	    }
-#endif
 #endif
 	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
 	    continue;
