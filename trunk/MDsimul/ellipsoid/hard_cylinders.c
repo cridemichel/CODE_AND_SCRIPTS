@@ -28,6 +28,13 @@
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D);
+double test_overlap_parall_cyll(long double *Ci, long double *ni, long double *Dj, long double *nj, long double Li, 
+				long double Diami, long double Diamj);
+double test_overlap_parall_cyl(double *Ci, double *ni, double *Dj, double *nj, double Li, 
+	       		       double Diami, double Diamj);
+void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], int *ok, int m);
+void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int m);
+
 extern const double saxfactMC[3];
 #ifdef MC_QUASI_CUBE
 extern const double saxfactMC_QC[3];
@@ -1469,6 +1476,7 @@ void csolve_cubic(double *coeff, double complex sol[3])
 #if 1
 void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
 {
+  int ok;
   const long double sqrt3=sqrtl(3.0);
   /* solution from Abramovitz */
   long double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
@@ -1476,9 +1484,12 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
   if (coeff[3] == 0.0)
     {
       printf("[WARNING] fallback to quadratic from cubic\n");
-      solve_quadraticl(coeff, numsol, sol);
+      solve_numrecl(coeff, numsol, sol, &ok, 2);
+      // solve_quadraticl(coeff, numsol, sol);
       return;
     }
+  solve_numrecl(coeff, numsol, sol, &ok, 3);
+  return;
   //printf("qu?????????????????????????????\n");
   a2 = coeff[2]/coeff[3];
   a1 = coeff[1]/coeff[3];
@@ -1514,15 +1525,21 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
 void solve_cubic(double *coeff, int *numsol, double sol[3])
 {
   const double sqrt3=sqrt(3.0);
+  int ok;
   /* solution from Abramovitz */
   double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
   double complex cs1, cs2, s1ps2, s1ms2;
   if (coeff[3] == 0.0)
     {
       printf("[WARNING] fallback to quadratic from cubic\n");
-      solve_quadratic(coeff, numsol, sol);
+      //solve_quadratic(coeff, numsol, sol);
+      solve_numrec(coeff, numsol, sol, &ok, 2);
       return;
     }
+  /* la soluzione numnerica è comunque più accurata di quella analitica */
+  solve_numrec(coeff, numsol, sol, &ok, 3);
+  return;
+   
   //printf("qu?????????????????????????????\n");
   a2 = coeff[2]/coeff[3];
   a1 = coeff[1]/coeff[3];
@@ -2970,6 +2987,13 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 {
   int ok;
   long double EPS=2.2204460492503131E-32;
+
+  if (coeff[4] == 0)
+    {
+      solve_cubicl(coeff, numsol, solqua);
+      return;
+    }
+#if 0
   if (fabsl(coeff[4]) < EPS*fabsl(coeff[2]))
     {
       printf("[WARNING] fallback to quadratic from quartic\n");
@@ -2977,7 +3001,6 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
       //solve_cubicl(coeff, numsol, solqua);
       return;
     }
-#if 0
   else if (coeff[4]==0.0)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
@@ -3028,7 +3051,14 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   int ok;
-  double EPS=2.2204460492503131E-16;
+  //double EPS=2.2204460492503131E-16;
+
+  if (coeff[4]==0)
+    {
+      solve_cubic(coeff, numsol, solqua);
+      return;
+    }
+#if 0
   if (fabs(coeff[4]) < EPS*fabs(coeff[2]))
     {
       printf("[WARNING] fallback to quadratic from quartic\n");
@@ -3036,7 +3066,6 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
       solve_numrec(coeff, numsol, solqua, &ok, 2);
       return;
     }
-#if 0
   else if (fabs(coeff[4]) < EPS)
     {
       printf("[WARNING] fallback to cubic from quartic\n");
@@ -4020,7 +4049,13 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
   for (kk1=0; kk1 < 5; kk1++)
     coeffs[kk1] = ((double)coeff[kk1]);
 #endif
-  solve_quarticl(coeff, &(numsol[0]), solqua);
+  if (coeff[4]==0)
+    {
+      /* cilindri paralleli */
+      return test_overlap_parall_cyll(Ci, ni, Dj, nj, L, D, D);
+    }
+  else
+    solve_quarticl(coeff, &(numsol[0]), solqua);
   discard_spuriousl(solqua, &(numsol[0]));
 
 #if 0
@@ -4170,7 +4205,13 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
       for (kk1=0; kk1 < 5; kk1++)
 	coeffs[kk1] = (double)coeff[kk1];
 #endif
-      solve_quarticl(coeff, &(numsol[1]), solqua);
+      if (coeff[4]==0)
+	{
+	  /* cilindri paralleli */
+	  return test_overlap_parall_cyll(Ci, ni, Dj, nj, L, D, D);
+	}
+      else
+	solve_quarticl(coeff, &(numsol[1]), solqua);
       discard_spuriousl(solqua, &(numsol[1]));
 
 #if 0
@@ -4453,7 +4494,15 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
   coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
-  solve_quartic(coeff, &(numsol[0]), solqua);
+  if (coeff[4]==0)
+    {
+      /* N.B. 08/01/18 forse così è troppo restrittiva e dovrò cambiare in una condizione del tipo 
+       * fabs(coeff[4]) < EPSILON, devo fare delle prove per stabilirlo... */
+      /* cilindri paralleli */
+      return test_overlap_parall_cyl(Ci, ni, Dj, nj, Li, Diami, Diamj);
+    }
+  else
+    solve_quartic(coeff, &(numsol[0]), solqua);
 #if 0
   if (numsol==1)
     {
@@ -4638,7 +4687,13 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
       coeff[2] = 2*c0*c1 - 2*c12 - c22 + 2*c0*c3 - 2*c1*c3 + c42 + c52;
       coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
       coeff[0] = c12 + 2*c1*c3 + c32 - c52;
-      solve_quartic(coeff, &(numsol[1]), solqua);
+      if (coeff[4]==0)
+	{
+	  /* cilindri paralleli */
+	  return test_overlap_parall_cyl(Ci, ni, Dj, nj, Li, Diami, Diamj);
+	}
+      else
+	solve_quartic(coeff, &(numsol[1]), solqua);
       discard_spurious(solqua, &(numsol[1]));
 
       for (kk1=0; kk1 < numsol[1]; kk1++)
@@ -4908,7 +4963,49 @@ void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3]
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
 }
+double test_overlap_parall_cyll(long double *Ci, long double *ni, long double *Dj, long double *nj, long double Li, 
+				long double Diami, long double Diamj)
+{
+  int kk;
+  long double DjCi[3], DjCini, Ui[3], DjUi[3], normDjUi;
+  for (kk=0; kk < 3; kk++)
+    DjCi[kk] = Dj[kk] - Ci[kk];
+  //normDjCi = calc_norm(DjCi);
+  DjCini = scalProdl(DjCi,ni);
 
+  for (kk=0; kk < 3; kk++)
+    {
+      Ui[kk] = Ci[kk] + DjCini*ni[kk];
+      DjUi[kk] = Dj[kk] - Ui[kk];
+    }
+  normDjUi = calc_norml(DjUi);
+
+  if (normDjUi <= 0.5*(Diamj+Diami) && fabsl(DjCini) <= Li*0.5)
+    return -1.0;
+  else
+    return 1.0;
+}
+double test_overlap_parall_cyl(double *Ci, double *ni, double *Dj, double *nj, double Li, double Diami, double Diamj)
+{
+  int kk;
+  double DjCi[3], DjCini, Ui[3], DjUi[3], normDjUi;
+  for (kk=0; kk < 3; kk++)
+    DjCi[kk] = Dj[kk] - Ci[kk];
+  //normDjCi = calc_norm(DjCi);
+  DjCini = scalProd(DjCi,ni);
+
+  for (kk=0; kk < 3; kk++)
+    {
+      Ui[kk] = Ci[kk] + DjCini*ni[kk];
+      DjUi[kk] = Dj[kk] - Ui[kk];
+    }
+  normDjUi = calc_norm(DjUi);
+
+  if (normDjUi <= 0.5*(Diamj+Diami) && fabs(DjCini) <= Li*0.5)
+    return -1.0;
+  else
+    return 1.0;
+}
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
@@ -5074,7 +5171,13 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
   coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
   coeff[0] = c12 + 2*c1*c3 + c32 - c52;
 #endif
-  solve_quartic(coeff, &(numsol[0]), solqua);
+  if (coeff[4]==0)
+    {
+      /* cilindri paralleli */
+      return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
+    }
+  else
+    solve_quartic(coeff, &(numsol[0]), solqua);
 #if 0
   if (numsol==1)
     {
@@ -5273,7 +5376,13 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
       coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
       coeff[0] = c02 + 2*c0*c3 + c32 - c42;
 #endif
-      solve_quartic(coeff, &(numsol[1]), solqua);
+      if (coeff[4]==0)
+	{
+	  /* cilindri paralleli */
+	  return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
+	}
+      else
+	solve_quartic(coeff, &(numsol[1]), solqua);
       discard_spurious(solqua, &(numsol[1]));
 
       for (kk1=0; kk1 < numsol[1]; kk1++)
@@ -5728,6 +5837,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
 
 */
+#if 0
 #ifndef MC_IBARRA_SIMPLER
 	  /* se sono quasi paralleli... */
 	  if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
@@ -5746,6 +5856,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      else
 		continue;
 	    }
+#endif
 #endif
 	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
 	    continue;
