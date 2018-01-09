@@ -1,0 +1,167 @@
+#MAIN Makefile
+# === >>> Put your PERC here !!! <<< ===
+HOME=/infm/cmprmk80
+PERC=$(HOME)/MDsimul
+
+# ======================================
+#export 
+COMM=$(PERC)/commSrc
+
+#export CC=gcc
+#export MPIDIR = $(HOME)/mpich-1.2.0
+#export CC= $(MPIDIR)/bin/mpicc
+#export CC= mpicc_mpich
+CC= cc
+#CFLAGS=-Wall -mcpu=i686 -O3\
+	-frerun-cse-after-loop -fstrength-reduce -fexpensive-optimizations\
+        -felide-constructors -malign-loops=2 -malign-jumps=2\
+	-malign-functions=2
+#CFLAGS  = -O3 -n32 -mips4 -Ofast=ip27 -OPT:IEEE_arithmetic=3 -IPA 
+
+LDFLAGS= -lmpi
+#CFLAGS = -Wall -m486 -fomit-frame-pointer -finline-functions -O2
+CFLAGS= -O3 
+
+# MACROS passed to the pre-processor
+#export 
+MACROS=-DORIGIN -DMD_GRAVITY -DXDISP -DATPTENS -UMOLPTENS -UATPRESS -DMPI #-DPRINTER_PROC
+# ATPTENS defined(-DATPTENS -U... undefined)=>calculate atomic pressure tensor
+# MOLPTENS defined => calculate mlecular pressor tensor
+# ATPRESS defined => calculate atomic pressure(if ATPTENS defined the atomic
+# pressure is automatically calculate)
+
+#export 
+BIN = $(PERC)/bin
+
+#directories to search for #include
+#export 
+INCLUDES = -I$(PERC) -I$(MPIDIR)/include  -I. -I$(PERC)/include -I$(COMM)
+
+# ============================================================================
+COMMOBJ = $(COMM)/mdsimul.o $(COMM)/mdinit.o $(COMM)/mdarray.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o
+
+COMMOBJMIX = $(COMM)/mdsimul.o $(COMM)/mdinit.o $(COMM)/mdarrayMIX.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o 
+
+COMMOBJ_PT = $(COMM)/mdsimul_PT.o $(COMM)/mdinit_PT.o $(COMM)/mdarray_PT.o $(COMM)/mdutil.o $(COMM)/mdio.o $(COMM)/mdchoose.o
+
+COMMOBJ_DPT = $(COMM)/mdsimul_PT.o $(COMM)/mdinit_DPT.o $(COMM)/mdarray_DPT.o $(COMM)/mdutil.o $(COMM)/mdio_DPT.o $(COMM)/mdchoose_DPT.o
+
+# dependencies for all simulation codes
+# rigid AB dumbell interacting by LJ12-6 potential
+RIGID = $(PERC)/rigidABdbLJ
+
+RIGIDOBJS = $(RIGID)/move.o $(RIGID)/measures.o $(RIGID)/init.o $(RIGID)/forces.o
+
+#monoatomic Lennard-Jones system with Ruocco many body term
+MONO = $(PERC)/monoLJ
+
+MONOOBJS =  $(MONO)/move.o $(MONO)/measures.o $(MONO)/init.o $(MONO)/forces.o
+
+MONOHS= $(PERC)/monohs
+MONOHSOBJS= $(MONOHS)/move.o $(MONOHS)/measures.o $(MONOHS)/init.o $(MONOHS)/tree.o
+#gauss
+GAUSS = $(PERC)/gauss
+
+GAUSSOBJS =  $(GAUSS)/move.o $(GAUSS)/measures.o $(GAUSS)/init.o $(GAUSS)/forces.o
+
+#monoatomic Lennard-Jones with Ruocco many body term and Parallel Tempering
+MONO_PT = $(PERC)/monoLJ_PT
+
+MONO_PT_OBJS =  $(MONO_PT)/move_PT.o $(MONO_PT)/measures.o $(MONO_PT)/init_PT.o $(MONO_PT)/forces_PT.o
+
+#monoatomic Lennard-Jones with Ruocco many body term and Parallel Tempering
+MONO_DPT = $(PERC)/monoLJ_DPT
+
+MONO_DPT_OBJS =  $(MONO_DPT)/move_DPT.o $(MONO_DPT)/measures.o $(MONO_DPT)/init_DPT.o $(MONO_DPT)/forces_DPT.o
+
+BIMIX = $(PERC)/bimix
+
+BIMIXOBJS = $(BIMIX)/move.o $(BIMIX)/measures.o $(BIMIX)/init.o $(BIMIX)/forces.o 
+
+
+default: monohs
+
+all: rigidABdbLJ monoLJ H2S monoLJPT monoLJDPT
+
+# make sub-make
+rigidABdbLJ: common rigidABdbLJObjs#common always here
+	$(CC) $(COMMOBJ) $(RIGIDOBJS) -o $(BIN)/rigidABdbLJ -lm $(LDFLAGS) -L$(PERC)/lib/
+
+monoLJ: common monoLJObjs
+	$(CC)  $(COMMOBJ) $(MONOOBJS) -o $(BIN)/monoLJ $(LDFLAGS) -L$(PERC)/lib/ -lm
+
+monohs: monohs_link common monohsObjs
+	$(CC) $(COMMOBJ) $(MONOHSOBJS)  -o $(BIN)/monohs $(LDFLAGS) -L$(PERC)/lib -lm
+gauss: gauss_link common gaussObjs
+	$(CC) $(CFLAGS) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJ) $(GAUSSOBJS) -o $(BIN)/gauss -lfastm -lm -lmpi
+
+monoLJPT: commonPT monoLJPTObjs
+	$(CC) $(COMMOBJ_PT) $(MONO_PT_OBJS) -o $(BIN)/monoLJPT $(LDFLAGS) -L$(PERC)/lib/ -lm 
+
+monoLJDPT: commonDPT monoLJDPTObjs
+	$(CC)  $(COMMOBJ_DPT) $(MONO_DPT_OBJS) -o $(BIN)/monoLJDPT $(LDFLAGS) -L$(PERC)/lib/ -lmpi -lm
+
+bimix: bimix_link commonMIX bimixObjs#common always here
+	$(CC) $(LDFLAGS) -L$(PERC)/lib/ $(COMMOBJMIX) $(BIMIXOBJS) -o $(BIN)/bimix -lmpi -lm
+
+H2S: common
+
+rigidABdbLJObjs:
+	cd $(PERC)/rigidABdbLJ && $(MAKE) -f Makefile.origin
+
+H2SObjs:
+	cd $(PERC)/H2S && $(MAKE) -f Makefile.origin
+
+monoLJObjs:
+	cd $(PERC)/monoLJ && $(MAKE) -f Makefile.origin
+
+monohsObjs:
+	cd $(PERC)/monohs && $(MAKE) -f Makefile.origin
+
+gaussObjs:
+	cd $(PERC)/gauss && $(MAKE) -f Makefile.origin
+
+monoLJPTObjs:
+	cd $(PERC)/monoLJ_PT && $(MAKE) -f Makefile.origin
+
+monoLJDPTObjs:
+	cd $(PERC)/monoLJ_DPT && $(MAKE) -f Makefile.origin
+
+bimixObjs:
+	cd $(PERC)/bimix && $(MAKE) -f Makefile.origin
+
+common: 
+	cd $(COMM) && $(MAKE) -f Makefile.origin
+
+commonMIX: 
+	cd $(COMM) && $(MAKE) -f Makefile.origin commonMIX
+
+commonPT:
+	cd $(COMM) && $(MAKE) -f Makefile.origin commonPT
+
+commonDPT: 
+	cd $(COMM) && $(MAKE) -f Makefile.origin commonDPT
+
+bimix_link:
+	cd $(PERC)/bimix && $(MAKE) -f Makefile.origin link
+
+monohs_link:
+	cd $(PERC)/monohs && $(MAKE) -f Makefile.origin link
+gauss_link:
+	cd $(PERC)/gauss && $(MAKE) -f Makefile.origin link
+
+# if you change the simulation code change here!!!!!!!!!!!!!!
+link:
+	cd $(PERC)/gauss && $(MAKE) -f Makefile.origin link
+
+realclean: clean 
+
+# delete all bins
+clean:
+	rm -f $(BIN)/*
+	cd rigidABdbLJ && $(MAKE) clean
+	cd gauss && $(MAKE) clean
+	cd monoLJ && $(MAKE) clean
+	cd commSrc && $(MAKE) clean
+	cd monoLJ_PT && $(MAKE) clean
+	cd monoLJ_DPT && $(MAKE) clean	
