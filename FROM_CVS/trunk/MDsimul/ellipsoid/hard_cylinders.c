@@ -3395,7 +3395,11 @@ int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, doubl
 }
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
+#ifdef MC_QUART_HYBRID
   const double DIST_THR=1E-12;
+#else
+  const double DIST_THR=5E-12;
+#endif
   double diff1, diff2;
   diff1=fabs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
   diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
