@@ -25,6 +25,7 @@
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
 //#define MC_QUART_VERBOSE
+#define MC_QUART_HYBRID
 
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
@@ -5066,7 +5067,7 @@ double test_overlap_parall_cyl(double *Ci, double *ni, double *Dj, double *nj, d
 }
 /* HYBRID version where for fallback a second ibarra iteration is performed to determine the disk reference system axes  
  */
-double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
+double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
 #ifdef MC_QUART_VERBOSE
@@ -5607,7 +5608,7 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
     }
   return 1;  
 }
-double rimdiskone_old(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
+double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
 #ifdef MC_QUART_VERBOSE
@@ -6162,7 +6163,15 @@ double rimdiskone_old(double D, double L, double Ci[3], double ni[3], double Dj[
     }
   return 1;  
 }
+double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
+{
+#ifdef MC_QUART_HYBRID
+  rimdiskone_hybrid(D, L, Ci, ni, Dj, nj, DjCini);
+#else
+  rimdiskone_solvxy(D, L, Ci, ni, Dj, nj, DjCini);
+#endif
 
+}
 double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, kk, j2, k2, ignore[2];
