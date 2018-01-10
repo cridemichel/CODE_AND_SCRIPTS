@@ -24,9 +24,9 @@
 //#define USE_LAGUERRE
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
-//#define MC_QUART_VERBOSE
+#define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
-
+//#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D);
@@ -3079,13 +3079,16 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 #ifdef POLY_SOLVE_GSL
   solve_gslpoly(coeff, numsol, solqua);
 #else
+#ifdef MC_QUART_USE_ANALYTIC
+  csolve_quartic_abramovitz(coeff, numsol, solqua);
+#else
   solve_numrec(coeff, numsol, solqua, &ok, 4);
   if (!ok)
     {
       /* if hqr() fails fallback to GSL */
       solve_gslpoly(coeff, numsol, solqua);
     }
-  //csolve_quartic_abramovitz(coeff, &numsol, solqua);
+#endif
 #endif
 }
 void newt2Dquartic(double c[6], double sol[3], double D2)
@@ -3395,10 +3398,14 @@ int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, doubl
 }
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
+#ifdef MC_QUART_USE_ANALYTIC
+  const double DIST_THR=5E-2;
+#else
 #ifdef MC_QUART_HYBRID
-  const double DIST_THR=1E-12;
+  const double DIST_THR=5E-13;
 #else
   const double DIST_THR=5E-12;
+#endif
 #endif
   double diff1, diff2;
   diff1=fabs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
@@ -4914,9 +4921,9 @@ void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long do
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
 }
-void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D, double *Tj)
+void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D, double *Tj, int MAXITS)
 {
-  int k, kk1, kk2, kk;
+  int k, kk1, kk2, kk, its;
   double u[3], norm, sp, dsc[3]; 
   double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
   /* first row vector */
@@ -4927,44 +4934,51 @@ void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R
    * determinare l'asse y del riferimenti del disco (l'asse x è l'asse perpendicolare
    * al disco e l'asse z si ottiene con il prodotto vettore dell'asse x e y) */
 #if 1
-  for (kk=0; kk < 3; kk++)
-    Tj[kk] *= D*0.5;
-  for (kk=0; kk < 3; kk++)
-    DjCi[kk] = Tj[kk] - Ci[kk];
-  normDjCi = calc_norm(DjCi);
-  DjCini = scalProd(DjCi,ni);
-
-  for (kk1 = 0; kk1 < 3; kk1++)
-    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
-  for (kk1=0; kk1 < 3; kk1++)
-    AiDj[kk1] = Ai[kk1] - Dj[kk1]; 
-  AiDjnj = scalProd(AiDj, nj);
-  for (kk1=0; kk1 < 3; kk1++)
+  for (its = 0; its < MAXITS; its++)
     {
-      VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+      for (kk=0; kk < 3; kk++)
+	DjCi[kk] = Dj[kk] - Ci[kk];
+      normDjCi = calc_norm(DjCi);
+      DjCini = scalProd(DjCi,ni);
+
+      for (kk1 = 0; kk1 < 3; kk1++)
+	Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
+      for (kk1=0; kk1 < 3; kk1++)
+	AiDj[kk1] = Ai[kk1] - Dj[kk1]; 
+      AiDjnj = scalProd(AiDj, nj);
+      for (kk1=0; kk1 < 3; kk1++)
+	{
+	  VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+	}
+      //for (kk1=0; kk1 < 3; kk1++)
+      //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+      ragg = calc_norm(VV);
+      for(k=0;k<3;k++)
+	{
+	  VV[k] /= ragg;
+	  Tj[k] = D*0.5*VV[k];
+
+	}
     }
-  //for (kk1=0; kk1 < 3; kk1++)
-    //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
-  ragg = calc_norm(VV);
 
   for(k=0;k<3;k++)
     {
-      R[1][k] = VV[k]/ragg;
+      R[1][k] = VV[k];
       //R[1][k] = VV[k];
       //TnCi[k] = Tnew[k]-Ci[k];
     }
 #if 0
-  ragg = scalProd(TnCi,ni);
-  for (k=0;k<3;k++)
-    Ai[k] = Ci[k] + ragg*ni[k];
+      ragg = scalProd(TnCi,ni);
+      for (k=0;k<3;k++)
+	Ai[k] = Ci[k] + ragg*ni[k];
 #endif
 #else
 
- for (k=0; k < 3; k++)
-    dsc[k] = Ci[k] - Dj[k]; 
-  sp = scalProd(dsc, nj);
-  for (k=0; k < 3; k++)
-    R[1][k] = dsc[k] - sp*nj[k];
+      for (k=0; k < 3; k++)
+	dsc[k] = Ci[k] - Dj[k]; 
+      sp = scalProd(dsc, nj);
+      for (k=0; k < 3; k++)
+	R[1][k] = dsc[k] - sp*nj[k];
 #endif  
   //printf("scalProd=%.15G\n", scalProd(R[1],R[0]));
   vectProdVec(R[0], R[1], u);
@@ -5096,7 +5110,11 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
 #else
-  versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
+  for (kk1=0; kk1 < 3; kk1++)
+    uy[kk1]=Dj[kk1];
+  versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 1); 
+
+  //versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
 #endif
   for (kk1=0; kk1 < 3; kk1++)
     {
@@ -5361,8 +5379,8 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   if (fallback)
     {
       for (kk1=0; kk1 < 3; kk1++)
-	uy[kk1] = Rl[1][kk1];
-      versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy); 
+	uy[kk1] = D2*Rl[1][kk1];
+      versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 2); 
       for (kk1=0; kk1 < 3; kk1++)
 	{
 	  nip[1][kk1] = 0;
@@ -5501,6 +5519,10 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
     	  temp = c4 + c2*solqua[kk1];
+	  if (temp==0)
+	    {
+	      printf("[WARNING] temp is 0 in fallback hybrid numsol=%d %d\n", numsol[0], numsol[1]);
+	    }
 	  solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
 	  solec[kk1][1] = solqua[kk1];
 	  //printf("fallback:");
@@ -5892,6 +5914,7 @@ double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double 
 #endif
       if (temp==0.0) 
 	{
+	  printf("[WARNING] temp is 0 in hybrid numsol=%d\n", numsol[0]);
 	  fallback=1;
 	}
 #if 0
@@ -6170,9 +6193,9 @@ double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double 
 double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
 #ifdef MC_QUART_HYBRID
-  rimdiskone_hybrid(D, L, Ci, ni, Dj, nj, DjCini);
+  return rimdiskone_hybrid(D, L, Ci, ni, Dj, nj, DjCini);
 #else
-  rimdiskone_solvxy(D, L, Ci, ni, Dj, nj, DjCini);
+  return rimdiskone_solvxy(D, L, Ci, ni, Dj, nj, DjCini);
 #endif
 
 }
