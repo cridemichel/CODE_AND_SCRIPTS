@@ -24,7 +24,7 @@
 //#define USE_LAGUERRE
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
-#define MC_QUART_VERBOSE
+//#define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
@@ -3402,7 +3402,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
   const double DIST_THR=5E-2;
 #else
 #ifdef MC_QUART_HYBRID
-  const double DIST_THR=5E-13;
+  const double DIST_THR=1E-12;
 #else
   const double DIST_THR=5E-12;
 #endif
@@ -5084,7 +5084,7 @@ double test_overlap_parall_cyl(double *Ci, double *ni, double *Dj, double *nj, d
     return 1.0;
 }
 /* HYBRID version where for fallback a second ibarra iteration is performed to determine the disk reference system axes  
- */
+*/
 double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
