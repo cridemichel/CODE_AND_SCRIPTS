@@ -3012,13 +3012,25 @@ void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int
     }
   //gsl_poly_complex_workspace_free (w);
 }
+int eps_identical(double *eps)
+{
+  int j;
+  for (j=1; j < 5; j++)
+    {
+      if (eps[j]!=eps[j-1])
+	return 0;
+    }
+  // if it gets here they are all equal!
+  return 1;
+}
 void backward_optimizer(double *al, double *be, double *ga, double *de, double a, double b, double c, double d)
 {
-  double e1[2], e2[2], e3[2], e4[2], a, b, c, d;
+  double e1[2], e2[2], e3[2], e4[2];
   double alpha[2], beta[2], gamma[2], delta[2];
   double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
-  const int MAXITS=30;
-  int k;
+  double eps[2][5];
+  const int MAXITS=10;
+  int k, j, its;
   for (k=0; k < 2; k++)
     {
       alpha[k]= al[k];
@@ -3051,28 +3063,43 @@ void backward_optimizer(double *al, double *be, double *ga, double *de, double a
 	  gamma[k] = gamma[k] + y3[k];
 	  delta[k] = delta[k] + y4[k];
 	  e1[k] = a - alpha[k] - gamma[k];
-	  e2[k] = b - beta[k] - alpha*gamma[k] - delta[k];
+	  e2[k] = b - beta[k] - alpha[k]*gamma[k] - delta[k];
 	  e3[k] = c - beta[k]*gamma[k] - alpha[k]*delta[k];
 	  e4[k] = d - beta[k]*delta[k];
-
+	  // 0 is the latest one
+	  /* shift epsilon's */ 
+	  for (j=4; j > 0; j--)
+	    eps[k][j] = eps[k][j-1];
 	  eps[k][0] = fabs(e1[k])+fabs(e2[k])+fabs(e3[k])+fabs(e3[k]);
 	  // convergence
-	  if (eps[k][0] < FASTQSEPS)
+	  if (eps[k][0] == 0.0)
 	    {
-	      *al = alpha;
-	      *be = beta;
-	      *ga = gamma;
-	      *de = delta;
+	      *al = alpha[k];
+	      *be = beta[k];
+	      *ga = gamma[k];
+	      *de = delta[k];
 	      return;
 	    }
 	  // cyclic condition
-	  else if ()
+	  else if (eps_identical(eps[k]))
 	    {
-
+	      *al = alpha[k];
+	      *be = beta[k];
+	      *ga = gamma[k];
+	      *de = delta[k];
+	      return;
 	    }
 	}
     }
- }
+  if (fabs(eps[0][0]) < fabs(eps[1][0]))
+    k = 0;
+  else
+    k = 1;
+  *al = alpha[k];
+  *be = beta[k];
+  *ga = gamma[k];
+  *de = delta[k];
+}
 int error_handler1(double a, double b, double c, double d, double *alpha, double *beta)
 {
   double eps1, eps2;
@@ -3116,14 +3143,18 @@ int error_handler2(double a, double b , double c, double d, int *numsol, double 
   return 0;
    
 }
-void initial_guess_fast_quart_solver
+void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d)
+{
+
+
+}
 void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 {
   double alpha[2], beta[2], gamma[2], delta[2];
-  double al, be;
-  double cq[3], nsq, solq[2], eps1, eps2;
+  double al, be, a, b, c, d;
+  double cq[3], sq[2], eps1, eps2;
   double FASTQSEPS=2.2204460492503131E-16;
-
+  int k, nsq; 
   a = coeff[3]/coeff[4];
   b = coeff[2]/coeff[4];
   c = coeff[1]/coeff[4];
