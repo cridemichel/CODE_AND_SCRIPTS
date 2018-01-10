@@ -3073,7 +3073,7 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
   double e1[2], e2[2], e3[2], e4[2];
   double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
   double eps[2][5];
-  const int MAXITS=3000;
+  const int MAXITS=30;
   int k, j, its;
   for (k=0; k < 2; k++)
     {
