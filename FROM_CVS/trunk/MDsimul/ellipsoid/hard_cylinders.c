@@ -25,8 +25,8 @@
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
 //#define MC_QUART_VERBOSE
-#define MC_QUART_HYBRID
-//#define MC_QUART_USE_ANALYTIC
+//#define MC_QUART_HYBRID
+#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D);
@@ -1423,6 +1423,7 @@ void solve_quadraticl(long double coeff[3], int *numsol, long double *sol)
       *numsol = 0;
     }
 }
+#if 0
 void solve_quadratic(double coeff[3], int *numsol, double *sol)
 {
   double delta, a2inv, sqrtd;
@@ -1445,6 +1446,33 @@ void solve_quadratic(double coeff[3], int *numsol, double *sol)
       *numsol = 0;
     }
 }
+#else
+void solve_quadratic(double coeff[3], int *numsol, double *sol)
+{
+  /* numeric error safe version of solve_quadratic from Numerical Recipe */
+  double delta, a, b, c, q;
+  a = coeff[2];
+  b = coeff[1];
+  c = coeff[0];
+  delta = Sqr(b) - 4.0*a*c;
+  if (delta > 0.0)
+    {
+      q = -0.5*(b+copysign(1.0,b)*sqrt(delta));
+      sol[0] = q/a;
+      sol[1] = c/q;
+      *numsol = 2;
+    } 
+  else if (delta == 0)
+    {
+      sol[0] = -b/(2.0*a);
+      *numsol = 1;
+    }
+  else
+    {
+      *numsol = 0;
+    }
+}
+#endif
 void csolve_cubic(double *coeff, double complex sol[3])
 {
   const double sqrt3=sqrt(3.0);
@@ -2984,6 +3012,164 @@ void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int
     }
   //gsl_poly_complex_workspace_free (w);
 }
+void backward_optimizer(double *al, double *be, double *ga, double *de, double a, double b, double c, double d)
+{
+  double e1[2], e2[2], e3[2], e4[2], a, b, c, d;
+  double alpha[2], beta[2], gamma[2], delta[2];
+  double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
+  const int MAXITS=30;
+  int k;
+  for (k=0; k < 2; k++)
+    {
+      alpha[k]= al[k];
+      beta[k] = be[k];
+      gamma[k] = ga[k];
+      delta[k] = de[k];
+      e1[k] = a - alpha[k] - gamma[k];
+      e2[k] = b - beta[k] - alpha[k]*gamma[k] - delta[k];
+      e3[k] = c - beta[k]*gamma[k] - alpha[k]*delta[k];
+      e4[k] = d - beta[k]*delta[k];
+    }
+  for (its=0; its < MAXITS; its++)
+    {
+      for (k=0; k < 2; k++)
+	{
+	  U23[k] = alpha[k] - gamma[k];
+	  U33[k] = beta[k] - delta[k] - gamma[k]*U23[k];
+	  L43[k] = -delta[k]*U23[k]/U33[k];
+	  U44[k] = beta[k] - delta[k] - L43[k]*U23[k];
+	  x1[k] = e1[k];
+	  x2[k] = e2[k] - gamma[k]*x1[k];
+	  x3[k] = e3[k] - delta[k]*x1[k] - gamma[k]*x2[k];
+	  x4[k] = e4[k] - delta[k]*x2[k] - L43[k]*x3[k];
+	  y4[k] = x4[k]/U44[k];
+	  y3[k] = (x3[k]-U23[k]*y4[k])/U33[k];
+	  y2[k] = x2[k] - U23[k]*y3[k] - y4[k];
+	  y1[k] = x1[k] - y3[k];
+	  alpha[k] = alpha[k] + y1[k];
+	  beta[k] = beta[k] + y2[k];
+	  gamma[k] = gamma[k] + y3[k];
+	  delta[k] = delta[k] + y4[k];
+	  e1[k] = a - alpha[k] - gamma[k];
+	  e2[k] = b - beta[k] - alpha*gamma[k] - delta[k];
+	  e3[k] = c - beta[k]*gamma[k] - alpha[k]*delta[k];
+	  e4[k] = d - beta[k]*delta[k];
+
+	  eps[k][0] = fabs(e1[k])+fabs(e2[k])+fabs(e3[k])+fabs(e3[k]);
+	  // convergence
+	  if (eps[k][0] < FASTQSEPS)
+	    {
+	      *al = alpha;
+	      *be = beta;
+	      *ga = gamma;
+	      *de = delta;
+	      return;
+	    }
+	  // cyclic condition
+	  else if ()
+	    {
+
+	    }
+	}
+    }
+ }
+int error_handler1(double a, double b, double c, double d, double *alpha, double *beta)
+{
+  double eps1, eps2;
+  *alpha = a*0.5;
+  *beta = (b - Sqr(*alpha))*0.5;
+  eps1 = c - 2.0*(*alpha)*(*beta);
+  eps2 = d - Sqr(*beta);
+  if (eps1==0 && eps2==0)
+    return 1;
+  else 
+    return 0; 
+}
+int error_handler2(double a, double b , double c, double d, int *numsol, double solqua[4])
+{
+  double cq[3], x1[2], x2[2], eps1, eps2;
+  int nsq, k;
+  cq[2] = 1.0;
+  cq[1] = a*0.5;
+  cq[0] = b/6.0;
+  solve_quadratic(cq, &nsq, x1);
+  if (nsq==0)
+    {
+      return 0;
+    } 
+  x2[0] = -a - 3.0*x1[0];
+  x2[1] = -a - 3.0*x1[1];
+     
+  for (k=0; k < 2; k++)
+    {
+      eps1 = c + Sqr(x1[k])*(x1[k]+3.0*x2[k]);
+      eps2 = d - Sqr(x1[k])*x1[k]*x2[k];
+      if (eps1==0 && eps2==0)
+	{
+	  *numsol=2;
+	  solqua[0] = x1[k];
+	  solqua[1] = x2[k];	  
+	  return 1;
+	}
+      
+    }
+  return 0;
+   
+}
+void initial_guess_fast_quart_solver
+void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
+{
+  double alpha[2], beta[2], gamma[2], delta[2];
+  double al, be;
+  double cq[3], nsq, solq[2], eps1, eps2;
+  double FASTQSEPS=2.2204460492503131E-16;
+
+  a = coeff[3]/coeff[4];
+  b = coeff[2]/coeff[4];
+  c = coeff[1]/coeff[4];
+  d = coeff[0]/coeff[4];
+
+  initial_guess_fast_quart_solver(alpha, beta, gamma, delta, a, b, c, d);
+
+  if (error_handler1(a, b, c, d, &al, &be))
+    {
+      /* now we solve the two quadratic equation providing the four roots of the original quartic */
+      cq[2] = 1.0;
+      cq[1] = al;
+      cq[0] = be;
+      solve_quadratic(cq, &nsq, sq);
+      *numsol=0;
+      for (k=0; k < nsq; k++)
+	{
+	  solqua[*numsol] = sq[k];
+	  (*numsol)++;
+	}
+    }
+  else if (!error_handler2(a, b, c, d, numsol, solqua))
+    {
+      backward_optimizer(alpha, beta, gamma, delta, a, b, c, d);
+      /* now we solve the two quadratic equation providing the four roots of the original quartic */
+      cq[2] = 1.0;
+      cq[1] = alpha[k];
+      cq[0] = beta[k];
+      solve_quadratic(cq, &nsq, sq);
+      *numsol=0;
+      for (k=0; k < nsq; k++)
+	{
+	  solqua[*numsol] = sq[k];
+	  (*numsol)++;
+	}
+      cq[2] = 1.0;
+      cq[1] = gamma[k];
+      cq[0] = delta[k];
+      solve_quadratic(cq, &nsq, sq);
+      for (k=0; k < nsq; k++)
+	{
+	  solqua[*numsol] = sq[k];
+	  (*numsol)++;
+	}
+    }
+}
 #if 1
 void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 {
@@ -3076,7 +3262,9 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
       return;
     }
 #endif
-#ifdef POLY_SOLVE_GSL
+#ifdef FAST_QUARTIC_SOLVER
+  fast_quartic_solver(coeff, numsol, solqua);
+#elif defined(POLY_SOLVE_GSL)
   solve_gslpoly(coeff, numsol, solqua);
 #else
 #ifdef MC_QUART_USE_ANALYTIC
