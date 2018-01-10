@@ -26,7 +26,8 @@
 //#define MC_EXCHG_QUART_SOL
 //#define MC_QUART_VERBOSE
 //#define MC_QUART_HYBRID
-#define MC_QUART_USE_ANALYTIC
+#define FAST_QUARTIC_SOLVER
+//#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D);
@@ -1552,6 +1553,39 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
       *numsol = 1;
     }
 }
+void solve_cubic_analytic(double *coeff, complex double sol[3])
+{
+  double a, b, c, Q, R, theta, Q3, R2, A, B;
+  const double sqrt32=cbrt(3)/2.0;
+  //printf("qu?????????????????????????????\n");
+  a = coeff[2]/coeff[3];
+  b = coeff[1]/coeff[3];
+  c = coeff[0]/coeff[3];
+  Q = (Sqr(a) - 3.0*b)/9.0;
+  R = (2.0*Sqr(a)*a - 9.0*a*b + 27.0*c)/54.0;
+
+  Q3 = Sqr(Q)*Q;
+  R2 = Sqr(R);
+  if (R2 < Q3)
+    {
+      theta = acos(R/sqrt(Q3));
+      sol[0] = -2.0*sqrt(Q)*cos(theta/3.0)- a/3.0;
+      sol[1] = -2.0*sqrt(Q)*cos((theta+2.0*M_PI)/3.0) - a/3.0;
+      sol[2] = -2.0*sqrt(Q)*cos((theta-2.0*M_PI)/3.0) - a/3.0;
+    }
+  else
+    {
+      A = -copysign(1.0,R)*pow(fabs(R) + sqrt(R2 - Q3),1.0/3.0);
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+      sol[0] = (A+B) - a/3.0;
+      sol[1] = -0.5*(A+B)-a/3.0+I*sqrt32*(A-B);
+      sol[1] = -0.5*(A+B)-a/3.0-I*sqrt32*(A-B);
+    }
+}
+
 void solve_cubic(double *coeff, int *numsol, double sol[3])
 {
   const double sqrt3=sqrt(3.0);
@@ -1568,39 +1602,6 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
     }
   /* la soluzione numnerica è comunque più accurata di quella analitica */
   solve_numrec(coeff, numsol, sol, &ok, 3);
-  return;
-   
-  //printf("qu?????????????????????????????\n");
-  a2 = coeff[2]/coeff[3];
-  a1 = coeff[1]/coeff[3];
-  a0 = coeff[0]/coeff[3];
-  a2sq=Sqr(a2);
-  q = (1.0/3.0)*a1-(1.0/9.0)*a2sq;
-  r = (1.0/6.0)*(a1*a2 - 3.0*a0)-a2sq*a2/27.0; 
-  q3 = Sqr(q)*q;
-  r2 = Sqr(r);
-  H = r2 + q3;
-  //printf("H=%.15G\n", H);
-  if (H <= 0.0)
-    {
-      cs1 = cpow(r + csqrt(H),1.0/3.0);
-      cs2 = cpow(r - csqrt(H),1.0/3.0);
-      sol[0] = creal(cs1 + cs2) - a2/3.0;
-      /* per il calcolo degli zeri di una quartica basta uno zero reale qualsiasi quindi 
-       * con questo flag si puo' ottimizzare calcolandone solo uno */
-      s1ps2 = (cs1+cs2)/2.0; 
-      s1ms2 = (cs1-cs2)/2.0;
-      sol[1] = creal(-s1ps2 - a2/3.0 + I*sqrt3*s1ms2);
-      sol[2] = creal(-s1ps2 - a2/3.0 - I*sqrt3*s1ms2);
-      *numsol = 3;
-    }
-  else
-    {
-      s1 = cbrt(r + sqrt(H));
-      s2 = cbrt(r - sqrt(H));
-      sol[0] = s1 + s2 - a2/3.0;
-      *numsol = 1;
-    }
 }
 #endif
 double solcgbl[3];
@@ -1634,13 +1635,13 @@ int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
 
   return 0;
 }
-#if 1
-void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
+void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
 {
   double a3, a2, a1, a0, a32, a12;
   double lambda, dd0, dd1, dd2;
-  double cb[4], solc[3], y1;
-  double complex sma, smb, smc, csol[4], R, D, E, A, B;
+  double cb[4], y1;
+  double complex solc[3], sma, smb, smc, R, D, E, A, B;
+ 
   int k, nsc;
   a3 = coeff[3]/coeff[4];
   a2 = coeff[2]/coeff[4];
@@ -1653,30 +1654,9 @@ void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
   cb[2] = -a2;
   cb[1] = a1*a3-4.0*a0;
   cb[0] = 4.0*a2*a0-a12-a32*a0;
-  solve_cubic(cb, &nsc, solc);
-#if 1
-  y1 = solc[0];
-#else
-  /* se ce n'è più d'una * scelgo la soluzione reale più vicina
-   * al coefficiente a2 a cui andrà sommata
-   * per ridurre gli errori di roundoff */
-  if (nsc==1)
-    {
-      y1=solc[0];
-    }
-  else
-    {
-      dd0 = fabs(solc[0]-a2);
-      dd1 = fabs(solc[1]-a2);
-      dd2 = fabs(solc[2]-a2);
-      if (dd0 < dd1 && dd0 < dd2)
-	y1 = solc[0];
-      else if (dd1 < dd0 && dd1 < dd2)
-	y1 = solc[1];
-      else 
-	y1 = solc[2];
-    }
-#endif
+  solve_cubic_analytic(cb, solc);
+  y1 = creal(solc[0]);
+
   R = csqrt(0.25*a32-a2+y1);
   if (R==0)
     {
@@ -1690,14 +1670,16 @@ void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
     }  
   D = csqrt(A+B);
   E = csqrt(A-B); 
-  csol[0] = -0.25*a3 + 0.5*R + 0.5*D;
-  csol[1] = -0.25*a3 + 0.5*R - 0.5*D;
-  csol[2] = -0.25*a3 - 0.5*R + 0.5*E;
-  csol[3] = -0.25*a3 - 0.5*R - 0.5*E;
-#if 0
-  for(k=0; k < 4; k++)
-    printf("csol[%d]=Re: %.15G Im: %.15G\n", k, creal(csol[k]), cimag(csol[k]));
-#endif
+  sol[0] = -0.25*a3 + 0.5*R + 0.5*D;
+  sol[1] = -0.25*a3 + 0.5*R - 0.5*D;
+  sol[2] = -0.25*a3 - 0.5*R + 0.5*E;
+  sol[3] = -0.25*a3 - 0.5*R - 0.5*E;
+}
+void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
+{
+  int nsol, k;
+  complex double csol[4];
+  csolve_quartic_abramovitz_cmplx(coeff, csol);
   /* restituisce solo le soluzioni reali */
   *numrealsol=0;
   for (k=0; k < 4; k++)
@@ -1711,8 +1693,69 @@ void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
 	}
     }
 }
-#endif
-
+void solve_fourth_deg_cmplx(double *coeff, complex double sol[4])
+{
+  /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
+  const double ROUNDOFFERR = 1E-20;
+  double x1, A, B, C, D, cb[4], m, n;
+  double Asq, alpha, beta, rho, mp, np, m2, dd0, dd1, dd2;
+  complex double gamma, delta, solc[3];
+  int nsc, kk;
+  A = coeff[3]/coeff[4];
+  B = coeff[2]/coeff[4];
+  C = coeff[1]/coeff[4];
+  D = coeff[0]/coeff[4];
+  Asq = Sqr(A);
+  cb[3] = 1.0;
+  cb[2] = -B;
+  cb[1] = A*C-4*D;
+  cb[0] = D*(4.0*B - Asq)-Sqr(C);
+  solve_cubic_analytic(cb, solc);
+  //printf("x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", cb[2], cb[1], cb[0]);
+  x1 = creal(solc[0]);
+  m2 = Asq/4.0-B+x1;
+  //printf("solc=%.15G numsol=%d m2=%.15G\n", solc[0], nsc, m2);
+  if (m2 > 0)
+    {
+      //printf("qui\n");
+      m = sqrt(m2);
+      n = (A*x1 - 2.0*C)/(4.0*m);
+    }
+  else if (m2==0.0)
+    {
+      m = 0.0;
+      n = sqrt(Sqr(x1)/4.0 - D);
+    }
+  else // m is imaginary 
+    {
+      mp = sqrt(-m2);
+      np = (A*x1 - 2.0*C)/(4.0*mp);
+      alpha=0.5*Asq-x1-B;
+      beta = 4.0*np-A*mp;
+      rho = sqrt(Sqr(alpha)+Sqr(beta));
+      gamma = csqrt((alpha + rho)/2.0); /* notare che alpha + rho è sempre positivo */
+      if (gamma == 0.0)
+	{
+	  delta = csqrt(-alpha); 
+	}
+      else
+	delta  = beta/gamma/2.0;
+      sol[0] = (-0.5*A + gamma + I*(mp+delta))*0.5;
+      sol[1] = conj(sol[0]);
+      sol[2] = (-0.5*A - gamma + I*(mp-delta))*0.5;
+      sol[3] = conj(sol[1]);
+      return;
+    }
+  // m is real 
+  alpha=0.5*Asq-x1-B;
+  beta=4*n-A*m;
+  gamma = csqrt(alpha+beta);
+  sol[0]=-0.25*A+0.5*m+0.5*gamma;
+  sol[1]=-0.25*A+0.5*m-0.5*gamma;
+  delta = csqrt(alpha-beta);
+  sol[2]=-0.25*A-0.5*m+0.5*delta;
+  sol[3]=-0.25*A-0.5*m-0.5*delta;
+}
 void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 {
   /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
@@ -3023,20 +3066,15 @@ int eps_identical(double *eps)
   // if it gets here they are all equal!
   return 1;
 }
-void backward_optimizer(double *al, double *be, double *ga, double *de, double a, double b, double c, double d)
+void backward_optimizer(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d, int *kchosen)
 {
   double e1[2], e2[2], e3[2], e4[2];
-  double alpha[2], beta[2], gamma[2], delta[2];
   double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
   double eps[2][5];
   const int MAXITS=10;
   int k, j, its;
   for (k=0; k < 2; k++)
     {
-      alpha[k]= al[k];
-      beta[k] = be[k];
-      gamma[k] = ga[k];
-      delta[k] = de[k];
       e1[k] = a - alpha[k] - gamma[k];
       e2[k] = b - beta[k] - alpha[k]*gamma[k] - delta[k];
       e3[k] = c - beta[k]*gamma[k] - alpha[k]*delta[k];
@@ -3074,31 +3112,21 @@ void backward_optimizer(double *al, double *be, double *ga, double *de, double a
 	  // convergence
 	  if (eps[k][0] == 0.0)
 	    {
-	      *al = alpha[k];
-	      *be = beta[k];
-	      *ga = gamma[k];
-	      *de = delta[k];
+	      *kchosen=k;
 	      return;
 	    }
 	  // cyclic condition
 	  else if (eps_identical(eps[k]))
 	    {
-	      *al = alpha[k];
-	      *be = beta[k];
-	      *ga = gamma[k];
-	      *de = delta[k];
+	      *kchosen=k;
 	      return;
 	    }
 	}
     }
   if (fabs(eps[0][0]) < fabs(eps[1][0]))
-    k = 0;
+    *kchosen = 0;
   else
-    k = 1;
-  *al = alpha[k];
-  *be = beta[k];
-  *ga = gamma[k];
-  *de = delta[k];
+    *kchosen = 1;
 }
 int error_handler1(double a, double b, double c, double d, double *alpha, double *beta)
 {
@@ -3143,10 +3171,44 @@ int error_handler2(double a, double b , double c, double d, int *numsol, double 
   return 0;
    
 }
+int fast_solver_cmp_func(const void* aa, const void *bb)
+{
+  complex double ai, bi;
+  ai = *((complex double *)aa);
+  bi = *((complex double *)bb);
+  if (cabs(ai) > cabs(bi))
+    return -1;
+  else if (cabs(ai)==cabs(bi))
+    return 0;
+  else
+    return 1;
+
+}
 void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d)
 {
+  int nsol, k;
+  complex double csol[4];
+  double coeff[5];
 
-
+  coeff[4] = 1.0;
+  coeff[3] = a;
+  coeff[2] = b;
+  coeff[1] = c;
+  coeff[0] = d;
+  //printf("coeff=%f %f %f %f", a, b, c, d);
+  //csolve_quartic_abramovitz_cmplx(coeff, csol);
+  solve_fourth_deg_cmplx(coeff, csol);
+  qsort(csol, 4, sizeof(complex double), fast_solver_cmp_func);
+  alpha[0] = creal(csol[0]+csol[1]);
+  beta[0] = 1 ;
+#if 1
+  for (k=0; k < 4; k++)
+    {
+      printf("csol=%.15G + (%.15G)*I (norm=%.15G)\n", creal(csol[k]), cimag(csol[k]), cabs(csol[k]));
+    }
+  printf("\n");
+  exit(-1);
+#endif
 }
 void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 {
@@ -3154,7 +3216,7 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
   double al, be, a, b, c, d;
   double cq[3], sq[2], eps1, eps2;
   double FASTQSEPS=2.2204460492503131E-16;
-  int k, nsq; 
+  int k, nsq, setchosen; 
   a = coeff[3]/coeff[4];
   b = coeff[2]/coeff[4];
   c = coeff[1]/coeff[4];
@@ -3178,11 +3240,11 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
     }
   else if (!error_handler2(a, b, c, d, numsol, solqua))
     {
-      backward_optimizer(alpha, beta, gamma, delta, a, b, c, d);
+      backward_optimizer(alpha, beta, gamma, delta, a, b, c, d, &setchosen);
       /* now we solve the two quadratic equation providing the four roots of the original quartic */
       cq[2] = 1.0;
-      cq[1] = alpha[k];
-      cq[0] = beta[k];
+      cq[1] = alpha[setchosen];
+      cq[0] = beta[setchosen];
       solve_quadratic(cq, &nsq, sq);
       *numsol=0;
       for (k=0; k < nsq; k++)
@@ -3191,8 +3253,8 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 	  (*numsol)++;
 	}
       cq[2] = 1.0;
-      cq[1] = gamma[k];
-      cq[0] = delta[k];
+      cq[1] = gamma[setchosen];
+      cq[0] = delta[setchosen];
       solve_quadratic(cq, &nsq, sq);
       for (k=0; k < nsq; k++)
 	{
@@ -3618,7 +3680,7 @@ int test_for_fallbackdiff(double *P, double *Cip, double *nip, double Di2, doubl
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
 #ifdef MC_QUART_USE_ANALYTIC
-  const double DIST_THR=5E-2;
+  const double DIST_THR=1E-4;
 #else
 #ifdef MC_QUART_HYBRID
   const double DIST_THR=1E-12;
@@ -5797,7 +5859,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 
 #if 1
       //if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-11)
-      if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip, D2, &tmp)) 
+      if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2, &tmp)) 
 	{
 	  printf("# %d numsol=%d %d ===================== <<<< \n", kk1, numsol[0], numsol[1]);
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[solset][kk1]));
