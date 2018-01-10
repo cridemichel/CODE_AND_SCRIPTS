@@ -3189,7 +3189,7 @@ void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma,
   int nsol, k;
   complex double csol[4];
   double coeff[5];
-
+  double phi1, phi2, c1, c2, L1, L2, L3, y1, y2;
   coeff[4] = 1.0;
   coeff[3] = a;
   coeff[2] = b;
@@ -3200,8 +3200,24 @@ void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma,
   solve_fourth_deg_cmplx(coeff, csol);
   qsort(csol, 4, sizeof(complex double), fast_solver_cmp_func);
   alpha[0] = creal(csol[0]+csol[1]);
-  beta[0] = 1 ;
-#if 1
+  beta[0] = creal(csol[0]*csol[1]);
+  alpha[1] = -creal(csol[1]+csol[2]);
+  beta[1] = creal(csol[1]*csol[2]);
+  for (k=0; k < 2; k++)
+    {
+      phi1 = 1.0 + Sqr(alpha[k])+Sqr(beta[k]);
+      phi2 = alpha[k]*(1.0+beta[k]);
+      c1 = a - alpha[k] + alpha[k]*(b-beta[k])+beta[k]*c;
+      c2 = b - beta[k] + alpha[k]*c + beta[k]*d;
+      L1 = sqrt(phi1);
+      L3 = phi2/L1;
+      L2 = sqrt(phi1-phi2*phi2/phi1);
+      y1 = c1/L1;
+      y2 = (c2 - y1*L3)/L2;
+      delta[k] = y2/L2;
+      gamma[k] = (y1 - delta[k]*L3)/L1;
+    }
+#if 0
   for (k=0; k < 4; k++)
     {
       printf("csol=%.15G + (%.15G)*I (norm=%.15G)\n", creal(csol[k]), cimag(csol[k]), cabs(csol[k]));
