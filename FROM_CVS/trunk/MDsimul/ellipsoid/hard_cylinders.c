@@ -25,7 +25,7 @@
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
 //#define MC_QUART_VERBOSE
-//#define MC_QUART_HYBRID
+#define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
@@ -3066,12 +3066,14 @@ int eps_identical(double *eps)
   // if it gets here they are all equal!
   return 1;
 }
+#ifdef FAST_QUARTIC_SOLVER
 void backward_optimizer(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d, int *kchosen)
 {
+  double FASTQSEPS=2.2204460492503131E-16;
   double e1[2], e2[2], e3[2], e4[2];
   double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
   double eps[2][5];
-  const int MAXITS=10;
+  const int MAXITS=3000;
   int k, j, its;
   for (k=0; k < 2; k++)
     {
@@ -3113,16 +3115,19 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
 	  if (eps[k][0] == 0.0)
 	    {
 	      *kchosen=k;
+	      //printf("qui1\n");
 	      return;
 	    }
 	  // cyclic condition
 	  else if (eps_identical(eps[k]))
 	    {
+	      //printf("qui2\n");
 	      *kchosen=k;
 	      return;
 	    }
 	}
     }
+  //printf("max iterations reached eps=%.16G %.16G\n", eps[0][0], eps[1][0]);
   if (fabs(eps[0][0]) < fabs(eps[1][0]))
     *kchosen = 0;
   else
@@ -3150,6 +3155,7 @@ int error_handler2(double a, double b , double c, double d, int *numsol, double 
   solve_quadratic(cq, &nsq, x1);
   if (nsq==0)
     {
+      *numsol=0;
       return 0;
     } 
   x2[0] = -a - 3.0*x1[0];
@@ -3196,10 +3202,10 @@ void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma,
   coeff[1] = c;
   coeff[0] = d;
   //printf("coeff=%f %f %f %f", a, b, c, d);
-  //csolve_quartic_abramovitz_cmplx(coeff, csol);
-  solve_fourth_deg_cmplx(coeff, csol);
+  csolve_quartic_abramovitz_cmplx(coeff, csol);
+  //solve_fourth_deg_cmplx(coeff, csol);
   qsort(csol, 4, sizeof(complex double), fast_solver_cmp_func);
-  alpha[0] = creal(csol[0]+csol[1]);
+  alpha[0] = -creal(csol[0]+csol[1]);
   beta[0] = creal(csol[0]*csol[1]);
   alpha[1] = -creal(csol[1]+csol[2]);
   beta[1] = creal(csol[1]*csol[2]);
@@ -3231,7 +3237,6 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
   double alpha[2], beta[2], gamma[2], delta[2];
   double al, be, a, b, c, d;
   double cq[3], sq[2], eps1, eps2;
-  double FASTQSEPS=2.2204460492503131E-16;
   int k, nsq, setchosen; 
   a = coeff[3]/coeff[4];
   b = coeff[2]/coeff[4];
@@ -3279,6 +3284,7 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 	}
     }
 }
+#endif
 #if 1
 void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 {
@@ -3347,7 +3353,7 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 #endif
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
-  int ok;
+  int ok, k;
   //double EPS=2.2204460492503131E-16;
 
   if (coeff[4]==0)
@@ -3372,7 +3378,73 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
     }
 #endif
 #ifdef FAST_QUARTIC_SOLVER
-  fast_quartic_solver(coeff, numsol, solqua);
+#if 0
+    {
+      double solquaQR[4], solquaFA[4], solquaQR2[4];
+      int numsolQR;
+      solve_numrec(coeff, &numsolQR, solquaQR, &ok, 4);
+      
+#if 0
+      printf("BEGIN\n");
+      for (k=0; k < *numsol; k++)
+	{
+	  printf("QR sol[%d]=%.16G\n", k, solqua[k]);
+	}
+#endif
+#endif
+      fast_quartic_solver(coeff, numsol, solqua);
+#if 0
+      if (*numsol != numsolQR)
+	{
+	  printf("different number of solutions QR=%d FA=%d\n", numsolQR, *numsol);
+	  printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], 
+		 coeff[1], coeff[0]);
+	  printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+
+	  for (k=0; k < numsolQR; k++)
+	    {
+	      printf("QR sol[%d]=%.16G\n", k, solquaQR[k]);
+	    }
+	  for (k=0; k < *numsol; k++)
+    	    {
+	      printf("FA sol[%d]=%.16G\n", k, solquaFA[k]);
+	    }
+	}
+      if (*numsol==2 && numsolQR==2)
+	{
+	  if (solqua[0] < solqua[1])
+	    {
+	      solquaFA[0] = solqua[0];
+	      solquaFA[1] = solqua[1];
+	    }
+	  else
+	    {
+	      solquaFA[0] = solqua[1];
+	      solquaFA[1] = solqua[0];
+	    }
+	  if (solquaQR[0] < solquaQR[1])
+	    {
+	      solquaQR2[0] = solquaQR[0];
+	      solquaQR2[1] = solquaQR[1];
+	    }
+	  else
+	    {
+	      solquaQR2[0] = solquaQR[1];
+	      solquaQR2[1] = solquaQR[0];
+	    }
+	  if (fabs(solquaQR2[1]-solquaFA[1]) > 1E-12||
+	      fabs(solquaQR2[0]-solquaFA[0]) > 1E-12)
+	    {
+	      for (k=0; k < *numsol; k++)
+		{
+		  printf("FA sol[%d]=%.16G\n", k, solquaFA[k]);
+		  printf("QR sol[%d]=%.16G\n", k, solquaQR2[k]);
+		}
+	    }
+	  //printf("END\n");
+	}
+    }
+#endif
 #elif defined(POLY_SOLVE_GSL)
   solve_gslpoly(coeff, numsol, solqua);
 #else
