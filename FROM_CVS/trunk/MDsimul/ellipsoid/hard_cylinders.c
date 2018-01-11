@@ -3520,13 +3520,13 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
       //solve_numrec(coeff, numsol, solqua, &ok, 4);
 #endif
       fast_quartic_solver(coeff, numsol, solqua);
-#if 1
+#if 0
       for (k=0; k < *numsol; k++)
 	{
 	  target= coeff[4]*Sqr(solqua[k])*Sqr(solqua[k])+
 		 coeff[3]*Sqr(solqua[k])*solqua[k] + coeff[2]*Sqr(solqua[k])+
 		 coeff[1]*solqua[k]+coeff[0];
-	  if (fabs(target) > 3E-16)
+	  if (fabs(target) > 5E-16)
 	    {
 	      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
 	      printf("quart(sol)=%.15G\n",target); 
@@ -3912,7 +3912,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=5E-14;
+  const double DIST_THR=1E-14;
 #else
   const double DIST_THR=1E-12;
 #endif
