@@ -3192,7 +3192,10 @@ void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int
     }
   //gsl_poly_complex_workspace_free (w);
 }
-#define FQSBUFLEN 10
+/* NOTA: nell'articolo dice di usare un buffer di 4 quindi in tutto 5 elementi, tuttavia
+ * stando ai risultati mostrati sembra che abbia usato un buffer più grande che in effetti
+ * garantisce una migliore convergenza dei casi ciclici */
+#define FQSBUFLEN 12
 int eps_identical(double *eps)
 {
   int j;
