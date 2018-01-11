@@ -3213,7 +3213,7 @@ int eps_identical(double *eps)
  * accurato dell'algoritm hqr() nel trovare gli zeri della quartica. I test li ho fatto calcolando
  * con quale accuratezza la quartica fa zero con le soluzioni reali trovate e FQS è sotto 5E-16 mentre
  * hqr() sotto 5E-13 */
-#define DEBUG_BACKWARD_OPT 
+//#define DEBUG_BACKWARD_OPT 
 void backward_optimizer(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d, int *kchosen)
 {
 #ifdef DEBUG_BACKWARD_OPT
