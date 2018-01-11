@@ -3184,6 +3184,11 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
 #ifdef DEBUGB_BACWARD_OPT
   totcall++;
 #endif
+  for (k=0; k < 5; k++)
+    {
+      eps[0][k] = eps[1][k] = 0;
+    }
+
   for (k=0; k < 2; k++)
     {
       e1[k] = a - alpha[k] - gamma[k];
