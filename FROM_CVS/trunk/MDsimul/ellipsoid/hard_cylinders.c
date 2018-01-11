@@ -3963,7 +3963,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=5E-13;
+  const double DIST_THR=2E-13;
 #else
   const double DIST_THR=1E-12;
 #endif
