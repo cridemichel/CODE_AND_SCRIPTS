@@ -3289,7 +3289,7 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
   //printf("max iterations reached eps=%.16G %.16G\n", eps[0][0], eps[1][0]);
 #ifdef DEBUG_BACKWARD_OPT
   nmax++;
-  if (totcall % 50000==0 && totcall > 0)
+  if (nmax % 100==0 && totcall > 0)
     {
       printf("nmax=%ld frac=%f\n", nmax, ((double)nmax)/((double)totcall));
       printf("eps=%.16G %.16G\n", eps[0][0], eps[1][0]);
