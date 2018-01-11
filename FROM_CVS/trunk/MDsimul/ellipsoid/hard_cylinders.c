@@ -1424,6 +1424,33 @@ void solve_quadraticl(long double coeff[3], int *numsol, long double *sol)
       *numsol = 0;
     }
 }
+void solve_quadratic_cmplx(double coeff[3], complex double *sol)
+{
+  /* numeric error safe version of solve_quadratic from Numerical Recipe */
+  double delta, a, b, c, q;
+  complex double cq;
+  a = coeff[2];
+  b = coeff[1];
+  c = coeff[0];
+  delta = Sqr(b) - 4.0*a*c;
+  if (delta > 0.0)
+    {
+      q = -0.5*(b+copysign(1.0,b)*sqrt(delta));
+      sol[0] = q/a;
+      sol[1] = c/q;
+    } 
+  else if (delta == 0)
+    {
+      sol[0] = sol[1] = -b/(2.0*a);
+    }
+  else
+    {
+      cq = -0.5*(b+copysign(1.0,b)*csqrt(delta));
+      sol[0] = cq/a;
+      sol[1] = c/cq; 
+    }
+}
+
 #if 0
 void solve_quadratic(double coeff[3], int *numsol, double *sol)
 {
@@ -1645,8 +1672,8 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   /* questa soluzione di fatto è quella di abramovitz */
   double a43, a2a3a4, a44, a4, a3, a2, a1, a0, a32, a12, a42, a3a4;
   double lambda, dd0, dd1, dd2;
-  double cb[4], y1, p, r, m;
-  double complex solc[3];
+  double cb[4], y1, p, q, r, m, cq[3];
+  double complex solc[3], solq[2];
   complex double sm, A, B, C, Dp, Dm;
   const double sqrt2=1.4142135623730950488016887242097; 
   int k, nsc;
@@ -1657,10 +1684,10 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   a0 = coeff[0];
   if (a3==0 && a2==0 && a1==0 && a0 ==0)
     {
-      csol[0] = 0.0;
-      csol[1] = 0.0;
-      csol[2] = 0.0;
-      csol[3] = 0.0;
+      sol[0] = 0.0;
+      sol[1] = 0.0;
+      sol[2] = 0.0;
+      sol[3] = 0.0;
       return;
     }
   a32 = Sqr(a3);
@@ -1671,8 +1698,8 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   a2a3a4 = a2*a3*a4;
   a44 = a42*a42;
   p = (8.0*a2*a4-3.0*a32)/8.0/a42;
-  q = (a32 - 4.0*a2a3a4 + 8.0*a1*a42)/8.0/(a43)
-  r = (-3.0*a32*a32+256.0*a0*a43-64.0*a1*a3*a44+16*a32*a2a3a4)/256.0/(a44);
+  q = (a32*a3 - 4.0*a2a3a4 + 8.0*a1*a42)/8.0/(a43);
+  r = (-3.0*a32*a32+256.0*a0*a43-64.0*a1*a3*a42+16*a3*a2a3a4)/256.0/(a44);
   cb[3] = 8.0;
   cb[2] = 8.0*p;
   cb[1] = 2*Sqr(p)-8.0*r;
@@ -1681,11 +1708,19 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   m = creal(solc[0]);
   if (m==0)
     {
-      /* it is a biquadratic */
-
+      /* hence q=0 and quartic is a biquadratic */
+      cq[2] = 1.0;
+      cq[1] = p;
+      cq[0] = r;
+      solve_quadratic_cmplx(cq, solq);
+      sol[0] = csqrt(solq[0]);
+      sol[1] = -csqrt(solq[0]);
+      sol[2] = csqrt(solq[1]);
+      sol[3] = -csqrt(solq[1]);
+      return;
     }
   sm = csqrt(m);
-  A = 0.5*csqrt2*sm;
+  A = 0.5*sqrt2*sm;
   B = sqrt2*q/sm;
   C = 2.0*(p+m);
   Dp = 0.5*csqrt(-(C + B));
@@ -1695,6 +1730,7 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   sol[2] = a3a4 - A + Dm;
   sol[3] = a3a4 - A - Dm;
 }
+
 void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
 {
   double a3, a2, a1, a0, a32, a12;
@@ -3127,17 +3163,26 @@ int eps_identical(double *eps)
   return 1;
 }
 #ifdef FAST_QUARTIC_SOLVER
+/* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
+ * accurato dell'algoritm hqr() nel trovare gli zeri della quartica. I test li ho fatto calcolando
+ * con quale accuratezza la quartica fa zero con le soluzioni reali trovate e FQS è sotto 5E-16 mentre
+ * hqr() sotto 5E-13 */
+//#define DEBUGB_BACWARD_OPT 
 void backward_optimizer(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d, int *kchosen)
 {
-  //static long int nmax=0, totcall=0;
-  double FASTQSEPS=2.2204460492503131E-16;
+#ifdef DEBUGB_BACWARD_OPT
+  static long int nmax=0, totcall=0;
+#endif
+  //double FASTQSEPS=2.2204460492503131E-16;
   double e1[2], e2[2], e3[2], e4[2];
   double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
   double eps[2][5];
   const int MAXITS=16; 
   //16 è il valore usato nell'articolo Journal of Computational and Applied Mathematics 234 (2010) 3007–3024
   int k, j, its;
-  //totcall++;
+#ifdef DEBUGB_BACWARD_OPT
+  totcall++;
+#endif
   for (k=0; k < 2; k++)
     {
       e1[k] = a - alpha[k] - gamma[k];
@@ -3191,7 +3236,7 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
 	}
     }
   //printf("max iterations reached eps=%.16G %.16G\n", eps[0][0], eps[1][0]);
-#if 0
+#ifdef DEBUGB_BACWARD_OPT
   nmax++;
   if (totcall % 50000==0 && totcall > 0)
     {
@@ -3278,18 +3323,8 @@ void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma,
   coeff[0] = d;
   //printf("coeff=%f %f %f %f", a, b, c, d);
 #if 1
-#if 0
-  printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
-  for(k=0; k < 5; k++)
-    cc[k]=CMPLX(coeff[k],0.0);
-  zroots(cc, csol, 1, 4, 1E-14);
-  printf("========\n");
-  for (k=0; k < 4; k++)
-    {
-      printf("LAGUER csol=%.15G + (%.15G)*I (norm=%.15G)\n", creal(csol[k]), cimag(csol[k]), cabs(csol[k]));
-    }
-#endif
-  csolve_quartic_abramovitz_cmplx(coeff, csol);
+  //csolve_quartic_abramovitz_cmplx(coeff, csol);
+  csolve_quartic_ferrari_cmplx(coeff, csol);
 #else
   solve_fourth_deg_cmplx(coeff, csol);
 #endif
@@ -3444,7 +3479,7 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   int ok, k;
   //double EPS=2.2204460492503131E-16;
-
+  double target;
   if (coeff[4]==0)
     {
       solve_cubic(coeff, numsol, solqua);
@@ -3480,8 +3515,22 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 	  printf("QR sol[%d]=%.16G\n", k, solqua[k]);
 	}
 #endif
+      //solve_numrec(coeff, numsol, solqua, &ok, 4);
 #endif
       fast_quartic_solver(coeff, numsol, solqua);
+#if 0
+      for (k=0; k < *numsol; k++)
+	{
+	  target= coeff[4]*Sqr(solqua[k])*Sqr(solqua[k])+
+		 coeff[3]*Sqr(solqua[k])*solqua[k] + coeff[2]*Sqr(solqua[k])+
+		 coeff[1]*solqua[k]+coeff[0];
+	  if (fabs(target > 2.2204460492503130808E-16))
+	    {
+	      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+	      printf("quart(sol)=%.15G\n",target); 
+	    }
+	}
+#endif
 #if 0
       if (*numsol != numsolQR)
 	{
@@ -3860,7 +3909,11 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
   const double DIST_THR=1E-4;
 #else
 #ifdef MC_QUART_HYBRID
+#ifdef FAST_QUARTIC_SOLVER
+  const double DIST_THR=5E-14;
+#else
   const double DIST_THR=1E-12;
+#endif
 #else
   const double DIST_THR=5E-12;
 #endif
@@ -5831,6 +5884,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
     }
   if (tinyimagGBL)
     {
+      //printf("qui\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
   solset=0;
