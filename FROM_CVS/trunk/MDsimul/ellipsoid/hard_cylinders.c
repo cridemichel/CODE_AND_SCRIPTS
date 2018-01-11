@@ -1597,11 +1597,9 @@ void solve_cubic_analytic(double *coeff, complex double sol[3])
     {
       theta = acos(R/sqrt(Q3));
       sol[0] = -2.0*sqrt(Q)*cos(theta/3.0)- a/3.0;
-#if 0
       // to solve quartic we need only in real root 
       sol[1] = -2.0*sqrt(Q)*cos((theta+2.0*M_PI)/3.0) - a/3.0;
       sol[2] = -2.0*sqrt(Q)*cos((theta-2.0*M_PI)/3.0) - a/3.0;
-#endif
     }
   else
     {
@@ -1611,10 +1609,8 @@ void solve_cubic_analytic(double *coeff, complex double sol[3])
       else
 	B = Q/A;
       sol[0] = (A+B) - a/3.0;
-#if 0
       sol[1] = -0.5*(A+B)-a/3.0+I*sqrt32*(A-B);
-      sol[1] = -0.5*(A+B)-a/3.0-I*sqrt32*(A-B);
-#endif
+      sol[2] = -0.5*(A+B)-a/3.0-I*sqrt32*(A-B);
     }
 }
 
@@ -1676,7 +1672,7 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   double complex solc[3], solq[2];
   complex double sm, A, B, C, Dp, Dm;
   const double sqrt2=1.4142135623730950488016887242097; 
-  int k, nsc;
+  int k, nsc, mzero;
   a4 = coeff[4];
   a3 = coeff[3];
   a2 = coeff[2];
@@ -1705,8 +1701,18 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
   cb[1] = 2*Sqr(p)-8.0*r;
   cb[0] = -Sqr(q);
   solve_cubic_analytic(cb, solc);
-  m = creal(solc[0]);
-  if (m==0)
+  mzero=1;
+  for (k=0; k < 3; k++)
+    {
+      if (cimag(solc[k])==0)
+	{
+	  if (creal(solc[k])!=0)
+	    m = creal(solc[k]);
+	  mzero=0;
+	  break;
+	}
+    }
+  if (mzero)
     {
       /* hence q=0 and quartic is a biquadratic */
       cq[2] = 1.0;
@@ -1737,12 +1743,20 @@ void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
   double lambda, dd0, dd1, dd2;
   double cb[4], y1;
   double complex solc[3], sma, smb, smc, R, D, E, A, B;
- 
   int k, nsc;
   a3 = coeff[3]/coeff[4];
   a2 = coeff[2]/coeff[4];
   a1 = coeff[1]/coeff[4];
   a0 = coeff[0]/coeff[4];
+  if (a3==0 && a2==0 && a1==0 && a0 ==0)
+    {
+      sol[0] = 0.0;
+      sol[1] = 0.0;
+      sol[2] = 0.0;
+      sol[3] = 0.0;
+      return;
+    }
+
   a32 = Sqr(a3);
   a12 = Sqr(a1);
   lambda = 0.25*a3;
@@ -1751,7 +1765,16 @@ void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
   cb[1] = a1*a3-4.0*a0;
   cb[0] = 4.0*a2*a0-a12-a32*a0;
   solve_cubic_analytic(cb, solc);
-  y1 = creal(solc[0]);
+  //y1 = creal(solc[0]);
+  for (k=0; k < 3; k++)
+    {
+      if (cimag(solc[k])==0)
+	{
+	  if (creal(solc[k])!=0)
+	    y1 = creal(solc[k]);
+	  break;
+	}
+    }
 
   R = csqrt(0.25*a32-a2+y1);
   if (R==0)
@@ -1796,11 +1819,20 @@ void solve_fourth_deg_cmplx(double *coeff, complex double sol[4])
   double x1, A, B, C, D, cb[4], m, n;
   double Asq, alpha, beta, rho, mp, np, m2, dd0, dd1, dd2;
   complex double gamma, delta, solc[3];
-  int nsc, kk;
+  int nsc, kk, k;
   A = coeff[3]/coeff[4];
   B = coeff[2]/coeff[4];
   C = coeff[1]/coeff[4];
   D = coeff[0]/coeff[4];
+  if (A==0 && B==0 && C==0 && D ==0)
+    {
+      sol[0] = 0.0;
+      sol[1] = 0.0;
+      sol[2] = 0.0;
+      sol[3] = 0.0;
+      return;
+    }
+
   Asq = Sqr(A);
   cb[3] = 1.0;
   cb[2] = -B;
@@ -1808,7 +1840,16 @@ void solve_fourth_deg_cmplx(double *coeff, complex double sol[4])
   cb[0] = D*(4.0*B - Asq)-Sqr(C);
   solve_cubic_analytic(cb, solc);
   //printf("x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", cb[2], cb[1], cb[0]);
-  x1 = creal(solc[0]);
+  //x1 = creal(solc[0]);
+  for (k=0; k < 3; k++)
+    {
+      if (cimag(solc[k])==0)
+	{
+	  if (creal(solc[k])!=0)
+	    x1 = creal(solc[k]);
+	  break;
+	}
+    }
   m2 = Asq/4.0-B+x1;
   //printf("solc=%.15G numsol=%d m2=%.15G\n", solc[0], nsc, m2);
   if (m2 > 0)
@@ -3168,10 +3209,10 @@ int eps_identical(double *eps)
  * accurato dell'algoritm hqr() nel trovare gli zeri della quartica. I test li ho fatto calcolando
  * con quale accuratezza la quartica fa zero con le soluzioni reali trovate e FQS è sotto 5E-16 mentre
  * hqr() sotto 5E-13 */
-//#define DEBUGB_BACWARD_OPT 
+#define DEBUG_BACKWARD_OPT 
 void backward_optimizer(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d, int *kchosen)
 {
-#ifdef DEBUGB_BACWARD_OPT
+#ifdef DEBUG_BACKWARD_OPT
   static long int nmax=0, totcall=0;
 #endif
   //double FASTQSEPS=2.2204460492503131E-16;
@@ -3181,7 +3222,7 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
   const int MAXITS=16; 
   //16 è il valore usato nell'articolo Journal of Computational and Applied Mathematics 234 (2010) 3007–3024
   int k, j, its;
-#ifdef DEBUGB_BACWARD_OPT
+#ifdef DEBUG_BACKWARD_OPT
   totcall++;
 #endif
   for (k=0; k < 5; k++)
@@ -3242,7 +3283,7 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
 	}
     }
   //printf("max iterations reached eps=%.16G %.16G\n", eps[0][0], eps[1][0]);
-#ifdef DEBUGB_BACWARD_OPT
+#ifdef DEBUG_BACKWARD_OPT
   nmax++;
   if (totcall % 50000==0 && totcall > 0)
     {
