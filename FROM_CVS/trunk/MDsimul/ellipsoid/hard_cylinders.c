@@ -3156,11 +3156,12 @@ int eps_identical(double *eps)
   int j;
   for (j=1; j < 5; j++)
     {
-      if (eps[j]!=eps[j-1])
-	return 0;
+      /* if actual eps is identical to one of the four previous ones then terminate! */
+      if (eps[0]==eps[j])
+	return 1;
     }
   // if it gets here they are all equal!
-  return 1;
+  return 0;
 }
 #ifdef FAST_QUARTIC_SOLVER
 /* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
