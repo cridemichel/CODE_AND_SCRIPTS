@@ -3253,17 +3253,30 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
       *kchosen = 1;
     }
 }
-int error_handler1(double a, double b, double c, double d, double *alpha, double *beta)
+int error_handler1(double a, double b, double c, double d, int *numsol, double solqua[4])
 {
-  double eps1, eps2;
-  *alpha = a*0.5;
-  *beta = (b - Sqr(*alpha))*0.5;
-  eps1 = c - 2.0*(*alpha)*(*beta);
-  eps2 = d - Sqr(*beta);
+  double sq[2], cq[3], alpha, beta, eps1, eps2;
+  int k, nsq;
+  alpha = a*0.5;
+  beta = (b - Sqr(alpha))*0.5;
+  eps1 = c - 2.0*(alpha)*(beta);
+  eps2 = d - Sqr(beta);
   if (eps1==0 && eps2==0)
-    return 1;
-  else 
-    return 0; 
+    {
+      /* now we solve the quadratic equation providing the roots of the original quartic */
+      cq[2] = 1.0;
+      cq[1] = alpha;
+      cq[0] = beta;
+      solve_quadratic(cq, &nsq, sq);
+      *numsol=0;
+      for (k=0; k < nsq; k++)
+	{
+	  solqua[*numsol] = sq[k];
+	  (*numsol)++;
+	}
+      return 1;
+    }
+  return 0; 
 }
 int error_handler2(double a, double b , double c, double d, int *numsol, double solqua[4])
 {
@@ -3369,43 +3382,32 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 
   initial_guess_fast_quart_solver(alpha, beta, gamma, delta, a, b, c, d);
 
-  if (error_handler1(a, b, c, d, &al, &be))
+  if (error_handler1(a, b, c, d, numsol, solqua))
+    return;
+
+  if (error_handler2(a, b, c, d, numsol, solqua))
+    return;
+
+  backward_optimizer(alpha, beta, gamma, delta, a, b, c, d, &setchosen);
+  /* now we solve the two quadratic equation providing the four roots of the original quartic */
+  cq[2] = 1.0;
+  cq[1] = alpha[setchosen];
+  cq[0] = beta[setchosen];
+  solve_quadratic(cq, &nsq, sq);
+  *numsol=0;
+  for (k=0; k < nsq; k++)
     {
-      /* now we solve the two quadratic equation providing the four roots of the original quartic */
-      cq[2] = 1.0;
-      cq[1] = al;
-      cq[0] = be;
-      solve_quadratic(cq, &nsq, sq);
-      *numsol=0;
-      for (k=0; k < nsq; k++)
-	{
-	  solqua[*numsol] = sq[k];
-	  (*numsol)++;
-	}
+      solqua[*numsol] = sq[k];
+      (*numsol)++;
     }
-  else if (!error_handler2(a, b, c, d, numsol, solqua))
+  cq[2] = 1.0;
+  cq[1] = gamma[setchosen];
+  cq[0] = delta[setchosen];
+  solve_quadratic(cq, &nsq, sq);
+  for (k=0; k < nsq; k++)
     {
-      backward_optimizer(alpha, beta, gamma, delta, a, b, c, d, &setchosen);
-      /* now we solve the two quadratic equation providing the four roots of the original quartic */
-      cq[2] = 1.0;
-      cq[1] = alpha[setchosen];
-      cq[0] = beta[setchosen];
-      solve_quadratic(cq, &nsq, sq);
-      *numsol=0;
-      for (k=0; k < nsq; k++)
-	{
-	  solqua[*numsol] = sq[k];
-	  (*numsol)++;
-	}
-      cq[2] = 1.0;
-      cq[1] = gamma[setchosen];
-      cq[0] = delta[setchosen];
-      solve_quadratic(cq, &nsq, sq);
-      for (k=0; k < nsq; k++)
-	{
-	  solqua[*numsol] = sq[k];
-	  (*numsol)++;
-	}
+      solqua[*numsol] = sq[k];
+      (*numsol)++;
     }
 }
 #endif
@@ -3518,13 +3520,13 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
       //solve_numrec(coeff, numsol, solqua, &ok, 4);
 #endif
       fast_quartic_solver(coeff, numsol, solqua);
-#if 0
+#if 1
       for (k=0; k < *numsol; k++)
 	{
 	  target= coeff[4]*Sqr(solqua[k])*Sqr(solqua[k])+
 		 coeff[3]*Sqr(solqua[k])*solqua[k] + coeff[2]*Sqr(solqua[k])+
 		 coeff[1]*solqua[k]+coeff[0];
-	  if (fabs(target > 2.2204460492503130808E-16))
+	  if (fabs(target) > 5E-16)
 	    {
 	      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
 	      printf("quart(sol)=%.15G\n",target); 
