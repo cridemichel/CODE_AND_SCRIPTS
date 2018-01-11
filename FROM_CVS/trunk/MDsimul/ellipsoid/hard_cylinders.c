@@ -3192,10 +3192,11 @@ void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int
     }
   //gsl_poly_complex_workspace_free (w);
 }
+#define FQSBUFLEN 10
 int eps_identical(double *eps)
 {
   int j;
-  for (j=1; j < 5; j++)
+  for (j=1; j < FQSBUFLEN; j++)
     {
       /* if actual eps is identical to one of the four previous ones then terminate! */
       if (eps[0]==eps[j])
@@ -3218,14 +3219,14 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
   //double FASTQSEPS=2.2204460492503131E-16;
   double e1[2], e2[2], e3[2], e4[2];
   double U23[2], U33[2], L43[2], U44[2], x1[2], x2[2], x3[2], x4[2], y1[2], y2[2], y3[2], y4[2];
-  double eps[2][5];
+  double eps[2][FQSBUFLEN];
   const int MAXITS=16; 
   //16 è il valore usato nell'articolo Journal of Computational and Applied Mathematics 234 (2010) 3007–3024
   int k, j, its;
 #ifdef DEBUG_BACKWARD_OPT
   totcall++;
 #endif
-  for (k=0; k < 5; k++)
+  for (k=0; k < FQSBUFLEN; k++)
     {
       eps[0][k] = eps[1][k] = 0;
     }
@@ -3263,7 +3264,7 @@ void backward_optimizer(double *alpha, double *beta, double *gamma, double *delt
 	  e4[k] = d - beta[k]*delta[k];
 	  // 0 is the latest one
 	  /* shift epsilon's */ 
-	  for (j=4; j > 0; j--)
+	  for (j=FQSBUFLEN-1; j > 0; j--)
 	    eps[k][j] = eps[k][j-1];
 	  eps[k][0] = fabs(e1[k])+fabs(e2[k])+fabs(e3[k])+fabs(e3[k]);
 	  // convergence
