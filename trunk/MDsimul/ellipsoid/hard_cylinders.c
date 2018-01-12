@@ -1765,17 +1765,7 @@ void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
   cb[1] = a1*a3-4.0*a0;
   cb[0] = 4.0*a2*a0-a12-a32*a0;
   solve_cubic_analytic(cb, solc);
-  //y1 = creal(solc[0]);
-  for (k=0; k < 3; k++)
-    {
-      if (cimag(solc[k])==0)
-	{
-	  if (creal(solc[k])!=0)
-	    y1 = creal(solc[k]);
-	  break;
-	}
-    }
-
+  y1 = creal(solc[0]);
   R = csqrt(0.25*a32-a2+y1);
   if (R==0)
     {
@@ -1840,16 +1830,7 @@ void solve_fourth_deg_cmplx(double *coeff, complex double sol[4])
   cb[0] = D*(4.0*B - Asq)-Sqr(C);
   solve_cubic_analytic(cb, solc);
   //printf("x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", cb[2], cb[1], cb[0]);
-  //x1 = creal(solc[0]);
-  for (k=0; k < 3; k++)
-    {
-      if (cimag(solc[k])==0)
-	{
-	  if (creal(solc[k])!=0)
-	    x1 = creal(solc[k]);
-	  break;
-	}
-    }
+  x1 = creal(solc[0]);
   m2 = Asq/4.0-B+x1;
   //printf("solc=%.15G numsol=%d m2=%.15G\n", solc[0], nsc, m2);
   if (m2 > 0)
@@ -3387,10 +3368,10 @@ void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma,
   coeff[0] = d;
   //printf("coeff=%f %f %f %f", a, b, c, d);
 #if 1
-  //csolve_quartic_abramovitz_cmplx(coeff, csol);
-  csolve_quartic_ferrari_cmplx(coeff, csol);
+  csolve_quartic_abramovitz_cmplx(coeff, csol);
+  //csolve_quartic_ferrari_cmplx(coeff, csol);
 #else
-  solve_fourth_deg_cmplx(coeff, csol);
+  //solve_fourth_deg_cmplx(coeff, csol);
 #endif
   qsort(csol, 4, sizeof(complex double), fast_solver_cmp_func);
   alpha[0] = -creal(csol[0]+csol[1]);
@@ -3963,9 +3944,9 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=2E-13;
+  const double DIST_THR=5E-13;
 #else
-  const double DIST_THR=1E-12;
+  const double DIST_THR=5E-12;
 #endif
 #else
   const double DIST_THR=5E-12;
