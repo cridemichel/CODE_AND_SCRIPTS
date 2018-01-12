@@ -3675,7 +3675,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     //    write(6,*)' '      
     //------------------------------------------ compute LDL^T parameters:      
 
-  printf("phi0=%.15G\n", phi0);
+  //printf("phi0=%.15G\n", phi0);
   l1=a/2;                                         // equation (4.2)
   l3=b/6+phi0/2;                                  // equation (4.3)
   del2=c-a*l3;                                    // equation (4.10) 
