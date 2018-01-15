@@ -4491,7 +4491,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=5E-13;
+  const double DIST_THR=5E-14;
 #else
   const double DIST_THR=5E-12;
 #endif
@@ -6013,6 +6013,62 @@ void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long do
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
 }
+void rotate_axes_on_plane(double *Ci, double *ni, double *Dj, double *nj, double R[3][3])
+{
+  double Rin[3][3];
+  int k1, k2, k3;
+  double ox, oy, oz, theta, thetaSq, sinw, cosw;
+  double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+
+  ox = R[0][0];
+  oy = R[0][1];
+  oz = R[0][2];
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	Rin[k1][k2]=R[k1][k2];
+      }
+  theta = (ranf()>0.5?1.:-1.)*M_PI/4.0;
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = Rin[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     R[k1][k2] = Ro[k1][k2];
+}
 void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D, double *Tj, int MAXITS)
 {
   int k, kk1, kk2, kk, its;
@@ -6471,9 +6527,29 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   solset=0;
   if (fallback)
     {
+#if defined(MC_QUART_VERBOSE) && 0
+      printf("numsol=%d,", numsol[0]);
+      for (kk1=0; kk1 < numsol[0]; kk1++)
+	{
+	  printf("sol=%.16G ", solqua[kk1]);
+	}
+      printf("\n");
+      for (kk1=0; kk1 < numsol[0]; kk1++)
+	{
+	  temp = c4 + c2*solqua[kk1];
+	  printf("temp[%d]=%.16G\n", kk1, temp);
+	}
+      printf("c2=%.16G c4=%.16G c5=%.16G\n", c2, c4, c5);
+      store_bump(iGbl,jGbl);
+#endif
+ 
+#if 0
       for (kk1=0; kk1 < 3; kk1++)
 	uy[kk1] = D2*Rl[1][kk1];
       versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 2); 
+#else
+      rotate_axes_on_plane(Ci, ni, Dj, nj, Rl);
+#endif
       for (kk1=0; kk1 < 3; kk1++)
 	{
 	  nip[1][kk1] = 0;
@@ -6612,6 +6688,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
     	  temp = c4 + c2*solqua[kk1];
+	  //printf("tempnew=%.16G\n", temp);
 	  if (temp==0)
 	    {
 	      printf("[WARNING] temp is 0 in fallback hybrid numsol=%d %d\n", numsol[0], numsol[1]);
@@ -7086,6 +7163,17 @@ double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double 
 #if 1
   if (fallback)
     {
+#if defined(MC_QUART_VERBOSE) && 0
+      printf("numsol=%d,", numsol[0]);
+      for (kk1=0; kk1 < numsol[0]; kk1++)
+	{
+	  printf("sol=%.16G ", solqua[kk1]);
+	}
+      printf("\n");
+      printf("temp=%.16G\n", temp);
+      store_bump(iGbl,jGbl);
+#endif
+
 #ifndef MC_EXCHG_QUART_SOL
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
       coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
@@ -7126,6 +7214,7 @@ double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double 
 #else
 #ifndef MC_EXCHG_QUART_SOL
 	  temp = c5 + c2*solqua[kk1];
+	  //printf("tempnew=%.16G\n", temp);
 	  solec[kk1][0] = solqua[kk1];
       	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #else
@@ -7621,6 +7710,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	      double alg1, alg2; 
 	      alg1 = rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini);
 	      alg2 = rimdiskonel(D, L, Ci, ni, Dj[j2], nj, DjCini);
+	      //alg1=alg2;
 	      //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
 		  //printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
 	      if (alg1!=alg2)
