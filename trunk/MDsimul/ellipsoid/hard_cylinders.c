@@ -4491,7 +4491,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=5E-14;
+  const double DIST_THR=1E-14;// old value 5.0E-13
 #else
   const double DIST_THR=5E-12;
 #endif
@@ -6013,22 +6013,26 @@ void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long do
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
 }
-void rotate_axes_on_plane(double *Ci, double *ni, double *Dj, double *nj, double R[3][3])
+extern double ranf(void);
+void rotate_axes_on_plane(double RR[3][3])
 {
   double Rin[3][3];
   int k1, k2, k3;
   double ox, oy, oz, theta, thetaSq, sinw, cosw;
   double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
 
-  ox = R[0][0];
-  oy = R[0][1];
-  oz = R[0][2];
+  ox = RR[0][0];
+  oy = RR[0][1];
+  oz = RR[0][2];
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       {
-	Rin[k1][k2]=R[k1][k2];
+	Rin[k1][k2]=RR[k1][k2];
       }
-  theta = (ranf()>0.5?1.:-1.)*M_PI/4.0;
+  //NOTA 15/01/2018
+  //se uso ranf altero la sequenza casuale e perdo il confronto la simulazione da 50x10^6 già fatta con il metodo di Alberto 
+  //theta = (ranf()>0.5?1.:-1.)*M_PI/4.0;
+  theta = M_PI/4.0;
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
@@ -6067,7 +6071,7 @@ void rotate_axes_on_plane(double *Ci, double *ni, double *Dj, double *nj, double
       }
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
-     R[k1][k2] = Ro[k1][k2];
+     RR[k1][k2] = Ro[k1][k2];
 }
 void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D, double *Tj, int MAXITS)
 {
@@ -6548,7 +6552,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	uy[kk1] = D2*Rl[1][kk1];
       versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 2); 
 #else
-      rotate_axes_on_plane(Ci, ni, Dj, nj, Rl);
+      rotate_axes_on_plane(Rl);
 #endif
       for (kk1=0; kk1 < 3; kk1++)
 	{
