@@ -10361,6 +10361,10 @@ void store_bump(int i, int j)
 	  uyz[j], uzx[j], uzy[j], uzz[j], Oparams.a[na], Oparams.b[na], Oparams.c[na], "blue");
 #endif
   //writeAllCor(bf);
+#if 1
+  fclose(bf);
+  return;
+#endif
 #ifdef MD_PATCHY_HE
   rA[0] = rx[i]-RCMx;
   rA[1] = ry[i]-RCMy;
