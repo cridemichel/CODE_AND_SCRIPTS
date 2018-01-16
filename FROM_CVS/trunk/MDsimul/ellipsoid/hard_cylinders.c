@@ -3362,7 +3362,7 @@ void  ac_fit(double a, double b, double c, double d, double *AQ, double *BQ, dou
 
       x1=cmat[0][0];
       x2=cmat[1][0];
-      r=sqrt(x1*x2+x2*x2);
+      r=sqrt(x1*x1+x2*x2);
       if(r==0.0)
 	{
 	  cr=1.0;
