@@ -4741,6 +4741,7 @@ int eps_identical(double *eps)
   // if it gets here they are all equal!
   return 0;
 }
+/* ============================= FAST QUARTIC SOLVER STROBACH ===================================== */
 #ifdef FAST_QUARTIC_SOLVER
 void two_lin_eqs(double fmat[2][2],double evec[2], double dalf[2])
 { 
@@ -5225,7 +5226,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     //    write(6,*)' '
     //    write(6,*)' phi0 = ',phi0
     //    write(6,*)' '      
-    //------------------------------------------ compute LDL^T parameters:      
+    //------------------------------------------ compute LDLT parameters:      
 
   //printf("phi0=%.15G\n", phi0);
   l1=a/2;                                         // equation (4.2)
@@ -5331,7 +5332,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   //--------------------------------------------------------------------      
 
 }
-      
+/* ============================================================================================ */  
 
 /* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
  * accurato dell'algoritm hqr() nel trovare gli zeri della quartica. I test li ho fatto calcolando
