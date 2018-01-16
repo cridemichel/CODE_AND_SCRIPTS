@@ -5212,7 +5212,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 {
   double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3;
   double gamma,del2,hphi0,phibal[3][3],phimat[3][3];
-
+  int nreal;
   double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
 
   //----------------------------- calculate the antidiagonal shift phi0:
@@ -5221,6 +5221,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
+  /* special cases to handle */
+  if ((a==0 && b==0 && c==0 && d==0) || (a==0 && b==0 && c==0)||
+      (a==0 && b==0 && d==0) || (b==0 && c==0 && d==0))
+    {
+      /* temporary fix */
+      quarticRoots(coeff, &nreal, roots);
+      return;
+    }
+
   cubic_B_shift(a,b,c,d,&phi0);     
 
     //    write(6,*)' '
@@ -5261,8 +5270,13 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     d2=del2/(2*l2);                                // equation (4.15)
 
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
-    d2=b-2*l3;                                     // equation (4.17)
+    {
+      /* temporary fix */
+      quarticRoots(coeff, &nreal, roots);
+      return;
 
+      d2=b-2*l3;                                     // equation (4.17)
+    }
 
   //-------- decide whether a real domain decomposition (equation (1.3))
   //- or a complex domain decomposition (equation (1.4)) should be used:
@@ -5660,11 +5674,28 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   double complex csol[4];
-  int k;
+  int k;//, printsol;
   LDLT_quartic(coeff, csol);
   *numsol=0;
+
+#if 0
+  printsol=0;
+  for (k=0; k < 4; k++)
+    if (fabs(cimag(csol[k])) > 5E5)
+      {
+	printsol=1;
+      }
+  if (printsol)
+    printf("STAMPO SOL:\n");
+#endif
   for (k=0; k < 4; k++)
     {
+#if 0
+      if (printsol)
+	{
+	  printf("sol=%.15G+(%.15G)*I\n", creal(csol[k]), cimag(csol[k]));
+	}
+#endif
       if (cimag(csol[k])==0)
 	{
 	  solqua[*numsol] = creal(csol[k]);
@@ -8333,8 +8364,8 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	  //printf("solqua=%.15G %.15G\n", solquad[0], solquad[1]); 
 	  printf("solqua[%d]=%.15G\n", kk1, solqua[kk1]);
 	  printf("ni.nj=%.15G\n", scalProd(ni,nj));
-	  printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
-	  printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+	  printf("(%.18G)*x^4+(%.18G)*x^3+(%.18G)*x^2+(%.18G)*x+(%.18G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
+	  printf("{%.18G,%.18G,%.18G,%.18G,%.18G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
 	  printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
 		 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
 		 coeff[1]*solqua[kk1]+coeff[0]);
