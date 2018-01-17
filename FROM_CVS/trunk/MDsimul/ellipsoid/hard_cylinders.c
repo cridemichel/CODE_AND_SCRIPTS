@@ -5271,11 +5271,37 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
     {
-      /* temporary fix */
+/* temporary fix */
+     /* if I choose a set of root such as 1,-1,0.0001,-0.0001 d2=0
+      * and algorithm fails, hence I decided to make flocke algo handle  
+      * biquadratics */
+#if 1
+#if 0
+      /* solve directly */
+      cbq[2]=1.0;
+      cbq[1]=b;	
+      cbq[0]=d;
+      solve_quadratic_cmplx(cbq,sbq);
+      roots[0] = csqrt(sbq[0]);
+      roots[1] = -csqrt(sbq[0]);
+      roots[2] = csqrt(sbq[1]);
+      roots[3] = -csqrt(sbq[1]);
+      return;
+#else
+      /* use Flocke */
       quarticRoots(coeff, &nreal, roots);
       return;
-
+#endif
+#else
+      /* LDT does not work if d2=0 too */
       d2=b-2*l3;                                     // equation (4.17)
+      if (d2==0)
+	{
+	  /*solve biquadratic through FLOCKE algorithm */
+	  quarticRoots(coeff, &nreal, roots);
+	  return;
+	}
+#endif
     }
 
   //-------- decide whether a real domain decomposition (equation (1.3))
