@@ -1294,14 +1294,14 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	    if (y >= 0.0) {
 
 	      x = sqrt (x) * k;
-		y = sqrt (y) * k;
+      	      y = sqrt (y) * k;
 
-		*nReal = 4;
+      	      *nReal = 4;
 
-		root [0] = x+I*0.0;
-		root [1] = y+I*0.0;
-		root [2] = - y+I*0.0;
-		root [3] = - x+I*0.0;
+      	      root [0] = x+I*0.0;
+	      root [1] = y+I*0.0;
+	      root [2] = - y+I*0.0;
+	      root [3] = - x+I*0.0;
 
 	    } else if (x >= 0.0 && y < 0.0) {
 
@@ -1745,7 +1745,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  s = c + y;                                         // magnitude^2 of (a + iy) root
 	  t = d + z;                                         // magnitude^2 of (b + iz) root
 
-	  if (s > t) {                                   // minimize imaginary error
+	  if (s > t || (q0/t-c) < 0.0) {                                   // minimize imaginary error
 	    c = sqrt (y);                                  // 1st imaginary component -> c
 	    d = sqrt (q0 / s - d);                         // 2nd imaginary component -> d
 	  } else {
@@ -3135,7 +3135,7 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
 void solve_cubic_analytic(double *coeff, complex double sol[3])
 {
   double a, b, c, Q, R, theta, Q3, R2, A, B;
-  const double sqrt32=cbrt(3)/2.0;
+  const double sqrt32=sqrt(3)/2.0;
   //printf("qu?????????????????????????????\n");
   a = coeff[2]/coeff[3];
   b = coeff[1]/coeff[3];
@@ -5212,9 +5212,16 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 {
   double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3;
   double gamma,del2,hphi0,phibal[3][3],phimat[3][3];
+#if 1
+  double cbq[3];
+  complex double sbq[2];
+#endif
+  double cubc[4];
   int nreal;
   double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
-
+  double sd, ssd;
+  complex long double rri, rmri;
+ 
   //----------------------------- calculate the antidiagonal shift phi0:
 
   a=coeff[3]/coeff[4];
@@ -5222,6 +5229,55 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
   /* special cases to handle */
+#if 1
+  if (a==0 && b==0 && c==0 && d==0)
+    {
+      roots[0]=roots[1]=roots[2]=roots[3]=0;
+      return;
+    }
+  else if (a==0 && b==0 && c==0)
+    {
+      if (d < 0.0)
+	{
+	  ssd = pow(-d,0.25);
+	  roots[0]=ssd+I*0.0;
+	  roots[1]=-ssd+I*0.0;
+	  roots[2]=0.0+I*ssd;
+	  roots[3]=0.0-I*ssd;
+	}
+      else
+	{
+	  //printf("qui\n");
+	  ssd = pow(d,0.25);
+	  rri = cosl(M_PI/4.0)+sinl(M_PI/4.0)*I;
+	  rmri=I*(cosl(M_PI/4.0)+sinl(M_PI/4.0)*I);
+	  roots[0]=rri*ssd;
+	  roots[1]=-rri*ssd;
+	  roots[2]=rmri*ssd;
+	  roots[3]=-rmri*ssd;
+	}
+      return;
+    }
+  else if (a==0 && b==0 && d==0) 
+    {
+      cubc[3]=1.0;
+      cubc[2]=0.0;
+      cubc[1]=0.0;
+      cubc[0]=c;
+      //csolve_cubic(cubc, roots);
+      solve_cubic_analytic(cubc, roots);
+      //cubicRoots(0, 0, c, &nreal, roots);
+      roots[3]=0.0+I*0.0;
+      return;
+    }
+  else if (b==0 && c==0 && d==0)
+    {
+      roots[0]=roots[1]=roots[2]=0.0+I*0.0;
+      roots[3]=-a+I*0.0;
+      return;
+    }
+
+#else
   if ((a==0 && b==0 && c==0 && d==0) || (a==0 && b==0 && c==0)||
       (a==0 && b==0 && d==0) || (b==0 && c==0 && d==0))
     {
@@ -5229,7 +5285,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       quarticRoots(coeff, &nreal, roots);
       return;
     }
-
+#endif
   cubic_B_shift(a,b,c,d,&phi0);     
 
     //    write(6,*)' '
@@ -5276,7 +5332,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       * and algorithm fails, hence I decided to make flocke algo handle  
       * biquadratics */
 #if 1
-#if 0
+#if 1
       /* solve directly */
       cbq[2]=1.0;
       cbq[1]=b;	
@@ -5295,12 +5351,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 #else
       /* LDT does not work if d2=0 too */
       d2=b-2*l3;                                     // equation (4.17)
-      if (d2==0)
-	{
-	  /*solve biquadratic through FLOCKE algorithm */
-	  quarticRoots(coeff, &nreal, roots);
-	  return;
-	}
 #endif
     }
 
