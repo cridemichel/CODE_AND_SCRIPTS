@@ -5265,7 +5265,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       cubc[2]=0.0;
       cubc[1]=0.0;
       cubc[0]=c;
-      printf("QUIIIIIIIIIII\n");
+      //printf("QUIIIIIIIIIII\n");
       //csolve_cubic(cubc, roots);
       solve_cubic_analytic(cubc, roots);
       //cubicRoots(0, 0, c, &nreal, roots);
