@@ -5207,29 +5207,30 @@ void  cubic_B_shift(double a, double b, double c, double d, double *phi0)
 // -------------------------------------------------------------------- 
       
 } 
-
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
+  double l2mC, l2m[8], d2m[8], res[8], resmin, d2eq46, dml3l3, bl311;
+  int s1, s2, k1, kmin, nsol, printall;
   double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3;
-  double gamma,del2,hphi0,phibal[3][3],phimat[3][3];
+  double d2alt, gamma,del2,hphi0,phibal[3][3],phimat[3][3];
+  const double macheps =2.2204460492503131E-16;
 #if 1
   double cbq[3];
   complex double sbq[2];
 #endif
   double cubc[4];
-  int nreal;
   double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
+  int nreal;
   double sd, ssd;
   complex long double rri, rmri;
- 
   //----------------------------- calculate the antidiagonal shift phi0:
 
   a=coeff[3]/coeff[4];
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
-  /* special cases to handle */
 #if 1
+  /* special cases to handle */
   if (a==0 && b==0 && c==0 && d==0)
     {
       roots[0]=roots[1]=roots[2]=roots[3]=0;
@@ -5264,6 +5265,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       cubc[2]=0.0;
       cubc[1]=0.0;
       cubc[0]=c;
+      printf("QUIIIIIIIIIII\n");
       //csolve_cubic(cubc, roots);
       solve_cubic_analytic(cubc, roots);
       //cubicRoots(0, 0, c, &nreal, roots);
@@ -5276,10 +5278,11 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       roots[3]=-a+I*0.0;
       return;
     }
-
 #else
-  if ((a==0 && b==0 && c==0 && d==0) || (a==0 && b==0 && c==0)||
-      (a==0 && b==0 && d==0) || (b==0 && c==0 && d==0))
+  if ((a==0 && b==0 && c==0 && d==0)||
+      (a==0 && b==0 && c==0)||
+      (a==0 && b==0 && d==0)|| 
+      (b==0 && c==0 && d==0))
     {
       /* temporary fix */
       quarticRoots(coeff, &nreal, roots);
@@ -5297,6 +5300,208 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   l1=a/2;                                         // equation (4.2)
   l3=b/6+phi0/2;                                  // equation (4.3)
   del2=c-a*l3;                                    // equation (4.10) 
+
+#if 1
+/* MINIMIZE CANCELLATION ERRORS HERE
+ * We have 3 equations and two unknowns in Eq. (4.6), (4.7) and (4.8), 
+ * hence we use two (or one) and use the remaining one (or two) for error estimate. 
+ * We have 18 possible choices but only 8 will be used, see below.
+ * All possible cases:
+ 
+ * (4.6) -> l2  (4.6) -> d2  * non si puo' usare poiché non compare l2 nella (4.6)  
+ * (4.6) -> l2  (4.7) -> d2  * non si puo' usare poiché non compare l2 nella (4.6) 
+ * (4.6) -> l2  (4.8) -> d2  * non si puo' usare poiché non compare l2 nella (4.6) 
+ 
+ * (4.7) -> l2  (4.6) -> d2  C3 
+ * (4.7) -> l2  (4.7) -> d2  C5 
+ * (4.7) -> l2  (4.8) -> d2  C4
+ 
+ * (4.8) -> l2  (4.6) -> d2  C2
+ * (4.8) -> l2  (4.7) -> d2  C1
+ * (4.8) -> l2  (4.8) -> d2  C0
+ *
+ * (4.6) -> d2  (4.6) -> l2  * non si puo' usare poiché non compare l2 nella (4.6) 
+ * (4.6) -> d2  (4.7) -> l2  * è uguale a: (4.7) -> l2  (4.6) -> d2
+ * (4.6) -> d2  (4.8) -> l2  * è uguale a: (4.8) -> l2  (4.6) -> d2
+ 
+ * (4.7) -> d2  (4.6) -> l2  * non si puo' usare poiché non compare l2 nella (4.6)
+ * (4.7) -> d2  (4.7) -> l2  * richiederebbe il calcolo di una sqrt() quindi la scarto
+ * (4.7) -> d2  (4.8) -> l2  * è uguale a  (4.8) -> l2  (4.7) -> d2 se voglio evitare di calcolre una sqrt()
+ 
+ * (4.8) -> d2  (4.6) -> l2  * non si puo' usare poiché non compare l2 nella (4.6)
+ * (4.8) -> d2  (4.7) -> l2  C6
+ * (4.8) -> d2  (4.8) -> l2  C7
+ * 
+ * che sono quindi 8 da utilizzare (C0-C7)
+ * */
+
+  nsol=0;
+  d2eq46 =2*b/3-phi0-l1*l1;
+  dml3l3=d-l3*l3;
+  bl311=b-2*l3-l1*l1;
+  while(1)
+    {
+      /* Strobach nel suo articolo usa i seguenti casi:
+       *  C5 se d > 0 
+       *  C1 se d < 0
+       *  a meno di eccezioni dovute all'annullamento dei denominatori */
+
+      if (del2!=0) 
+	{
+	  l2mC = 2.0*dml3l3/del2;
+	  if (l2mC!=0.0)    
+	    {
+	      //  <<<<<< C0
+	      // (4.8) -> l2  (4.8) -> d2 
+    	      l2m[nsol] = l2mC;                                  // Eq. (4.8)
+	      d2m[nsol] = dml3l3/(l2mC*l2mC);                    // Eq. (4.8)
+	      res[nsol] = MAX(fabs(del2-2.0*l2m[nsol]*d2m[nsol]),fabs(d2m[nsol]-bl311));    // Eq. (4.7) and (4.6) 
+    	      if (res[nsol]==0.0)
+		{
+		  nsol++;
+	  	  break;
+		}
+	      nsol++;
+	      //  <<<<<< C1
+	      /* (4.8) -> l2  (4.7) -> d2 */
+	      l2m[nsol] = l2mC;                               // Eq. (4.8)
+	      d2m[nsol] = del2/(2*l2m[nsol]);                 // Eq. (4.7)
+	      //printf("2)c=%.15G l1*l3=%.16G l2=%.16G d2=%.16G\n", c, l1*l3, l2m[nsol], d2m[nsol]);
+	      res[nsol] = fabs(bl311-d2m[nsol]);      // Eq. (4.6)
+	      if (res[nsol]==0.0)
+		{
+		  nsol++;
+  		  break;
+		}
+	      nsol++;
+
+	    }
+	  // <<<<<<<<< C2
+	  /* (4.8) -> l2  (4.6) -> d2 */
+      	  l2m[nsol] = l2mC;                                  // Eq. (4.8)
+	  d2m[nsol] = d2eq46;                                // Eq. (4.6)
+	  //printf("3)c=%.15G l1*l3=%.16G l2=%.16G d2=%.16G\n", c, l1*l3, l2m[nsol], d2m[nsol]);
+	  res[nsol] = fabs(del2-2.0*l2m[nsol]*d2m[nsol]);     // Eq. (4.7)
+	  if (res[nsol]==0.0)
+	    {
+	      nsol++;
+	      break; 
+	    }
+	  nsol++;
+	}
+      if (d2eq46!=0.0)                                 
+	{
+	  // <<<<<<< C3
+	  /* using eq. (4.6) and (4.7)*/
+	  d2m[nsol]=d2eq46;                                     // d2 from Eq. (4.6)
+	  l2m[nsol]=del2/(d2m[nsol]*2.0);                      // Eq. (4.7)
+	  //printf("1)c=%.15G l1*l3=%.16G l2=%.16G d2=%.16G\n", c, l1*l3, l2m[nsol], d2m[nsol]);
+	  res[nsol]=fabs(dml3l3-d2m[nsol]*l2m[nsol]*l2m[nsol]);// Eq. (4.8)
+	  if (res[nsol]==0.0)
+	    {
+	      nsol++;
+	      break;
+	    }
+	  nsol++;
+	  if (l2m[nsol-1]!=0)  
+	    { 
+	      // <<<<<<< C4 (4.7) -> l2  (4.8) -> d2
+
+	      /* using eq. (4.7) and (4.8)*/
+	      l2m[nsol] = l2m[nsol-1];                  // Eq. (4.7)
+	      d2m[nsol] = dml3l3/(l2m[nsol]*l2m[nsol]); // Eq. (4.8)
+	      res[nsol] = fabs(bl311-d2m[nsol]);        // Eq. (4.6)
+	      if (res[nsol]==0.0)
+		{ 
+		  nsol++;
+		  break;
+		}
+	      nsol++;
+	      // <<<<<<<< C5  (4.7) -> l2  (4.7) -> d2
+
+	      l2m[nsol] = l2m[nsol-1];                  // Eq. (4.7)
+	      d2m[nsol] = del2/(l2m[nsol]*2.0);         // Eq.(4.7)
+	      res[nsol] = MAX(fabs(d2m[nsol]-bl311),fabs(dml3l3-d2m[nsol]*l2m[nsol]*l2m[nsol]));
+	      if (res[nsol]==0.0)
+		{
+		  nsol++;
+	  	  break;
+		}
+	      nsol++;
+	    }
+	}
+      if (dml3l3!=0.0)
+	{
+	  //printf("qui dml3l3=%.16G del2=%.15G\n", dml3l3, del2);
+	  d2m[nsol] = del2*del2/(4.0*dml3l3);                  // Eq. (4.8)
+	  if (d2m[nsol]!=0)
+	    {
+	      // <<<<<<<< C6
+	      // (4.8) -> d2  (4.7) -> l2  
+	      l2m[nsol] = del2/(d2m[nsol]*2.0);             // Eq. (4.7)
+	      res[nsol] = fabs(d2m[nsol]-bl311);                   // Eq. (4.6)
+	      if (res[nsol]==0.0)
+		{
+		  nsol++;
+	  	  break; 
+		}
+	      nsol++;
+
+	      // <<<<<<<< C7
+	      // (4.8) -> d2  (4.8) -> l2
+	      if (del2!=0)
+		{	    
+		  d2m[nsol] = d2m[nsol-1];                      // Eq. (4.8)
+		  l2m[nsol] = 2.0*dml3l3/del2;                 // Eq. (4.8)
+		  res[nsol] = MAX(fabs(d2m[nsol]-bl311),fabs(2.0*d2m[nsol]*l2m[nsol]-del2));
+		  nsol++;
+		}
+	    }
+	}
+      break;
+    }
+  if (nsol==0)
+    {
+      d2=l2=0.0;
+    }
+  else
+    {
+      /* ...and now pick the one with the best residue if any*/ 
+      //printf("residues:\n");
+      for (k1=0; k1 < nsol; k1++)
+	{
+	  //printf("k=%d res=%.16G\n",k1,  res[k1]);
+	  if (k1==0 || res[k1] < resmin)
+	    {
+	      kmin = k1;
+	      resmin=res[k1];
+	    }
+	}    
+
+#if 0
+      //printf("nsol=%d kmin=%d res=%.16G\n", nsol, kmin, resmin);
+      printall=0;
+      for (k1=0; k1 < nsol; k1++)
+	{
+	  if (res[k1] > 1E-12)
+	    printall=1;
+	}
+
+      if (printall && d < 0)
+	{
+	  printf("Printing all... d=%.16G bml311=%.16G del2=%.16G\n", d, bl311, del2);
+	  for (k1=0; k1 < nsol; k1++)
+	    {
+	      printf("res[%d]=%.16G l2=%.16G d2=%.16G\n", k1, res[k1], l2m[k1], d2m[k1]);
+	    }
+	}
+      if (fabs(resmin) > 5E-15)
+	printf("[ WARNING ] resmin too big? chosen %d resmin=%.16G\n", kmin, resmin);
+#endif
+      d2=d2m[kmin];
+      l2=l2m[kmin];
+    }
+#else
   if(d<=0.0)
     {
       if(del2==0.0)
@@ -5319,15 +5524,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  l2=del2/(2*(b-l1*l1-2*l3));              // equation (4.11)
 	}
     }
-
   if(l2==0.0)
     d2=2*b/3-phi0-l1*l1;
   else
     d2=del2/(2*l2);                                // equation (4.15)
-
+#endif
+  //printf("d2e46=%.16G del2=%.15G d2=%.15G l2=%.15G\n", d2eq46, del2, d2, l2);
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
     {
-/* temporary fix */
+      /* temporary fix */
      /* if I choose a set of root such as 1,-1,0.0001,-0.0001 d2=0
       * and algorithm fails, hence I decided to make flocke algo handle  
       * biquadratics */
@@ -5345,12 +5550,25 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       return;
 #else
       /* use Flocke */
+      //printf("1)d2=%.18G\n", d2);
+      d2=b-2*l3;                                     // equation (4.17)
+
+      printf("2)d2=%.18G\n", d2);
+      //printf("l1=%.18G l2=%.18G l3=%.18G d2=%.18G\n", l1, l2, l3, d2);
       quarticRoots(coeff, &nreal, roots);
       return;
 #endif
 #else
       /* LDT does not work if d2=0 too */
       d2=b-2*l3;                                     // equation (4.17)
+#if 0
+      if (d2==0)
+	{
+	  /*solve biquadratic through FLOCKE algorithm */
+	  quarticRoots(coeff, &nreal, roots);
+	  return;
+	}
+#endif
 #endif
     }
 
@@ -5362,6 +5580,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     {
       // assume a real quadratic decomposition (1.3)
       gamma=sqrt(-d2);                               // equation (2.8) 
+      //printf("gamma=%.16G\n", gamma);
 
       aq=l1+gamma;                                    // equation (5.3)
       bq=l3+gamma*l2;                                 //equation (5.5)
@@ -5374,12 +5593,12 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       else if(fabs(dq) > fabs(bq))
 	bq=d/dq;                                       // equation (5.10)
 
-
       //------------------------ aq and cq coefficients backward correction:
 
       ac_fit(a,b,c,d,&aq,&bq,&cq,&dq);
       //------------------------------------ roots of the quadratic factors:   
 
+      //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
       quadratic(a,b,c,d,aq,bq,qroots);
       roots[0]=qroots[0];
       roots[1]=qroots[1];        
@@ -5422,6 +5641,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   //--------------------------------------------------------------------      
 
 }
+ 
 /* ============================================================================================ */  
 
 /* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
