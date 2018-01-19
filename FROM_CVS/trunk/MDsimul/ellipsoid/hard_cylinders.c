@@ -1522,6 +1522,9 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 
 	    if (y < 0.0) {                           // does Newton start oscillating ?
 	      oscillate = oscillate + 1;                  // increment oscillation counter
+	    }
+
+	    if (y < 0.0) {
 	      s = x;                                      // save lower bisection bound
 	    } else {
 	      u = x;                                      // save upper bisection bound
@@ -1703,20 +1706,16 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	      y = a * d * d - b * c * d + b * b;              // y = H(x), usually < 0
 	      z = 2 * d * (4 * a - b * d - c * c);            // z = H'(x)
 	     
-	      if (y < t)                                      // does Newton start oscillating ?
-	    	oscillate = oscillate + 1;                    // increment oscillation counter
-                 
-
-	      if (y > 0.0) {                           // does Newton start oscillating ?
+	      if (y < t)                            // does Newton start oscillating ?
 		oscillate = oscillate + 1;                  // increment oscillation counter
+	      
+              if (y > 0.0) {
 		s = x;                                      // save upper bisection bound
+	      
 	      } else {
 		u = x;                                      // save lower bisection bound
 	      }
 
-	      y = y / z;                                      // Newton correction
-	      x = x - y;                                      // new Newton root
-	     
 	      if (z == 0.0)                           // safeguard against accidental
 		{
 		  bisection = 1;                         // H'(x) = 0 due to roundoff
@@ -1833,6 +1832,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   return;
 }
 //end subroutine quarticRoots
+
 #endif
 
 
