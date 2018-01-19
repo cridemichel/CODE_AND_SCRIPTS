@@ -1089,8 +1089,9 @@ void quadraticRoots (double q1, double q0, int *nReal, complex double root[2])
 //
 //***
 // VERSIONE AGGIORNATA AL 2018 più veloce e robusta
-void quarticRoots (double cc[5], int *nReal, complex double root[4])
 
+//end subroutine quarticRoots
+void quarticRoots (double cc[5], int *nReal, complex double root[4])
 {
   int bisection;
   int converged;
@@ -1483,7 +1484,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	    x = 2.0;
 	  }
 	}
-
+	s = u;
 	*nReal = 1;
 
       } else {
@@ -1509,7 +1510,6 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	oscillate = 0;
 	bisection = 0;
 	converged = 0;
-
 	while (!converged && !bisection)    // Newton-Raphson iterates
 	  {
 	    y = x + a3;                                     //
@@ -1520,7 +1520,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	    z = z * x + y;                                  //
 	    y = y * x + a0;                                 //
 
-	    if (y < 0.0) {                           // does Newton start oscillating ?
+	    if (y > t) {                           // does Newton start oscillating ?
 	      oscillate = oscillate + 1;                  // increment oscillation counter
 	    }
 
@@ -1672,6 +1672,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	t =  s * s - a2;
 	u =  s * t + a1;                   // value of Q'(-a3/4) at stationary point -a3/4
 
+
 	notZero = (fabs (u) >= macheps)?1:0;    // H(-a3/4) is considered > 0 at stationary point
 
 	if (a3 != 0.0) {
@@ -1687,6 +1688,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 
 	  x = copysign (2.0,a3);                              // initial root -> target = smaller mag root
 
+	  t = -8992.0;
 	  oscillate = 0;
 	  bisection = 0;
 	  converged = 0;
@@ -1771,6 +1773,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  y = y * a + q2 + q2;                               // Q'(a)
 	  y = y * a + q1;                                    //
 	  y = Max2 (y / x, 0.0);                           // ensure Q'(a) / Q'''(a) >= 0
+	  c = sqrt(y);
 	  x = 4 * b + q3;                                    // Q'''(b)
 	  z = x + q3 + q3;                                   //
 	  z = z * b + q2 + q2;                               // Q'(b)
@@ -1814,7 +1817,6 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  root [3] = a-I*c;
 
 	} else {
-
 	  root [0] = a+I*c;
 	  root [1] = a-I*c;
 	  root [2] = a+I*d;
@@ -1832,6 +1834,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   return;
 }
 //end subroutine quarticRoots
+//
 
 #endif
 
