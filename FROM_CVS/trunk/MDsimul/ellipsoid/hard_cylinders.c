@@ -5231,7 +5231,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   complex long double rri, rmri;
   //----------------------------- calculate the antidiagonal shift phi0:
 
-
   a=coeff[3]/coeff[4];
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];
@@ -5589,13 +5588,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     d2=del2/(2*l2);                                // equation (4.15) 
 #if 1
   /* check solution */
-  if (l2!=0)
+  while (l2!=0)
     { 
       if (d <=0)
 	{
 	  bl311 =  b-2*l3-l1*l1; // equation (4.15)
 	  //d2eq46 =2*b/3-phi0-l1*l1;
 	  /* check solution */
+	  if (bl311==0)
+	    break;
 	  l2alt = del2/(2*bl311);   // eq. (4.12)
 	  d2alt = 2*b/3-phi0-l1*l1;  // eq. (4.6)
 	  diff = fabs(d2-bl311); // nel calcolo della soluzione non uso la (4.6)
@@ -5614,7 +5615,11 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  dml3l3=d-l3*l3;
 	  d2eq46 =2*b/3-phi0-l1*l1;
 	  /* check solution */
+	  if (del2==0)
+	    break;
 	  l2alt=2*(dml3l3)/del2;                           // equation (4.12)
+	  if (l2alt==0.0)
+	    break;
 	  d2alt = del2/(2*l2alt);                          // eq. (4.15)
 	  diff = fabs(d2*l2*l2-dml3l3);/* con la prima soluzione non uso la (4.8) quindi valuto l'errore con questa */
 	  diff_alt = fabs(d2alt-d2eq46); /* con la soluzione alternativa non uso la (4.6) quindi valuto l'errore con questa */
@@ -5626,8 +5631,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	      l2=l2alt;
 	    }
 	}
+      break;
     }
 #endif
+
 #endif
   //printf("d2e46=%.16G del2=%.15G d2=%.15G l2=%.15G\n", d2eq46, del2, d2, l2);
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
