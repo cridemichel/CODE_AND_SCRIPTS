@@ -1088,7 +1088,7 @@ void quadraticRoots (double q1, double q0, int *nReal, complex double root[2])
 // NOTES
 //
 //***
-
+// VERSIONE AGGIORNATA AL 2018 più veloce e robusta
 void quarticRoots (double cc[5], int *nReal, complex double root[4])
 
 {
@@ -1110,7 +1110,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   double a0, a1, a2, a3;
   double a, b, c, d, k, s, t, u, x, y, z;
 
-  const double macheps =2.2204460492503131E-16; 
+  const double macheps = 2.2204460492503131E-16; 
   const double third   = 1.0 / 3.0;
   //
   //
@@ -1306,43 +1306,43 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	    } else if (x >= 0.0 && y < 0.0) {
 
 	      x = sqrt (x)       * k;
-		y = sqrt (fabs (y)) * k;
+      	      y = sqrt (fabs (y)) * k;
 
-		*nReal = 2;
+      	      *nReal = 2;
 
-		root [0] = x+I*0.0;
-		root [1] = - x+I*0.0;
-		root [2] = 0.0+I*y;
-		root [3] = 0.0-I*y;
+      	      root [0] = x+I*0.0;
+	      root [1] = - x+I*0.0;
+	      root [2] = 0.0+I*y;
+	      root [3] = 0.0-I*y;
 
 	    } else if (x < 0.0) {
 
 	      x = sqrt (fabs (x)) * k;
-		y = sqrt (fabs (y)) * k;
+      	      y = sqrt (fabs (y)) * k;
 
-		*nReal = 0;
+      	      *nReal = 0;
 
-		root [0] = 0+I*y;
-		root [1] = 0+I*x;
-		root [2] = 0- I*x;
-		root [3] = 0- I*y;
+      	      root [0] = 0+I*y;
+	      root [1] = 0+I*x;
+	      root [2] = 0- I*x;
+	      root [3] = 0- I*y;
 
 	    }
 
 	} else {          // complex conjugate pair biquadratic roots x +/- iy.
 
 	  x = creal(root [0]) * 0.5;
-	    y = cimag(root[0]) * 0.5;
-	    z = sqrt (x * x + y * y);
-	    y = sqrt (z - x) * k;
-	    x = sqrt (z + x) * k;
+	  y = cimag(root[0]) * 0.5;
+	  z = sqrt (x * x + y * y);
+	  y = sqrt (z - x) * k;
+	  x = sqrt (z + x) * k;
 
-	    *nReal = 0;
+	  *nReal = 0;
 
-	    root [0] = x+I*y;
-	    root [1] = x-I*y;
-	    root [2] = - x+I*y;
-	    root [3] = - x-I*y;
+	  root [0] = x+I*y;
+	  root [1] = x-I*y;
+	  root [2] = - x+I*y;
+	  root [3] = - x-I*y;
 
 	}
       break;
@@ -1388,10 +1388,10 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
     case general:
 
       x = 0.75 * a3;
-	y = 0.50 * a2;
-	z = 0.25 * a1;
+      y = 0.50 * a2;
+      z = 0.25 * a1;
 
-	cubicRoots (x, y, z, nReal, root);
+      cubicRoots (x, y, z, nReal, root);
 
       s = creal(root[0]);        // Q'(x) root s (real for sure)
       x = s + a3;
@@ -1419,34 +1419,48 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
       }
 #endif
       if (x < 0.0 && y < 0.0) {
+	if (s < 0.0 && a0 > 0.0) 
+              x = 0.0;
+          else
+              x = 2.0;
 
-	if (x < y) {
-	  if (s < 0.0) {
-	    x = 1.0 - copysign (1.0,a0);
-	  } else {
-	    x = 2.0;
+          if (u > 0.0 && a0 > 0.0) 
+              y = 0.0;
+          else
+              y = -2.0;
+
+          a = x + a3;
+          b = x + a;
+          a = a * x + a2;
+          b = b * x + a;
+          a = a * x + a1;
+          b = b * x + a;     // b = Q'(x)
+
+          c = y + a3;
+          d = y + c;
+          c = c * y + a2;
+          d = d * y + c;
+          c = c * y + a1;
+          d = d * y + c;    // d = Q'(y)
+
+          if (fabs(b) > fabs(d)) {    // if Q'(y) < Q'(x),
+	    x = y;                     // take root u for Newton iterations
+	    s = u;                     // save for lower bisecion bound just in case
 	  }
-	} else {
-	  if (u > 0.0) {
-	    x = - 1.0 + copysign (1.0,a0);
-	  } else {
-	    x = - 2.0;
-	  }
-	}
 
 	*nReal = 1;
 
       } else if (x < 0.0) {
 
 	if (s < - a3 * 0.25) {
-	  if (s > 0.0) {
-	    x = - 1.0 + copysign (1.0,a0);
+	  if (s > 0.0 && a0 > 0.0) {
+	    x = 0.0;
 	  } else {
 	    x = - 2.0;
 	  }
 	} else {
-	  if (s < 0.0) {
-	    x = 1.0 - copysign (1.0,a0);
+	  if (s < 0.0 && a0 > 0.0) {
+	    x = 0.0;
 	  } else {
 	    x = 2.0;
 	  }
@@ -1457,20 +1471,21 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
       } else if (y < 0.0) {
 
 	if (u < - a3 * 0.25) {
-	  if (u > 0.0) {
-	    x = - 1.0 + copysign (1.0,a0);
+	  if (u > 0.0 && a0 > 0.0) {
+	    x =  0.0;
 	  } else {
-	    x = - 2.0;
+	    x = -2.0;
 	  }
 	} else {
-	  if (u < 0.0) {
-	    x = 1.0 - copysign (1.0,a0);
+	  if (u < 0.0 && a0 > 0.0) {
+	    x = 0.0;
 	  } else {
 	    x = 2.0;
 	  }
 	}
 
 	*nReal = 1;
+
       } else {
 	*nReal = 0;
       }
@@ -1490,6 +1505,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
       //
       if (*nReal > 0) {
 
+	t = 32.0;
 	oscillate = 0;
 	bisection = 0;
 	converged = 0;
@@ -1511,6 +1527,13 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	      u = x;                                      // save upper bisection bound
 	    }
 
+	    if (z==0.0)
+	      {
+		bisection = 1; 
+		break;
+	      }
+
+	    t = y;
 	    y = y / z;                                      // Newton correction
 	    x = x - y;                                      // new Newton root
 
@@ -1655,7 +1678,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  minimum = ((4 * a0) > (a2 * a2))?1:0;                      // H''(-a3/4) > 0 -> minimum
 	}
 
-	iterate = notZero || (!notZero && minimum);
+	iterate = (notZero || (!notZero && minimum))?1:0;
 
 	if (iterate) {
 
@@ -1679,6 +1702,10 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	      a = a * x + a0;                                 //
 	      y = a * d * d - b * c * d + b * b;              // y = H(x), usually < 0
 	      z = 2 * d * (4 * a - b * d - c * c);            // z = H'(x)
+	     
+	      if (y < t)                                      // does Newton start oscillating ?
+	    	oscillate = oscillate + 1;                    // increment oscillation counter
+                 
 
 	      if (y > 0.0) {                           // does Newton start oscillating ?
 		oscillate = oscillate + 1;                  // increment oscillation counter
@@ -1687,6 +1714,15 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 		u = x;                                      // save lower bisection bound
 	      }
 
+	      y = y / z;                                      // Newton correction
+	      x = x - y;                                      // new Newton root
+	     
+	      if (z == 0.0)                           // safeguard against accidental
+		{
+		  bisection = 1;                         // H'(x) = 0 due to roundoff
+		  break;                                       // errors -> bisection takes
+		}    
+	      t = y;                                          // save H(x) for next Newton step
 	      y = y / z;                                      // Newton correction
 	      x = x - y;                                      // new Newton root
 
@@ -1700,7 +1736,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  if (bisection) {
 
 	    t = u - s;                                     // initial bisection interval
-	    while (fabs (t) > fabs (x * macheps))        // bisection iterates
+	    while (fabs (t) > fabs (x) * macheps)        // bisection iterates
 	      {
 		a = x + a3;                                 //
 		b = x + a;                                  // a = Q(x)
@@ -1724,6 +1760,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 		x = s + t;                                  // new bisection root
 
 	      }
+
 	  }
 
 
@@ -1740,18 +1777,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  z = z * b + q2 + q2;                               // Q'(b)
 	  z = z * b + q1;                                    //
 	  z = Max2 (z / x, 0.0);                           // ensure Q'(b) / Q'''(b) >= 0
-	  c = a * a;                                         // store a^2 for later
-	  d = b * b;                                         // store b^2 for later
-	  s = c + y;                                         // magnitude^2 of (a + iy) root
-	  t = d + z;                                         // magnitude^2 of (b + iz) root
-
-	  if (s > t || (q0/t-c) < 0.0) {                                   // minimize imaginary error
-	    c = sqrt (y);                                  // 1st imaginary component -> c
-	    d = sqrt (q0 / s - d);                         // 2nd imaginary component -> d
-	  } else {
-	    c = sqrt (q0 / t - c);                         // 1st imaginary component -> c
-	    d = sqrt (z);                                  // 2nd imaginary component -> d
-	  }
+	  d = sqrt(z);
 
 	} else {                                                  // no bisection -> real components equal
 
@@ -1807,7 +1833,6 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   return;
 }
 //end subroutine quarticRoots
-//
 #endif
 
 
