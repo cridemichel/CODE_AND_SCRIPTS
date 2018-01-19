@@ -5213,8 +5213,10 @@ double calc_res(double d2, double l2, double del2, double dml3l3, double d2eq46)
 }
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
-  double l2mC, l2m[12], d2m[12], res[12], resmin, d2eq46, dml3l3; //, bl311;
-  int s1, s2, k1, kmin, nsol, printall, C5, C1, C2, C3;
+  //double l2mC, l2m[12], d2m[12], res[12], resmin;
+  //int  kmin, nsol, printall, C5, C1, C2, C3;
+  double d2eq46, bl311, diff, diff_alt, l2alt, dml3l3;
+  int s1, s2, k1; 
   double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3;
   double d2alt, gamma,del2,hphi0,phibal[3][3],phimat[3][3];
   const double macheps =2.2204460492503131E-16;
@@ -5306,7 +5308,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   l3=b/6+phi0/2;                                  // equation (4.3)
   del2=c-a*l3;                                    // equation (4.10) 
 
-#if 1
+#if 0
 /* MINIMIZE CANCELLATION ERRORS HERE
  * We have 3 equations and two unknowns in Eq. (4.6), (4.7) and (4.8), 
  * hence we use two (or one) and use the remaining one (or two) for error estimate. 
@@ -5482,7 +5484,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       //printf("residues:\n");
       for (k1=0; k1 < nsol; k1++)
 	{
-	  //printf("k=%d res=%.16G d2=%.16G l2=%.16G\n",k1,  res[k1], d2m[k1], l2m[k1]);
+	  printf("k=%d res=%.16G d2=%.16G l2=%.16G\n",k1,  res[k1], d2m[k1], l2m[k1]);
 	  if (k1==0 || res[k1] < resmin)
 	    {
 	      kmin = k1;
@@ -5555,7 +5557,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	
 #endif
     }
-#else
+#elif 1
+  /* ora ho trovato una soluzione che sostanzialmente pone rimedio solo ai rari casi in cui 
+   * il metodo di Strobach non funziona 
+   * su test brevi i risultati sono identici a quelli di Strobach */
   if(d<=0.0)
     {
       if(del2==0.0)
@@ -5581,9 +5586,48 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   if(l2==0.0)
     d2=2*b/3-phi0-l1*l1;
   else
-    d2=del2/(2*l2);                                // equation (4.15)
-//  printf("del2=%.16G l1=%.16G l3=%.16G\n", del2, l1, l3);
-//  printf("d2 new:%.16G old:%.16G l2 new:%.16G old:%.16G\n", d2m[kmin],d2,l2m[kmin],l2);
+    d2=del2/(2*l2);                                // equation (4.15) 
+#if 1
+  /* check solution */
+  if (l2!=0)
+    { 
+      if (d <=0)
+	{
+	  bl311 =  b-2*l3-l1*l1; // equation (4.15)
+	  //d2eq46 =2*b/3-phi0-l1*l1;
+	  /* check solution */
+	  l2alt = del2/(2*bl311);   // eq. (4.12)
+	  d2alt = 2*b/3-phi0-l1*l1;  // eq. (4.6)
+	  diff = fabs(d2-bl311); // nel calcolo della soluzione non uso la (4.6)
+	  diff_alt = fabs(d2alt*l2alt*l2alt-(d-l3*l3)); // nel calcolo della soluzione alt non uso la (4.8)
+	  //if (diff > macheps || diff_alt > macheps)
+	  //printf("1qui diff1=%.15G diff2=%.15G\n", diff, diff_alt);
+	  if (diff > macheps && diff_alt < diff)
+	    {
+	      d2=d2alt;
+	      l2=l2alt;
+	    }
+	}
+      else
+	{
+	  //bl311 = b-2*l3-l1*l1; // equation (4.15)
+	  dml3l3=d-l3*l3;
+	  d2eq46 =2*b/3-phi0-l1*l1;
+	  /* check solution */
+	  l2alt=2*(dml3l3)/del2;                           // equation (4.12)
+	  d2alt = del2/(2*l2alt);                          // eq. (4.15)
+	  diff = fabs(d2*l2*l2-dml3l3);/* con la prima soluzione non uso la (4.8) quindi valuto l'errore con questa */
+	  diff_alt = fabs(d2alt-d2eq46); /* con la soluzione alternativa non uso la (4.6) quindi valuto l'errore con questa */
+	  //if (diff > macheps || diff_alt > macheps)
+	  //printf("2diff1=%.16G diff2=%.16G\n", diff, diff_alt);
+	  if (diff > macheps && diff_alt < diff)
+	    {
+	      d2=d2alt;
+	      l2=l2alt;
+	    }
+	}
+    }
+#endif
 #endif
   //printf("d2e46=%.16G del2=%.15G d2=%.15G l2=%.15G\n", d2eq46, del2, d2, l2);
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
@@ -5697,6 +5741,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   //--------------------------------------------------------------------      
 
 }
+
 /* ============================================================================================ */  
 
 /* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
