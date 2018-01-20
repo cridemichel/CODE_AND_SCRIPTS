@@ -10421,6 +10421,43 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 }
 #endif
 #endif
+#ifdef MC_SPHEROCYL
+double calcDistSpheroCyl(int i, int j, double shift[3])
+{
+  int k, kk, rim;
+  double CiCj[3], D, L, Di[2][3], Ci[3], ni[3], Dj[2][3], Cj[3], nj[3];
+
+  for (kk=0; kk < 3; kk++)
+    {
+      ni[kk] = R[i][0][kk];
+      nj[kk] = R[j][0][kk];
+    }
+  Ci[0] = rx[i];
+  Ci[1] = ry[i];
+  Ci[2] = rz[i]; 
+  Cj[0] = rx[j] + shift[0];
+  Cj[1] = ry[j] + shift[1];
+  Cj[2] = rz[j] + shift[2]; 
+  L = 2.0*typesArr[typeOfPart[i]].sax[0];
+  D = 2.0*typesArr[typeOfPart[i]].sax[1];
+  for (kk=0; kk < 3; kk++)
+    {
+      CiCj[kk] = Ci[kk] - Cj[kk];
+    }
+
+  for (kk=0; kk < 3; kk++)
+    {
+      /* centers of mass of disks */
+      Di[0][kk]=Ci[kk]+0.5*L*ni[kk];
+      Di[1][kk]=Ci[kk]-0.5*L*ni[kk];
+      Dj[0][kk]=Cj[kk]+0.5*L*nj[kk];
+      Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
+    }
+
+  return check_spherocyl(CiCj, D, L, Di, Ci, ni, Cj, nj, Dj, &rim);
+
+}
+#endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)
 {
   const int MAX_ITERATIONS = 1000000;
