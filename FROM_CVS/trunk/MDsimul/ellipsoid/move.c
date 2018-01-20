@@ -5889,10 +5889,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   double phi, psi;
 #endif
   MD_DEBUG(printf("t=%f tai=%f taj=%f i=%d j=%d\n", t, t-atomTime[i],t-atomTime[j],i,j));
-#ifdef MC_HC
-  return calcDistNegHC(i, j, shift, &calcdist_retcheck);
-#elif defined(MC_SPHEROCYL)
+#if defined(MC_SPHEROCYL)
   return calcDistSpheroCyl(i, j, shift);
+#elif defined(MC_HC)
+  return calcDistNegHC(i, j, shift, &calcdist_retcheck);
 #elif defined(MC_PERWER)
   return check_overlap_pw(i, j, shift);
 #elif defined(MC_HELIX)
