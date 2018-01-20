@@ -10422,6 +10422,8 @@ double calcDistNegHCdiffbrent(int i, int j, double shift[3], int* retchk)
 #endif
 #endif
 #ifdef MC_SPHEROCYL
+double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim);
+
 double calcDistSpheroCyl(int i, int j, double shift[3])
 {
   int k, kk, rim;
@@ -10947,7 +10949,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
     }
   return 1;
 }
-#ifdef MC_HC_SPHERO_OPT
+#if defined(MC_HC_SPHERO_OPT) || defined(MC_SPHEROCYL)
 /*
  Revision of
  Carlos Vega & Santiago Lago
