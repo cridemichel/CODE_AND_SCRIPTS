@@ -5241,8 +5241,8 @@ double calc_res(double d2, double l2, double del2, double dml3l3, double d2eq46)
 }
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
-  //double l2mC, l2m[12], d2m[12], res[12], resmin;
-  //int  kmin, nsol, printall, C5, C1, C2, C3;
+  double l2mC, l2m[12], d2m[12], res[12], resmin;
+  int  kmin, nsol, printall, C5, C1, C2, C3;//, tryalt;
   double d2eq46, bl311, diff, diff_alt, l2alt, dml3l3;
   int s1, s2, k1; 
   double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3;
@@ -5258,6 +5258,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   double sd, ssd;
   complex long double rri, rmri;
   //----------------------------- calculate the antidiagonal shift phi0:
+
 
   a=coeff[3]/coeff[4];
   b=coeff[2]/coeff[4];
@@ -5299,7 +5300,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       cubc[2]=0.0;
       cubc[1]=0.0;
       cubc[0]=c;
-      printf("QUIIIIIIIIIII\n");
       //csolve_cubic(cubc, roots);
       solve_cubic_analytic(cubc, roots);
       //cubicRoots(0, 0, c, &nreal, roots);
@@ -5511,7 +5511,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       //printf("residues:\n");
       for (k1=0; k1 < nsol; k1++)
 	{
-	  printf("k=%d res=%.16G d2=%.16G l2=%.16G\n",k1,  res[k1], d2m[k1], l2m[k1]);
+	  //printf("k=%d res=%.16G d2=%.16G l2=%.16G\n",k1,  res[k1], d2m[k1], l2m[k1]);
 	  if (k1==0 || res[k1] < resmin)
 	    {
 	      kmin = k1;
@@ -5588,6 +5588,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   /* ora ho trovato una soluzione che sostanzialmente pone rimedio solo ai rari casi in cui 
    * il metodo di Strobach non funziona 
    * su test brevi i risultati sono identici a quelli di Strobach */
+  //tryalt=0;
   if(d<=0.0)
     {
       if(del2==0.0)
@@ -5616,7 +5617,8 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     d2=del2/(2*l2);                                // equation (4.15) 
 #if 1
   /* check solution */
-  while (l2!=0)
+  //printf("l2=%.15G  d2=%.16G del2=%.16G\n", l2, 2*b/3-phi0-l1*l1, del2);
+  while (1)
     { 
       if (d <=0)
 	{
@@ -5647,8 +5649,9 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	    break;
 	  l2alt=2*(dml3l3)/del2;                           // equation (4.12)
 	  if (l2alt==0.0)
-	    break;
-	  d2alt = del2/(2*l2alt);                          // eq. (4.15)
+	    d2alt = d2eq46;
+	  else 
+	    d2alt = del2/(2*l2alt);                          // eq. (4.15)
 	  diff = fabs(d2*l2*l2-dml3l3);/* con la prima soluzione non uso la (4.8) quindi valuto l'errore con questa */
 	  diff_alt = fabs(d2alt-d2eq46); /* con la soluzione alternativa non uso la (4.6) quindi valuto l'errore con questa */
 	  //if (diff > macheps || diff_alt > macheps)
@@ -5662,7 +5665,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       break;
     }
 #endif
-
 #endif
   //printf("d2e46=%.16G del2=%.15G d2=%.15G l2=%.15G\n", d2eq46, del2, d2, l2);
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
