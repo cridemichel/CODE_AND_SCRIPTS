@@ -1,6 +1,6 @@
 #include<mdsimul.h>
 //#define DEBUG_HCMC
-
+//#define MC_DISABLE_BB
 extern double fons(double theta, double alpha);
 extern double dfons(double theta, double alpha);
 #ifdef MC_ELCONST_MC

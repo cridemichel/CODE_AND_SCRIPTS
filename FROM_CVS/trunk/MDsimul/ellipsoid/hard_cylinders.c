@@ -4891,6 +4891,26 @@ void quadratic(double aa,double bb,double cc, double dd, double a, double b, com
     }   
 } 
       
+/* qui ottendo c e a con il metodo dei minimi quadrati (i calcoli sono più semplici di quelli di Strobach
+ * poiché faccio un semplice least-square fit mentre lui fa un weighted least square fit) */
+void  ac_fit_alt(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
+{
+  double aq, bq, cq, dq;
+
+  aq = *AQ;
+  bq = *BQ;
+  cq = *CQ;
+  dq = *DQ; 
+
+  if (fabs(*AQ) > fabs(*CQ))
+    cq = (-aq + a - aq*bq + aq*b + bq*c - aq*dq - aq*bq*dq)/(1 + aq*aq + bq*bq);
+  else
+    aq = (a - cq - bq*cq + b*cq - cq*dq - bq*cq*dq + c*dq)/(1 + cq*cq + dq*dq); 
+  *AQ=aq;
+  *BQ=bq;
+  *CQ=cq;
+  *DQ=dq;
+}    
 
 void  ac_fit(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
 {
@@ -5731,8 +5751,11 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	bq=d/dq;                                       // equation (5.10)
 
       //------------------------ aq and cq coefficients backward correction:
-
+#if 1
       ac_fit(a,b,c,d,&aq,&bq,&cq,&dq);
+#else
+      ac_fit_alt(a,b,c,d,&aq,&bq,&cq,&dq);
+#endif
       //------------------------------------ roots of the quadratic factors:   
 
       //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
