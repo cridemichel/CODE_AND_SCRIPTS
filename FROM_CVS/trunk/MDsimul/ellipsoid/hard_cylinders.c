@@ -24,7 +24,7 @@
 //#define USE_LAGUERRE
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
-//#define MC_QUART_VERBOSE
+#define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
 //#define MC_QUART_USE_ANALYTIC
@@ -6531,7 +6531,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=1E-14;// old value 5.0E-13
+  const double DIST_THR=5E-13;// old value 5.0E-13
 #else
   const double DIST_THR=5E-12;
 #endif
@@ -10086,10 +10086,10 @@ double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
 #endif
   if (L >= D) // prolate
     {
-      if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
+      if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
 	return ret;
 
-      if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
+      if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
 	return ret;
 
       if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
