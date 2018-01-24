@@ -1,6 +1,11 @@
 #include<mdsimul.h>
 //#define DEBUG_HCMC
-//#define MC_DISABLE_BB
+#ifdef MC_SPHEROCYL
+#define MC_DISABLE_BB
+#endif
+#ifdef HC_ALGO_OPT
+extern double numcallsRR, numcallsRD, numcallsDD;
+#endif
 extern double fons(double theta, double alpha);
 extern double dfons(double theta, double alpha);
 #ifdef MC_ELCONST_MC
@@ -14942,6 +14947,13 @@ void move(void)
 #if defined(MC_HC) && !defined(MC_HELIX) && !defined(HC_ALGO_OPT)
       if (numcallsHC > 0)
         printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
+#ifdef HC_ALGO_OPT
+      if (numcallsRR > 0 && numcallsRD > 0 && numcallsDD > 0.0)
+	{
+	  printf("[calls type relative frequency] disk-disk: %G rim-rim: %G rim-disk: %G\n", numcallsDD/numcallsHC,
+		 numcallsRR/numcallsHC, numcallsRD/numcallsHC);
+	}
+#endif
 #endif
     }
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)
