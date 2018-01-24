@@ -782,7 +782,11 @@ double calc_phi(void)
 #elif defined(MC_HC) && defined(MC_HELIX)
 	  N += 7.02;
 #else
+#ifdef MC_SPHEROCYL
+	  N += typesArr[typei].sax[1]*typesArr[typei].sax[1]*typesArr[typei].sax[1]*4.0*M_PI/3.0 + SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#else
 	  N += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
+#endif
 #endif
 #else
 	  N += typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
