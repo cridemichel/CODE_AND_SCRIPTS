@@ -1866,6 +1866,9 @@ int check_convergence(double Told[3], double Tnew[3])
 }
 double totitsHC = 0.0;
 double numcallsHC = 0.0;
+#ifdef HC_ALGO_OPT
+double numcallsRR=0.0, numcallsRD=0.0, numcallsDD=0.0;
+#endif
 #ifdef DEBUG_HCMC
 extern int dostorebump;
 #endif
@@ -3891,6 +3894,7 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
   double DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], Dini, Pi[3], N[3], Pj[3], normN;
   double normNSq, PiPj[3], normPiPj, Q2, PjDj[3], normPiDi, normPjDj, PiDi[3];
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
+  numcallsDD++;
   for (kk=0; kk < 3; kk++)
     {
       CiCj[kk] = Ci[kk] - Cj[kk];
@@ -9636,6 +9640,9 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
   char fileop2[512];
   double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
   double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
+
+  numcallsRD++;
+
   for (j1=0; j1 < 2; j1++)
     {
       if (j1==1)
@@ -9866,6 +9873,7 @@ double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], doubl
   double ViVj[3], lambdai, lambdaj, ninj;
   double CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3]; 
   /* case A.3 rim-rim overlap */
+  numcallsRR++;
   for (kk=0; kk < 3; kk++)
     {
       CiCj[kk] = Ci[kk] - Cj[kk];
