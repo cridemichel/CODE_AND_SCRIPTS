@@ -14,6 +14,9 @@
 #define MD_DEBUG38(x) 
 #define MD_DEBUG39(x) 
 #define MD_DEBUG40(x) 
+#ifdef MC_SPHEROCYL
+extern double calcDistSpheroCyl(int i, int j, double shift[3]);
+#endif
 void print_matrix(double **M, int n);
 void update_MSDrot(int i);
 void update_MSD(int i);
@@ -783,6 +786,7 @@ double calc_phi(void)
 	  N += 7.02;
 #else
 #ifdef MC_SPHEROCYL
+	  //printf("vol=%.15G\n", typesArr[typei].sax[1]*typesArr[typei].sax[1]*typesArr[typei].sax[1]*4.0*M_PI/3.0 + SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2]);
 	  N += typesArr[typei].sax[1]*typesArr[typei].sax[1]*typesArr[typei].sax[1]*4.0*M_PI/3.0 + SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];
 #else
 	  N += SQvolPrefact[typei]*typesArr[typei].sax[0]*typesArr[typei].sax[1]*typesArr[typei].sax[2];

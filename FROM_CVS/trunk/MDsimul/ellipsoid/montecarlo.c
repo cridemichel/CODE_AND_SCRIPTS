@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 //#define DEBUG_HCMC
 #ifdef MC_SPHEROCYL
-#define MC_DISABLE_BB
+//#define MC_DISABLE_BB
 #endif
 #ifdef HC_ALGO_OPT
 extern double numcallsRR, numcallsRD, numcallsDD;
@@ -2437,7 +2437,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 #else
 #ifdef MC_SPHEROCYL
       saxi[0] = 1.01*(typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[i]].sax[1]);
-      saxj[0] = 1.01*(typesArr[typeOfPart[j]].sax[0]+typesArr[typeOfPart[i]].sax[1]);
+      saxj[0] = 1.01*(typesArr[typeOfPart[j]].sax[0]+typesArr[typeOfPart[j]].sax[1]);
       saxi[1] = 1.01* typesArr[typeOfPart[i]].sax[1];
       saxj[1] = 1.01* typesArr[typeOfPart[j]].sax[1];
       saxi[2] = 1.01* typesArr[typeOfPart[i]].sax[2];
@@ -2454,7 +2454,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
   rB[0] = rx[j];
   rB[1] = ry[j];
   rB[2] = rz[j];
-#ifndef MC_DISABLE_BB
+#if !defined(MC_DISABLE_BB) && !defined(MC_SPHEROCYL)
   /* if bounding spheres do not overlap parallelepiped will not overlap */
   daSq = drSq = 0.0;
   for (kk=0; kk < 3; kk++)
