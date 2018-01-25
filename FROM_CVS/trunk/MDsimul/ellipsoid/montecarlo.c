@@ -1,7 +1,7 @@
 #include<mdsimul.h>
 //#define DEBUG_HCMC
 #ifdef MC_SPHEROCYL
-//#define MC_DISABLE_BB
+#define MC_DISABLE_BB
 #endif
 #ifdef HC_ALGO_OPT
 extern double numcallsRR, numcallsRD, numcallsDD;
