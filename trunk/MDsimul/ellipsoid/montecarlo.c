@@ -2454,7 +2454,21 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
   rB[0] = rx[j];
   rB[1] = ry[j];
   rB[2] = rz[j];
-#if !defined(MC_DISABLE_BB) && !defined(MC_SPHEROCYL)
+#ifdef MC_SPHEROCYL
+  daSq = drSq = 0.0;
+  for (kk=0; kk < 3; kk++)
+    {
+      if (kk==0)
+	daSq += Sqr(typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[j]].sax[0]+
+		    typesArr[typeOfPart[i]].sax[1]+typesArr[typeOfPart[j]].sax[1]);
+      else
+	daSq += Sqr(typesArr[typeOfPart[i]].sax[kk]+typesArr[typeOfPart[j]].sax[kk]);
+      drSq += Sqr(rA[kk]-rB[kk]-shift[kk]);
+    }
+  //printf("sph dist=%.15G\n", sqrt(daSq));
+  if (drSq > daSq)
+    return 1.0;
+#elif !defined(MC_DISABLE_BB) 
   /* if bounding spheres do not overlap parallelepiped will not overlap */
   daSq = drSq = 0.0;
   for (kk=0; kk < 3; kk++)
@@ -2462,7 +2476,6 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
       daSq += Sqr(typesArr[typeOfPart[i]].sax[kk]+typesArr[typeOfPart[j]].sax[kk]);
       drSq += Sqr(rA[kk]-rB[kk]-shift[kk]);
     } 
-
   //printf("daSq=%f\n", sqrt(daSq));
   if (drSq > daSq)
     return 1.0;
