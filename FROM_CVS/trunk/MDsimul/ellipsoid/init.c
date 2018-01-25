@@ -1955,6 +1955,9 @@ void usrInitBef(void)
 #ifdef MD_EDHEFLEX_OPTNNL
     OprogStatus.optnnl = 0;
 #endif
+#ifdef MC_BOUNDING_SPHERES
+    OprogStatus.useboundsph = 1;
+#endif
 #ifdef EDHE_FLEX
     OprogStatus.stripStore = 0;
     strcpy(OprogStatus.par2save, "ALL"); 
@@ -5762,15 +5765,129 @@ void create_chains(void)
   printf("total energy=%f\n", calcpotene());
 }
 #endif
+#ifdef MC_BOUNDING_SPHERES
+void create_bounding_sphere(void)
+{
+  int maxdir=-1, maxdir1=-1, maxdir2=-1, mindir=-1, nBSsp, nt, ns, kk, isprolate;
+  double x0[3], hlenbs;
+  double a, b, c, ab, a1[2], a2[2], fact;  
+  int n1, n2, maxn;
+  /* create bounding sphere */
+  for (nt = 0; nt < Oparams.ntypes; nt++)
+    {
+#if 0
+      if (OprogStatus.useboundsph==0)
+	{
+	  typesArr[nt].nspotsBS = 0;
+	  continue;
+	}
+#endif
+      a = typesArr[nt].sax[0];
+      b = typesArr[nt].sax[1];
+      c = typesArr[nt].sax[2];
+      if (a > b && b==c)
+	{
+	  isprolate=1;
+	  maxdir = 0;
+	}
+      else if (b > a && a==c)
+	{
+	  isprolate=1;
+	  maxdir = 1;
+	}
+      else if (c > b && a==b)
+	{
+	  isprolate=1;
+	  maxdir = 2;
+	}
+      else if (a < b && b==c)
+	{
+	  isprolate = 0;
+	  mindir = 0; 
+	  maxdir=maxdir1 = 1;
+	  maxdir2 = 2;
+	}
+      else if (b < c && a == c)
+	{
+	  isprolate = 0;
+	  mindir = 1;
+	  maxdir=maxdir1 = 0;
+	  maxdir2 = 2;
+	}
+      else
+	{
+	  isprolate = 0;
+	  mindir = 2;
+	  maxdir=maxdir1 = 0;
+	  maxdir2 = 1;
+	}
+      if (isprolate)
+	{
+	  typesArr[nt].nspotsBS = typesArr[nt].sax[maxdir]/typesArr[nt].sax[(maxdir+1)%3];    
+	  typesArr[nt].bsdiam = 2.0*typesArr[nt].sax[maxdir]/typesArr[nt].nspotsBS;
+	  typesArr[nt].spots = realloc(typesArr[nt].spots,sizeof(spotStruct)*(typesArr[nt].nspots+typesArr[nt].nspotsBS));
+	  printf("DIAM=%f maxsax=%f nspotsBS=%d\n",  typesArr[nt].bsdiam, typesArr[nt].sax[maxdir], typesArr[nt].nspotsBS);
+	  //printf("spots=%p\n", typesArr[nt].spots);
+	  hlenbs = typesArr[nt].bsdiam*typesArr[nt].nspotsBS*0.5;
+	  x0[(maxdir+1)%3] = 0.0;
+	  x0[(maxdir+2)%3] = 0.0;
+	  x0[maxdir] = -hlenbs+typesArr[nt].bsdiam*0.5;
+	  for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
+	    {
+	      for (kk=0; kk < 3; kk++)
+		typesArr[nt].spots[ns+typesArr[nt].nspots].x[kk] = 0.0;
+	      typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
+	      typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0);
+	    }
+	  typesArr[nt].bsdiam *= sqrt(2.0);
+	  printf("maxdir=%d nspotsBS=%d sigma=%f diam=%f hlenvbs=%f\n", maxdir, typesArr[nt].nspotsBS, typesArr[nt].bsdiam*sqrt(2.0)*1.0001, 
+		 typesArr[nt].bsdiam, hlenbs);
+	}
+      else // oblate case
+	{
+	  printf("[WARNING] for oblate case bounding spheres are disabled!\n");
+	  OprogStatus.useboundsph=0;
+	  typesArr[nt].nspotsBS=0;
+#if 0
+	  typesArr[nt].bsdiam = fact*2.0*typesArr[nt].sax[mindir]/sqrt(2.0/3.0);
+	  // passo del reticolo di Bravais
+	  ab = typesArr[nt].bsdiam;
+	  // vettori primitivi
+	  a1[0] = -0.5*ab;
+	  a1[1] = ab*sqrt(3.0)/2.0;
+	  a2[0] = ab;
+	  a2[1] = 0.0;
+	  maxn = 2; /* limito il numero di bounding spheres */
+
+	  typesArr[nt].nspotsBS=0;
+	  for (n1=-maxn+1; n1 < maxn; n1++)
+	    for (n2=-maxn+1; n2 < maxn; n2++)
+	      {
+		typesArr[nt].nspotsBS += 1;
+	      }
+	  printf("[OBLATE] DIAM=%f maxsax=%f nspotsBS=%d\n",  typesArr[nt].bsdiam, typesArr[nt].sax[maxdir1], typesArr[nt].nspotsBS);
+	  typesArr[nt].spots = realloc(typesArr[nt].spots,sizeof(spotStruct)*(typesArr[nt].nspots+typesArr[nt].nspotsBS));
+	  ns=0;
+	  for (n1=-maxn+1; n1 < maxn; n1++)
+	    for (n2=-maxn+1; n2 < maxn; n2++)
+	      { 
+		typesArr[nt].spots[ns+typesArr[nt].nspots].x[mindir] = 0.0;
+		typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir1] = a1[0]*n1+a2[0]*n2; 
+		typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir2] = a1[1]*n1+a2[1]*n2; 
+		//printf("n1=%d n2=%d x=%f y=%f\n",n1,n2, a1[0]*n1+a2[0]*n2, a1[1]*n1+a2[1]*n2);
+		typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam;
+		ns++;
+	      }
+#endif
+	}
+    }
+}
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
-  int numsps;
-#ifdef MC_BOUNDING_SPHERES
-  int maxdir, nBSsp, nt;
-  double x0[3], hlenbs;
-#endif
-  int numll, k1old, k2old, nl, numbm;
+  int numsps, foundspot;
+ int numll, k1old, k2old, nl, numbm;
   /* DESCRIPTION:
      This function is called after the parameters were read from disk, put
      here all initialization that depends upon such parameters, and call 
@@ -6171,36 +6288,7 @@ void usrInitAft(void)
   Aip = matrix(3,3);
   R = malloc(sizeof(double**)*Oparams.parnum);
 #ifdef MC_BOUNDING_SPHERES
-  for (nt = 0; nt < Oparams.ntypes; nt++)
-    {
-      /* assume che le particelle siano uniassiali e dispongo le bounding spheres lungo
-       * l'asse più lungo */
-      if (typesArr[nt].sax[0] > typesArr[nt].sax[1])
-	maxdir = 0;
-      else 
-	maxdir = 1;
-      if (typesArr[nt].sax[maxdir] < typesArr[nt].sax[2])
-	maxdir = 2;
-
-      typesArr[nt].nspotsBS = typesArr[nt].sax[maxdir]/typesArr[nt].sax[(maxdir+1)%3];    
-      typesArr[nt].bsdiam = 2.0*typesArr[nt].sax[maxdir]/typesArr[nt].nspotsBS;
-
-      printf("DIAM=%f maxsax=%f nspotsBS=%d\n",  typesArr[nt].bsdiam, typesArr[nt].sax[maxdir], typesArr[nt].nspotsBS);
-      hlenbs = typesArr[nt].bsdiam*typesArr[nt].nspotsBS*0.5;
-      x0[(maxdir+1)%3] = 0.0;
-      x0[(maxdir+2)%3] = 0.0;
-      x0[maxdir] = -hlenbs+typesArr[nt].bsdiam*0.5;
-      for (ns=0; ns < typesArr[nt].nspotsBS; ns++)
-	{
-	  for (kk=0; kk < 3; kk++)
-	    typesArr[nt].spots[ns+typesArr[nt].nspots].x[kk] = 0.0;
-	  typesArr[nt].spots[ns+typesArr[nt].nspots].x[maxdir] = x0[maxdir] + ns * typesArr[nt].bsdiam; 
-	  typesArr[nt].spots[ns+typesArr[nt].nspots].sigma = typesArr[nt].bsdiam*sqrt(2.0);
-	}
-      typesArr[nt].bsdiam *= sqrt(2.0);
-      printf("maxdir=%d nspotsBS=%d sigma=%f diam=%f hlenvbs=%f\n", maxdir, typesArr[nt].nspotsBS, typesArr[nt].bsdiam*sqrt(2.0)*1.0001, 
-	     typesArr[nt].bsdiam, hlenbs);
-    }
+  create_bounding_sphere();
 #endif
 #ifdef MC_CLUSTER_MOVE
   RoldAll = malloc(sizeof(double**)*Oparams.parnum);
@@ -6345,6 +6433,7 @@ void usrInitAft(void)
     }
   if (Oparams.rcutBP==-1)
     {
+      foundspot=0;
       maxsig = 0.0;
       for (k1=0; k1 < Oparams.ntypes; k1++)
 	{
@@ -6352,6 +6441,7 @@ void usrInitAft(void)
 	    {
 	      if (typesArr[k1].spots[k2].sigma > maxsig)
 		maxsig = typesArr[k1].spots[k2].sigma;
+	      foundspot=1;
 	    }
 	}
       Oparams.rcutBP = maxsig*1.0001;
@@ -6363,6 +6453,7 @@ void usrInitAft(void)
   inCellBP[0] = malloc(sizeof(int)*totspots);
   inCellBP[1] = malloc(sizeof(int)*totspots);
   inCellBP[2] = malloc(sizeof(int)*totspots);
+    
 #ifdef MC_BOUNDING_SPHERES
   totspots += totspotsBS;
 #endif
@@ -7466,8 +7557,11 @@ void usrInitAft(void)
       cellsyBP = L / Oparams.rcutBP;
       cellszBP = L / Oparams.rcutBP;
 #endif
-      printf("Oparams.rcutBP: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBP,
-	     cellsxBP, cellsyBP, cellszBP);
+      if (foundspot)
+	printf("Oparams.rcutBP: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBP,
+	       cellsxBP, cellsyBP, cellszBP);
+      printf("Oparams.rcutBS: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBS,
+	       cellsxBS, cellsyBS, cellszBS);
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
       if (OprogStatus.optnnl)
