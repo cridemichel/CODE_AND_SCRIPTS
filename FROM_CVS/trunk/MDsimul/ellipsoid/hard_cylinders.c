@@ -11000,7 +11000,7 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
  lh1,lh2: halves of the length of rods
  Lv.x,Lv.y,Lv.z the edges of the periodic simulation cell
 */
-
+#if 1
 //----------------- VECTOR operations: -----------------------------------------------------
 
 
@@ -11030,7 +11030,6 @@ typedef struct { double VECT_LIST(); } coo_t;
 
 
 coo_t Lv;
-
 
 // Minimum distance in the periodic system:
 
@@ -11098,12 +11097,51 @@ if( fabs(xla)>lh1 || fabs(xmu)>lh2 ) {
 
  return rr+PW2(xla)+PW2(xmu) + 2*(xmu*rw2 -xla*(rw1+xmu*w1w2));
 }
+#endif
+double rimrim_sphcyl(double D, double L, double Ci[3],double ni[3], double Cj[3], double nj[3])
+{
+  int kk;
+  double ViVj[3], lambdai, lambdaj, ninj;
+  double CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3]; 
+  /* case A.3 rim-rim overlap */
+  for (kk=0; kk < 3; kk++)
+    {
+      CiCj[kk] = Ci[kk] - Cj[kk];
+    }
+  CiCjni = scalProd(CiCj,ni);
+  CiCjnj = scalProd(CiCj,nj);
+  ninj = scalProd(ni, nj);
+  detA = Sqr(ninj)-1;
+
+  /* WARNING: solution given in Ibarra et al. Mol. Sim. 33,505 (2007) is wrong */
+  lambdai = ( CiCjni - CiCjnj*ninj)/detA;
+  lambdaj = (-CiCjnj + CiCjni*ninj)/detA;
+
+  for (kk=0; kk < 3; kk++)
+    {
+      Vi[kk] = Ci[kk] + lambdai*ni[kk];   
+      Vj[kk] = Cj[kk] + lambdaj*nj[kk];
+      ViVj[kk] = Vi[kk] - Vj[kk];
+    }
+  if (calc_norm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
+    {
+#ifdef DEBUG_HCMC
+      if (dostorebump)
+	printf("rim-rim NP=%d\n", Oparams.parnum);
+#endif	
+//      if (sphov > 0.0)
+//	printf("boh\n");
+      return -1;
+    }
+  return 1;
+}
 double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], double *Ci, double *ni, double Dj[2][3], double *Cj, double *nj, int *rim)
 {
   coo_t r1, r2, w1, w2;
   double sum, d, normDiCj, normDjCi, DiCj[3], DjCi[3], Ui[3], Uj[3], DjUi[3], DiUj[3], DjCini, DiCjnj;
   int kk, j1, j2;
 
+#if 1
   r1.x = Ci[0];
   r1.y = Ci[1];
   r1.z = Ci[2];
@@ -11124,7 +11162,7 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
 #else
   Lv.x = Lv.y = Lv.z = L;
 #endif
-
+#endif
   for (j1=0; j1 < 2; j1++)
     for (j2=0; j2 < 2; j2++)
       {
@@ -11174,13 +11212,16 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
     }
 
   *rim = 1;
-
+#if 0
+  if  (rimrim_sphcyl(D, Lc, Ci, ni, Cj, nj) < 0)
+   return -1; 
+#else
   if ((d=dist2_rods(r1, r2, w1, w2, Lc*0.5, Lc*0.5)) <= Sqr(D)) 
     {
       *rim=-1;
       return -1;
     }
-
+#endif
   
   return 1;
 }

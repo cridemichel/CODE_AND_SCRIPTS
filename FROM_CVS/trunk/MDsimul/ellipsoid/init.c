@@ -2918,6 +2918,9 @@ void calc_encpp(void)
 	    typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk]+fabs(com[kk]);
 	  MD_DEBUG31(printf("typesArr.sax= %f %f %f .ppsax=%f %f %f\n", typesArr[pt].sax[0],typesArr[pt].sax[1],typesArr[pt].sax[2],
 			    typesArr[pt].ppsax[0],typesArr[pt].ppsax[1],typesArr[pt].ppsax[2]));
+#ifdef MC_SPHEROCYL
+    	  typesArr[pt].ppsax[0] += typesArr[pt].sax[1];
+#endif
 	  //printf("pt=%d com=%f %f %f\n", pt, com[0], com[1], com[2]);
 	}
       else
@@ -2927,12 +2930,18 @@ void calc_encpp(void)
 	      typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
 	      /* N.B. 15/06/10: inizializza anche ppr anche se in teoria non serve 
 		 poiché non lo usa se optnnl=0 */
+#ifdef MC_SPHEROCYL
+    	      typesArr[pt].ppsax[0] += typesArr[pt].sax[1];
+#endif
 	      typesArr[pt].ppr[kk] = 0.0;
 	    }
 	}
 #else
       for (kk = 0; kk < 3; kk++)
 	typesArr[pt].ppsax[kk] = typesArr[pt].sax[kk];
+#ifdef MC_SPHEROCYL
+      typesArr[pt].ppsax[0] += typesArr[pt].sax[1];
+#endif
 #endif
 #ifndef MC_BOND_POS
       for (sp = 0; sp < typesArr[pt].nspots; sp++) 
@@ -7200,8 +7209,13 @@ void usrInitAft(void)
       /* per i superellissoidi il centroide non puo' essere uguale al raggio maggiore,
 	 così lo sceglo pari alla metà della diagonale maggiore del parallelepipedo
 	 con i lati pari al doppio dei semi-assi */
+#ifdef MC_SPHEROCYL
+      maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[i]].sax[1])+Sqr(typesArr[typeOfPart[i]].sax[1])+
+	Sqr(typesArr[typeOfPart[i]].sax[2]));
+#else
       maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
 	Sqr(typesArr[typeOfPart[i]].sax[2]));
+#endif
 #endif
 #else
       maxax[i] = sqrt(Sqr(typesArr[typeOfPart[i]].sax[0])+Sqr(typesArr[typeOfPart[i]].sax[1])+
