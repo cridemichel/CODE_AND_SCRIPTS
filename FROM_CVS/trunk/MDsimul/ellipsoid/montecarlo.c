@@ -2435,8 +2435,17 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
       saxi[k] = typesArr[typeOfPart[i]].sax[k];
       saxj[k] = typesArr[typeOfPart[j]].sax[k];
 #else
+#ifdef MC_SPHEROCYL
+      saxi[0] = 1.01*(typesArr[typeOfPart[i]].sax[0]+typesArr[typeOfPart[i]].sax[1]);
+      saxj[0] = 1.01*(typesArr[typeOfPart[j]].sax[0]+typesArr[typeOfPart[i]].sax[1]);
+      saxi[1] = 1.01* typesArr[typeOfPart[i]].sax[1];
+      saxj[1] = 1.01* typesArr[typeOfPart[j]].sax[1];
+      saxi[2] = 1.01* typesArr[typeOfPart[i]].sax[2];
+      saxj[2] = 1.01* typesArr[typeOfPart[j]].sax[2];
+#else
       saxi[k] = 1.01* typesArr[typeOfPart[i]].sax[k];
       saxj[k] = 1.01* typesArr[typeOfPart[j]].sax[k];
+#endif
 #endif
     }
   rA[0] = rx[i];
@@ -2795,6 +2804,10 @@ int clsNPT=0;
 int func_checkBS(int i, int j)
 {
   int kk;
+#if 0
+  if (OprogStatus.useboundsph==0)
+    return 1;
+#endif
   for (kk=0; kk < numcheckBS[i]; kk++)
     {
       if (checkBS[i][kk] == j)
@@ -2809,8 +2822,11 @@ void find_part_with_BS(int i)
   int cellRangeT[6];
   double shift[3], sigmabs, distSq;
   double rspA[3], rspB[3];
-  
   nb=-1;
+  if (OprogStatus.useboundsph==0)
+    {
+      return;
+    }
   for (j=0; j < Oparams.parnum; j++)
     {
 #ifdef MC_OPT_CHECK_BS
@@ -2906,6 +2922,7 @@ void find_part_with_BS(int i)
 			{
 			  //assign_bond_mapping(i,j);
 			  j = n2sp_map[n+totspots].i;
+
 #ifdef MC_OPT_CHECK_BS
 			  if (func_checkBS(i,j))
 			    continue;
@@ -2947,6 +2964,7 @@ void find_part_with_BS(int i)
 			      numcheckBS[i]++;
 #else
 			      checkBS[j] = 1; 
+			      //printf("Part=%d check[%d]=%d\n", i, j, checkBS[j]);
 #endif
 			    }
 			}
@@ -3115,9 +3133,10 @@ int overlapMC_LL(int ip, int *err)
 		{
 		  if (n != na && n != nb && (nb >= -1 || n < na)) 
 		    {
+		      //printf("n=%d na=%d\n", n, na);
 #ifdef MC_BOUNDING_SPHERES
 #if 1
-		      if (
+		      if (OprogStatus.useboundsph==1 &&
 #ifdef MC_OPT_CHECK_BS
 			  !func_checkBS(na, n)
 #else
@@ -3187,7 +3206,6 @@ void remove_from_current_cell_BS(int i)
   int n;
   n = (inCellBS[2][i] * cellsyBS + inCellBS[1][i])*cellsxBS + inCellBS[0][i]
     + totspotsBS;
-  
   while (cellListBS[n] != i) 
     n = cellListBS[n];
   /* Eliminazione di evIdA dalla lista della cella n-esima */
@@ -14947,13 +14965,13 @@ void move(void)
 #if defined(MC_HC) && !defined(MC_HELIX) && !defined(HC_ALGO_OPT)
       if (numcallsHC > 0)
         printf("Average iterations in case A.2:%G\n", totitsHC/numcallsHC);
+#endif
 #ifdef HC_ALGO_OPT
       if (numcallsRR > 0 && numcallsRD > 0 && numcallsDD > 0.0)
 	{
 	  printf("[calls type relative frequency] disk-disk: %G rim-rim: %G rim-disk: %G\n", numcallsDD/numcallsHC,
 		 numcallsRR/numcallsHC, numcallsRD/numcallsHC);
 	}
-#endif
 #endif
     }
   if (OprogStatus.adjstepsMC < 0 || Oparams.curStep <= OprogStatus.adjstepsMC)

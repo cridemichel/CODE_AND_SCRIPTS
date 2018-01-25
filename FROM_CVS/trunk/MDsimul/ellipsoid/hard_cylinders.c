@@ -10061,6 +10061,7 @@ double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
 
   *retchk = 0; 
 
+  numcallsHC += 1.0; 
   for (kk=0; kk < 3; kk++)
     {
       ni[kk] = R[i][0][kk];
@@ -10117,7 +10118,6 @@ double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
   /* case A.2 overlap of rim and disk */
   /* =================================== >>> Part A <<< ========================= */
  /* =================================== >>> Part B <<< ========================= */
-  numcallsHC += 4.0; 
   return 1;
 }
 #if 0
@@ -10460,7 +10460,7 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
 double calcDistSpheroCyl(int i, int j, double shift[3])
 {
   int k, kk, rim;
-  double CiCj[3], D, L, Di[2][3], Ci[3], ni[3], Dj[2][3], Cj[3], nj[3];
+  double dist, CiCj[3], D, L, Di[2][3], Ci[3], ni[3], Dj[2][3], Cj[3], nj[3];
 
   for (kk=0; kk < 3; kk++)
     {
@@ -10489,8 +10489,9 @@ double calcDistSpheroCyl(int i, int j, double shift[3])
       Dj[1][kk]=Cj[kk]-0.5*L*nj[kk];
     }
 
-  return check_spherocyl(CiCj, D, L, Di, Ci, ni, Cj, nj, Dj, &rim);
-
+  dist = check_spherocyl(CiCj, D, L, Di, Ci, ni, Dj, Cj, nj, &rim);
+  //printf("dist=%.15G\n", dist);
+  return dist;
 }
 #endif
 double calcDistNegHC(int i, int j, double shift[3], int* retchk)

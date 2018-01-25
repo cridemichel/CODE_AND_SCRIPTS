@@ -664,7 +664,9 @@ struct progStatus
   double *sushisto;
 #endif
 #endif
-
+#ifdef MC_BOUNDING_SPHERES
+  int useboundsph;
+#endif
 #ifndef MD_DYNAMIC_OPROG
   double sumox[MAXPAR];
   double sumoy[MAXPAR];
@@ -1437,6 +1439,9 @@ struct pascii opro_ascii[] =
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",       &OS(optnnl),            1, 1,              "%d"},
 #endif
+#ifdef MC_BOUNDING_SPHERES
+  {"useboundsph",   &OS(useboundsph), 1, 1, "%d"},
+#endif
 #if defined(MD_RABBIT) || defined(MD_NANOBODY)
   {"time_limit",           &OS(time_limit),                1, 1,             "%.15G"},
   {"first_time",           &OS(first_time),                1, 1,             "%.15G"},
@@ -2013,6 +2018,9 @@ struct singlePar OsinglePar[] = {
 #ifdef MD_SUBENZYME
   {"SEreaction",   &OprogStatus.SEreaction, INT},
   {"SEp",          &OprogStatus.SEp,        CT},
+#endif
+#ifdef MC_BOUNDING_SPHERES
+  {"useboundsph",   &OprogStatus.useboundsph, INT},
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
   {"optnnl",      &OprogStatus.optnnl,      INT},
