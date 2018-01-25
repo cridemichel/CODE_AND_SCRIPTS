@@ -3217,6 +3217,7 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
 #endif
 double solcgbl[3];
 int nscgbl;
+#ifdef POLY_SOLVE_GSL
 int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
 {
   static gsl_poly_complex_workspace * w;
@@ -3246,6 +3247,7 @@ int solve_gslpoly(double c[5], int *numrealsol, double rsol[4])
 
   return 0;
 }
+#endif
 void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
 {
   /* questa soluzione di fatto è quella di abramovitz */
