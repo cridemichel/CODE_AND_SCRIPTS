@@ -1309,6 +1309,8 @@ void find_bonds_one(int i)
   int jj, jj2, aa, bb;
 #endif
 #endif
+  if (typesArr[typeOfPart[i]].nspots==0)
+    return;
 #ifdef MC_BOND_POS
   //build_linked_list_bp();
   find_bonds_one_BP(i);
