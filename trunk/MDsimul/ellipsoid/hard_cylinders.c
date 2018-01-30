@@ -8294,7 +8294,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
   double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
   double Cip[2][3], nip[2][3], norm, Rl[3][3];
-  double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
+  double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
   //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
@@ -8338,12 +8338,12 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   nip02=Sqr(nip0);
   nip12=Sqr(nip1);
   nip22=Sqr(nip2);
-  nip04=Sqr(nip02);
-  nip14=Sqr(nip12);
-  nip24=Sqr(nip22);
-  nip03=nip02*nip0;
-  nip13=nip12*nip1;
-  nip23=nip22*nip2;
+  //nip04=Sqr(nip02);
+  //nip14=Sqr(nip12);
+  //nip24=Sqr(nip22);
+  //nip03=nip02*nip0;
+  //nip13=nip12*nip1;
+  //nip23=nip22*nip2;
   Cip02=Sqr(Cip0);
   Cip12=Sqr(Cip1);
   Cip22=Sqr(Cip2);
@@ -8639,16 +8639,31 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       nip02=Sqr(nip0);
       nip12=Sqr(nip1);
       nip22=Sqr(nip2);
-      nip04=Sqr(nip02);
-      nip14=Sqr(nip12);
-      nip24=Sqr(nip22);
-      nip03=nip02*nip0;
-      nip13=nip12*nip1;
-      nip23=nip22*nip2;
+      //nip04=Sqr(nip02);
+      //nip14=Sqr(nip12);
+      //nip24=Sqr(nip22);
+      //nip03=nip02*nip0;
+      //nip13=nip12*nip1;
+      //nip23=nip22*nip2;
       Cip02=Sqr(Cip0);
       Cip12=Sqr(Cip1);
       Cip22=Sqr(Cip2);   
 #if 1
+      omnip02 = 1.0 - nip02;
+      omnip12 = 1.0 - nip12;
+      omnip22 = 1.0 - nip22;
+      nip1nip2 = nip1*nip2;
+      nip0nip2 = nip0*nip2;
+      nip0nip1 = nip0*nip1;
+      coeffEr[0] = omnip12;
+      coeffEr[1] = omnip22;
+      coeffEr[2] = -2.0*nip1nip2;  
+      coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
+									Cip1*Cip2*nip1nip2) - D2sq;
+      coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
+      coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
+
+#elif 0
       coeffEr[0] = 1 - 2*nip12 + nip02*nip12 + nip14 + 
 	nip12*nip22;
       coeffEr[1] = 1 - 2*nip22 + nip02*nip22 + 
