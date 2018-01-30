@@ -8296,6 +8296,8 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   double Cip[2][3], nip[2][3], norm, Rl[3][3];
   double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
+  //double nip04,nip14,nip24,nip03,nip13,nip23;
+ 
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
   //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
   //double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
