@@ -7574,8 +7574,11 @@ void usrInitAft(void)
       if (foundspot)
 	printf("Oparams.rcutBP: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBP,
 	       cellsxBP, cellsyBP, cellszBP);
-      printf("Oparams.rcutBS: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBS,
+#ifdef MC_BOUNDING_SPHERES
+      if (OprogStatus.useboundsph)
+	printf("Oparams.rcutBS: %f cellsx:%d cellsy: %d cellsz:%d\n", Oparams.rcutBS,
 	       cellsxBS, cellsyBS, cellszBS);
+#endif
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
       if (OprogStatus.optnnl)
