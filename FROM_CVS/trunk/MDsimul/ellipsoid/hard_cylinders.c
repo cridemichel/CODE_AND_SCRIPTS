@@ -6350,8 +6350,8 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 {
   int kk1, kk2, it, k;
   const int MAX_ITERATIONS=1000;
-  double Bi[3], Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dscpara[3], dsc[3];
-  double dscperp[3], ragg, ragg2, TnCi[3]; 
+  double Bi[3], Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dsc[3];//dscpara[3], dsc[3];
+  double ragg, ragg2, TnCi[3]; 
   for (kk1 = 0; kk1 < 3; kk1++)
     Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
   //printf("distance=%.15G\n", calc_distance(Ai, Dj[j2]));
@@ -6366,8 +6366,8 @@ double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double 
 	{
 	  VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
 	}
-      for (kk1=0; kk1 < 3; kk1++)
-	dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+      //    for (kk1=0; kk1 < 3; kk1++)
+      //	dscpara[kk1] = dscperp[kk1] - Dj[kk1];
       ragg = calc_norm(VV);
 
       for(k=0;k<3;k++)
@@ -8295,11 +8295,12 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
   double Cip[2][3], nip[2][3], norm, Rl[3][3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
+  double omnip02, omnip12, omnip22;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
   //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
   //double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
   //double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112, delta;
-  double D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2; 
+  double D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
 /* LAST ATTEMPT */
   /* se asse del rim e asse del disco sono paralleli si deve considerare un caso a parte */
   D2 = D*0.5; 
@@ -8345,8 +8346,23 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   nip23=nip22*nip2;
   Cip02=Sqr(Cip0);
   Cip12=Sqr(Cip1);
-  Cip22=Sqr(Cip2);   
+  Cip22=Sqr(Cip2);
 #if 1
+  /* with some simplifications we same a bunch of FLOPS... */
+  omnip02 = 1.0 - nip02;
+  omnip12 = 1.0 - nip12;
+  omnip22 = 1.0 - nip22;
+  nip1nip2 = nip1*nip2;
+  nip0nip2 = nip0*nip2;
+  nip0nip1 = nip0*nip1;
+  coeffEr[0] = omnip12;
+  coeffEr[1] = omnip22;
+  coeffEr[2] = -2.0*nip1nip2;  
+  coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
+   Cip1*Cip2*nip1nip2) - D2sq;
+  coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
+  coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
+#elif 0
   coeffEr[0] = 1 - 2*nip12 + nip02*nip12 + nip14 + 
     nip12*nip22;
   coeffEr[1] = 1 - 2*nip22 + nip02*nip22 + 
