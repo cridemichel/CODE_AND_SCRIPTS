@@ -5757,9 +5757,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	bq=d/dq;                                       // equation (5.10)
 
       //------------------------ aq and cq coefficients backward correction:
-#if 1
+#if 0
       ac_fit(a,b,c,d,&aq,&bq,&cq,&dq);
 #else
+      /* la mia soluzione è più semplice e più veloce */
       ac_fit_alt(a,b,c,d,&aq,&bq,&cq,&dq);
 #endif
       //------------------------------------ roots of the quadratic factors:   
