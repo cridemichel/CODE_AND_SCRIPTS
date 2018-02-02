@@ -11152,7 +11152,7 @@ double dist2_rods(coo_t r1, coo_t r2, coo_t w1, coo_t w2,double lh1,double lh2)
 // Checking whether the rods are or not parallel:
 // The original code is modified to have symmetry:
 
- if(cc<1e-15) {
+ if(cc<1e-6) {
   if(rw1 && rw2) {
    xla= rw1/2;
    xmu= -rw2/2;
@@ -11256,6 +11256,7 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
   Lv.x = Lv.y = Lv.z = L;
 #endif
 #endif
+#if 0
   for (j1=0; j1 < 2; j1++)
     for (j2=0; j2 < 2; j2++)
       {
@@ -11305,10 +11306,22 @@ double check_spherocyl(double CiCj[3], double D, double Lc, double Di[2][3], dou
     }
 
   *rim = 1;
-#if 0
+#if 1
   if  (rimrim_sphcyl(D, Lc, Ci, ni, Cj, nj) < 0)
-   return -1; 
+    {
+      //printf("BOHBOH\n");
+      return -1;
+    } 
 #else
+  if ((d=dist2_rods(r1, r2, w1, w2, Lc*0.5, Lc*0.5)) <= Sqr(D)) 
+    {
+      *rim=-1;
+      return -1;
+    }
+#endif
+#else
+  // dist2_rods da la distanza tra due segmenti quindi è quello che serve per capire se gli sferocilindri
+  // si sovrappongono o meno
   if ((d=dist2_rods(r1, r2, w1, w2, Lc*0.5, Lc*0.5)) <= Sqr(D)) 
     {
       *rim=-1;
