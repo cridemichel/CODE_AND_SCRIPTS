@@ -1421,7 +1421,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  write (*,wpformat) ' ------------------------------------------------'
       }
 #endif
-      if (x < 0.0 && y < 0.0) 
+      if (x == 0.0 && y == 0.0) 
 	{
 	  if (fabs(s) > fabs(u))
 	    x=s;
