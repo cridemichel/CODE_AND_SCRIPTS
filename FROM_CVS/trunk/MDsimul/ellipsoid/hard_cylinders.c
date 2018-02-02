@@ -1541,6 +1541,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	    y = y * x + a1;                                 // z = Q'(x)
 	    z = z * x + y;                                  //
 	    y = y * x + a0;                                 //
+	    t = z;
 	    y = y / z;
 	    x = x - y;
 
@@ -1748,7 +1749,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	     
 	      if (y > 0.0)                            // does Newton start oscillating ?
 		{
-		  oscillate = oscillate + 1;                  // increment oscillation counter
+		  overshoot = overshoot + 1;                  // increment oscillation counter
 		  s = x;
 		}
 	      else
@@ -1764,7 +1765,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	      y = y / z;                                      // Newton correction
 	      x = x - y;                                      // new Newton root
 
-	      bisection = (oscillate > 2)?1:0;                      // activate bisection
+	      bisection = (overshoot > 2)?1:0;                      // activate bisection
 	      converged = (fabs (y) <= fabs (x) * macheps)?1:0;       // Newton convergence criterion
 
 	      // if (doPrint) write (*,wpformat) ' Newton H(x) root      = ',x
