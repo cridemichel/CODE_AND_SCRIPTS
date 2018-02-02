@@ -1098,6 +1098,8 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   int doPrint;
   int iterate;
   int minimum;
+  int overshoot;
+  int dsignflip;
   int notZero;
 
   int deflateCase;
@@ -1419,12 +1421,34 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  write (*,wpformat) ' ------------------------------------------------'
       }
 #endif
-      if (x < 0.0 && y < 0.0) {
-	if (s < 0.0 && a0 > 0.0) 
-              x = 0.0;
+      if (x < 0.0 && y < 0.0) 
+	{
+	  if (fabs(s) > fabs(u))
+	    x=s;
+	  else
+	    x=u;
+	  *nReal = 1;
+	  iterate = 0;
+	} 
+      else if (x==0)
+	{
+	  x=s;
+	  *nReal = 1;
+	  iterate = 0;
+	}
+      else if (y==0)
+	{
+	  x = u;
+	  *nReal = 1;
+	  iterate = 0;
+	}
+      else if (x < 0.0 && y < 0.0)
+	{
+	  if (s < 0.0 && a0 > 0.0) 
+	    x = 0.0;
           else
-              x = 2.0;
-
+	    x = 2.0;
+          
           if (u > 0.0 && a0 > 0.0) 
               y = 0.0;
           else
@@ -1442,16 +1466,18 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
           c = c * y + a2;
           d = d * y + c;
           c = c * y + a1;
-          d = d * y + c;    // d = Q'(y)
+          d = d * y + c;     //! d = Q'(y)
 
-          if (fabs(b) > fabs(d)) {    // if Q'(y) < Q'(x),
-	    x = y;                     // take root u for Newton iterations
-	    s = u;                     // save for lower bisecion bound just in case
-	  }
+	  if (fabs (b) > fabs (d))   
+	    {                           // if Q'(y) < Q'(x),
+              x = y;                     // take root u for Newton iterations
+              s = u;                     // save for lower bisecion bound just in case
+	    }
 
-	*nReal = 1;
-
-      } else if (x < 0.0) {
+          *nReal = 1;
+          iterate = 1;
+	}
+      else if (x < 0.0) {
 
 	if (s < - a3 * 0.25) {
 	  if (s > 0.0 && a0 > 0.0) {
@@ -1468,6 +1494,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	}
 
 	*nReal = 1;
+	iterate = 1;
 
       } else if (y < 0.0) {
 
@@ -1486,7 +1513,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	}
 	s = u;
 	*nReal = 1;
-
+	iterate = 1;
       } else {
 	*nReal = 0;
       }
@@ -1505,12 +1532,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
       //
       //
       if (*nReal > 0) {
-
-	t = 32.0;
-	oscillate = 0;
-	bisection = 0;
-	converged = 0;
-	while (!converged && !bisection)    // Newton-Raphson iterates
+	if (iterate)
 	  {
 	    y = x + a3;                                     //
 	    z = x + y;                                     //
@@ -1519,55 +1541,72 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	    y = y * x + a1;                                 // z = Q'(x)
 	    z = z * x + y;                                  //
 	    y = y * x + a0;                                 //
+	    y = y / z;
+	    x = x - y;
 
-	    if (y > t) {                           // does Newton start oscillating ?
-	      oscillate = oscillate + 1;                  // increment oscillation counter
-	    }
+	    dsignflip = 0;
+	    overshoot = 0;
+	    bisection = 0;
+	    converged = 0;
 
-	    if (y < 0.0) {
-	      s = x;                                      // save lower bisection bound
-	    } else {
-	      u = x;                                      // save upper bisection bound
-	    }
-
-	    if (z==0.0)
+	    while (!converged && !bisection)    // Newton-Raphson iterates
 	      {
-		bisection = 1; 
-		break;
+		y = x + a3;                                      //
+		z = x + y;                                      //
+		y = y * x + a2;                                 // y = Q(x)
+		z = z * x + y;                                  //
+		y = y * x + a1;                                 // z = Q'(x)
+		z = z * x + y;                                  //
+		y = y * x + a0;                                 //
+
+		if (y < 0.0)    
+		  {                                            // does Newton start overshooting ?
+		    overshoot = overshoot + 1;                 // increment overshoot counter
+		    s = x;
+		  }                                            // save lower bisection bound
+		else
+		  u = x;                                      // save upper bisection bound
+
+		if (z * t < 0.0)  
+		  {  // does Q'(x) have a sign flip ?
+		    dsignflip = dsignflip + 1;                  // increment sign flip counter
+		    t = z;
+		  }  // save Q'(x) for next sign check
+
+		if (z == 0.0)                           // safeguard against accidental
+		  {
+		    bisection = 1;                        // Q'(x) = 0 due to roundoff
+		    break;
+		  } // errors -> activate bisection
+		// with current bracket [s,u]
+
+		y = y / z;                                      // Newton correction
+		x = x - y;                                      // new Newton root
+
+		bisection = (overshoot > 2 || dsignflip > 2)?1:0;   // activate bisection
+		converged = (fabs (y) <= fabs (x) * macheps)?1:0;   // Newton convergence indicator
 	      }
 
-	    t = y;
-	    y = y / z;                                      // Newton correction
-	    x = x - y;                                      // new Newton root
+	    if (bisection) 
+	      {
+		t = u - s;                                     // initial bisection interval
+		while (fabs (t) > fabs (x) * macheps)        // bisection iterates
+		  {
+		    y = x + a3;                                 //
+		    y = y * x + a2;                             // y = Q(x)
+		    y = y * x + a1;                             //
+		    y = y * x + a0;                             //
 
-	    bisection = (oscillate > 2)?1:0;                      // activate bisection
-	    converged = (fabs (y) <= fabs (x) * macheps)?1:0;       // Newton convergence indicator
+		    if (y < 0.0)                       //
+		      s = x;                                  //
+		    else                                       // keep bracket on root
+		      u = x;                                  //
 
+		    t = 0.5 * (u - s);                       // new bisection interval
+		    x = s + t;                                  // new bisection root
+		  }
+	      }
 	  }
-
-	if (bisection) {
-
-	  t = u - s;                                     // initial bisection interval
-	  while (fabs (t) > fabs (x) * macheps)        // bisection iterates
-	    {
-
-	      y = x + a3;                                 //
-	      y = y * x + a2;                             // y = Q(x)
-	      y = y * x + a1;                             //
-	      y = y * x + a0;                             //
-
-	      if (y < 0.0) {                       //
-		s = x;                                  //
-	      } else {                                       // keep bracket on root
-		u = x;                                  //
-	      }                                     //
-
-	      t = 0.5 * (u - s);                       // new bisection interval
-	      x = s + t;                                  // new bisection root
-
-
-	    } 
-	}
 
 	//
 	//
@@ -1688,8 +1727,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 
 	  x = copysign (2.0,a3);                              // initial root -> target = smaller mag root
 
-	  t = -8992.0;
-	  oscillate = 0;
+	  overshoot = 0;
 	  bisection = 0;
 	  converged = 0;
 
@@ -1708,22 +1746,21 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	      y = a * d * d - b * c * d + b * b;              // y = H(x), usually < 0
 	      z = 2 * d * (4 * a - b * d - c * c);            // z = H'(x)
 	     
-	      if (y < t)                            // does Newton start oscillating ?
-		oscillate = oscillate + 1;                  // increment oscillation counter
-	      
-              if (y > 0.0) {
-		s = x;                                      // save upper bisection bound
-	      
-	      } else {
-		u = x;                                      // save lower bisection bound
-	      }
-
-	      if (z == 0.0)                           // safeguard against accidental
+	      if (y > 0.0)                            // does Newton start oscillating ?
 		{
-		  bisection = 1;                         // H'(x) = 0 due to roundoff
-		  break;                                       // errors -> bisection takes
-		}    
-	      t = y;                                          // save H(x) for next Newton step
+		  oscillate = oscillate + 1;                  // increment oscillation counter
+		  s = x;
+		}
+	      else
+		{
+		  u = x;	  
+		}
+	      if (z == 0.0)
+		{
+		  converged = 1;
+		  bisection = 0;
+		  break;
+		}
 	      y = y / z;                                      // Newton correction
 	      x = x - y;                                      // new Newton root
 
@@ -1767,19 +1804,36 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 
 	  a = x * k;                                         // 1st real component -> a
 	  b = - 0.5 * q3 - a;                             // 2nd real component -> b
+	  c = a * a;
+	  d = b * b;
 
 	  x = 4 * a + q3;                                    // Q'''(a)
 	  y = x + q3 + q3;                                   //
 	  y = y * a + q2 + q2;                               // Q'(a)
 	  y = y * a + q1;                                    //
-	  y = Max2 (y / x, 0.0);                           // ensure Q'(a) / Q'''(a) >= 0
-	  c = sqrt(y);
+	  y = y / x;                                         // Q'(a) / Q'''(a)
+	  s = c + y;                                         // magnitude^2 of (a + iy) root
 	  x = 4 * b + q3;                                    // Q'''(b)
 	  z = x + q3 + q3;                                   //
 	  z = z * b + q2 + q2;                               // Q'(b)
 	  z = z * b + q1;                                    //
-	  z = Max2 (z / x, 0.0);                           // ensure Q'(b) / Q'''(b) >= 0
-	  d = sqrt(z);
+	  z = z / x;                                         // Q'(b) / Q'''(b)
+	  t = d + z;                                         // magnitude^2 of (b + iz) root
+
+	  if (s > t) 
+	    {                                   // minimize imaginary error
+	      y = Max2(y, 0.0);                           // ensure >= 0 for sqrt
+      	      d = Max2(q0 / s - d, 0.0);                  // small component using Vieta
+	      c = sqrt(y);                                  // 1st imaginary component -> c
+	      d = sqrt(d);
+	    }// 2nd imaginary component -> d
+	  else
+	    {
+	      c = Max2(q0 / t - c, 0.0);                  // small component using Vieta
+   	      z = Max2(z, 0.0);                           // ensure >= 0 for sqrt
+	      c = sqrt(c);                                  // 1st imaginary component -> c
+	      d = sqrt(z);                                  // 2nd imaginary component -> d
+	    }
 
 	} else {                                                  // no bisection -> real components equal
 
@@ -8341,12 +8395,14 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   nip02=Sqr(nip0);
   nip12=Sqr(nip1);
   nip22=Sqr(nip2);
-  //nip04=Sqr(nip02);
-  //nip14=Sqr(nip12);
-  //nip24=Sqr(nip22);
-  //nip03=nip02*nip0;
-  //nip13=nip12*nip1;
-  //nip23=nip22*nip2;
+#if 0
+  nip04=Sqr(nip02);
+  nip14=Sqr(nip12);
+  nip24=Sqr(nip22);
+  nip03=nip02*nip0;
+  nip13=nip12*nip1;
+  nip23=nip22*nip2;
+#endif
   Cip02=Sqr(Cip0);
   Cip12=Sqr(Cip1);
   Cip22=Sqr(Cip2);
