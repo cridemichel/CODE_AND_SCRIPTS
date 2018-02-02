@@ -8185,6 +8185,9 @@ char *par2rgb(int i, double rgb[3])
 /* ========================== >>> writeAllCor <<< ========================== */
 void writeAllCor(FILE* fs, int saveAll)
 {
+#ifdef MC_SPHEROCYL
+  double L2, D;
+#endif
 #ifdef POVRAY
   double cp[3], bp[3], ni[3], nj[3];
   int kk, i1l, i2l;
@@ -8526,6 +8529,14 @@ void writeAllCor(FILE* fs, int saveAll)
 		  2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
 #endif
 #endif
+#ifdef MC_SPHEROCYL
+	D = 2.0*typesArr[typeOfPart[i]].sax[1];
+	L2 = typesArr[typeOfPart[i]].sax[0];
+	//printf("D=%f L=%f\n", D, L2*2);
+	fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", rx[i]+uxx[i]*L2, ry[i]+uxy[i]*L2, rz[i]+uxz[i]*L2, D*0.5, colsFlex[typeOfPart[i]%numcols]);
+	fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", rx[i]-uxx[i]*L2, ry[i]-uxy[i]*L2, rz[i]-uxz[i]*L2, D*0.5, colsFlex[typeOfPart[i]%numcols]);
+#endif
+
 #else
 #ifdef EDHE_FLEX
 #ifndef MD_FOUR_BEADS
