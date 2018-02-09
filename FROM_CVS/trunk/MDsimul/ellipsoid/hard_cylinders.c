@@ -3989,6 +3989,7 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
     }
   else 
     {
+   
       /* loop over all disk pairs (they are 4) */
       vectProdVec(ni, nj, N);
       vectProdVec(ni,N,niN);
@@ -3998,6 +3999,15 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
       for (j1=0; j1 < 2; j1++)
 	for (j2=0; j2 < 2; j2++)
 	  {
+#if 0
+	    sp=0;
+	    for (kk=0; kk < 3; kk++)
+	      {
+		sp  += Sqr(Di[j1][kk]-Dj[j2][kk]);
+	      }	  
+	    if (sp > D*D)
+	      continue;
+#endif
 	    DiN = scalProd(Di[j1],N);
 	    DjN = scalProd(Dj[j2],N);
 	    Dini = scalProd(Di[j1],ni);
@@ -5320,6 +5330,69 @@ double calc_res(double d2, double l2, double del2, double dml3l3, double d2eq46)
 {
   return fabs(d2eq46-d2)+fabs(del2-2.0*l2*d2)+fabs(dml3l3-d2*l2*l2);
 }
+void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
+{
+  double g,h,gg,hh,aq,bq,cq,dq,s,diskr, coeff[4];
+  int nreal,k, trovato=0;
+  double rmax;
+  complex double radici[3]; 
+ 
+  // !------------------------------------------------------- the B-shift:
+  diskr=9*a*a-24*b;                    //         ! equation (3.58)
+      
+  if(diskr > 0.0)
+    { 
+      diskr=sqrt(diskr);
+      if(a > 0.0)
+	s=-2*b/(3*a+diskr);                            // equation (3.58)
+      else
+	s=-2*b/(3*a-diskr);                            // equation (3.58)
+	  
+    }
+  else
+    {      
+      s=-a/4;                                    // equations (3.59-60)
+    }
+      
+  // !--------------------------- the shift transformation (Horner forms):
+
+  aq=a+4*s;                                      // equation (3.45)
+  bq=b+3*s*(a+2*s);                              // equation (3.46)
+  cq=c+s*(2*b+s*(3*a+4*s));                      // equation (3.47)
+  dq=d+s*(c+s*(b+s*(a+s)));                      // equation (3.48)     
+
+  gg=bq*bq/9;
+  hh=aq*cq;      
+  g=hh-4*dq-3*gg;                                // equation (3.49)
+  h=(8*dq+hh-2*gg)*bq/3-cq*cq-dq*aq*aq;         // equation (3.50)
+
+//------------------ call the parabola/reciprocal intersection method:      
+      
+  coeff[3]=1.0;
+  coeff[2]=0.0;
+  coeff[1]=g;
+  coeff[0]=h;
+  /* NOTA 09/02/18 La soluzione analitica sembra accurata quanto il metodo usato da Strobach ma è più veloce,
+   * In alternativa si può usare l'algoritmo di Flocke per le cubiche Sembra*/
+  //cubicRoots(0,g,h,&nreal,radici);
+  solve_cubic_analytic(coeff,radici);
+  for (k=0; k < 3; k++)
+    {
+      if (cimag(radici[k])==0)
+	{
+	  if (!trovato || fabs(creal(radici[k])) > rmax )
+	    {
+	      trovato=1;
+	      rmax=creal(radici[k]);
+	    }
+	}
+    }
+  *phi0=rmax;
+
+// -------------------------------------------------------------------- 
+      
+}
+
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
   double l2mC, l2m[12], d2m[12], res[12], resmin;
@@ -5404,6 +5477,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       return;
     }
 #endif
+  //mycubic_B_shift(a,b,c,d,&phi0);     
   cubic_B_shift(a,b,c,d,&phi0);     
 
     //    write(6,*)' '
@@ -8353,13 +8427,13 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
   //double nip04,nip14,nip24,nip03,nip13,nip23;
- 
+
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
   //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
   //double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
   //double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112, delta;
   double D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
-/* LAST ATTEMPT */
+  /* LAST ATTEMPT */
   /* se asse del rim e asse del disco sono paralleli si deve considerare un caso a parte */
   D2 = D*0.5; 
   D2sq = Sqr(D2);
@@ -8408,7 +8482,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   Cip12=Sqr(Cip1);
   Cip22=Sqr(Cip2);
 #if 1
-  /* with some simplifications we same a bunch of FLOPS... */
+  /* with some simplifications we save a bunch of FLOPS... */
   omnip02 = 1.0 - nip02;
   omnip12 = 1.0 - nip12;
   omnip22 = 1.0 - nip22;
@@ -8419,7 +8493,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   coeffEr[1] = omnip22;
   coeffEr[2] = -2.0*nip1nip2;  
   coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
-   Cip1*Cip2*nip1nip2) - D2sq;
+								    Cip1*Cip2*nip1nip2) - D2sq;
   coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
   coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
 #elif 0
@@ -8445,13 +8519,13 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
     4*Cip2*nip22 - 2*Cip2*nip02*nip22 - 2*Cip2*nip12*nip22 - 2*Cip0*nip0*nip23 - 2*Cip1*nip1*nip23 
     - 2*Cip2*nip24;
 #else
- /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
+  /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
 
   coeffEr[0] = 1.0 + ( -2*nip12 + nip14 + nip12*nip22) + nip02*nip12;
   coeffEr[1] = 1.0 + ( -2*nip22 + nip12*nip22 + nip24) + nip02*nip22;
   coeffEr[2] = 2*nip02*nip1*nip2 + (- 4*nip1*nip2 + 2*nip13*nip2 + 
-    2*nip1*nip23);
- 
+				    2*nip1*nip23);
+
   coeffEr[3] = 
     (- 2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1+ 
      Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 - 4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2
@@ -8460,42 +8534,40 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
     + Cip02 + Cip12 + Cip22 - Sqr(D2)  - 
     2*Cip12*nip12  + Cip12*nip14 - 4*Cip1*Cip2*nip1*nip2  + 2*Cip1*Cip2*nip13*nip2 - 2*Cip22*nip22  + Cip12*nip12*nip22 
     + Cip22*nip12*nip22  + 2*Cip1*Cip2*nip1*nip23 + Cip22*nip24;
- 
+
   coeffEr[4] =
     (4*Cip0*nip0*nip1 - 2*Cip0*nip03*nip1 +  
      - 2*Cip1*nip02*nip12 - 2*Cip0*nip0*nip13
      - 2*Cip2*nip02*nip1*nip2 - 2*Cip0*nip0*nip1*nip22 ) 
     - 2*Cip1 + 4*Cip1*nip12  - 2*Cip1*nip14 + 4*Cip2*nip1*nip2 - 2*Cip2*nip13*nip2 - 2*Cip1*nip12*nip22 - 
     2*Cip2*nip1*nip23;
- 
+
   coeffEr[5] = 
     (4*Cip0*nip0*nip2 - 2*Cip0*nip03*nip2 - 2*Cip1*nip02*nip1*nip2 - 2*Cip0*nip0*nip12*nip2 - 2*Cip2*nip02*nip22
      - 2*Cip0*nip0*nip23 ) -2*Cip2 + 4*Cip1*nip1*nip2  - 2*Cip1*nip13*nip2 + 
     4*Cip2*nip22  - 2*Cip2*nip12*nip22 - 2*Cip1*nip1*nip23 - 2*Cip2*nip24;
- 
+
 #endif
   /* check ellipse */
 #if 0
-  {
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-    double cq[3], x, lam, solq[2], p[3];
-    int numsol;
-    lam = -Cip0/nip0;
-    x = Cip1 + lam*nip1;
-    cq[0] = coeffEr[3]+coeffEr[4]*x+coeffEr[0]*x*x;
-    cq[1] = coeffEr[5]+coeffEr[2]*x;
-    cq[2] = coeffEr[1];
-    solve_quadratic(cq, &numsol, solq);
-    p[0] = 0.0;
-    p[1] = x;
-    p[2] = solq[0];
-    if (fabs(perpcomp(p, Cip, nip) - D2) > 3E-8)
-      {
-	printf("coeff quad=%.16G %.16G %.16G\n", cq[2], cq[1], cq[0]);
-      	printf("distance punto ellipse axis=%.16G\n", perpcomp(p, Cip, nip));
-	printf("nip.njp=%.15G lam=%.15G\n", nip0, lam);
-      }
-  }
+  double cq[3], x, lam, solq[2], p[3];
+  int numsol;
+  lam = -Cip0/nip0;
+  x = Cip1 + lam*nip1;
+  cq[0] = coeffEr[3]+coeffEr[4]*x+coeffEr[0]*x*x;
+  cq[1] = coeffEr[5]+coeffEr[2]*x;
+  cq[2] = coeffEr[1];
+  solve_quadratic(cq, &numsol, solq);
+  p[0] = 0.0;
+  p[1] = x;
+  p[2] = solq[0];
+  if (fabs(perpcomp(p, Cip, nip) - D2) > 3E-8)
+    {
+      printf("coeff quad=%.16G %.16G %.16G\n", cq[2], cq[1], cq[0]);
+      printf("distance punto ellipse axis=%.16G\n", perpcomp(p, Cip, nip));
+      printf("nip.njp=%.15G lam=%.15G\n", nip0, lam);
+    }
 #endif
   /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
   coeffEr[0] *= D2sq;
@@ -8615,7 +8687,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 #if 0
       if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
 	{
-  	  printf("solec[%d]=%.16G %.16G temp=%.15G\n", kk1, solec[kk1][0], solec[kk1][1], temp);
+	  printf("solec[%d]=%.16G %.16G temp=%.15G\n", kk1, solec[kk1][0], solec[kk1][1], temp);
 	  printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
 	  printf("numeratore=%.16G\n", -c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]));
 	}
@@ -8668,7 +8740,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       printf("c2=%.16G c4=%.16G c5=%.16G\n", c2, c4, c5);
       store_bump(iGbl,jGbl);
 #endif
- 
+
 #if 0
       for (kk1=0; kk1 < 3; kk1++)
 	uy[kk1] = D2*Rl[1][kk1];
@@ -8777,25 +8849,25 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 #endif
       /* check ellipse */
 
-    /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
-    coeffEr[0] *= D2sq;
-    coeffEr[1] *= D2sq; 
-    coeffEr[2] *= D2sq;
-    coeffEr[4] *= D2;
-    coeffEr[5] *= D2;
-    //printf("coeffEr=%.15G %.15G\n", coeffEr[0], coeffEr[1]);
-    c0 = coeffEr[0];
-    c1 = coeffEr[1];
-    c2 = coeffEr[2];
-    c3 = coeffEr[3];
-    c4 = coeffEr[4];
-    c5 = coeffEr[5];
-    c02 = Sqr(c0);
-    c12 = Sqr(c1);
-    c22 = Sqr(c2);
-    c32 = Sqr(c3);
-    c42 = Sqr(c4);
-    c52 = Sqr(c5);
+      /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
+      coeffEr[0] *= D2sq;
+      coeffEr[1] *= D2sq; 
+      coeffEr[2] *= D2sq;
+      coeffEr[4] *= D2;
+      coeffEr[5] *= D2;
+      //printf("coeffEr=%.15G %.15G\n", coeffEr[0], coeffEr[1]);
+      c0 = coeffEr[0];
+      c1 = coeffEr[1];
+      c2 = coeffEr[2];
+      c3 = coeffEr[3];
+      c4 = coeffEr[4];
+      c5 = coeffEr[5];
+      c02 = Sqr(c0);
+      c12 = Sqr(c1);
+      c22 = Sqr(c2);
+      c32 = Sqr(c3);
+      c42 = Sqr(c4);
+      c52 = Sqr(c5);
 
 #if 0
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
@@ -8826,9 +8898,9 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 #if 0 
 	  temp = c5 + c2*solqua[kk1];
 	  solec[kk1][0] = solqua[kk1];
-      	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
+	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
-    	  temp = c4 + c2*solqua[kk1];
+	  temp = c4 + c2*solqua[kk1];
 	  //printf("tempnew=%.16G\n", temp);
 	  if (temp==0)
 	    {
@@ -8869,7 +8941,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       else
 	{
 	  if (maxdiff[1] < maxdiff[0])
-	  //if (sumdiff[1] < sumdiff[0])
+	    //if (sumdiff[1] < sumdiff[0])
 	    solset = 1;
 	  else 
 	    solset = 0;
@@ -8894,12 +8966,12 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	  printf("# %d numsol=%d %d ===================== <<<< \n", kk1, numsol[0], numsol[1]);
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[solset][kk1]));
 	  printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[solset][kk1], Cip[solset], nip[solset]));
-	  
+
 	  if (kk1 < numsol[1-solset])
 	    {
 	      printf("DISCARDED SOLSET [%d]\n", 1-solset);
-    	      printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[1-solset][kk1]));
-    	      printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[1-solset][kk1], Cip[1-solset], nip[1-solset]));
+	      printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[1-solset][kk1]));
+	      printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[1-solset][kk1], Cip[1-solset], nip[1-solset]));
 	    }
 #ifdef MC_QUART_VERBOSE
 	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
@@ -9986,7 +10058,9 @@ double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], doubl
       Vj[kk] = Cj[kk] + lambdaj*nj[kk];
       ViVj[kk] = Vi[kk] - Vj[kk];
     }
-  if (calc_norm(ViVj) < D && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
+  if ( //Sqr(ViVj[0])+Sqr(ViVj[1])+Sqr(ViVj[2])<Sqr(D) 
+       calc_norm(ViVj) < D 
+       && fabs(lambdai) < 0.5*L && fabs(lambdaj) < 0.5*L)
     {
 #ifdef DEBUG_HCMC
       if (dostorebump)
