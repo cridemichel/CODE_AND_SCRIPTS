@@ -5485,7 +5485,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   solve_cubic_analytic(coeff,radici);
   for (k=0; k < 3; k++)
     {
-      if (isnan(radici[k]) || isinf(radici[k]))
+      if (isnan(creal(radici[k])) || isnan(cimag(radici[k])) ||
+	  isinf(creal(radici[k])) || isinf(cimag(radici[k]))) 
 	{
 	  for (k2=0; k2 < 4; k2++)
 	    coeffl[k2] = coeff[k2];
