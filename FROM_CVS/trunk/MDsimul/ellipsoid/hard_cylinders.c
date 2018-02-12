@@ -4723,6 +4723,7 @@ void QRfactorization(double hess[4][4], complex double sol[4], int *ok, int n)
 #endif
 }
 int tinyimagGBL=0;
+
 void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], int *ok, int m)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
@@ -4883,6 +4884,88 @@ void two_lin_eqs(double fmat[2][2],double evec[2], double dalf[2])
   else
     dalf[0]=(evec[0]-fmat[0][1]*dalf[1])/fmat[0][0];
 }  
+void myquadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
+{ 
+  double MACHEPS=2.2204460492503131E-16;
+  double diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
+  int iter; 
+  //-------------------------------- parameter backward correction step:       
+
+  /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
+  evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
+  evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
+  err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23)
+
+  //printf("BEGIN err=%.16G a=%.16G b=%.15G\n", err, a, b);
+  if(err!=0.0)    
+    {      
+      for (iter=0; iter < 8; iter++) 
+	{ 
+	  fmat[0][0]=-b*aa+2*a*b;                         // equation (5.19)
+	  fmat[0][1]=bb-2*b-a*aa+a*a;                    // equation (5.19)
+	  fmat[1][0]=b*b-dd;                             // equation (5.19)
+	  fmat[1][1]=cc-2*b*aa+2*b*a;                     // equation (5.19)
+
+	  /* usuale criterio di convergenza di un NR */
+	  if (err < MACHEPS)
+	    break;
+	  evec[0]=-evec[0];
+	  evec[1]=-evec[1];
+
+	  two_lin_eqs(fmat,evec,dpar);              // equation (5.20)
+	  at=a;
+	  bt=b;
+	  a=a+dpar[0];                                   // equation (5.21)
+	  b=b+dpar[1];                                   // equation (5.22)
+
+  	  evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
+	  evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
+
+	  errt=err;
+	  err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23) 
+
+	  if(err == 0.0)
+	    break;	// terminate
+	  if(err>=errt)   // terminate without parameter update
+	    {
+	      a=at;
+	      b=bt;  
+	      break;
+	    }
+	  /* questo è l'usuale criterio di convergenza del NR */
+	  if (fabs(dpar[0]) + fabs(dpar[1]) < MACHEPS)
+	    break;
+	}
+    } 
+  //---------------------------------------- solve a quadratic equation:     
+  //if (iter>4 && err > 3E-16)
+    //printf("iter=%d max iterations reached err=%.16G!\n", iter, err);
+
+  diskr=a*a-4*b;   
+
+  if(diskr>=0.0)
+    {
+      if(a>=0.0)
+	div=-a-sqrt(diskr);
+      else
+	div=-a+sqrt(diskr);
+
+      zmax=div/2;
+
+      if(zmax==0.0)
+	zmin=0.0;
+      else
+	zmin=b/zmax;
+
+      roots[0]=CMPLX(zmax,0.0);
+      roots[1]=CMPLX(zmin,0.0);
+    } 
+  else
+    {   
+      roots[0]=CMPLX(-a/2,sqrt(-diskr)/2);
+      roots[1]=CMPLX(-a/2,-sqrt(-diskr)/2);      
+    }   
+}
 
 void quadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
 { 
@@ -5330,13 +5413,37 @@ double calc_res(double d2, double l2, double del2, double dml3l3, double d2eq46)
 {
   return fabs(d2eq46-d2)+fabs(del2-2.0*l2*d2)+fabs(dml3l3-d2*l2*l2);
 }
+void solve_numrecl_cmplx(long double *coeff, complex long double *csol, int m)
+{
+//void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
+  /*Find all the roots of a polynomial with real coefficients, a4*x^4+a3*x^3+a2*x^2+a1*x+a0, 
+   * given the coefficients a[0..m]. The method is to construct an upper Hessenberg matrix whose 
+   * eigenvalues are the desired roots and then use the routine Unsymmeig. The roots are returned 
+   * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
+  /* pagina 497 Num. Rec. */
+  complex long double cc[5], lsol[4]; 
+  //const int m=4;
+  const double TINYEPS=1E-7;
+  long double hess[4][4]; //coeff[5];
+  int j, k, smallimag, ok;
+  //for (k=0; k < 5; k++)
+    //coeff[k] = (long double) coeffA[k];
+  for (k=0;k<m;k++) { //Construct the matrix.
+    hess[0][k] = -coeff[m-k-1]/coeff[m];
+    for (j=1;j<m;j++) hess[j][k]=0.0;
+    if (k != m-1) hess[k+1][k]=1.0;
+  }
+  QRfactorizationl(hess, csol, &ok, m);
+}
+
 void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 {
   double g,h,gg,hh,aq,bq,cq,dq,s,diskr, coeff[4];
-  int nreal,k, trovato=0;
+  int nreal,k, trovato=0, k2;
   double rmax;
   complex double radici[3]; 
- 
+  complex long double radicil[3];
+  long double coeffl[4];
   // !------------------------------------------------------- the B-shift:
   diskr=9*a*a-24*b;                    //         ! equation (3.58)
       
@@ -5376,6 +5483,20 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
    * In alternativa si può usare l'algoritmo di Flocke per le cubiche Sembra*/
   //cubicRoots(0,g,h,&nreal,radici);
   solve_cubic_analytic(coeff,radici);
+  for (k=0; k < 3; k++)
+    {
+      if (isnan(radici[k]) || isinf(radici[k]))
+	{
+	  for (k2=0; k2 < 4; k2++)
+	    coeffl[k2] = coeff[k2];
+	  solve_numrecl_cmplx(coeffl, radicil, 3);
+	  for (k2=0; k2 < 3; k2++)
+	    radici[k2] = radicil[k2];
+	  //cubicRoots(0,g,h,&nreal,radici);
+	  break;
+	}
+    }
+
   for (k=0; k < 3; k++)
     {
       if (cimag(radici[k])==0)
@@ -5477,8 +5598,8 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       return;
     }
 #endif
-  //mycubic_B_shift(a,b,c,d,&phi0);     
-  cubic_B_shift(a,b,c,d,&phi0);     
+  mycubic_B_shift(a,b,c,d,&phi0);     
+  //cubic_B_shift(a,b,c,d,&phi0);     
 
     //    write(6,*)' '
     //    write(6,*)' phi0 = ',phi0
@@ -5895,10 +6016,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       //------------------------------------ roots of the quadratic factors:   
 
       //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
-      quadratic(a,b,c,d,aq,bq,qroots);
+      myquadratic(a,b,c,d,aq,bq,qroots);
       roots[0]=qroots[0];
       roots[1]=qroots[1];        
-      quadratic(a,b,c,d,cq,dq,qroots);
+      myquadratic(a,b,c,d,cq,dq,qroots);
       roots[2]=qroots[0];
       roots[3]=qroots[1];               
 
@@ -6263,13 +6384,69 @@ void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 }
 #endif
 #ifdef FAST_QUARTIC_SOLVER
+complex double quarticfunc(double c[5], double complex sol)
+{
+  complex double sum=0.0, psol;
+  int k;
+  
+  sum=c[0];
+  psol=1.0+I*0.0;
+  for (k=1; k < 5; k++)
+    {
+      psol*=sol;
+      sum+=c[k]*psol;
+    }
+  return sum/cabs(sol);
+}
+
 void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
 {
+  //double ERRTHR=1E-10;
   double complex csol[4];
-  int k;//, printsol;
+  double sum, sum2;
+  long double complex csoll[4];
+  long double coeffl[5];
+  int k, planB=0;//, printsol;
   LDLT_quartic(coeff, csol);
   *numsol=0;
 
+#if 0
+  sum=0;
+  for (k=0; k < 4; k++)
+    {
+      sum += cabs(quarticfunc(coeff, csol[k]));
+    }
+#endif
+
+  for (k=0; k < 4; k++)
+    {
+      if (isnan(creal(csol[k]))||isnan(cimag(csol[k]))|| 
+	  isinf(creal(csol[k]))||isinf(cimag(csol[k])))
+	planB=1;
+    }
+ // if error is too large use quadruple precision HQR routine as a safe (although much slower) backup */ 
+  if (planB)
+    {
+      printf("[USING HQRL] BEFORE sum=%.15G\n", sum);
+      for (k=0; k < 4; k++)
+	{
+	  printf("BEFORE csol=%.16G + I*(%.16G)\n", creal(csol[k]), cimag(csol[k]));
+	}
+      for (k=0; k < 5; k++)
+	coeffl[k]=coeff[k];
+      solve_numrecl_cmplx(coeffl, csoll, 4);
+      for (k=0; k < 4; k++)
+	{
+	  csol[k] = csoll[k];
+	  printf("AFTER csol=%.16G + I*(%.16G)\n", creal(csol[k]), cimag(csol[k]));
+	}
+      sum2=0;
+      for (k=0; k < 4; k++)
+	{
+	  sum2 += cabs(quarticfunc(coeff, csol[k]));
+	}
+      printf("[USING HQRL] AFTER sum=%.20G\n", sum2);
+    }
 #if 0
   printsol=0;
   for (k=0; k < 4; k++)
