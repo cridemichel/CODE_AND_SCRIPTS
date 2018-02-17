@@ -27,6 +27,7 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
+#define LDLT_NONR
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
@@ -4890,7 +4891,7 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   double diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
   int iter; 
   //-------------------------------- parameter backward correction step:       
-
+#ifdef LDLT_NONR
   /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
   evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
   evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
@@ -4940,7 +4941,7 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   //---------------------------------------- solve a quadratic equation:     
   //if (iter>4 && err > 3E-16)
     //printf("iter=%d max iterations reached err=%.16G!\n", iter, err);
-
+#endif
   diskr=a*a-4*b;   
 
   if(diskr>=0.0)
@@ -6419,6 +6420,13 @@ void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
     }
 #endif
 
+#if 0
+  for (k=0; k < 4; k++)
+    {
+      if (cabsl(csol[k]) > 1E6)
+	printf("%.15G+I*(%.15G)\n", creal(csol[k]), cimag(csol[k]));
+    }
+#endif
   for (k=0; k < 4; k++)
     {
       if (isnan(creal(csol[k]))||isnan(cimag(csol[k]))|| 
