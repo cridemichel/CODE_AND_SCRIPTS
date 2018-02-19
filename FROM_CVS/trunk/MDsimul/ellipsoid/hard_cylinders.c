@@ -27,7 +27,8 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
-#define LDLT_NONR
+//#define LDLT_USENR //senza il NR è più accurato nella coda della cumulativa
+#define LDLT_THREE_SOL
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
@@ -362,7 +363,7 @@ void cubicRoots (double c2, double c1, double c0, int *nReal, complex double roo
   enum costanti {allzero = 0, linear = 1, quadratic = 2, general   = 3};
   const int Re = 1, Im = 2;
 
-  double a0, a1, a2, a, b, c, k, s, t, u, x, y, z, xShift;
+  double a0, a1, a2, a=0, b=0, c=0, k, s, t, u, x, y, z, xShift;
 
   double macheps =2.2204460492503131E-16, one27th = 1.0 / 27.0;
   double two27th = 2.0 / 27.0, third   = 1.0 /  3.0;
@@ -3219,6 +3220,37 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
       *numsol = 1;
     }
 }
+void solve_cubic_analytic_depressed(double b, double c, complex double sol[3])
+{
+  double Q, R, theta, Q3, R2, A, B;
+  const double sqrt32=sqrt(3)/2.0;
+  //printf("qu?????????????????????????????\n");
+  Q = -b/3.0;
+  R = 0.5*c;
+
+  Q3 = Sqr(Q)*Q;
+  R2 = Sqr(R);
+  if (R2 < Q3)
+    {
+      theta = acos(R/sqrt(Q3));
+      sol[0] = -2.0*sqrt(Q)*cos(theta/3.0);
+      // to solve quartic we need only one real root 
+      sol[1] = -2.0*sqrt(Q)*cos((theta+2.0*M_PI)/3.0);
+      sol[2] = -2.0*sqrt(Q)*cos((theta-2.0*M_PI)/3.0);
+    }
+  else
+    {
+      A = -copysign(1.0,R)*pow(fabs(R) + sqrt(R2 - Q3),1.0/3.0);
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+      sol[0] = A+B;
+      sol[1] = -0.5*(A+B)+I*sqrt32*(A-B);
+      sol[2] = -0.5*(A+B)-I*sqrt32*(A-B);
+    }
+}
+
 void solve_cubic_analytic(double *coeff, complex double sol[3])
 {
   double a, b, c, Q, R, theta, Q3, R2, A, B;
@@ -4891,7 +4923,7 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   double diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
   int iter; 
   //-------------------------------- parameter backward correction step:       
-#ifdef LDLT_NONR
+#ifdef LDLT_USENR
   /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
   evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
   evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
@@ -4900,7 +4932,7 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   //printf("BEGIN err=%.16G a=%.16G b=%.15G\n", err, a, b);
   if(err!=0.0)    
     {      
-      for (iter=0; iter < 8; iter++) 
+      for (iter=0; iter < 30; iter++) 
 	{ 
 	  fmat[0][0]=-b*aa+2*a*b;                         // equation (5.19)
 	  fmat[0][1]=bb-2*b-a*aa+a*a;                    // equation (5.19)
@@ -5476,14 +5508,18 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 
 //------------------ call the parabola/reciprocal intersection method:      
       
+#if 1
+  solve_cubic_analytic_depressed(g, h, radici);
+#else
   coeff[3]=1.0;
   coeff[2]=0.0;
   coeff[1]=g;
   coeff[0]=h;
-  /* NOTA 09/02/18 La soluzione analitica sembra accurata quanto il metodo usato da Strobach ma è più veloce,
+  /* NOTA 09/02/18 La soluzione analitica è accurata quanto il metodo usato da Strobach ma è più veloce,
    * In alternativa si può usare l'algoritmo di Flocke per le cubiche Sembra*/
   //cubicRoots(0,g,h,&nreal,radici);
   solve_cubic_analytic(coeff,radici);
+#endif
   for (k=0; k < 3; k++)
     {
       if (isnan(creal(radici[k])) || isnan(cimag(radici[k])) ||
@@ -5863,6 +5899,94 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 #endif
     }
 #elif 1
+#ifdef LDLT_THREE_SOL
+  nsol=0;
+  d2eq46 =2.*b/3.-phi0-l1*l1;
+  dml3l3 = d-l3*l3;
+  //printf("dml3l3=%.15G\n", dml3l3);
+  bl311 = d2eq46;//b-2*l3-l1*l1;
+  if (del2!=0)
+    {
+      l2m[nsol]=2*dml3l3/del2;
+      if (l2m[nsol]!=0)
+	{
+  	  d2m[nsol]=del2/(2*l2m[nsol]);
+	  res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
+	  nsol++;
+	}
+    }
+  if (bl311!=0.0)
+    {
+      d2m[nsol] = d2eq46;  // eq. (4.6)
+      l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
+      res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
+      nsol++;
+    }
+  /* questa potrebbe essere una terza scelta */
+  if (del2!=0)
+    {
+      d2m[nsol] = d2eq46;
+      l2m[nsol] = 2*dml3l3/del2;
+      res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
+      nsol++;
+    }
+  if (nsol==0)
+    {
+      l2=d2=0.0;
+    }
+  else
+    {
+      for (k1=0; k1 < nsol; k1++)
+	{
+	  if (k1==0 || res[k1] < resmin)
+	    {
+	      resmin = res[k1];
+	      kmin = k1;	
+	    }
+	}
+      d2 = d2m[kmin];
+      l2 = l2m[kmin];
+    }
+
+#elif defined(LDLT_TWO_SOL)
+  nsol=0;
+  d2eq46 =2.*b/3.-phi0-l1*l1;
+  if (del2==0)
+    {
+      l2m[nsol] = 0.0;
+      d2m[nsol]= d2eq46;
+    }
+  else
+    {
+      l2m[nsol]=2*(d-l3*l3)/del2;
+      if (l2m[nsol]!=0)
+	d2m[nsol]=del2/(2*l2m[nsol]);
+      else
+	d2m[nsol]= d2eq46;
+    }
+  bl311 = d2eq46;//b-2*l3-l1*l1;
+  res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
+  nsol++;
+  if (bl311!=0.0 && del2 != 0.0)
+    {
+      l2m[nsol] = del2/(2*bl311);   // eq. (4.12)
+      d2m[nsol] = d2eq46;  // eq. (4.6)
+      res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-(d-l3*l3));
+      nsol++;
+    }
+  /* NOTA: ci sarebbe anche una terza soluzione che si ottiene usando l'equazione in cui d3=0
+   * ma in tal caso si dovrebbe calcolare una radice quadrata per cui la scarto */
+  if (nsol==1 || res[0] < res[1])
+    {
+      d2 = d2m[0];
+      l2 = l2m[0];
+    }	
+  else
+    {
+      d2 = d2m[1];
+      l2 = l2m[1];
+    }
+#else
   /* ora ho trovato una soluzione che sostanzialmente pone rimedio solo ai rari casi in cui 
    * il metodo di Strobach non funziona 
    * su test brevi i risultati sono identici a quelli di Strobach */
@@ -5942,6 +6066,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	}
       break;
     }
+#endif
 #endif
 #endif
   //printf("d2e46=%.16G del2=%.15G d2=%.15G l2=%.15G\n", d2eq46, del2, d2, l2);
