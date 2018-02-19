@@ -5953,6 +5953,9 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 #elif defined(LDLT_TWO_SOL)
   nsol=0;
   d2eq46 =2.*b/3.-phi0-l1*l1;
+  bl311 = d2eq46;//b-2*l3-l1*l1;
+  dml3l3 = d-l3*l3;
+
   if (del2==0)
     {
       l2m[nsol] = 0.0;
@@ -5960,20 +5963,24 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     }
   else
     {
-      l2m[nsol]=2*(d-l3*l3)/del2;
+      l2m[nsol]=2*(dml3l3)/del2;
       if (l2m[nsol]!=0)
-	d2m[nsol]=del2/(2*l2m[nsol]);
+	{
+	  d2m[nsol]=del2/(2*l2m[nsol]);
+	  res[nsol]=fabs(d2m[nsol]-bl311);
+	}
       else
-	d2m[nsol]= d2eq46;
+	{
+  	  d2m[nsol]= d2eq46;
+	  res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
+	}
     }
-  bl311 = d2eq46;//b-2*l3-l1*l1;
-  res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
   nsol++;
   if (bl311!=0.0 && del2 != 0.0)
     {
       l2m[nsol] = del2/(2*bl311);   // eq. (4.12)
       d2m[nsol] = d2eq46;  // eq. (4.6)
-      res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-(d-l3*l3));
+      res[nsol] = fabs(del2*l2m[nsol]-2.0*(dml3l3));
       nsol++;
     }
   /* NOTA: ci sarebbe anche una terza soluzione che si ottiene usando l'equazione in cui d3=0
