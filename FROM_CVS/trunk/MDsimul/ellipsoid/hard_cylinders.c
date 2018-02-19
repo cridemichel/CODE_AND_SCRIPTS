@@ -5525,12 +5525,14 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
       if (isnan(creal(radici[k])) || isnan(cimag(radici[k])) ||
 	  isinf(creal(radici[k])) || isinf(cimag(radici[k]))) 
 	{
+#if 0
 	  for (k2=0; k2 < 4; k2++)
 	    coeffl[k2] = coeff[k2];
 	  solve_numrecl_cmplx(coeffl, radicil, 3);
 	  for (k2=0; k2 < 3; k2++)
 	    radici[k2] = radicil[k2];
-	  //cubicRoots(0,g,h,&nreal,radici);
+#endif
+	  cubicRoots(0,g,h,&nreal,radici);
 	  break;
 	}
     }
