@@ -27,7 +27,7 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
-//#define LDLT_USENR //senza il NR è più accurato nella coda della cumulativa
+#define LDLT_USENR //senza il NR è più accurato nella coda della cumulativa
 #define LDLT_THREE_SOL
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
@@ -5907,28 +5907,31 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   dml3l3 = d-l3*l3;
   //printf("dml3l3=%.15G\n", dml3l3);
   bl311 = d2eq46;//b-2*l3-l1*l1;
+  if (bl311!=0.0)
+    {
+      d2m[nsol] = d2eq46;  // eq. (4.6)
+      l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
+      //res[nsol] = fabs(del2*l2m[nsol]/2.0/dml3l3-1.0);
+      //res[nsol] = fabs((d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3/dml3l3);
+      //res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
+
+      res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
+      nsol++;
+    }
   if (del2!=0)
     {
       l2m[nsol]=2*dml3l3/del2;
       if (l2m[nsol]!=0)
 	{
   	  d2m[nsol]=del2/(2*l2m[nsol]);
+	  //res[nsol] = fabs(d2m[nsol]/bl311-1.0); // nel calcolo della soluzione non uso la (4.6)
 	  res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
 	  nsol++;
 	}
-    }
-  if (bl311!=0.0)
-    {
-      d2m[nsol] = d2eq46;  // eq. (4.6)
-      l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
-      res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
-      nsol++;
-    }
-  /* questa potrebbe essere una terza scelta */
-  if (del2!=0)
-    {
+
       d2m[nsol] = d2eq46;
-      l2m[nsol] = 2*dml3l3/del2;
+      l2m[nsol] = 2.0*dml3l3/del2;
+      //res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol]/del2-1.0); 
       res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
       nsol++;
     }
@@ -5946,9 +5949,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	      kmin = k1;	
 	    }
 	}
+      //printf("d=%.15G kmin=%d nsol=%d\n", d, kmin, nsol);
+      //printf("res= %.16G %.16G %.16G\n", res[0], res[1], res[2]);
+      //kmin=2;
       d2 = d2m[kmin];
       l2 = l2m[kmin];
     }
+#if 0
+  printf("kmin=%d nsol=%d res=%.16G %.16G %.16G\n", kmin, nsol, res[0], res[1], res[2]);
+#endif
 
 #elif defined(LDLT_TWO_SOL)
   nsol=0;
