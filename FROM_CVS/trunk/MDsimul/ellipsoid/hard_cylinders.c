@@ -4932,7 +4932,7 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   //printf("BEGIN err=%.16G a=%.16G b=%.15G\n", err, a, b);
   if(err!=0.0)    
     {      
-      for (iter=0; iter < 30; iter++) 
+      for (iter=0; iter < 8; iter++) 
 	{ 
 	  fmat[0][0]=-b*aa+2*a*b;                         // equation (5.19)
 	  fmat[0][1]=bb-2*b-a*aa+a*a;                    // equation (5.19)
@@ -4940,8 +4940,8 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
 	  fmat[1][1]=cc-2*b*aa+2*b*a;                     // equation (5.19)
 
 	  /* usuale criterio di convergenza di un NR */
-	  if (err < MACHEPS)
-	    break;
+	  //if (err < MACHEPS)
+	    //break;
 	  evec[0]=-evec[0];
 	  evec[1]=-evec[1];
 
@@ -4966,8 +4966,8 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
 	      break;
 	    }
 	  /* questo è l'usuale criterio di convergenza del NR */
-	  if (fabs(dpar[0]) + fabs(dpar[1]) < MACHEPS)
-	    break;
+	  //if (fabs(dpar[0]) + fabs(dpar[1]) < MACHEPS)
+	    //break;
 	}
     } 
   //---------------------------------------- solve a quadratic equation:     
