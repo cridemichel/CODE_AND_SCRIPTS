@@ -27,8 +27,12 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
-//#define USE_NR
-//#define REFINE_PHI_WITH_NR
+
+/* NOTA 21/02/18: per quanto riguarda le simulazioni queste due define incidono pochissimo e danno più robustezza
+ * volendo quindi possono essere attivate senza problemi */
+//#define USE_NR /* newton-raphson per il calcolo di c e a in LDLT */
+//#define REFINE_PHI_WITH_NR  /* newtown-raphson per il refinement di phi0 in LDLT */
+
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
@@ -4923,11 +4927,30 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   double diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
   int iter; 
 #ifdef USENR
+  int k;
+  double tt[9], ttmax;
+#endif
+
+#ifdef USENR
   /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
   evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
   evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
   err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23)
-  if(err!=0.0)    
+
+  tt[0]=fabs(bb*b);
+  tt[1]=fabs(b*b);
+  tt[2]=fabs(a*b*aa);
+  tt[3]=fabs(a*a*b);
+  tt[4]=fabs(dd);
+  tt[5]=fabs(cc*b);
+  tt[6]=fabs(b*b*aa);
+  tt[7]=fabs(b*b*a);
+  tt[8]=fabs(a*dd);
+  for (k=0; k < 9; k++)
+    if (k==0 || tt[k] > ttmax)
+      ttmax = tt[k];
+  if(err > 2.0*MACHEPS*ttmax)    
+  //if(err!=0.0)    
     {      
       for (iter=0; iter < 8; iter++) 
 	{ 
@@ -5465,7 +5488,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   complex long double radicil[3];
   long double coeffl[4];
 #ifdef REFINE_PHI_WITH_NR
-  double x, xold, f, fold, df, xsq;
+  double MACHEPS=2.2204460492503131E-16;
+  double maxtt, xxx, gx, x, xold, f, fold, df, xsq;
   int iter;
 #endif
 
@@ -5563,10 +5587,20 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
     }
 #ifdef REFINE_PHI_WITH_NR
   x = rmax;
-  f = x*x*x + g*x + h;
-  if (f != 0)
+  xxx=x*x*x;
+  gx=g*x;
+  f = xxx + gx + h;
+  if (fabs(xxx) > fabs(gx))
+    maxtt = fabs(xxx);
+  else
+    maxtt = fabs(gx);
+  if (fabs(h) > maxtt)
+    maxtt = fabs(h);
+
+  if (fabs(f) >= MACHEPS*maxtt)
+  //if (f != 0)
     {
-      for (iter=0; iter < 2; iter++)
+      for (iter=0; iter < 4; iter++)
 	{   
 	  df =  3.0*x*x + g;
 	  if (df==0)
