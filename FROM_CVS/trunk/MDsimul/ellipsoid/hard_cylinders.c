@@ -5873,6 +5873,20 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
   x[1] = *BQ;
   x[2] = *CQ;
   x[3] = *DQ;
+  /* risolvo con un NR il sistema:
+   *
+   * bq*dq - d = 0
+   * bq*cq + aq*dq - c = 0
+   * bq + aq*cq + dq - b = 0
+   * aq + cq - a = 0
+   *
+   * che si ottiene moltiplicando i due polinomi quadratici
+   *
+   * (x^2 + aq*x + bq)*(x^2 + cq*x + dq)
+   *
+   * ed equagualiando i coefficienti che si ottengono con quelli della quartica (cioè a,b,c e d)
+   * */
+
   fvec[0] = x[1]*x[3] - d;
   fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
   fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
