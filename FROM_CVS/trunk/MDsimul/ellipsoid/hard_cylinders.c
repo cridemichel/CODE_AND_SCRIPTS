@@ -30,8 +30,8 @@
 
 /* NOTA 21/02/18: per quanto riguarda le simulazioni queste due define incidono pochissimo e danno più robustezza
  * volendo quindi possono essere attivate senza problemi */
-//#define USE_NR /* newton-raphson per il calcolo di c e a in LDLT */
-//#define REFINE_PHI_WITH_NR  /* newtown-raphson per il refinement di phi0 in LDLT */
+#define LDLT_USENR /* newton-raphson per il calcolo di c e a in LDLT */
+#define LDLT_REFINE_PHI_WITH_NR  /* newtown-raphson per il refinement di phi0 in LDLT */
 
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
@@ -4926,12 +4926,12 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
   double MACHEPS=2.2204460492503131E-16;
   double diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
   int iter; 
-#ifdef USENR
+#ifdef LDLT_USENR
   int k;
   double tt[9], ttmax;
 #endif
 
-#ifdef USENR
+#ifdef LDLT_USENR
   /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
   evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
   evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
@@ -5487,7 +5487,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   complex double radici[3];
   complex long double radicil[3];
   long double coeffl[4];
-#ifdef REFINE_PHI_WITH_NR
+#ifdef LDLT_REFINE_PHI_WITH_NR
   double MACHEPS=2.2204460492503131E-16;
   double maxtt, xxx, gx, x, xold, f, fold, df, xsq;
   int iter;
@@ -5585,7 +5585,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	    }
 	}
     }
-#ifdef REFINE_PHI_WITH_NR
+#ifdef LDLT_REFINE_PHI_WITH_NR
   x = rmax;
   xxx=x*x*x;
   gx=g*x;
@@ -6025,8 +6025,8 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
       //res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
 
-      //res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
-      res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+      res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
+      //res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
   if (del2!=0)
@@ -6035,19 +6035,17 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       if (l2m[nsol]!=0)
 	{
   	  d2m[nsol]=del2/(2*l2m[nsol]);
-	  //res[nsol] = fabs(d2m[nsol]/bl311-1.0); // nel calcolo della soluzione non uso la (4.6)
 	  
-	  //res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
-	  res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+	  res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
+	  //res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
 	  nsol++;
 	}
 
       d2m[nsol] = d2eq46;
       l2m[nsol] = 2.0*dml3l3/del2;
-      //res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol]/del2-1.0); 
 
-      //res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
-      res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+      res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
+      //res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
   if (nsol==0)
