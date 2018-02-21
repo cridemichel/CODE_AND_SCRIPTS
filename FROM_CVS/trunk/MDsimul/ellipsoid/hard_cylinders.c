@@ -5755,10 +5755,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  cq = cqv[kmin];
 	}	
       //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
-      myquadratic(a,b,c,d,aq,bq,qroots);
+      quadratic(a,b,c,d,aq,bq,qroots);
       roots[0]=qroots[0];
       roots[1]=qroots[1];        
-      myquadratic(a,b,c,d,cq,dq,qroots);
+      quadratic(a,b,c,d,cq,dq,qroots);
       roots[2]=qroots[0];
       roots[3]=qroots[1];               
 
