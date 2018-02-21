@@ -4923,68 +4923,7 @@ void two_lin_eqs(double fmat[2][2],double evec[2], double dalf[2])
 }  
 void myquadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
 { 
-  double MACHEPS=2.2204460492503131E-16;
-  double diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
-  int iter; 
-#ifdef LDLT_USENR
-  int k;
-  double tt[9], ttmax;
-#endif
-
-#ifdef LDLT_USENR
-  /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
-  evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
-  evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
-  err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23)
-
-  tt[0]=fabs(bb*b);
-  tt[1]=fabs(b*b);
-  tt[2]=fabs(a*b*aa);
-  tt[3]=fabs(a*a*b);
-  tt[4]=fabs(dd);
-  tt[5]=fabs(cc*b);
-  tt[6]=fabs(b*b*aa);
-  tt[7]=fabs(b*b*a);
-  tt[8]=fabs(a*dd);
-  for (k=0; k < 9; k++)
-    if (k==0 || tt[k] > ttmax)
-      ttmax = tt[k];
-  if(err > 2.0*MACHEPS*ttmax)    
-  //if(err!=0.0)    
-    {      
-      for (iter=0; iter < 8; iter++) 
-	{ 
-	  fmat[0][0]=-b*aa+2*a*b;                         // equation (5.19)
-	  fmat[0][1]=bb-2*b-a*aa+a*a;                    // equation (5.19)
-	  fmat[1][0]=b*b-dd;                             // equation (5.19)
-	  fmat[1][1]=cc-2*b*aa+2*b*a;                     // equation (5.19)
-	  evec[0]=-evec[0];
-	  evec[1]=-evec[1];
-
-	  two_lin_eqs(fmat,evec,dpar);              // equation (5.20)
-	  at=a;
-	  bt=b;
-	  a=a+dpar[0];                                   // equation (5.21)
-	  b=b+dpar[1];                                   // equation (5.22)
-  	  evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
-	  evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
-	  errt=err;
-	  err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23) 
-  	  if(err == 0.0)
-	    break;	// terminate
-	  if(err>=errt)   // terminate without parameter update
-	    {
-	      a=at;
-	      b=bt;  
-	      break;
-	    }
-	}
-    } 
-  //---------------------------------------- solve a quadratic equation:     
-  //if (iter>4 && err > 3E-16)
-   // printf("iter=%d max iterations reached err=%.16G!\n", iter, err);
-#endif
-
+  double diskr,div,zmax,zmin;
   //-------------------------------- parameter backward correction step:       
   diskr=a*a-4*b;   
   if(diskr>=0.0)
@@ -5925,6 +5864,89 @@ double calc_err_abc(double a, double b, double c, double aq, double bq, double c
   return sum;
 #endif
 }
+void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
+{
+  int iter, k1, k2;
+  double errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+
+  x[0] = *AQ;
+  x[1] = *BQ;
+  x[2] = *CQ;
+  x[3] = *DQ;
+  fvec[0] = x[1]*x[3] - d;
+  fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
+  fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
+  fvec[3] = x[0] + x[2] - a; 
+  errf=0;
+  for (k1=0; k1 < 4; k1++)
+    {
+      errf += fabs(fvec[k1]);
+    }
+  if (errf==0)
+    return;
+  //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
+  for (iter = 0; iter < 8; iter++)
+    {
+      det = x[1]*x[1] + x[1]*(-x[0]*x[2] + x[2]*x[2] - 2.0*x[3]) + x[3]*(x[0]*x[0] - x[0]*x[2] + x[3]);
+      if (det==0.0)
+	break;
+      Jinv[0][0] = x[0] - x[2];
+      Jinv[0][1] = x[3] - x[1];
+      Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
+      Jinv[0][3] = x[1]*x[1] + x[0]*x[0]*x[3] - x[1]*(x[0]*x[2] + x[3]); 
+      Jinv[1][0] = x[0]*x[0] - x[1] - x[0]*x[2] + x[3];
+      Jinv[1][1] = x[1]*(-x[0] + x[2]);
+      Jinv[1][2] = x[1]*(x[1] - x[3]);   
+      Jinv[1][3] = x[1]*(-x[1]*x[2] + x[0]*x[3]);
+      Jinv[2][0] =-x[0] + x[2];
+      Jinv[2][1] = x[1] - x[3];
+      Jinv[2][2] = -x[1]*x[2] + x[0]*x[3];
+      Jinv[2][3] = x[1]*x[2]*x[2] - (x[1] + x[0]*x[2])*x[3] + x[3]*x[3];
+      Jinv[3][0] = x[1] - x[0]*x[2] + x[2]*x[2] - x[3];
+      Jinv[3][1] = (x[0] - x[2])*x[3];
+      Jinv[3][2] = x[3]*(-x[1] + x[3]);
+      Jinv[3][3] = x[3]*(x[1]*x[2] - x[0]*x[3]);
+
+      for (k1=0; k1 < 4; k1++)
+	{
+	  dx[k1] = 0;
+	  for (k2=0; k2 < 4; k2++)
+	    dx[k1] += Jinv[k1][k2]*fvec[k2];
+	}
+     for (k1=0; k1 < 4; k1++)
+       xold[k1] = x[k1];
+ 
+      for (k1=0; k1 < 4; k1++)
+	{
+	  x[k1] += -dx[k1]/det;
+	}
+      fvec[0] = x[1]*x[3] - d;
+      fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
+      fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
+      fvec[3] = x[0] + x[2] - a; 
+
+      errfold = errf;
+      errf=0;
+      for (k1=0; k1 < 4; k1++)
+	{
+	  errf += fabs(fvec[k1]);
+	}
+      if (errf==0)
+	break;
+      //printf("iter=%d abcd=%f %f %f %f errf=%.16G errfold=%.16G\n", iter, x[0], x[1], x[2], x[3], errf, errfold);
+      if (errf >= errfold)
+	{
+	  for (k1=0; k1 < 4; k1++)
+	    x[k1] = xold[k1];
+	  break;
+	}
+    }
+
+  *AQ=x[0];
+  *BQ=x[1];
+  *CQ=x[2];
+  *DQ=x[3];
+}
 
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
@@ -6159,6 +6181,9 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	    }
 	  cq = cqv[kmin];
 	}	
+#ifdef LDLT_USENR
+      NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
+#endif
       //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
       myquadratic(a,b,c,d,aq,bq,qroots);
       roots[0]=qroots[0];
