@@ -4923,7 +4923,7 @@ void two_lin_eqs(double fmat[2][2],double evec[2], double dalf[2])
 }  
 void myquadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
 { 
-  double diskr,div,zmax,zmin;
+  double sqrtd,diskr,div,zmax,zmin;
   //-------------------------------- parameter backward correction step:       
   diskr=a*a-4*b;   
   if(diskr>=0.0)
@@ -4945,8 +4945,9 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
     } 
   else
     {   
-      roots[0]=CMPLX(-a/2,sqrt(-diskr)/2);
-      roots[1]=CMPLX(-a/2,-sqrt(-diskr)/2);      
+      sqrtd=sqrt(-diskr);
+      roots[0]=CMPLX(-a/2,sqrtd/2);
+      roots[1]=CMPLX(-a/2,-sqrtd/2);      
     }   
 }
 
