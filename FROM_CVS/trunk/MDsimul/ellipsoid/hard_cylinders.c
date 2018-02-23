@@ -5537,7 +5537,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   if (fabs(h) > maxtt)
     maxtt = fabs(h);
 
-  if (fabs(f) >= MACHEPS*maxtt)
+  if (fabs(f) > MACHEPS*maxtt)
   //if (f != 0)
     {
       for (iter=0; iter < 4; iter++)
