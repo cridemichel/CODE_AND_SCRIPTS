@@ -5905,6 +5905,24 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
       det = x[1]*x[1] + x[1]*(-x[0]*x[2] + x[2]*x[2] - 2.0*x[3]) + x[3]*(x[0]*x[0] - x[0]*x[2] + x[3]);
       if (det==0.0)
 	break;
+#if 1
+      Jinv[0][0] = x[0] - x[2];
+      Jinv[0][1] = x[3] - x[1];
+      Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
+      Jinv[0][3] = -x[1]*Jinv[0][1] - x[0]*Jinv[0][2]; 
+      Jinv[1][0] = x[0]*Jinv[0][0] + Jinv[0][1];
+      Jinv[1][1] = -x[1]*Jinv[0][0];
+      Jinv[1][2] = -x[1]*Jinv[0][1];   
+      Jinv[1][3] = -x[1]*Jinv[0][2];
+      Jinv[2][0] = -Jinv[0][0];
+      Jinv[2][1] = -Jinv[0][1];
+      Jinv[2][2] = -Jinv[0][2];
+      Jinv[2][3] = Jinv[0][2]*x[2] + Jinv[0][1]*x[3];
+      Jinv[3][0] = -x[2]*Jinv[0][0] - Jinv[0][1];
+      Jinv[3][1] = Jinv[0][0]*x[3];
+      Jinv[3][2] = x[3]*Jinv[0][1];
+      Jinv[3][3] = x[3]*Jinv[0][2];
+#else
       Jinv[0][0] = x[0] - x[2];
       Jinv[0][1] = x[3] - x[1];
       Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
@@ -5921,7 +5939,7 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
       Jinv[3][1] = (x[0] - x[2])*x[3];
       Jinv[3][2] = x[3]*(-x[1] + x[3]);
       Jinv[3][3] = x[3]*(x[1]*x[2] - x[0]*x[3]);
-
+#endif
       for (k1=0; k1 < 4; k1++)
 	{
 	  dx[k1] = 0;
@@ -7143,7 +7161,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #else
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
-  const double DIST_THR=5E-13;// old value 5.0E-13
+  const double DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
 #else
   const double DIST_THR=5E-12;
 #endif
