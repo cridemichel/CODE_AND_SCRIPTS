@@ -5902,11 +5902,16 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
   //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
   for (iter = 0; iter < 8; iter++)
     {
+#if 1
+      x02 = x[0]-x[2];
+      det = x[1]*x[1] + x[1]*(-x[2]*x02 - 2.0*x[3]) + x[3]*(x[0]*x02 + x[3]);
+#else
       det = x[1]*x[1] + x[1]*(-x[0]*x[2] + x[2]*x[2] - 2.0*x[3]) + x[3]*(x[0]*x[0] - x[0]*x[2] + x[3]);
+#endif
       if (det==0.0)
 	break;
 #if 1
-      Jinv[0][0] = x[0] - x[2];
+      Jinv[0][0] = x02;
       Jinv[0][1] = x[3] - x[1];
       Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
       Jinv[0][3] = -x[1]*Jinv[0][1] - x[0]*Jinv[0][2]; 
