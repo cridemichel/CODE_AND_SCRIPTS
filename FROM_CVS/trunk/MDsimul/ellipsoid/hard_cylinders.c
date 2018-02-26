@@ -3224,9 +3224,61 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
       *numsol = 1;
     }
 }
+void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex double sol[3])
+{
+  double Q, R, theta, A, B;//Q3, R2;
+  const double sqrt32=sqrt(3)/2.0;
+  double QR, QRSQ, KK, sqrtQ;
+  //printf("qu?????????????????????????????\n");
+  Q = -b/3.0;
+  R = 0.5*c;
+
+  if (R==0)
+    {
+      sol[0]=0;
+      if (b <= 0)
+	{
+	  sol[1]=sqrt(-b);
+	  sol[2]=-sqrt(-b);
+	}
+      else
+	{
+	  sol[1]=I*sqrt(b);
+	  sol[2]=-I*sqrt(b);
+	}
+      return;
+    }
+  QR=Q/R;
+  QRSQ=QR*QR;
+  //Q3 = Sqr(Q)*Q;
+  //R2 = Sqr(R);
+  KK=1.0 - Q*QRSQ;
+  if (KK < 0.0)
+    {
+      sqrtQ=sqrt(Q);
+      theta = acos((R/sqrtQ)/fabs(Q));
+      sol[0] = -2.0*sqrtQ*cos(theta/3.0);
+      // to solve quartic we need only one real root 
+      sol[1] = -2.0*sqrtQ*cos((theta+2.0*M_PI)/3.0);
+      sol[2] = -2.0*sqrtQ*cos((theta-2.0*M_PI)/3.0);
+    }
+  else
+    {
+      A = -copysign(1.0,R)*pow(fabs(R)*(1.0+sqrt(KK)),1.0/3.0);
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+      sol[0] = A+B;
+      sol[1] = -0.5*(A+B)+I*sqrt32*(A-B);
+      sol[2] = -0.5*(A+B)-I*sqrt32*(A-B);
+    }
+}
+
+
 void solve_cubic_analytic_depressed(double b, double c, complex double sol[3])
 {
-  double Q, R, theta, Q3, R2, A, B;
+  double Q, R, theta, Q3, R2, A, B, sqrtQ;
   const double sqrt32=sqrt(3)/2.0;
   //printf("qu?????????????????????????????\n");
   Q = -b/3.0;
@@ -3237,10 +3289,11 @@ void solve_cubic_analytic_depressed(double b, double c, complex double sol[3])
   if (R2 < Q3)
     {
       theta = acos(R/sqrt(Q3));
-      sol[0] = -2.0*sqrt(Q)*cos(theta/3.0);
+      sqrtQ= -2.0*sqrt(Q);
+      sol[0] = sqrtQ*cos(theta/3.0);
       // to solve quartic we need only one real root 
-      sol[1] = -2.0*sqrt(Q)*cos((theta+2.0*M_PI)/3.0);
-      sol[2] = -2.0*sqrt(Q)*cos((theta-2.0*M_PI)/3.0);
+      sol[1] = sqrtQ*cos((theta+2.0*M_PI)/3.0);
+      sol[2] = sqrtQ*cos((theta-2.0*M_PI)/3.0);
     }
   else
     {
@@ -5510,7 +5563,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	  for (k2=0; k2 < 3; k2++)
 	    radici[k2] = radicil[k2];
 #endif
-	  cubicRoots(0,g,h,&nreal,radici);
+	  solve_cubic_analytic_depressed_handle_inf(g, h, radici);
+	  //cubicRoots(0,g,h,&nreal,radici);
 	  break;
 	}
     }
@@ -5868,7 +5922,7 @@ double calc_err_abc(double a, double b, double c, double aq, double bq, double c
 void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
 {
   int iter, k1, k2;
-  double errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+  double errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4], x02;
 
   x[0] = *AQ;
   x[1] = *BQ;
