@@ -27,6 +27,7 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
+#define USE_CUBIC_HANDLE_INF_ONLY
 
 /* NOTA 21/02/18: per quanto riguarda le simulazioni queste due define incidono pochissimo e danno più robustezza
  * volendo quindi possono essere attivate senza problemi */
@@ -5550,6 +5551,12 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   //solve_cubic_analytic(coeff,radici);
 #if 1
   //cubicRoots(0,g,h,&nreal,radici);
+  /* NOTA 26/02/18 sto testando solve_cubic_analytic_depressed_handle_inf()
+   * se i risultati sono identici a quelli forniti da solve_cubic_analytic_depressed()
+   * usare soltanto la prima che si comporta meglio con radici grandi */
+#ifdef USE_CUBIC_HANDLE_INF_ONLY
+  solve_cubic_analytic_depressed_handle_inf(g, h, radici);
+#else
   solve_cubic_analytic_depressed(g, h, radici);
   for (k=0; k < 3; k++)
     {
@@ -5568,6 +5575,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	  break;
 	}
     }
+#endif
   for (k=0; k < 3; k++)
     {
       if (cimag(radici[k])==0)
@@ -5581,9 +5589,10 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
     }
 #ifdef LDLT_REFINE_PHI_WITH_NR
   x = rmax;
-  xxx=x*x*x;
+  xsq = x*x
+  xxx=x*xsq;
   gx=g*x;
-  f = xxx + gx + h;
+  f = x*(xsq + g) + h;
   if (fabs(xxx) > fabs(gx))
     maxtt = fabs(xxx);
   else
@@ -5596,7 +5605,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
     {
       for (iter=0; iter < 4; iter++)
 	{   
-	  df =  3.0*x*x + g;
+	  df =  3.0*xsq + g;
 	  if (df==0)
 	    {
 	      break;
@@ -5604,7 +5613,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	  xold = x;
 	  x += -f/df;
 	  fold = f;
-	  f = x*x*x + g*x + h;
+	  xsq = x*x;
+	  f = x*(xsq + g) + h;
 	  if (f==0)
 	    {
 	      break;
