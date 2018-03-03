@@ -5908,9 +5908,9 @@ double calc_err_ldlt(double a, double b, double c, double d, double d2, double l
   /* d3 + d2 l2^2 + d1 l3^2 + (2 d2 l2 + 2 d1 l1 l3) z + (d2 + d1 l1^2 + 2 d1 l3) z^2 + 
      2 d1 l1 z^3 + d1 z^4 */
   double sum;
-  return fabs((d2 + l1*l1 + 2.0*l3)-b)+fabs((2.0*d2*l2 + 2.0*l1*l3)-c)+fabs((d2*l2*l2 + l3*l3)-d);
+  //return fabs((d2 + l1*l1 + 2.0*l3)-b)+fabs((2.0*d2*l2 + 2.0*l1*l3)-c)+fabs((d2*l2*l2 + l3*l3)-d);
 
-#if 0
+#if 1
   sum =  (b==0)?fabs(d2 + l1*l1 + 2.0*l3):fabs(((d2 + l1*l1 + 2.0*l3)-b)/b);
   sum += (c==0)?fabs(2.0*d2*l2 + 2.0*l1*l3):fabs(((2.0*d2*l2 + 2.0*l1*l3)-c)/c);
   sum += (d==0)?fabs(d2*l2*l2 + l3*l3):fabs(((d2*l2*l2 + l3*l3)-d)/d);
@@ -5921,8 +5921,8 @@ double calc_err_abc(double a, double b, double c, double aq, double bq, double c
 {
   double sum;
 
-  return fabs((bq*cq + aq*dq) - c) + fabs((bq + aq*cq + dq) - b) + fabs((aq + cq) - a);
-#if 0
+  //return fabs((bq*cq + aq*dq) - c) + fabs((bq + aq*cq + dq) - b) + fabs((aq + cq) - a);
+#if 1
   sum = (c==0)?fabs(bq*cq + aq*dq):fabs(((bq*cq + aq*dq) - c)/c);
   sum +=(b==0)?fabs(bq + aq*cq + dq):fabs(((bq + aq*cq + dq) - b)/b);
   sum +=(a==0)?fabs(aq + cq):fabs(((aq + cq) - a)/a);
@@ -6300,8 +6300,8 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
       //res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
 
-      res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
-      //res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+      //res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
+      res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
   if (del2!=0)
@@ -6311,16 +6311,16 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	{
   	  d2m[nsol]=del2/(2*l2m[nsol]);
 	  
-	  res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
-	  //res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+	  //res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
+	  res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
 	  nsol++;
 	}
 
       d2m[nsol] = d2eq46;
       l2m[nsol] = 2.0*dml3l3/del2;
 
-      res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
-      //res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+      //res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
+      res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
   if (nsol==0)
