@@ -5589,7 +5589,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
     }
 #ifdef LDLT_REFINE_PHI_WITH_NR
   x = rmax;
-  xsq = x*x
+  xsq = x*x;
   xxx=x*xsq;
   gx=g*x;
   f = x*(xsq + g) + h;
@@ -5929,6 +5929,126 @@ double calc_err_abc(double a, double b, double c, double aq, double bq, double c
   return sum;
 #endif
 }
+void NRabcdCmplx(double a, double b, double c, double d, 
+		 double complex *AQ, double complex *BQ, double complex *CQ, double complex *DQ)
+{
+  int iter, k1, k2;
+  complex double x02, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+  double errf, errfold;
+  x[0] = *AQ;
+  x[1] = *BQ;
+  x[2] = *CQ;
+  x[3] = *DQ;
+  /* risolvo con un NR il sistema:
+   *
+   * bq*dq - d = 0
+   * bq*cq + aq*dq - c = 0
+   * bq + aq*cq + dq - b = 0
+   * aq + cq - a = 0
+   *
+   * che si ottiene moltiplicando i due polinomi quadratici
+   *
+   * (x^2 + aq*x + bq)*(x^2 + cq*x + dq)
+   *
+   * ed equagualiando i coefficienti che si ottengono con quelli della quartica (cioè a,b,c e d)
+   * */
+
+  fvec[0] = x[1]*x[3] - d;
+  fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
+  fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
+  fvec[3] = x[0] + x[2] - a; 
+  errf=0;
+  for (k1=0; k1 < 4; k1++)
+    {
+      errf += cabs(fvec[k1]);
+    }
+  if (errf==0)
+    return;
+  //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
+  for (iter = 0; iter < 8; iter++)
+    {
+      x02 = x[0]-x[2];
+      det = x[1]*x[1] + x[1]*(-x[2]*x02 - 2.0*x[3]) + x[3]*(x[0]*x02 + x[3]);
+      if (det==0.0)
+	break;
+#if 1
+      Jinv[0][0] = x02;
+      Jinv[0][1] = x[3] - x[1];
+      Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
+      Jinv[0][3] = -x[1]*Jinv[0][1] - x[0]*Jinv[0][2]; 
+      Jinv[1][0] = x[0]*Jinv[0][0] + Jinv[0][1];
+      Jinv[1][1] = -x[1]*Jinv[0][0];
+      Jinv[1][2] = -x[1]*Jinv[0][1];   
+      Jinv[1][3] = -x[1]*Jinv[0][2];
+      Jinv[2][0] = -Jinv[0][0];
+      Jinv[2][1] = -Jinv[0][1];
+      Jinv[2][2] = -Jinv[0][2];
+      Jinv[2][3] = Jinv[0][2]*x[2] + Jinv[0][1]*x[3];
+      Jinv[3][0] = -x[2]*Jinv[0][0] - Jinv[0][1];
+      Jinv[3][1] = Jinv[0][0]*x[3];
+      Jinv[3][2] = x[3]*Jinv[0][1];
+      Jinv[3][3] = x[3]*Jinv[0][2];
+#else
+      Jinv[0][0] = x[0] - x[2];
+      Jinv[0][1] = x[3] - x[1];
+      Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
+      Jinv[0][3] = x[1]*x[1] + x[0]*x[0]*x[3] - x[1]*(x[0]*x[2] + x[3]); 
+      Jinv[1][0] = x[0]*x[0] - x[1] - x[0]*x[2] + x[3];
+      Jinv[1][1] = x[1]*(-x[0] + x[2]);
+      Jinv[1][2] = x[1]*(x[1] - x[3]);   
+      Jinv[1][3] = x[1]*(-x[1]*x[2] + x[0]*x[3]);
+      Jinv[2][0] =-x[0] + x[2];
+      Jinv[2][1] = x[1] - x[3];
+      Jinv[2][2] = -x[1]*x[2] + x[0]*x[3];
+      Jinv[2][3] = x[1]*x[2]*x[2] - (x[1] + x[0]*x[2])*x[3] + x[3]*x[3];
+      Jinv[3][0] = x[1] - x[0]*x[2] + x[2]*x[2] - x[3];
+      Jinv[3][1] = (x[0] - x[2])*x[3];
+      Jinv[3][2] = x[3]*(-x[1] + x[3]);
+      Jinv[3][3] = x[3]*(x[1]*x[2] - x[0]*x[3]);
+#endif
+      for (k1=0; k1 < 4; k1++)
+	{
+	  dx[k1] = 0;
+	  for (k2=0; k2 < 4; k2++)
+	    dx[k1] += Jinv[k1][k2]*fvec[k2];
+	}
+      for (k1=0; k1 < 4; k1++)
+      	xold[k1] = x[k1];
+
+      for (k1=0; k1 < 4; k1++)
+	{
+	  x[k1] += -dx[k1]/det;
+	}
+
+      fvec[0] = x[1]*x[3] - d;
+      fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
+      fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
+      fvec[3] = x[0] + x[2] - a; 
+
+      errfold = errf;
+      errf=0;
+      for (k1=0; k1 < 4; k1++)
+	{
+	  errf += cabs(fvec[k1]);
+	}
+      
+      //printf("iter=%d errf=%.15G\n", iter, errf);
+      //printf("iter=%d abcd=%f %f %f %f errf=%.16G errfold=%.16G\n", iter, x[0], x[1], x[2], x[3], errf, errfold);
+      if (errf==0)
+	break;
+      if (errf >= errfold)
+	{
+	  for (k1=0; k1 < 4; k1++)
+	    x[k1] = xold[k1];
+	  break;
+	}
+    }
+
+  *AQ=x[0];
+  *BQ=x[1];
+  *CQ=x[2];
+  *DQ=x[3];
+}
 void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
 {
   int iter, k1, k2;
@@ -6049,117 +6169,6 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
   *CQ=x[2];
   *DQ=x[3];
 }
-/* NOTA 21/02/18 Questa versione è ottimizzata ma le perfomance sono le stesse probabilmente il compilatore fa lo stesso */
-void NRabcdOPT(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
-{
-  int iter, k1, k2;
-  double errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
-  double  x00, x11, x01, x02, x12, x22, x03, x13, x23, x33; 
-
-  x[0] = *AQ;
-  x[1] = *BQ;
-  x[2] = *CQ;
-  x[3] = *DQ;
-  /* risolvo con un NR il sistema:
-   *
-   * bq*dq - d = 0
-   * bq*cq + aq*dq - c = 0
-   * bq + aq*cq + dq - b = 0
-   * aq + cq - a = 0
-   *
-   * che si ottiene moltiplicando i due polinomi quadratici
-   *
-   * (x^2 + aq*x + bq)*(x^2 + cq*x + dq)
-   *
-   * ed equagualiando i coefficienti che si ottengono con quelli della quartica (cioè a,b,c e d)
-   * */
-
-  fvec[0] = x[1]*x[3] - d;
-  fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
-  fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
-  fvec[3] = x[0] + x[2] - a; 
-  errf=0;
-  for (k1=0; k1 < 4; k1++)
-    {
-      errf += fabs(fvec[k1]);
-    }
-  if (errf==0)
-    return;
-  //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
-  for (iter = 0; iter < 8; iter++)
-    {
-      x00 = x[0]*x[0];
-      x11 = x[1]*x[1];
-      x12 = x[1]*x[2];
-      x01 = x[0]*x[1];
-      x02 = x[0]*x[2];
-      x22 = x[2]*x[2];
-      x03 = x[0]*x[3];
-      x13 = x[1]*x[3];
-      x23 = x[2]*x[3];
-      x33 = x[3]*x[3];
-
-      det = x11 + x[1]*(-x02 + x22 - 2.0*x[3]) + x[3]*(x00 - x02 + x[3]);
-      if (det==0.0)
-	break;
-      Jinv[0][0] = x[0] - x[2];
-      Jinv[0][1] = x[3] - x[1];
-      Jinv[0][2] = x12 - x03;
-      Jinv[0][3] = x11 + x[0]*x03 - x[1]*x02 - x13; 
-      Jinv[1][0] = x00 - x[1] - x02 + x[3];
-      Jinv[1][1] = -x01 + x12;// x[1]*(-x[0] + x[2]);
-      Jinv[1][2] =  x11 - x13; //x[1]*(x[1] - x[3]);   
-      Jinv[1][3] = x[1]*x12 + x[1]*x03;//x[1]*(-x[1]*x[2] + x[0]*x[3]);
-      Jinv[2][0] =-x[0] + x[2];
-      Jinv[2][1] = x[1] - x[3];
-      Jinv[2][2] = -x12 + x03;
-      Jinv[2][3] = x[1]*x22 - x13 - x02*x[3] + x33;//x[1]*x22 - (x[1] + x02)*x[3] + x33;
-      Jinv[3][0] = x[1] - x02 + x22 - x[3];
-      Jinv[3][1] = x03 - x23;//(x[0] - x[2])*x[3];
-      Jinv[3][2] = -x13 + x33;//x[3]*(-x[1] + x[3]);
-      Jinv[3][3] = x[3]*(x12 - x03);
-
-      for (k1=0; k1 < 4; k1++)
-	{
-	  dx[k1] = 0;
-	  for (k2=0; k2 < 4; k2++)
-	    dx[k1] += Jinv[k1][k2]*fvec[k2];
-	}
-     for (k1=0; k1 < 4; k1++)
-       xold[k1] = x[k1];
- 
-      for (k1=0; k1 < 4; k1++)
-	{
-	  x[k1] += -dx[k1]/det;
-	}
-      fvec[0] = x[1]*x[3] - d;
-      fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
-      fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
-      fvec[3] = x[0] + x[2] - a; 
-
-      errfold = errf;
-      errf=0;
-      for (k1=0; k1 < 4; k1++)
-	{
-	  errf += fabs(fvec[k1]);
-	}
-      if (errf==0)
-	break;
-      //printf("iter=%d abcd=%f %f %f %f errf=%.16G errfold=%.16G\n", iter, x[0], x[1], x[2], x[3], errf, errfold);
-      if (errf >= errfold)
-	{
-	  for (k1=0; k1 < 4; k1++)
-	    x[k1] = xold[k1];
-	  break;
-	}
-    }
-
-  *AQ=x[0];
-  *BQ=x[1];
-  *CQ=x[2];
-  *DQ=x[3];
-}
-
 
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
@@ -6179,6 +6188,9 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   int nreal;
   double sd, ssd;
   complex long double rri, rmri;
+  double d3;
+  complex double ccx, dcx;
+ 
   //----------------------------- calculate the antidiagonal shift phi0:
 
   a=coeff[3]/coeff[4];
@@ -6252,6 +6264,34 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   nsol=0;
   d2eq46 =2.*b/3.-phi0-l1*l1;
   dml3l3 = d-l3*l3;
+#ifdef HANDLE_NUM_ERR_BETTER
+  /* Handle numerical errors */
+  if (phi0!=0 && del2==0 && (b >= 0 || phi0 < 0) && fabs(d2eq46) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1))
+	  //&& phi0 != 0//a*a*a - 4.*a*b + 8.0*c==0 && //se d2=0 questa equivale a del2=0
+	 // se phi0 = 0 abbiamo una radice quadrupla e la routine funziona ancora
+    {
+      if (d2eq46!=0)
+	{
+	  c += c*macheps;
+	  del2=c-a*l3;
+	}                                    // equation (4.10) 
+      else 
+	{
+	  /* caso d2=0: d3 + d1 (l3 + l1 z + z^2)^2 = 0 */
+	  /* e d3 si ottiene da questa d3 + d1 l3^2 + 2 d1 l1 l3 z + (d1 l1^2 + 2 d1 l3) z^2 + 2 d1 l1 z^3 + 
+		 d1 z^4 = d + c x + b x^2 + a x^3 + x^4 */
+
+	  //printf("QUI<<<<<<<<<<<\n");
+	  //printf("c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
+	  //printf("l2=%.16G del2=%.16G\n", l2, del2);
+	  b -= b*macheps;
+	  l3=b/6+phi0/2;
+	  del2=c-a*l3;                                    // equation (4.10) 
+	  d2eq46 =2.*b/3.-phi0-l1*l1;
+	}
+    }
+#endif
+
   //printf("dml3l3=%.15G\n", dml3l3);
   bl311 = d2eq46;//b-2*l3-l1*l1;
   if (bl311!=0.0)
@@ -6323,8 +6363,50 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   //-------- decide whether a real domain decomposition (equation (1.3))
   //- or a complex domain decomposition (equation (1.4)) should be used:
   //--------------------------------------------------------------------      
-
-  if(d2<=0.0) 
+  if (fabs(d2) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
+    {
+      d3 = d - l3*l3;
+      if (d3 <= 0)
+	{
+	  aq = l1;
+	  bq = l3 + sqrt(-d3);
+	  cq = l1;
+	  dq = l3 - sqrt(-d3);
+	  if(fabs(dq) < fabs(bq))
+	    dq=d/bq;                                        // equation (5.9)
+	  else if(fabs(dq) > fabs(bq))
+	    bq=d/dq;                                       // equation (5.10)
+    	  NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
+	  myquadratic(a,b,c,d,aq,bq,qroots);
+	  roots[0]=qroots[0];
+	  roots[1]=qroots[1];        
+	  myquadratic(a,b,c,d,cq,dq,qroots);
+	  //solve_quadr_NR(cq, dq, qroots);
+	  roots[2]=qroots[0];
+	  roots[3]=qroots[1];               
+	  //printf("qroots=%.15G + I*%.15G\n", creal(qroots[1]), cimag(qroots[1]));
+	}
+      else /* caso complesso */
+	{
+	  acx = l1;
+	  bcx = l3 + I*sqrt(d3);
+	  ccx = l1;
+	  dcx = conj(bcx);
+	  NRabcdCmplx(a, b, c, d, &acx, &bcx, &ccx, &dcx);
+	  cbq[2]=1.0;
+	  cbq[1]=acx;	
+	  cbq[0]=bcx;
+	  solve_quadratic_cmplx(cbq,qroots);
+	  roots[0]=qroots[0];
+	  roots[1]=qroots[1];        
+	  cbq[1]=ccx;	
+	  cbq[0]=dcx;
+	  solve_quadratic_cmplx(cbq,qroots);
+	  roots[2]=qroots[0];
+	  roots[3]=qroots[1];        
+	}
+    }
+  else if(d2<=0.0) 
     {
       // assume a real quadratic decomposition (1.3)
       gamma=sqrt(-d2);                               // equation (2.8) 
