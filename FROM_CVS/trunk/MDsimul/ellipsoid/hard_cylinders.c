@@ -33,7 +33,7 @@
  * volendo quindi possono essere attivate senza problemi */
 #define LDLT_USENR /* newton-raphson per il calcolo di c e a in LDLT */
 #define LDLT_REFINE_PHI_WITH_NR  /* newtown-raphson per il refinement di phi0 in LDLT */
-
+//#define LDLT_USENRCMPLX
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
 #include <gsl/gsl_errno.h>
@@ -4975,35 +4975,6 @@ void two_lin_eqs(double fmat[2][2],double evec[2], double dalf[2])
   else
     dalf[0]=(evec[0]-fmat[0][1]*dalf[1])/fmat[0][0];
 }  
-void myquadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
-{ 
-  double sqrtd,diskr,div,zmax,zmin;
-  //-------------------------------- parameter backward correction step:       
-  diskr=a*a-4*b;   
-  if(diskr>=0.0)
-    {
-      if(a>=0.0)
-	div=-a-sqrt(diskr);
-      else
-	div=-a+sqrt(diskr);
-
-      zmax=div/2;
-
-      if(zmax==0.0)
-	zmin=0.0;
-      else
-	zmin=b/zmax;
-
-      roots[0]=CMPLX(zmax,0.0);
-      roots[1]=CMPLX(zmin,0.0);
-    } 
-  else
-    {   
-      sqrtd=sqrt(-diskr);
-      roots[0]=CMPLX(-a/2,sqrtd/2);
-      roots[1]=CMPLX(-a/2,-sqrtd/2);      
-    }   
-}
 
 void quadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
 { 
@@ -5473,6 +5444,122 @@ void solve_numrecl_cmplx(long double *coeff, complex long double *csol, int m)
   }
   QRfactorizationl(hess, csol, &ok, m);
 }
+
+/* ============================================================================================ */  
+void myquadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
+{ 
+  double MACHEPS=2.2204460492503131E-16;
+  double sqrtd, errold, diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
+  int iter; 
+#ifdef LDLT_USENR
+  int k;
+  double tt[9], ttmax;
+#endif
+  //-------------------------------- parameter backward correction step:       
+#if 0
+  /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
+  evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
+  evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
+  err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23)
+  //printf("BEGIN err=%.16G a=%.16G b=%.15G\n", err, a, b);
+
+  tt[0]=fabs(bb*b);
+  tt[1]=fabs(b*b);
+  tt[2]=fabs(a*b*aa);
+  tt[3]=fabs(a*a*b);
+  tt[4]=fabs(dd);
+  tt[5]=fabs(cc*b);
+  tt[6]=fabs(b*b*aa);
+  tt[7]=fabs(b*b*a);
+  tt[8]=fabs(a*dd);
+  for (k=0; k < 9; k++)
+    if (k==0 || tt[k] > ttmax)
+      ttmax = tt[k];
+  if (err > 2.0*MACHEPS*ttmax)    
+    if (err!=0)
+    {      
+      //errold=err;
+      //printf("PRIMA err=%.16G\n", err);
+      //for (iter=0; iter < 8; iter++) 
+      for (iter=0; iter < 8; iter++) 
+	{ 
+#if 0
+	  if (err <= MACHEPS*(fabs(bb*b)+fabs(b*b)+fabs(a*b*aa)+fabs(a*a*b)+fabs(dd)+fabs(cc*b)+fabs(b*b*aa)+
+			      fabs(b*b*a)+fabs(a*dd)))
+	    break;
+#endif
+	  fmat[0][0]=-b*aa+2*a*b;                         // equation (5.19)
+	  fmat[0][1]=bb-2*b-a*aa+a*a;                    // equation (5.19)
+	  fmat[1][0]=b*b-dd;                             // equation (5.19)
+	  fmat[1][1]=cc-2*b*aa+2*b*a;                     // equation (5.19)
+	  /* usuale criterio di convergenza di un NR */
+	  //if (err <= MACHEPS)
+	    //break;
+	  evec[0]=-evec[0];
+	  evec[1]=-evec[1];
+
+	  two_lin_eqs(fmat,evec,dpar);              // equation (5.20)
+	  at=a;
+	  bt=b;
+	  a=a+dpar[0];                                   // equation (5.21)
+	  b=b+dpar[1];                                   // equation (5.22)
+	  //printf("iter=%d a=%.15G b=%.16G evec=%.16G %.16G\n", iter, a, b, evec[0], evec[1]);
+  	  evec[0]=bb*b-b*b-a*b*aa+a*a*b-dd;            // equation (5.18)
+	  evec[1]=cc*b-b*b*aa+b*b*a-a*dd;              // equation (5.18)
+	  errt=err;
+	  err=fabs(evec[0])+fabs(evec[1]);                 // equation (5.23) 
+  	  if(err == 0.0)
+	    break;	// terminate
+	  if(err>=errt)   // terminate without parameter update
+	    {
+	      //printf("TOO LARGE QUI\n");
+	      a=at;
+	      b=bt;  
+	      break;
+	    }
+  	  //if (fabs(dpar[0]) + fabs(dpar[1]) <= MACHEPS*(fabs(a)+fabs(b)))
+	    //break;
+	}
+  //printf("BEGIN err=%.16G a=%.16G b=%.15G\n", err, a, b);
+      //if (iter > 8)
+	//printf("FINAL err=%.16G a=%.16G b=%.15G errt=%.15G iter=%d\n", err, a, b, errt, iter);
+      
+      //if (err < errold)
+      //printf("DOPO err=%.16G\n", err);
+    } 
+  //---------------------------------------- solve a quadratic equation:     
+  //if (iter>4 && err > 3E-16)
+   // printf("iter=%d max iterations reached err=%.16G!\n", iter, err);
+#endif
+
+  diskr=a*a-4*b;   
+  if(diskr>=0.0)
+    {
+      if(a>=0.0)
+	div=-a-sqrt(diskr);
+      else
+	div=-a+sqrt(diskr);
+
+      zmax=div/2;
+
+      if(zmax==0.0)
+	zmin=0.0;
+      else
+	zmin=b/zmax;
+
+      roots[0]=CMPLX(zmax,0.0);
+      roots[1]=CMPLX(zmin,0.0);
+    } 
+  else
+    {   
+      sqrtd = sqrt(-diskr);
+      roots[0]=CMPLX(-a/2,sqrtd/2);
+      roots[1]=CMPLX(-a/2,-sqrtd/2);      
+    }   
+}
+void solve_cubic_analytic_depressed(double b, double c, complex double sol[3]);
+void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex double sol[3]);
+
 void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 {
   double g,h,gg,hh,aq,bq,cq,dq,s,diskr, coeff[4], err;
@@ -5486,7 +5573,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   double maxtt, xxx, gx, x, xold, f, fold, df, xsq;
   int iter;
 #endif
-
+  double kd0, kd1, kd2; 
   //------------------ call the parabola/reciprocal intersection method:      
   // !------------------------------------------------------- the B-shift:
 #if 1
@@ -5495,27 +5582,79 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   if(diskr > 0.0)
     { 
       diskr=sqrt(diskr);
+#if 0
+      /* b + 3 a s +  6 s^2 = 0*/ 	
+      /* if we use standard formula for solving a quadratic
+       * the most accurate root is the largest one */
+      if (a > 0)
+	{
+	  s = (-3*a - diskr)/12.0; 
+	}
+      else
+	{
+	  s = (-3*a + diskr)/12.0;
+	}
+#else
+
       if(a > 0.0)
 	s=-2*b/(3*a+diskr);                            // equation (3.58)
       else
 	s=-2*b/(3*a-diskr);                            // equation (3.58)
-
+#endif
     }
   else
     {      
       s=-a/4;                                    // equations (3.59-60)
     }
-
   // !--------------------------- the shift transformation (Horner forms):
+#if 0
+    {
+      double sold;
+      sold=s;
+      s=0; 
+      aq=a+4*s;                                      // equation (3.45)
+      bq=b+3*s*(a+2*s);                              // equation (3.46)
+      cq=c+s*(2*b+s*(3*a+4*s));                      // equation (3.47)
+      dq=d+s*(c+s*(b+s*(a+s)));                      // equation (3.48)     
+      printf("[s=0] (8*dq+hh-2*gg)*bq/3=%.16G cq*cq=%16G dq*aq*aq=%.16G\n", (8*dq+hh-2*gg)*bq/3, cq*cq, dq*aq*aq);
+      s=sold;
+    }
+#endif
+  //s=0;
+#if 0
+  aq=a+4*s;                                      // equation (3.45)
+  bq =b + 3*a*s + 6*s*s;
+  cq = c + 2*b*s + 3*a*s*s + 4*s*s*s; 
+  dq = d + c*s + b*s*s + a*s*s*s + s*s*s*s;
+#else
   aq=a+4*s;                                      // equation (3.45)
   bq=b+3*s*(a+2*s);                              // equation (3.46)
   cq=c+s*(2*b+s*(3*a+4*s));                      // equation (3.47)
   dq=d+s*(c+s*(b+s*(a+s)));                      // equation (3.48)     
+#endif
+  //printf("a=%.15G ap=%.15G b=%.15G bp=%.15G c=%.15G cp=%.15G d=%.15G dp=%.15G\n", a, aq, b, bq, c, cq, d, dq);
   gg=bq*bq/9;
   hh=aq*cq;      
   g=hh-4*dq-3*gg;                                // equation (3.49)
   h=(8*dq+hh-2*gg)*bq/3-cq*cq-dq*aq*aq;         // equation (3.50)
-
+  //printf("g=%.15G h=%.15G\n", g, h);
+  //printf("(8*dq+hh-2*gg)*bq/3=%.16G cq*cq=%16G dq*aq*aq=%.16G\n", (8*dq+hh-2*gg)*bq/3, cq*cq, dq*aq*aq);
+#if 0
+  if (1)
+    {
+      kd1=fabs(h);
+      kd0 = cbrt(kd1);
+      kd2= kd0*kd0;
+      gg=(bq/kd1)*bq/9;
+      hh=aq*(cq/kd1);      
+      h = (8*dq/kd1+hh-2*gg)*bq/3-cq*(cq/kd1)-aq*aq*(dq/kd1);
+      //h=1.0;
+      hh=aq*(cq/kd2);
+      gg=(bq/kd2)*bq/9.0;
+      g =hh-4*dq/kd2-3*gg;
+      //printf("h=%.15G g=%.15G\n", g, h);
+    }
+#endif
 #if 0
   coeff[3]=1.0;
   coeff[2]=0.0;
@@ -5551,9 +5690,6 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   //solve_cubic_analytic(coeff,radici);
 #if 1
   //cubicRoots(0,g,h,&nreal,radici);
-  /* NOTA 26/02/18 sto testando solve_cubic_analytic_depressed_handle_inf()
-   * se i risultati sono identici a quelli forniti da solve_cubic_analytic_depressed()
-   * usare soltanto la prima che si comporta meglio con radici grandi */
 #ifdef USE_CUBIC_HANDLE_INF_ONLY
   solve_cubic_analytic_depressed_handle_inf(g, h, radici);
 #else
@@ -5578,6 +5714,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 #endif
   for (k=0; k < 3; k++)
     {
+      //printf("rad[%d]=%.15G+I*%.15G\n", k, creal(radici[k]), cimag(radici[k]));
       if (cimag(radici[k])==0)
 	{
 	  if (!trovato || fabs(creal(radici[k])) > fabs(rmax) )
@@ -5589,7 +5726,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
     }
 #ifdef LDLT_REFINE_PHI_WITH_NR
   x = rmax;
-  xsq = x*x;
+  xsq=x*x;
   xxx=x*xsq;
   gx=g*x;
   f = x*(xsq + g) + h;
@@ -5601,9 +5738,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
     maxtt = fabs(h);
 
   if (fabs(f) > MACHEPS*maxtt)
-  //if (f != 0)
     {
-      for (iter=0; iter < 4; iter++)
+      for (iter=0; iter < 8; iter++)
 	{   
 	  df =  3.0*xsq + g;
 	  if (df==0)
@@ -5615,11 +5751,13 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	  fold = f;
 	  xsq = x*x;
 	  f = x*(xsq + g) + h;
+	  //f = x*x*x + g*x + h;
 	  if (f==0)
 	    {
 	      break;
 	    } 
-       	  if (fabs(f) > fabs(fold))
+	  //printf("iter %d f=%.25G\n", iter, fabs(f));
+       	  if (fabs(f) >= fabs(fold))
 	    {
 	      x = xold;
 	      break;
@@ -5630,6 +5768,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 #else
   *phi0 = rmax;
 #endif
+  //printf("phi=%.1G\n", *phi0);
 #else
   depressed_cubic_root(g,h,phi0);
 #endif
@@ -5642,265 +5781,6 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   //printf("err3=%.20G err2=%.15G phi0=%.15G\n", targetfunc(4, coeff, *phi0), err, *phi0);
   // -------------------------------------------------------------------- 
 }
-/* questa è la versione di LDLT usata nell'EPJE sugli HCs */
-void CLDLTMY_quartic_alt(double coeff[5], complex double roots[4])      
-{
-  double l2mC, l2m[12], d2m[12], res[12], resmin;
-  int  printall, C5, C1, C2, C3;//, tryalt;
-  double d2eq46, bl311, diff, diff_alt, l2alt, dml3l3;
-  int s1, s2, k1, k, kmin, nsol; 
-  double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3];
-  double d2alt, gamma,del2,hphi0,phibal[3][3],phimat[3][3];
-  const double macheps =2.2204460492503131E-16;
-#if 1
-  double cbq[3];
-  complex double sbq[2];
-#endif
-  double cubc[4];
-  double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
-  int nreal;
-  double sd, ssd;
-  complex long double rri, rmri;
-  //----------------------------- calculate the antidiagonal shift phi0:
-
-
-  a=coeff[3]/coeff[4];
-  b=coeff[2]/coeff[4];
-  c=coeff[1]/coeff[4];
-  d=coeff[0]/coeff[4];
-#if 1
-  /* special cases to handle */
-  if (a==0 && b==0 && c==0 && d==0)
-    {
-      roots[0]=roots[1]=roots[2]=roots[3]=0;
-      return;
-    }
-  else if (a==0 && b==0 && c==0)
-    {
-      if (d < 0.0)
-	{
-	  ssd = pow(-d,0.25);
-	  roots[0]=ssd+I*0.0;
-	  roots[1]=-ssd+I*0.0;
-	  roots[2]=0.0+I*ssd;
-	  roots[3]=0.0-I*ssd;
-	}
-      else
-	{
-	  //printf("qui\n");
-	  ssd = pow(d,0.25);
-	  rri = cosl(M_PI/4.0)+sinl(M_PI/4.0)*I;
-	  rmri=I*(cosl(M_PI/4.0)+sinl(M_PI/4.0)*I);
-	  roots[0]=rri*ssd;
-	  roots[1]=-rri*ssd;
-	  roots[2]=rmri*ssd;
-	  roots[3]=-rmri*ssd;
-	}
-      return;
-    }
-  else if (a==0 && b==0 && d==0) 
-    {
-      cubc[3]=1.0;
-      cubc[2]=0.0;
-      cubc[1]=0.0;
-      cubc[0]=c;
-      //printf("QUIIIIIIIIIII\n");
-      //csolve_cubic(cubc, roots);
-      solve_cubic_analytic(cubc, roots);
-      //cubicRoots(0, 0, c, &nreal, roots);
-      roots[3]=0.0+I*0.0;
-      return;
-    }
-  else if (b==0 && c==0 && d==0)
-    {
-      roots[0]=roots[1]=roots[2]=0.0+I*0.0;
-      roots[3]=-a+I*0.0;
-      return;
-    }
-#else
-  if ((a==0 && b==0 && c==0 && d==0)||
-      (a==0 && b==0 && c==0)||
-      (a==0 && b==0 && d==0)|| 
-      (b==0 && c==0 && d==0))
-    {
-      /* temporary fix */
-      quarticRoots(coeff, &nreal, roots);
-      return;
-    }
-#endif
-  mycubic_B_shift(a,b,c,d,&phi0);     
-  l1=a/2;                                         // equation (4.2)
-  l3=b/6+phi0/2;                                  // equation (4.3)
-  del2=c-a*l3;                                    // equation (4.10) 
-  if(d<=0.0)
-    {
-      if(del2==0.0)
-	{
-	  l2=0.0;
-	}
-      else
-	{
-	  l2=2*(d-l3*l3)/del2;                           // equation (4.12)
-	}
-    }  
-  else
-    {
-      if(b-l1*l1-2*l3==0.0)
-	{
-	  l2=0.0;
-	}
-      else
-	{
-	  l2=del2/(2*(b-l1*l1-2*l3));              // equation (4.11)
-	}
-    }
-  if(l2==0.0)
-    d2=2*b/3-phi0-l1*l1;
-  else
-    d2=del2/(2*l2);                                // equation (4.15) 
-  /* check solution */
-  //printf("l2=%.15G  d2=%.16G del2=%.16G\n", l2, 2*b/3-phi0-l1*l1, del2);
-  while (1)
-    { 
-      if (d <=0)
-	{
-	  bl311 =  b-2*l3-l1*l1; // equation (4.15)
-	  //d2eq46 =2*b/3-phi0-l1*l1;
-	  /* check solution */
-	  if (bl311==0)
-	    break;
-	  l2alt = del2/(2.*bl311);   // eq. (4.12)
-	  d2alt = 2.*b/3.-phi0-l1*l1;  // eq. (4.6)
-	  diff = fabs(d2-bl311); // nel calcolo della soluzione non uso la (4.6)
-	  diff_alt = fabs(d2alt*l2alt*l2alt-(d-l3*l3)); // nel calcolo della soluzione alt non uso la (4.8)
-	  //if (diff > macheps || diff_alt > macheps)
-	  //printf("1qui diff1=%.15G diff2=%.15G\n", diff, diff_alt);
-	  if (diff > macheps && diff_alt < diff)
-	    {
-	      d2=d2alt;
-	      l2=l2alt;
-	    }
-	}
-      else
-	{
-	  //bl311 = b-2*l3-l1*l1; // equation (4.15)
-	  dml3l3=d-l3*l3;
-	  d2eq46 =2*b/3-phi0-l1*l1;
-	  /* check solution */
-	  if (del2==0)
-	    break;
-	  l2alt=2*(dml3l3)/del2;                           // equation (4.12)
-	  if (l2alt==0.0)
-	    d2alt = d2eq46;
-	  else 
-	    d2alt = del2/(2*l2alt);                          // eq. (4.15)
-	  diff = fabs(d2*l2*l2-dml3l3);/* con la prima soluzione non uso la (4.8) quindi valuto l'errore con questa */
-	  diff_alt = fabs(d2alt-d2eq46); /* con la soluzione alternativa non uso la (4.6) quindi valuto l'errore con questa */
-	  //if (diff > macheps || diff_alt > macheps)
-	  //printf("2diff1=%.16G diff2=%.16G\n", diff, diff_alt);
-	  
-	  if (diff > macheps && diff_alt < diff)
-	    {
-	      d2=d2alt;
-	      l2=l2alt;
-	    }
-	}
-      break;
-    }
-  //printf("d2e46=%.16G del2=%.15G d2=%.15G l2=%.15G\n", d2eq46, del2, d2, l2);
-  if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
-    {
-      /* temporary fix */
-     /* if I choose a set of root such as 1,-1,0.0001,-0.0001 d2=0
-      * and algorithm fails, hence I decided to make flocke algo handle  
-      * biquadratics */
-#if 1
-      /* solve directly */
-      cbq[2]=1.0;
-      cbq[1]=b;	
-      cbq[0]=d;
-      solve_quadratic_cmplx(cbq,sbq);
-      roots[0] = csqrt(sbq[0]);
-      roots[1] = -csqrt(sbq[0]);
-      roots[2] = csqrt(sbq[1]);
-      roots[3] = -csqrt(sbq[1]);
-      return;
-#else
-      /* use Flocke */
-      //printf("1)d2=%.18G\n", d2);
-      d2=b-2*l3;                                     // equation (4.17)
-
-      printf("2)d2=%.18G\n", d2);
-      //printf("l1=%.18G l2=%.18G l3=%.18G d2=%.18G\n", l1, l2, l3, d2);
-      quarticRoots(coeff, &nreal, roots);
-      return;
-#endif
-    }
-
-  //-------- decide whether a real domain decomposition (equation (1.3))
-  //- or a complex domain decomposition (equation (1.4)) should be used:
-  //--------------------------------------------------------------------      
-
-  if(d2<=0.0) 
-    {
-      // assume a real quadratic decomposition (1.3)
-      gamma=sqrt(-d2);                               // equation (2.8) 
-      //printf("gamma=%.16G\n", gamma);
-      aq=l1+gamma;                                    // equation (5.3)
-      bq=l3+gamma*l2;                                 //equation (5.5)
-
-      cq=l1-gamma;                                    // equation (5.4)
-      dq=l3-gamma*l2;                                 // equation (5.6)
-
-      if(fabs(dq) < fabs(bq))
-	dq=d/bq;                                        // equation (5.9)
-      else if(fabs(dq) > fabs(bq))
-	bq=d/dq;                                       // equation (5.10)
-      //------------------------ aq and cq coefficients backward correction:
-      //printf("QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n");
-      ac_fit_alt(a,b,c,d,&aq,&bq,&cq,&dq);
-      //------------------------------------ roots of the quadratic factors:   
-      //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
-      myquadratic(a,b,c,d,aq,bq,qroots);
-      roots[0]=qroots[0];
-      roots[1]=qroots[1];        
-      myquadratic(a,b,c,d,cq,dq,qroots);
-      roots[2]=qroots[0];
-      roots[3]=qroots[1];               
-
-      //--------------------------------------------------------------------      
-    }
-  else    // (d2.gt.0.0) assume a complex quadratic decomposition: 
-    {
-      // --------------------------------------------------------------------       
-
-      gamma=sqrt(d2);                                // equation (2.8)
-
-      acx=CMPLX(l1,gamma);                          // equation (2.28)
-      bcx=CMPLX(l3,gamma*l2);                       // equation (2.29)
-
-      cdiskr=acx*acx/4-bcx;               
-
-      zx1=-acx/2+csqrt(cdiskr);                       // equation (2.31)
-      zx2=-acx/2-csqrt(cdiskr);                       // equation (2.32)
-
-      if(cabs(zx1) > cabs(zx2))                  // equation (2.33)
-	zxmax=zx1;
-      else
-	zxmax=zx2;
-	     
-
-      zxmin=bcx/zxmax;                               // equation (2.34)
-
-      roots[0]=zxmin;
-      roots[1]=conj(zxmin);
-      roots[2]=zxmax;
-      roots[3]=conj(zxmax);
-
-      //--------------------------------------------------------------------
-    }       
-  //--------------------------------------------------------------------      
-}
 double calc_err_ldlt(double a, double b, double c, double d, double d2, double l1, double l2, double l3)
 {
   /* d3 + d2 l2^2 + d1 l3^2 + (2 d2 l2 + 2 d1 l1 l3) z + (d2 + d1 l1^2 + 2 d1 l3) z^2 + 
@@ -5908,9 +5788,12 @@ double calc_err_ldlt(double a, double b, double c, double d, double d2, double l
   /* d3 + d2 l2^2 + d1 l3^2 + (2 d2 l2 + 2 d1 l1 l3) z + (d2 + d1 l1^2 + 2 d1 l3) z^2 + 
      2 d1 l1 z^3 + d1 z^4 */
   double sum;
+#if 0
+  return max3((b==0)?fabs(d2 + l1*l1 + 2.0*l3):fabs(((d2 + l1*l1 + 2.0*l3)-b)/b),
+              (c==0)?fabs(2.0*d2*l2 + 2.0*l1*l3):fabs(((2.0*d2*l2 + 2.0*l1*l3)-c)/c),
+             (d==0)?fabs(d2*l2*l2 + l3*l3):fabs(((d2*l2*l2 + l3*l3)-d)/d));
+#else
   //return fabs((d2 + l1*l1 + 2.0*l3)-b)+fabs((2.0*d2*l2 + 2.0*l1*l3)-c)+fabs((d2*l2*l2 + l3*l3)-d);
-
-#if 1
   sum =  (b==0)?fabs(d2 + l1*l1 + 2.0*l3):fabs(((d2 + l1*l1 + 2.0*l3)-b)/b);
   sum += (c==0)?fabs(2.0*d2*l2 + 2.0*l1*l3):fabs(((2.0*d2*l2 + 2.0*l1*l3)-c)/c);
   sum += (d==0)?fabs(d2*l2*l2 + l3*l3):fabs(((d2*l2*l2 + l3*l3)-d)/d);
@@ -5926,8 +5809,129 @@ double calc_err_abc(double a, double b, double c, double aq, double bq, double c
   sum = (c==0)?fabs(bq*cq + aq*dq):fabs(((bq*cq + aq*dq) - c)/c);
   sum +=(b==0)?fabs(bq + aq*cq + dq):fabs(((bq + aq*cq + dq) - b)/b);
   sum +=(a==0)?fabs(aq + cq):fabs(((aq + cq) - a)/a);
+  //printf("abc SUM=%.15G\n", sum);
   return sum;
 #endif
+}
+#if 1
+//#define LU_DECOMP
+void qludcmp(double a[4][4], int indx[4], double* d, int *ok)
+{
+  /* A[i][j] = Aij 
+   * A x = b  
+   * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
+  int i,imax=-1,j,k;
+  const int n=4;
+  const double TINY=1E-40;
+  double big,dum,sum,temp; 
+  double vv[8]; /* vv stores the implicit scaling of each row.*/
+  /*vv = vector(1,n);*/
+  *d=1.0; /* No row interchanges yet. */
+  *ok = 0;
+  for (i=0;i<n;i++) 
+    { 
+      /* Loop over rows to get the implicit scaling information.*/ 
+      big=0.0; 
+      for (j=0;j<n;j++)
+	{
+	  if ((temp=fabs(a[i][j])) > big) big=temp; 
+	}
+      if (big == 0.0)
+	{
+	  //ERROR: Singular matrix in routine ludcmp 
+	  *ok = 1;
+	  return;
+	}
+      /* No nonzero largest element. */
+      vv[i]=1.0/big; /* Save the scaling.*/
+    } 
+  for (j=0;j<n;j++) 
+    { /* This is the loop over columns of Crout s method.*/
+      for (i=0;i<j;i++) 
+	{ 
+	  /* This is equation (2.3.12) except for i = j. */
+	  sum=a[i][j]; 
+	  for (k=0;k<i;k++) 
+	    sum -= a[i][k]*a[k][j]; 
+	  a[i][j]=sum; 
+	} 
+      big=0.0; /* Initialize for the search for largest pivot element. */ 
+      for (i=j;i<n;i++) 
+	{ 
+	  /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
+	  sum=a[i][j]; 
+	  for (k=0;k<j;k++)
+	    sum -= a[i][k]*a[k][j]; 
+	    a[i][j]=sum; 
+	    if ( (dum=vv[i]*fabs(sum)) >= big) 
+	      { 
+		/* Is the  gure of merit for the pivot better than the best so far? */
+		big=dum; imax=i; 
+	      } 
+	} 
+      if (j != imax) 
+	{ 
+	  /* Do we need to interchange rows? */
+	  for (k=0;k<n;k++) 
+	    { 
+	      /* Yes, do so...*/ 
+	      dum=a[imax][k]; 
+	      a[imax][k]=a[j][k]; 
+	      a[j][k]=dum; 
+	    } 
+	  *d = -(*d); 
+	  /* ...and change the parity of d. */ 
+	  vv[imax]=vv[j]; 
+	  /* Also interchange the scale factor.*/ 
+	} 
+      indx[j]=imax; 
+      if (a[j][j] == 0.0) 
+	a[j][j]=TINY; 
+      /* If the pivot element is zero the matrix is singular 
+       * (at least to the precision of the algorithm). 
+       * For some applications on singular matrices, 
+       * it is desirable to substitute TINY for zero. */ 
+      if (j != n) 
+	{ 
+	  /* Now,  nally, divide by the pivot element.*/
+	  dum=1.0/(a[j][j]); 
+	  for (i=j+1;i<n;i++) a[i][j] *= dum; 
+	} 
+    } 
+  /* Go back for the next column in the reduction.*/
+  /*free_vector(vv,1,n); */
+}
+
+void qlubksb(double a[4][4], int indx[4], double b[4])
+{ 
+  int i,ii=0,ip,j; 
+  double sum; 
+  const int n=4;
+  for (i=0;i<n;i++) 
+    { 
+      /* When ii is set to a positive value, it will become the index of the  
+       * rst nonvanishing element of b. Wenow do the forward substitution,
+       * equation (2.3.6). The only new wrinkle is to unscramble the permutation as we go. */
+      ip=indx[i];
+      sum=b[ip];
+      b[ip]=b[i]; 
+      if (ii>-1) 
+	for (j=ii;j<=i-1;j++) 
+	  sum -= a[i][j]*b[j]; 
+      else if (sum) 
+	ii=i; 
+      /* A nonzero element was encountered, so from now on we will have to do 
+       * the sums in the loop above. */ 
+      b[i]=sum; 
+    } 
+  for (i=n-1;i>=0;i--) 
+    { 
+      /* Now we do the backsubstitution, equation (2.3.7).*/
+      sum=b[i]; 
+      for (j=i+1;j<n;j++) 
+	sum -= a[i][j]*b[j]; b[i]=sum/a[i][i]; 
+      /* Store a component of the solution vector X. */ 
+    } /* All done! */
 }
 void NRabcdCmplx(double a, double b, double c, double d, 
 		 double complex *AQ, double complex *BQ, double complex *CQ, double complex *DQ)
@@ -5935,6 +5939,11 @@ void NRabcdCmplx(double a, double b, double c, double d,
   int iter, k1, k2;
   complex double x02, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
   double errf, errfold;
+#ifdef LU_DECOMP
+  complex double fjac[4][4], p[4];
+  int indx[4], ok;
+  complex double dlu;
+#endif
   x[0] = *AQ;
   x[1] = *BQ;
   x[2] = *CQ;
@@ -5967,8 +5976,44 @@ void NRabcdCmplx(double a, double b, double c, double d,
   //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
   for (iter = 0; iter < 8; iter++)
     {
+#ifdef LU_DECOMP
+      fjac[0][0]=0;
+      fjac[0][1]=x[3];
+      fjac[0][2]=0;
+      fjac[0][3]=x[1];
+      fjac[1][0]=x[3];
+      fjac[1][1]=x[2];
+      fjac[1][2]=x[1];
+      fjac[1][3]=x[0];
+      fjac[2][0]=x[2];
+      fjac[2][1]=1;
+      fjac[2][2]=x[0];
+      fjac[2][3]=1;
+      fjac[3][0]=1;
+      fjac[3][1]=0;
+      fjac[3][2]=1;
+      fjac[3][3]=0;	
+      qludcmp(fjac,indx,&dlu, &ok); /* Solve linear equations by LU decomposition.*/
+      if (ok != 0)
+	break;
+      for (k1=0; k1 < 4; k1++)
+	dx[k1] = fvec[k1];
+      qlubksb(fjac,indx, dx);
+      //printf("iter=%d dx=%.16G %.16G %.16G %.16G\n", iter, dx[0], dx[1], dx[2], dx[3]);
+      for (k1=0; k1 < 4; k1++)
+      	xold[k1] = x[k1];
+
+      for (k1=0; k1 < 4; k1++)
+	{
+	  x[k1] += -dx[k1];
+	}
+#else
+#if 1
       x02 = x[0]-x[2];
       det = x[1]*x[1] + x[1]*(-x[2]*x02 - 2.0*x[3]) + x[3]*(x[0]*x02 + x[3]);
+#else
+      det = x[1]*x[1] + x[1]*(-x[0]*x[2] + x[2]*x[2] - 2.0*x[3]) + x[3]*(x[0]*x[0] - x[0]*x[2] + x[3]);
+#endif
       if (det==0.0)
 	break;
 #if 1
@@ -6020,6 +6065,7 @@ void NRabcdCmplx(double a, double b, double c, double d,
 	  x[k1] += -dx[k1]/det;
 	}
 
+#endif
       fvec[0] = x[1]*x[3] - d;
       fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
       fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
@@ -6052,8 +6098,12 @@ void NRabcdCmplx(double a, double b, double c, double d,
 void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
 {
   int iter, k1, k2;
-  double errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4], x02;
-
+  double x02, errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+#ifdef LU_DECOMP
+  double fjac[4][4], p[4];
+  int indx[4], ok;
+  double dlu;
+#endif
   x[0] = *AQ;
   x[1] = *BQ;
   x[2] = *CQ;
@@ -6086,6 +6136,38 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
   //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
   for (iter = 0; iter < 8; iter++)
     {
+#ifdef LU_DECOMP
+      fjac[0][0]=0;
+      fjac[0][1]=x[3];
+      fjac[0][2]=0;
+      fjac[0][3]=x[1];
+      fjac[1][0]=x[3];
+      fjac[1][1]=x[2];
+      fjac[1][2]=x[1];
+      fjac[1][3]=x[0];
+      fjac[2][0]=x[2];
+      fjac[2][1]=1;
+      fjac[2][2]=x[0];
+      fjac[2][3]=1;
+      fjac[3][0]=1;
+      fjac[3][1]=0;
+      fjac[3][2]=1;
+      fjac[3][3]=0;	
+      qludcmp(fjac,indx,&dlu, &ok); /* Solve linear equations by LU decomposition.*/
+      if (ok != 0)
+	break;
+      for (k1=0; k1 < 4; k1++)
+	dx[k1] = fvec[k1];
+      qlubksb(fjac,indx, dx);
+      //printf("iter=%d dx=%.16G %.16G %.16G %.16G\n", iter, dx[0], dx[1], dx[2], dx[3]);
+      for (k1=0; k1 < 4; k1++)
+      	xold[k1] = x[k1];
+
+      for (k1=0; k1 < 4; k1++)
+	{
+	  x[k1] += -dx[k1];
+	}
+#else
 #if 1
       x02 = x[0]-x[2];
       det = x[1]*x[1] + x[1]*(-x[2]*x02 - 2.0*x[3]) + x[3]*(x[0]*x02 + x[3]);
@@ -6135,6 +6217,118 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
 	  for (k2=0; k2 < 4; k2++)
 	    dx[k1] += Jinv[k1][k2]*fvec[k2];
 	}
+      for (k1=0; k1 < 4; k1++)
+      	xold[k1] = x[k1];
+
+      for (k1=0; k1 < 4; k1++)
+	{
+	  x[k1] += -dx[k1]/det;
+	}
+
+#endif
+      fvec[0] = x[1]*x[3] - d;
+      fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
+      fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
+      fvec[3] = x[0] + x[2] - a; 
+
+      errfold = errf;
+      errf=0;
+      for (k1=0; k1 < 4; k1++)
+	{
+	  errf += fabs(fvec[k1]);
+	}
+      //printf("iter=%d abcd=%f %f %f %f errf=%.16G errfold=%.16G\n", iter, x[0], x[1], x[2], x[3], errf, errfold);
+      if (errf==0)
+	break;
+      if (errf >= errfold)
+	{
+	  for (k1=0; k1 < 4; k1++)
+	    x[k1] = xold[k1];
+	  break;
+	}
+    }
+
+  *AQ=x[0];
+  *BQ=x[1];
+  *CQ=x[2];
+  *DQ=x[3];
+}
+#else
+void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
+{
+  int iter, k1, k2;
+  double errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+  double  x00, x11, x01, x02, x12, x22, x03, x13, x23, x33; 
+
+  x[0] = *AQ;
+  x[1] = *BQ;
+  x[2] = *CQ;
+  x[3] = *DQ;
+  /* risolvo con un NR il sistema:
+   *
+   * bq*dq - d = 0
+   * bq*cq + aq*dq - c = 0
+   * bq + aq*cq + dq - b = 0
+   * aq + cq - a = 0
+   *
+   * che si ottiene moltiplicando i due polinomi quadratici
+   *
+   * (x^2 + aq*x + bq)*(x^2 + cq*x + dq)
+   *
+   * ed equagualiando i coefficienti che si ottengono con quelli della quartica (cioè a,b,c e d)
+   * */
+
+  fvec[0] = x[1]*x[3] - d;
+  fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
+  fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
+  fvec[3] = x[0] + x[2] - a; 
+  errf=0;
+  for (k1=0; k1 < 4; k1++)
+    {
+      errf += fabs(fvec[k1]);
+    }
+  if (errf==0)
+    return;
+  //printf("abcd=%f %f %f %f\n", x[0], x[1], x[2], x[3]);
+  for (iter = 0; iter < 8; iter++)
+    {
+      x00 = x[0]*x[0];
+      x11 = x[1]*x[1];
+      x12 = x[1]*x[2];
+      x01 = x[0]*x[1];
+      x02 = x[0]*x[2];
+      x22 = x[2]*x[2];
+      x03 = x[0]*x[3];
+      x13 = x[1]*x[3];
+      x23 = x[2]*x[3];
+      x33 = x[3]*x[3];
+
+      det = x11 + x[1]*(-x02 + x22 - 2.0*x[3]) + x[3]*(x00 - x02 + x[3]);
+      if (det==0.0)
+	break;
+      Jinv[0][0] = x[0] - x[2];
+      Jinv[0][1] = x[3] - x[1];
+      Jinv[0][2] = x12 - x03;
+      Jinv[0][3] = x11 + x[0]*x03 - x[1]*x02 - x13; 
+      Jinv[1][0] = x00 - x[1] - x02 + x[3];
+      Jinv[1][1] = -x01 + x12;// x[1]*(-x[0] + x[2]);
+      Jinv[1][2] =  x11 - x13; //x[1]*(x[1] - x[3]);   
+      Jinv[1][3] = x[1]*x12 + x[1]*x03;//x[1]*(-x[1]*x[2] + x[0]*x[3]);
+      Jinv[2][0] =-x[0] + x[2];
+      Jinv[2][1] = x[1] - x[3];
+      Jinv[2][2] = -x12 + x03;
+      Jinv[2][3] = x[1]*x22 - x13 - x02*x[3] + x33;//x[1]*x22 - (x[1] + x02)*x[3] + x33;
+      Jinv[3][0] = x[1] - x02 + x22 - x[3];
+      Jinv[3][1] = x03 - x23;//(x[0] - x[2])*x[3];
+      Jinv[3][2] = -x13 + x33;//x[3]*(-x[1] + x[3]);
+      Jinv[3][3] = x[3]*(x12 - x03);
+
+      for (k1=0; k1 < 4; k1++)
+	{
+	  dx[k1] = 0;
+	  for (k2=0; k2 < 4; k2++)
+	    dx[k1] += Jinv[k1][k2]*fvec[k2];
+	}
      for (k1=0; k1 < 4; k1++)
        xold[k1] = x[k1];
  
@@ -6169,14 +6363,14 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
   *CQ=x[2];
   *DQ=x[3];
 }
-
+#endif
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
   double l2mC, l2m[12], d2m[12], res[12], resmin;
   int  printall, C5, C1, C2, C3;//, tryalt;
   double d2eq46, bl311, diff, diff_alt, l2alt, dml3l3;
   int s1, s2, k1, k, kmin, nsol; 
-  double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3];
+  double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3], l1sq;
   double d2alt, gamma,del2,hphi0,phibal[3][3],phimat[3][3];
   const double macheps =2.2204460492503131E-16;
 #if 1
@@ -6188,9 +6382,9 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   int nreal;
   double sd, ssd;
   complex long double rri, rmri;
-  double d3;
   complex double ccx, dcx;
- 
+  double l3m[2];
+  //int d2z=0;
   //----------------------------- calculate the antidiagonal shift phi0:
 
   a=coeff[3]/coeff[4];
@@ -6262,8 +6456,11 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   l3=b/6+phi0/2;                                  // equation (4.3)
   del2=c-a*l3;                                    // equation (4.10) 
   nsol=0;
+
   d2eq46 =2.*b/3.-phi0-l1*l1;
-  dml3l3 = d-l3*l3;
+  //d2eq46 = b-2*l3-l1*l1;
+  //printf("d2=%.25G\n", d2eq46);
+  //if (fabs(d2eq46) < macheps*(fabs(l1*l1)+fabs(phi0)+fabs(b*2./3.)))
 #ifdef HANDLE_NUM_ERR_BETTER
   /* Handle numerical errors */
   if (phi0!=0 && del2==0 && (b >= 0 || phi0 < 0) && fabs(d2eq46) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1))
@@ -6277,12 +6474,8 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	}                                    // equation (4.10) 
       else 
 	{
-	  /* caso d2=0: d3 + d1 (l3 + l1 z + z^2)^2 = 0 */
-	  /* e d3 si ottiene da questa d3 + d1 l3^2 + 2 d1 l1 l3 z + (d1 l1^2 + 2 d1 l3) z^2 + 2 d1 l1 z^3 + 
-		 d1 z^4 = d + c x + b x^2 + a x^3 + x^4 */
-
-	  //printf("QUI<<<<<<<<<<<\n");
-	  //printf("c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
+	  printf("QUI<<<<<<<<<<<\n");
+	  printf("c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
 	  //printf("l2=%.16G del2=%.16G\n", l2, del2);
 	  b -= b*macheps;
 	  l3=b/6+phi0/2;
@@ -6291,7 +6484,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	}
     }
 #endif
-
+  //printf("QUI d2eq46=%.64G l1*l1=%.16G\n", d2eq46, l1*l1);
+  
+  //printf("====>d2=%.15G\n",d2eq46);
+  dml3l3 = d-l3*l3;
   //printf("dml3l3=%.15G\n", dml3l3);
   bl311 = d2eq46;//b-2*l3-l1*l1;
   if (bl311!=0.0)
@@ -6299,8 +6495,8 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       d2m[nsol] = d2eq46;  // eq. (4.6)
       l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
       //res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
-
       //res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
+
       res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
@@ -6318,11 +6514,17 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 
       d2m[nsol] = d2eq46;
       l2m[nsol] = 2.0*dml3l3/del2;
-
       //res[nsol] = fabs(2.0*d2m[nsol]*l2m[nsol] - del2); 
       res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
+
+#if 0
+  printf("qui nsol=%d del2=%.16G l2=%.15G d2=%.48G phi0=%.15G d3=%.16G cond=%.16G d2eq46=%.16G\n", nsol, del2, l2, d2, phi0, d-l3*l3,
+	 a*a*a - 4.*a*b + 8.0*c, d2eq46);
+  printf("det(M)=%.20G\n", -2*b*b*b + 9*a*b*c - 27*c*c - 27*a*a*d + 72*b*d - 9*b*b*phi0 + 
+ 27*a*c*phi0- 108*d*phi0 + 27.*phi0*phi0*phi0);
+#endif
   if (nsol==0)
     {
       l2=d2=0.0;
@@ -6331,6 +6533,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     {
       for (k1=0; k1 < nsol; k1++)
 	{
+	  //printf("nsol=%d  k=%d res=%.16G\n", nsol, k1, res[k1]);
 	  if (k1==0 || res[k1] < resmin)
 	    {
 	      resmin = res[k1];
@@ -6342,11 +6545,14 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       d2 = d2m[kmin];
       l2 = l2m[kmin];
     }
+  //d2=d2m[0];
+  //l2=l2m[0];
+  //printf("d2=%.15G l2=%.15G kmin=%d\n", d2, l2, kmin);
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
     {
       /* temporary fix */
      /* if I choose a set of root such as 1,-1,0.0001,-0.0001 d2=0
-      * and algorithm fails, hence I decided to make flocke algo handle  
+      * algorithm fails, hence I decided to make flocke algo handle  
       * biquadratics */
       /* solve directly */
       cbq[2]=1.0;
@@ -6363,11 +6569,53 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   //-------- decide whether a real domain decomposition (equation (1.3))
   //- or a complex domain decomposition (equation (1.4)) should be used:
   //--------------------------------------------------------------------      
+
+  /* if d2==0 (ossia gamma=0) && phi0!=0 allora calcola pure d3 (oltre a stimare l1, l2) e lo sommo bq e dq,
+   * se d3 < 0 allora ho un numero complesso e rientro nel caso d2 > 0 altrimenti ho un numero
+   * reale  */
+  //if (d2==0)// or d2 very small
+  //phi0!=0 && 
+  //del2==0 && (b >= 0 || phi0 < 0) && 
   if (fabs(d2) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
     {
+      //phi0=-0.25*a*a+2.0*b/3.0;
+      //l1 = a/2;
+#if 0
+      nsol = 0;
+      if (a!=0)
+	{
+	  l3m[nsol] = c/l1/2;
+	  res[nsol] = fabs((2*l3m[nsol] + l1*l1) - b);
+	  //printf("l3_0=%.15G res=%.15G\n", l3m[nsol], res[nsol]);
+	  nsol++;
+	}
+      l3m[nsol] = 0.5*(b - l1*l1); 
+      res[nsol] = fabs(2.0*l3m[nsol]*l1-c);
+      //printf("l3_1=%.15G res=%.15G\n", l3m[nsol], res[nsol]);
+      nsol++;
+      if (nsol==1)
+	l3 = l3m[0];
+      else
+	{
+	  if (res[0] < res[1])
+	    {
+	      l3 = l3m[0];
+	    }
+	  else
+	    l3 = l3m[1];
+	}
+      l3 =l3m[1];
+#else
+      //l3 = b/6.0+phi0/2.;
+#endif
+      //printf("nsol=%d\n", nsol);
       d3 = d - l3*l3;
       if (d3 <= 0)
 	{
+	  //printf("QUI d3=%.15G l3*l3=%.15G d=%.15G\n", d3, l3*l3, d); 
+	  //printf("c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
+	  //printf("l2=%.16G del2=%.16G\n", l2, del2);
+	  //printf("d2=%.15G\n", d2);
 	  aq = l1;
 	  bq = l3 + sqrt(-d3);
 	  cq = l1;
@@ -6377,6 +6625,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  else if(fabs(dq) > fabs(bq))
 	    bq=d/dq;                                       // equation (5.10)
     	  NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
+	  //printf("aq=%.15G bq=%.15G cq=%.15G dq=%.15G\n", aq, bq, cq, dq);
+	  //printf("l3=%.15G sqrt(-d3)=%.15G\n", l3, sqrt(-d3));
+	  //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
+	  //solve_quadr_NR(aq, bq, qroots);
 	  myquadratic(a,b,c,d,aq,bq,qroots);
 	  roots[0]=qroots[0];
 	  roots[1]=qroots[1];        
@@ -6388,6 +6640,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	}
       else /* caso complesso */
 	{
+	  //printf("XX c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
 	  acx = l1;
 	  bcx = l3 + I*sqrt(d3);
 	  ccx = l1;
@@ -6426,20 +6679,24 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  if (dq !=0)
 	    {
 	      aqv[nsol] = (c - bq*cq)/dq;
+	      //printf("0)c-bq*cq=%.15G dq=%.15G signs=%f %f\n", c-bq*cq, dq, copysign(1,c), copysign(1,-bq*cq));
 	      errv[nsol]=calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
 	      nsol++;
 	    }
 	  if (cq != 0) 
 	    {
 	      aqv[nsol] = (b - dq - bq)/cq;
+	      //printf("1)b-dq-bq=%.15G cq=%.15G signs=%f %f %f\n", b-dq-bq, cq,copysign(1,b), copysign(1,-dq), copysign(1,-bq));
 	      errv[nsol] = calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
 	      nsol++;
 	    }
 	  aqv[nsol] = a - cq;
+	  //printf("2)a-cq=%.15G signs=%f %f\n", a-cq, copysign(1,a), copysign(1,cq));
 	  errv[nsol] = calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
 	  nsol++;
 	  for (k=0; k < nsol; k++)
 	    {
+	      //printf("k=%d err=%.20G\n", k, errv[k]);
 	      if (k==0 || errv[k] < errmin)
 		{
 		  kmin = k;
@@ -6447,8 +6704,12 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 		}
 	    }
 	  aq = aqv[kmin];
+
+	  //if (errmin > 5E-15)
+	  //printf("errmin=%.15G\n", errmin);
+	  //printf("nsol=%d kmin=%d\n", nsol, kmin);
 	}
-      else
+      else 
 	{
 	  nsol = 0;
 	  if (bq != 0)
@@ -6475,15 +6736,17 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 		}
 	    }
 	  cq = cqv[kmin];
-	}	
+	}
 #ifdef LDLT_USENR
       NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
 #endif
       //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
+      //solve_quadr_NR(aq, bq, qroots);
       myquadratic(a,b,c,d,aq,bq,qroots);
       roots[0]=qroots[0];
       roots[1]=qroots[1];        
       myquadratic(a,b,c,d,cq,dq,qroots);
+      //solve_quadr_NR(cq, dq, qroots);
       roots[2]=qroots[0];
       roots[3]=qroots[1];               
 
@@ -6492,12 +6755,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   else    // (d2.gt.0.0) assume a complex quadratic decomposition: 
     {
       // --------------------------------------------------------------------       
-
       gamma=sqrt(d2);                                // equation (2.8)
 
       acx=CMPLX(l1,gamma);                          // equation (2.28)
       bcx=CMPLX(l3,gamma*l2);                       // equation (2.29)
-
+#ifdef LDLT_USENRCMPLX
+      ccx = conj(acx);
+      dcx = conj(bcx);
+      NRabcdCmplx(a, b, c, d, &acx, &bcx, &ccx, &dcx);
+#endif
       cdiskr=acx*acx/4-bcx;               
 
       zx1=-acx/2+csqrt(cdiskr);                       // equation (2.31)
@@ -6520,7 +6786,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   //--------------------------------------------------------------------      
 }
 
-/* ============================================================================================ */  
 
 /* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
  * accurato dell'algoritm hqr() nel trovare gli zeri della quartica. I test li ho fatto calcolando
