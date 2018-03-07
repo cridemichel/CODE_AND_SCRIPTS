@@ -5706,8 +5706,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	  for (k2=0; k2 < 3; k2++)
 	    radici[k2] = radicil[k2];
 #endif
-	  solve_cubic_analytic_depressed_handle_inf(g, h, radici);
-	  //cubicRoots(0,g,h,&nreal,radici);
+	  //solve_cubic_analytic_depressed_handle_inf(g, h, radici);
+	  cubicRoots(0,g,h,&nreal,radici);
 	  break;
 	}
     }
