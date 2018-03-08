@@ -3229,11 +3229,11 @@ void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex doubl
 {
   double Q, R, theta, A, B;//Q3, R2;
   const double sqrt32=sqrt(3)/2.0;
-  double QR, QRSQ, KK, sqrtQ;
+  double QR, QRSQ, KK, sqrtQ, RQ;
   //printf("qu?????????????????????????????\n");
   Q = -b/3.0;
   R = 0.5*c;
-
+  //printf("Q=%.15G R=%.16G\n", Q, R);
   if (R==0)
     {
       sol[0]=0;
@@ -3249,15 +3249,29 @@ void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex doubl
 	}
       return;
     }
-  QR=Q/R;
-  QRSQ=QR*QR;
-  //Q3 = Sqr(Q)*Q;
-  //R2 = Sqr(R);
-  KK=1.0 - Q*QRSQ;
+  
+  if (fabs(Q) < fabs(R))
+    {
+      //printf("Q < R\n");
+      QR=Q/R;
+      QRSQ=QR*QR; 
+      KK=1.0 - Q*QRSQ;
+    }
+  else
+    {
+      //printf("Q >= R\n");
+      RQ = R/Q;
+      KK = copysign(1.0,Q)*(RQ*RQ/Q-1.0);
+      //printf("RQ=%.15G sq=%.16G\n", RQ, RQ*RQ/Q-1.0);
+      //printf("qui KK=%.15G Q=%.15G\n", KK, Q);
+    }
+
   if (KK < 0.0)
     {
+      //printf("KK < 0\n");
       sqrtQ=sqrt(Q);
-      theta = acos((R/sqrtQ)/fabs(Q));
+      theta = acos((R/fabs(Q))/sqrtQ);
+      //printf("theta=%.15G arg=%.15G sqrtQ=%.15G\n", theta, R/fabs(Q), sqrtQ);
       sol[0] = -2.0*sqrtQ*cos(theta/3.0);
       // to solve quartic we need only one real root 
       sol[1] = -2.0*sqrtQ*cos((theta+2.0*M_PI)/3.0);
@@ -3265,7 +3279,14 @@ void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex doubl
     }
   else
     {
-      A = -copysign(1.0,R)*pow(fabs(R)*(1.0+sqrt(KK)),1.0/3.0);
+      //printf("KK >= 0\n");
+      if (fabs(Q) < fabs(R))
+	A = -copysign(1.0,R)*pow(fabs(R)*(1.0+sqrt(KK)),1.0/3.0);
+      else
+	{
+	  A = -copysign(1.0,R)*pow(fabs(R)+sqrt(fabs(Q))*fabs(Q)*sqrt(KK),1.0/3.0);
+	  //printf("A=%.15G arg=%.15G\n", A, sqrt(fabs(Q))*Q*sqrt(KK));
+	}
       if (A==0.0)
 	B=0.0;
       else
@@ -3276,7 +3297,6 @@ void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex doubl
     }
 }
 
-
 void solve_cubic_analytic_depressed(double b, double c, complex double sol[3])
 {
   double Q, R, theta, Q3, R2, A, B, sqrtQ;
@@ -3284,7 +3304,11 @@ void solve_cubic_analytic_depressed(double b, double c, complex double sol[3])
   //printf("qu?????????????????????????????\n");
   Q = -b/3.0;
   R = 0.5*c;
-
+  if (fabs(Q) > 1E102 || fabs(R) > 1E154)
+    {
+      solve_cubic_analytic_depressed_handle_inf(b, c, sol);
+      return;
+    }
   Q3 = Sqr(Q)*Q;
   R2 = Sqr(R);
   if (R2 < Q3)
@@ -5694,6 +5718,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   solve_cubic_analytic_depressed_handle_inf(g, h, radici);
 #else
   solve_cubic_analytic_depressed(g, h, radici);
+#if 1
   for (k=0; k < 3; k++)
     {
       if (isnan(radici[k]) || isinf(radici[k]))
@@ -5706,11 +5731,12 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	  for (k2=0; k2 < 3; k2++)
 	    radici[k2] = radicil[k2];
 #endif
-	  //solve_cubic_analytic_depressed_handle_inf(g, h, radici);
-	  cubicRoots(0,g,h,&nreal,radici);
+	  solve_cubic_analytic_depressed_handle_inf(g, h, radici);
+	  //cubicRoots(0,g,h,&nreal,radici);
 	  break;
 	}
     }
+#endif
 #endif
   for (k=0; k < 3; k++)
     {
