@@ -27,12 +27,13 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
-#define USE_CUBIC_HANDLE_INF_ONLY
+//#define USE_CUBIC_HANDLE_INF_ONLY
 
 /* NOTA 21/02/18: per quanto riguarda le simulazioni queste due define incidono pochissimo e danno più robustezza
  * volendo quindi possono essere attivate senza problemi */
 #define LDLT_USENR /* newton-raphson per il calcolo di c e a in LDLT */
 #define LDLT_REFINE_PHI_WITH_NR  /* newtown-raphson per il refinement di phi0 in LDLT */
+//#define LDLT_LOSSOFSIG_FIX
 //#define LDLT_USENRCMPLX
 //#define MC_QUART_USE_ANALYTIC
 #include <gsl/gsl_poly.h>
@@ -9349,6 +9350,43 @@ double test_overlap_parall_cyl(double *Ci, double *ni, double *Dj, double *nj, d
 }
 /* HYBRID version where for fallback a second ibarra iteration is performed to determine the disk reference system axes  
 */
+#ifdef LDLT_LOSSOFSIG_FIX
+/* error compensated sums */
+double loft[100];
+double KahanSum(double input[], int n)
+{    
+  double sum = 0.0;
+  double c = 0.0;
+  double y, t;  // A running compensation for lost low-order bits.
+  int i;
+  for (i = 0; i < n; i++)
+    {
+      y = input[i] - c; // So far, so good: c is zero.
+      t = sum + y;      // Alas, sum is big, y small, so low-order digits of y are lost.
+      c = (t - sum) - y;// (t - sum) cancels the high-order part of y; subtracting y recovers negative (low part of y)
+      sum = t;          // Algebraically, c should always be zero. Beware overly-aggressive optimizing compilers!
+    }                   // Next time around, the lost low part will be added to y in a fresh attempt.
+  return sum;
+}
+
+double NeumaierSum(double input[], int n)
+{  
+  double sum, c, t;
+  int i;
+  sum = input[0];
+  c = 0.0;                 // A running compensation for lost low-order bits.
+  for(i = 1; i < n; i++)
+    {
+      t = sum + input[i];
+      if (fabs(sum) >= fabs(input[i]))
+	c += (sum - t) + input[i]; // If sum is bigger, low-order digits of input[i] are lost.
+      else
+	c += (input[i] - t) + sum; // Else low-order digits of sum are lost
+      sum = t;
+    }
+  return sum + c;              // Correction only applied once in the very end
+}
+#endif
 double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
@@ -9425,6 +9463,27 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   nip1nip2 = nip1*nip2;
   nip0nip2 = nip0*nip2;
   nip0nip1 = nip0*nip1;
+#ifdef LDLT_LOSSOFSIG_FIX
+  coeffEr[0] = omnip12;
+  coeffEr[1] = omnip22;
+  coeffEr[2] = -2.0*nip1nip2;
+  loft[0] =  Cip02*omnip02;
+  loft[1] = Cip12*omnip12;
+  loft[2] = Cip22*omnip22; 
+  loft[3] = -2.0*Cip0*Cip1*nip0nip1; 
+  loft[4] = -2.0*Cip0*Cip2*nip0nip2;
+  loft[5] = -2.0* Cip1*Cip2*nip1nip2;
+  loft[6] = -D2sq;
+  coeffEr[3]= NeumaierSum(loft, 7);
+  loft[0] = Cip2*nip1nip2;
+  loft[1] = Cip0*nip0nip1; 
+  loft[2] = -Cip1*omnip12;
+  coeffEr[4] = 2.0*NeumaierSum(loft,3);
+  loft[0] = Cip0*nip0nip2; 
+  loft[1] = Cip1*nip1nip2;
+  loft[2] = - Cip2*omnip22;
+  coeffEr[5] = 2.0*NeumaierSum(loft,3);
+#else
   coeffEr[0] = omnip12;
   coeffEr[1] = omnip22;
   coeffEr[2] = -2.0*nip1nip2;  
@@ -9432,6 +9491,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 								    Cip1*Cip2*nip1nip2) - D2sq;
   coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
   coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
+#endif
 #elif 0
   coeffEr[0] = 1 - 2*nip12 + nip02*nip12 + nip14 + 
     nip12*nip22;
@@ -9526,11 +9586,40 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   c52 = Sqr(c5);
   //xC=yC=0;
 #ifndef MC_EXCHG_QUART_SOL
+#ifdef LDLT_LOSSOFSIG_FIX
+  loft[0] = c02; 
+  loft[1] = -2*c0*c1;
+  loft[2] = c12;
+  loft[3] = c22;
+  coeff[4] = NeumaierSum(loft,4);
+  loft[0] = 2*c2*c4;
+  loft[1] = - 2*c0*c5;
+  loft[2] = 2*c1*c5;
+  coeff[3] = NeumaierSum(loft,3);
+  loft[0] = -2*c02;
+  loft[1] = 2*c0*c1;
+  loft[2] = -c22;
+  loft[3] = - 2*c0*c3;
+  loft[4] = 2*c1*c3;
+  loft[5] = c42; 
+  loft[6] = c52;
+  coeff[2] = NeumaierSum(loft,7);
+  loft[0] = -2*c2*c4; 
+  loft[1] = 2*c0*c5;
+  loft[2] = 2*c3*c5;
+  coeff[1] = NeumaierSum(loft,3);
+  loft[0] = c02;
+  loft[1] = 2*c0*c3;
+  loft[2] = c32;
+  loft[3] = -c42;
+  coeff[0] = NeumaierSum(loft,4);
+#else
   coeff[4] = c02 - 2*c0*c1 + c12 + c22;
   coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
   coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
+#endif
 #else
   coeff[4] = c02 - 2*c0*c1 + c12 + c22;
   coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
@@ -9612,7 +9701,16 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   for (kk1=0; kk1 < numsol[0]; kk1++)
     {
       temp = c4 + c2*solqua[kk1];
+#ifdef LDLT_LOSSOFSIG_FIX
+      loft[0] = -c0;
+      loft[1] = -c3;
+      loft[2] = -c5*solqua[kk1];
+      loft[3] = c0*Sqr(solqua[kk1]);
+      loft[4] =-c1*Sqr(solqua[kk1]);
+      solec[kk1][0] = NeumaierSum(loft,5)/temp;
+#else
       solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
+#endif
       solec[kk1][1] = solqua[kk1];
 #if 0
       temp = c5 + c2*solqua[kk1];
