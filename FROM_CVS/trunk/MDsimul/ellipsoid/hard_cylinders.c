@@ -5722,7 +5722,8 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 #if 1
   for (k=0; k < 3; k++)
     {
-      if (isnan(radici[k]) || isinf(radici[k]))
+      if (isnan(creal(radici[k])) || isnan(cimag(radici[k])) 
+	  || isinf(creal(radici[k])) || isinf(cimag(radici[k])) )
 	{
 	  //printf("QUIQUIIIIIIIIIIIIIIIIIIIIII\n");
 #if 0
