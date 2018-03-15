@@ -6391,8 +6391,32 @@ void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, doub
   *DQ=x[3];
 }
 #endif
+double calc_err_abcd_cmplx(double a, double b, double c, double d, 
+			   complex double aq, complex double bq, complex double cq, complex double dq)
+{
+  double sum;
+  sum = (d==0)?cabs(bq*dq):cabs((bq*dq-d)/d);
+  sum += (c==0)?cabs(bq*cq + aq*dq):cabs(((bq*cq + aq*dq) - c)/c);
+  sum +=(b==0)?cabs(bq + aq*cq + dq):cabs(((bq + aq*cq + dq) - b)/b);
+  sum +=(a==0)?cabs(aq + cq):cabs(((aq + cq) - a)/a);
+  return sum;
+}
+double calc_err_abcd(double a, double b, double c, double d, double aq, double bq, double cq, double dq)
+{
+  double sum;
+  sum = (d==0)?fabs(bq*dq):fabs((bq*dq-d)/d);
+  sum += (c==0)?fabs(bq*cq + aq*dq):fabs(((bq*cq + aq*dq) - c)/c);
+  sum +=(b==0)?fabs(bq + aq*cq + dq):fabs(((bq + aq*cq + dq) - b)/b);
+  sum +=(a==0)?fabs(aq + cq):fabs(((aq + cq) - a)/a);
+  return sum;
+}
+
 void LDLT_quartic(double coeff[5], complex double roots[4])      
 {
+  int realcase[2], whichcase;
+  double err0, err1;
+  double aq1, bq1, cq1, dq1; 
+  complex double acx1, bcx1, ccx1, dcx1;
   double l2mC, l2m[12], d2m[12], res[12], resmin;
   int  printall, C5, C1, C2, C3;//, tryalt;
   double d2eq46, bl311, diff, diff_alt, l2alt, dml3l3;
@@ -6400,12 +6424,10 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3], l1sq;
   double d2alt, gamma,del2,hphi0,phibal[3][3],phimat[3][3];
   const double macheps =2.2204460492503131E-16;
-#if 1
   double cbq[3];
-  complex double sbq[2];
-#endif
+  complex double sbq[2]; 
   double cubc[4];
-  double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
+  double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2], qcx;
   int nreal;
   double sd, ssd;
   complex long double rri, rmri;
@@ -6485,35 +6507,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   nsol=0;
 
   d2eq46 =2.*b/3.-phi0-l1*l1;
-  //d2eq46 = b-2*l3-l1*l1;
-  //printf("d2=%.25G\n", d2eq46);
-  //if (fabs(d2eq46) < macheps*(fabs(l1*l1)+fabs(phi0)+fabs(b*2./3.)))
-#ifdef HANDLE_NUM_ERR_BETTER
-  /* Handle numerical errors */
-  if (phi0!=0 && del2==0 && (b >= 0 || phi0 < 0) && fabs(d2eq46) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1))
-	  //&& phi0 != 0//a*a*a - 4.*a*b + 8.0*c==0 && //se d2=0 questa equivale a del2=0
-	 // se phi0 = 0 abbiamo una radice quadrupla e la routine funziona ancora
-    {
-      if (d2eq46!=0)
-	{
-	  c += c*macheps;
-	  del2=c-a*l3;
-	}                                    // equation (4.10) 
-      else 
-	{
-	  printf("QUI<<<<<<<<<<<\n");
-	  printf("c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
-	  //printf("l2=%.16G del2=%.16G\n", l2, del2);
-	  b -= b*macheps;
-	  l3=b/6+phi0/2;
-	  del2=c-a*l3;                                    // equation (4.10) 
-	  d2eq46 =2.*b/3.-phi0-l1*l1;
-	}
-    }
-#endif
-  //printf("QUI d2eq46=%.64G l1*l1=%.16G\n", d2eq46, l1*l1);
-  
-  //printf("====>d2=%.15G\n",d2eq46);
   dml3l3 = d-l3*l3;
   //printf("dml3l3=%.15G\n", dml3l3);
   bl311 = d2eq46;//b-2*l3-l1*l1;
@@ -6523,7 +6516,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       l2m[nsol] = del2/(2.0*d2m[nsol]);   // eq. (4.12)
       //res[nsol] = fabs(del2*l2m[nsol]-2.0*dml3l3);
       //res[nsol] = fabs(d2m[nsol]*l2m[nsol]*l2m[nsol]-dml3l3);
-
       res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
       nsol++;
     }
@@ -6533,7 +6525,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       if (l2m[nsol]!=0)
 	{
   	  d2m[nsol]=del2/(2*l2m[nsol]);
-	  
 	  //res[nsol] = fabs(d2m[nsol]-bl311); // nel calcolo della soluzione non uso la (4.6)
 	  res[nsol] = calc_err_ldlt(a,b,c,d,d2m[nsol], l1, l2m[nsol], l3);
 	  nsol++;
@@ -6546,12 +6537,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       nsol++;
     }
 
-#if 0
-  printf("qui nsol=%d del2=%.16G l2=%.15G d2=%.48G phi0=%.15G d3=%.16G cond=%.16G d2eq46=%.16G\n", nsol, del2, l2, d2, phi0, d-l3*l3,
-	 a*a*a - 4.*a*b + 8.0*c, d2eq46);
-  printf("det(M)=%.20G\n", -2*b*b*b + 9*a*b*c - 27*c*c - 27*a*a*d + 72*b*d - 9*b*b*phi0 + 
- 27*a*c*phi0- 108*d*phi0 + 27.*phi0*phi0*phi0);
-#endif
   if (nsol==0)
     {
       l2=d2=0.0;
@@ -6560,21 +6545,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
     {
       for (k1=0; k1 < nsol; k1++)
 	{
-	  //printf("nsol=%d  k=%d res=%.16G\n", nsol, k1, res[k1]);
 	  if (k1==0 || res[k1] < resmin)
 	    {
 	      resmin = res[k1];
 	      kmin = k1;	
 	    }
 	}
-      //printf("d=%.15G kmin=%d nsol=%d\n", d, kmin, nsol);
-      //printf("res= %.16G %.16G %.16G\n", res[0], res[1], res[2]);
       d2 = d2m[kmin];
       l2 = l2m[kmin];
     }
-  //d2=d2m[0];
-  //l2=l2m[0];
-  //printf("d2=%.15G l2=%.15G kmin=%d\n", d2, l2, kmin);
   if(a==0.0 && c==0.0)  // handle a bi-quadratic equation
     {
       /* temporary fix */
@@ -6593,112 +6572,19 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       return;
     }
 
-  //-------- decide whether a real domain decomposition (equation (1.3))
-  //- or a complex domain decomposition (equation (1.4)) should be used:
-  //--------------------------------------------------------------------      
-
-  /* if d2==0 (ossia gamma=0) && phi0!=0 allora calcola pure d3 (oltre a stimare l1, l2) e lo sommo bq e dq,
-   * se d3 < 0 allora ho un numero complesso e rientro nel caso d2 > 0 altrimenti ho un numero
-   * reale  */
-  //if (d2==0)// or d2 very small
-  //phi0!=0 && 
-  //del2==0 && (b >= 0 || phi0 < 0) && 
-  if (fabs(d2) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
+  whichcase = 0; // d2 != 0
+  if(d2 < 0.0) 
     {
-      //phi0=-0.25*a*a+2.0*b/3.0;
-      //l1 = a/2;
-#if 0
-      nsol = 0;
-      if (a!=0)
-	{
-	  l3m[nsol] = c/l1/2;
-	  res[nsol] = fabs((2*l3m[nsol] + l1*l1) - b);
-	  //printf("l3_0=%.15G res=%.15G\n", l3m[nsol], res[nsol]);
-	  nsol++;
-	}
-      l3m[nsol] = 0.5*(b - l1*l1); 
-      res[nsol] = fabs(2.0*l3m[nsol]*l1-c);
-      //printf("l3_1=%.15G res=%.15G\n", l3m[nsol], res[nsol]);
-      nsol++;
-      if (nsol==1)
-	l3 = l3m[0];
-      else
-	{
-	  if (res[0] < res[1])
-	    {
-	      l3 = l3m[0];
-	    }
-	  else
-	    l3 = l3m[1];
-	}
-      l3 =l3m[1];
-#else
-      //l3 = b/6.0+phi0/2.;
-#endif
-      //printf("nsol=%d\n", nsol);
-      d3 = d - l3*l3;
-      if (d3 <= 0)
-	{
-	  //printf("QUI d3=%.15G l3*l3=%.15G d=%.15G\n", d3, l3*l3, d); 
-	  //printf("c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
-	  //printf("l2=%.16G del2=%.16G\n", l2, del2);
-	  //printf("d2=%.15G\n", d2);
-	  aq = l1;
-	  bq = l3 + sqrt(-d3);
-	  cq = l1;
-	  dq = l3 - sqrt(-d3);
-	  if(fabs(dq) < fabs(bq))
-	    dq=d/bq;                                        // equation (5.9)
-	  else if(fabs(dq) > fabs(bq))
-	    bq=d/dq;                                       // equation (5.10)
-    	  NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
-	  //printf("aq=%.15G bq=%.15G cq=%.15G dq=%.15G\n", aq, bq, cq, dq);
-	  //printf("l3=%.15G sqrt(-d3)=%.15G\n", l3, sqrt(-d3));
-	  //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
-	  //solve_quadr_NR(aq, bq, qroots);
-	  myquadratic(a,b,c,d,aq,bq,qroots);
-	  roots[0]=qroots[0];
-	  roots[1]=qroots[1];        
-	  myquadratic(a,b,c,d,cq,dq,qroots);
-	  //solve_quadr_NR(cq, dq, qroots);
-	  roots[2]=qroots[0];
-	  roots[3]=qroots[1];               
-	  //printf("qroots=%.15G + I*%.15G\n", creal(qroots[1]), cimag(qroots[1]));
-	}
-      else /* caso complesso */
-	{
-	  //printf("XX c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
-	  acx = l1;
-	  bcx = l3 + I*sqrt(d3);
-	  ccx = l1;
-	  dcx = conj(bcx);
-	  NRabcdCmplx(a, b, c, d, &acx, &bcx, &ccx, &dcx);
-	  cbq[2]=1.0;
-	  cbq[1]=acx;	
-	  cbq[0]=bcx;
-	  solve_quadratic_cmplx(cbq,qroots);
-	  roots[0]=qroots[0];
-	  roots[1]=qroots[1];        
-	  cbq[1]=ccx;	
-	  cbq[0]=dcx;
-	  solve_quadratic_cmplx(cbq,qroots);
-	  roots[2]=qroots[0];
-	  roots[3]=qroots[1];        
-	}
-    }
-  else if(d2<=0.0) 
-    {
-      // assume a real quadratic decomposition (1.3)
-      gamma=sqrt(-d2);                               // equation (2.8) 
-      aq=l1+gamma;                                    // equation (5.3)
-      bq=l3+gamma*l2;                                 //equation (5.5)
+      gamma=sqrt(-d2);                               
+      aq=l1+gamma;                                  
+      bq=l3+gamma*l2;                              
 
-      cq=l1-gamma;                                    // equation (5.4)
-      dq=l3-gamma*l2;                                 // equation (5.6)
+      cq=l1-gamma;                                
+      dq=l3-gamma*l2;                            
       if(fabs(dq) < fabs(bq))
-	dq=d/bq;                                        // equation (5.9)
+	dq=d/bq;                                
       else if(fabs(dq) > fabs(bq))
-	bq=d/dq;                                       // equation (5.10)
+	bq=d/dq;                               
 
       if (fabs(aq) < fabs(cq))
 	{
@@ -6706,24 +6592,20 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  if (dq !=0)
 	    {
 	      aqv[nsol] = (c - bq*cq)/dq;
-	      //printf("0)c-bq*cq=%.15G dq=%.15G signs=%f %f\n", c-bq*cq, dq, copysign(1,c), copysign(1,-bq*cq));
 	      errv[nsol]=calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
 	      nsol++;
 	    }
 	  if (cq != 0) 
 	    {
 	      aqv[nsol] = (b - dq - bq)/cq;
-	      //printf("1)b-dq-bq=%.15G cq=%.15G signs=%f %f %f\n", b-dq-bq, cq,copysign(1,b), copysign(1,-dq), copysign(1,-bq));
 	      errv[nsol] = calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
 	      nsol++;
 	    }
 	  aqv[nsol] = a - cq;
-	  //printf("2)a-cq=%.15G signs=%f %f\n", a-cq, copysign(1,a), copysign(1,cq));
 	  errv[nsol] = calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
 	  nsol++;
 	  for (k=0; k < nsol; k++)
 	    {
-	      //printf("k=%d err=%.20G\n", k, errv[k]);
 	      if (k==0 || errv[k] < errmin)
 		{
 		  kmin = k;
@@ -6731,10 +6613,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 		}
 	    }
 	  aq = aqv[kmin];
-
-	  //if (errmin > 5E-15)
-	  //printf("errmin=%.15G\n", errmin);
-	  //printf("nsol=%d kmin=%d\n", nsol, kmin);
 	}
       else 
 	{
@@ -6764,55 +6642,136 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	    }
 	  cq = cqv[kmin];
 	}
+      err0 = calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
+      realcase[0]=1;
+    }
+  else if (d2 > 0)   // (d2.gt.0.0) assume a complex quadratic decomposition: 
+    {
+      // --------------------------------------------------------------------       
+      gamma=sqrt(d2); 
+
+      acx=CMPLX(l1,gamma);  
+      bcx=CMPLX(l3,gamma*l2);
+      ccx = conj(acx);
+      dcx = conj(bcx);
+      realcase[0] = 0; // complex 
+      err0 = calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
+    }
+  //else 
+    //realcase[0]=-1; // d2=0
+  
+  if (fabs(d2) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
+    {
+      d3 = d - l3*l3;
+      if (d3 <= 0)
+	{
+	  realcase[1] = 1;
+	  aq1 = l1;
+	  bq1 = l3 + sqrt(-d3);
+	  cq1 = l1;
+	  dq1 = l3 - sqrt(-d3);
+	  if(fabs(dq1) < fabs(bq1))
+	    dq1=d/bq1;                                        // equation (5.9)
+	  else if(fabs(dq1) > fabs(bq1))
+	    bq1=d/dq1;                                       // equation (5.10)
+	  err1 = calc_err_abcd(a, b, c, d, aq1, bq1, cq1, dq1);
+	}
+      else /* caso complesso */
+	{
+	  printf("qui1 d2=%.16G d3=%.16G phi0=%.16G\n", d2, d-l3*l3, phi0);
+	  realcase[1] = 0;
+	  //printf("XX c[5]={%.32G,%.32G,%.32G,%.32G,%.32G}\n", d, c, b, a, 1.0);
+	  acx1 = l1;
+	  bcx1 = l3 + I*sqrt(d3);
+	  ccx1 = l1;
+	  dcx1 = conj(bcx1);
+	  err1 = calc_err_abcd_cmplx(a, b, c, d, acx1, bcx1, ccx1, dcx1); 
+	}
+      if (err1 < err0)
+	{
+          whichcase=1; // d2 = 0
+	  if (realcase[1]==1)
+	    {
+	      aq = aq1;
+	      bq = bq1;
+	      cq = cq1;
+	      dq = dq1;
+	    }
+	  else
+	    {
+	      acx = acx1;
+	      bcx = bcx1;
+	      ccx = ccx1;
+	      dcx = dcx1;
+	    }
+	}
+    }
+  if (realcase[whichcase]==1)
+    {
 #ifdef LDLT_USENR
       NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
 #endif
-      //printf("aq=%.16G bq=%.16G cq=%.16G dq=%.16G\n", aq, bq, cq, dq);
-      //solve_quadr_NR(aq, bq, qroots);
       myquadratic(a,b,c,d,aq,bq,qroots);
       roots[0]=qroots[0];
       roots[1]=qroots[1];        
       myquadratic(a,b,c,d,cq,dq,qroots);
-      //solve_quadr_NR(cq, dq, qroots);
       roots[2]=qroots[0];
-      roots[3]=qroots[1];               
-
-      //--------------------------------------------------------------------      
+      roots[3]=qroots[1];
     }
-  else    // (d2.gt.0.0) assume a complex quadratic decomposition: 
+  else
     {
-      // --------------------------------------------------------------------       
-      gamma=sqrt(d2);                                // equation (2.8)
-
-      acx=CMPLX(l1,gamma);                          // equation (2.28)
-      bcx=CMPLX(l3,gamma*l2);                       // equation (2.29)
+      /* complex coefficients of p1 and p2 */
+      if (whichcase==0) // d2!=0
+	{
 #ifdef LDLT_USENRCMPLX
-      ccx = conj(acx);
-      dcx = conj(bcx);
-      NRabcdCmplx(a, b, c, d, &acx, &bcx, &ccx, &dcx);
+	  NRabcdCmplx(a, b, c, d, &acx, &bcx, &ccx, &dcx);
 #endif
-      cdiskr=acx*acx/4-bcx;               
+	  cdiskr=acx*acx/4-bcx;               
 
-      zx1=-acx/2+csqrt(cdiskr);                       // equation (2.31)
-      zx2=-acx/2-csqrt(cdiskr);                       // equation (2.32)
+	  zx1=-acx/2+csqrt(cdiskr);
+	  zx2=-acx/2-csqrt(cdiskr);
 
-      if(cabs(zx1) > cabs(zx2))                  // equation (2.33)
-	zxmax=zx1;
-      else
-	zxmax=zx2;
+	  if(cabs(zx1) > cabs(zx2))
+	    zxmax=zx1;
+	  else
+	    zxmax=zx2;
 
-      zxmin=bcx/zxmax;                               // equation (2.34)
+	  zxmin=bcx/zxmax;        
 
-      roots[0]=zxmin;
-      roots[1]=conj(zxmin);
-      roots[2]=zxmax;
-      roots[3]=conj(zxmax);
-
-      //--------------------------------------------------------------------
-    }       
+	  roots[0]=zxmin;
+	  roots[1]=conj(zxmin);
+	  roots[2]=zxmax;
+	  roots[3]=conj(zxmax);
+	}
+      else // d2 ~ 0
+	{
+#ifdef USENRCMPLX
+	  NRabcdCmplx(a, b, c, d, &acx, &bcx, &ccx, &dcx);
+#endif
+	  cdiskr=csqrt(acx*acx-4.0*bcx);
+	  zx1 = -0.5*(acx+cdiskr);
+	  zx2 = -0.5*(acx-cdiskr);
+	  if (cabs(zx1) > cabs(zx2))
+	    zxmax = zx1;
+	  else
+	    zxmax = zx2;
+	  zxmin = bcx/zxmax;
+	  roots[0] = zxmax;
+	  roots[1] = zxmin;
+	  cdiskr=csqrt(ccx*ccx-4.0*dcx);
+	  zx1 = -0.5*(ccx+cdiskr);
+	  zx2 = -0.5*(ccx-cdiskr);
+	  if (cabs(zx1) > cabs(zx2))
+	    zxmax = zx1;
+	  else
+	    zxmax = zx2;
+	  zxmin = dcx/zxmax;
+	  roots[2]= zxmax;
+	  roots[3]= zxmin;
+	}
+    }
   //--------------------------------------------------------------------      
 }
-
 
 /* 11/01/18 NOTA: dai test che ho effettuato fast quartic solver (FQS)è circa 3 ordini di grandezza più
  * accurato dell'algoritm hqr() nel trovare gli zeri della quartica. I test li ho fatto calcolando
