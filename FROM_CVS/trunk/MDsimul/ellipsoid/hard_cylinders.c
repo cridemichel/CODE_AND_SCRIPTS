@@ -6643,7 +6643,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	    }
 	  cq = cqv[kmin];
 	}
-      err0 = calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
       realcase[0]=1;
     }
   else if (d2 > 0)   // (d2.gt.0.0) assume a complex quadratic decomposition: 
@@ -6656,14 +6655,19 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       ccx = conj(acx);
       dcx = conj(bcx);
       realcase[0] = 0; // complex 
-      err0 = calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
     }
   //else 
     //realcase[0]=-1; // d2=0
   
-  if (fabs(d2) < macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
+  if (fabs(d2) <= macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
     {
       d3 = d - l3*l3;
+      if (realcase[0]==1)
+	err0 = calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
+      else
+	err0 = calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
+
+
       if (d3 <= 0)
 	{
 	  realcase[1] = 1;
