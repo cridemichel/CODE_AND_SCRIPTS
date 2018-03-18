@@ -27,6 +27,7 @@
 #define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
+#define LDLT_OPT_CUBIC
 //#define USE_CUBIC_HANDLE_INF_ONLY
 
 /* NOTA 21/02/18: per quanto riguarda le simulazioni queste due define incidono pochissimo e danno più robustezza
@@ -3226,6 +3227,148 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
       *numsol = 1;
     }
 }
+#ifdef LDLT_OPT_CUBIC
+void solve_cubic_analytic_depressed_handle_inf(double b, double c, double *sol)
+{
+  double Q, R, theta, A, B;//Q3, R2;
+  const double sqrt32=sqrt(3)/2.0;
+  double QR, QRSQ, KK, sqrtQ, RQ;
+  //printf("qu?????????????????????????????\n");
+  Q = -b/3.0;
+  R = 0.5*c;
+  //printf("Q=%.15G R=%.16G\n", Q, R);
+  if (R==0)
+    {
+      //sol[0]=0;
+      if (b <= 0)
+	{
+	  *sol=sqrt(-b);
+	  //sol[2]=-sqrt(-b);
+	}
+      else
+	{
+	  *sol=0;
+	  //sol[1]=I*sqrt(b);
+	  //sol[2]=-I*sqrt(b);
+	}
+      return;
+    }
+  
+  if (fabs(Q) < fabs(R))
+    {
+      //printf("Q < R\n");
+      QR=Q/R;
+      QRSQ=QR*QR; 
+      KK=1.0 - Q*QRSQ;
+    }
+  else
+    {
+      //printf("Q >= R\n");
+      RQ = R/Q;
+      KK = copysign(1.0,Q)*(RQ*RQ/Q-1.0);
+      //printf("RQ=%.15G sq=%.16G\n", RQ, RQ*RQ/Q-1.0);
+      //printf("qui KK=%.15G Q=%.15G\n", KK, Q);
+    }
+
+  if (KK < 0.0)
+    {
+      //printf("KK < 0\n");
+      sqrtQ=sqrt(Q);
+      theta = acos((R/fabs(Q))/sqrtQ);
+      //printf("theta=%.15G arg=%.15G sqrtQ=%.15G\n", theta, R/fabs(Q), sqrtQ);
+#if 1
+      if (theta < M_PI/2) 
+	*sol = -2.0*sqrtQ*cos(theta/3.0);
+      else 
+	*sol = -2.0*sqrtQ*cos((theta+2.0*M_PI)/3.0);
+#else
+      sol[0] = -2.0*sqrtQ*cos(theta/3.0);
+      // to solve quartic we need only one real root 
+      sol[1] = -2.0*sqrtQ*cos((theta+2.0*M_PI)/3.0);
+      sol[2] = -2.0*sqrtQ*cos((theta-2.0*M_PI)/3.0);
+#endif
+    }
+  else
+    {
+      //printf("KK >= 0\n");
+      if (fabs(Q) < fabs(R))
+	A = -copysign(1.0,R)*pow(fabs(R)*(1.0+sqrt(KK)),1.0/3.0);
+      else
+	{
+	  A = -copysign(1.0,R)*pow(fabs(R)+sqrt(fabs(Q))*fabs(Q)*sqrt(KK),1.0/3.0);
+	  //printf("A=%.15G arg=%.15G\n", A, sqrt(fabs(Q))*Q*sqrt(KK));
+	}
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+      *sol = A+B;
+#if 0
+      sol[1] = -0.5*(A+B)+I*sqrt32*(A-B);
+      sol[2] = -0.5*(A+B)-I*sqrt32*(A-B);
+#endif
+    }
+}
+
+void solve_cubic_analytic_depressed(double b, double c, double *sol)
+{
+  double Q, R, theta, Q3, R2, A, B, sqrtQ;
+  double sa, sb, sc;
+  const double sqrt32=sqrt(3)/2.0;
+  //printf("qu?????????????????????????????\n");
+  Q = -b/3.0;
+  R = 0.5*c;
+  /* 
+     if (fabs(Q) > 1E102 o fabs(R) > 1E154)
+     si ottengono degli inf quindi meglio usare la versione handle_inf
+     printf("Q=%.16G R=%.16G\n", Q, R);
+  */
+  if (fabs(Q) > 1E102 || fabs(R) > 1E154)
+    {
+      solve_cubic_analytic_depressed_handle_inf(b, c, sol);
+      return;
+    }
+  //sol[1]=sol[2]=0.0;
+  Q3 = Sqr(Q)*Q;
+  R2 = Sqr(R);
+  if (R2 < Q3)
+    {
+      theta = acos(R/sqrt(Q3));
+      sqrtQ=-2.0*sqrt(Q);
+#if 1
+      /* si puo' determinare facilmente la soluizioni più grande poiché basta studiare l'argomento del coseno */
+      //t3 = (theta-2.0*M_PI)/3.0;
+      if (theta < M_PI/2) 
+	*sol = sqrtQ*cos(theta/3.0);
+      else 
+	*sol = sqrtQ*cos((theta+2.0*M_PI)/3.0);
+      /* N.B. la terza soluzione è sempre più piccola delle altre due nell'intervallo
+	 0 e Pi che è il range di angoli restituito da acos(...)
+	 */ 
+#else
+      sol[0] = sqrtQ*cos(theta/3.0);
+      // to solve quartic we need only one real root 
+      sol[1] = sqrtQ*cos((theta+2.0*M_PI)/3.0);
+      sol[2] = sqrtQ*cos((theta-2.0*M_PI)/3.0);
+#endif
+    }
+  else
+    {
+      A = -copysign(1.0,R)*pow(fabs(R) + sqrt(R2 - Q3),1.0/3.0);
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+      *sol = A+B; /* this is always largest root even if A=B */
+#if 0
+      sol[1] = -0.5*(A+B)+I*sqrt32*(A-B);
+      sol[2] = -0.5*(A+B)-I*sqrt32*(A-B);
+#endif
+	
+    }
+}
+
+#else
 void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex double sol[3])
 {
   double Q, R, theta, A, B;//Q3, R2;
@@ -3333,7 +3476,7 @@ void solve_cubic_analytic_depressed(double b, double c, complex double sol[3])
       sol[2] = -0.5*(A+B)-I*sqrt32*(A-B);
     }
 }
-
+#endif
 void solve_cubic_analytic(double *coeff, complex double sol[3])
 {
   double a, b, c, Q, R, theta, Q3, R2, A, B;
@@ -5582,9 +5725,14 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
       roots[1]=CMPLX(-a/2,-sqrtd/2);      
     }   
 }
+#ifdef LDLT_OPT_CUBIC
+void solve_cubic_analytic_depressed(double b, double c, double *sol);
+void solve_cubic_analytic_depressed_handle_inf(double b, double c, double *sol);
+
+#else
 void solve_cubic_analytic_depressed(double b, double c, complex double sol[3]);
 void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex double sol[3]);
-
+#endif
 void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 {
   double g,h,gg,hh,aq,bq,cq,dq,s,diskr, coeff[4], err;
@@ -5715,6 +5863,22 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
   //solve_cubic_analytic(coeff,radici);
 #if 1
   //cubicRoots(0,g,h,&nreal,radici);
+#ifdef LDLT_OPT_CUBIC
+#ifdef USE_CUBIC_HANDLE_INF_ONLY
+  solve_cubic_analytic_depressed_handle_inf(g, h, &rmax);
+#else
+  solve_cubic_analytic_depressed(g, h, &rmax);
+  for (k=0; k < 3; k++)
+    {
+      if (isnan(rmax) || isinf(rmax))
+	{
+	  solve_cubic_analytic_depressed_handle_inf(g, h, &rmax);
+	  //cubicRoots(0,g,h,&nreal,radici);
+	  break;
+	}
+    }
+#endif
+#else
 #ifdef USE_CUBIC_HANDLE_INF_ONLY
   solve_cubic_analytic_depressed_handle_inf(g, h, radici);
 #else
@@ -5752,6 +5916,7 @@ void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 	    }
 	}
     }
+#endif
 #ifdef LDLT_REFINE_PHI_WITH_NR
   x = rmax;
   xsq=x*x;
