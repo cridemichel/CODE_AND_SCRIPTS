@@ -1858,7 +1858,10 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 	  z = Max2 (y * y - x, 0.0);                       // force discriminant to be >= 0
 	  z = sqrt (z);                                      // square root of discriminant
 	  y = y + copysign (z,y);                                // larger magnitude root
-	  x = x / y;                                         // smaller magnitude root
+	  if (y == 0.0)                                    // guard against larger magnitude root = 0
+	    x = 0.0;                                       // in this case smaller magnitude root must be 0
+	  else
+	    x = x / y;                                     // smaller magnitude root
 	  c = Max2 (y, 0.0);                               // ensure root of biquadratic > 0
 	  d = Max2 (x, 0.0);                               // ensure root of biquadratic > 0
 	  c = sqrt (c);                                      // large magnitude imaginary component
@@ -6821,15 +6824,15 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
       dcx = conj(bcx);
       realcase[0] = 0; // complex 
     }
-  //else 
-    //realcase[0]=-1; // d2=0
+  else 
+    realcase[0]=-1; // d2=0
   
   if (fabs(d2) <= macheps*max3(fabs(2.*b/3.), fabs(phi0), l1*l1)) // if d2 is nearly zero it is a special case
     {
       d3 = d - l3*l3;
       if (realcase[0]==1)
 	err0 = calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
-      else
+      else if (realcase[0]==0)
 	err0 = calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
 
 
@@ -6857,7 +6860,7 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	  dcx1 = conj(bcx1);
 	  err1 = calc_err_abcd_cmplx(a, b, c, d, acx1, bcx1, ccx1, dcx1); 
 	}
-      if (err1 < err0)
+      if (realcase[0]==-1 || err1 < err0)
 	{
           whichcase=1; // d2 = 0
 	  if (realcase[1]==1)
@@ -7290,6 +7293,7 @@ void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
   long double coeffl[5];
   int k, planB=0;//, printsol;
   LDLT_quartic(coeff, csol);
+  //quarticRoots(coeff, numsol, csol);
   *numsol=0;
 
 #if 0
