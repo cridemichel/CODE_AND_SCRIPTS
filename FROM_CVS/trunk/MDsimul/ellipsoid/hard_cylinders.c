@@ -4795,93 +4795,107 @@ void hqr(double a[4][4], complex double wri[4], int *ok, int n)
       while (l+1 < nn);
     }
 }
-
-void laguer(double complex *a, double complex *x, int *its, int m) 
+#define MR 10
+#define MT 8
+void laguer(complex double a[], int m, complex double *x, int *its)
+/*m i Given the degree m and the m+1 complex coefficients a[0..m] of the polynomial i=0 a[i]x ,
+and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.*/
 {
-  //Given the m+1 complex coefficients a[0..m] of the polynomial iD0 aŒix , and given a complex value x, this routine improves x by Laguerre’s method until it converges, within the achievable roundoff limit, to a root of the given polynomial. The number of iterations taken is returned as its.
-  const int MR=8,MT=500,MAXIT=MT*MR;
-  const double EPS=3E-16;//1E-15;//1E-14;//nota: questo settaggio su linux funziona bene//3E-16; //2.2204460492503130808E-16;
-  //Here EPS is the estimated fractional roundoff error. We try to break (rare) limit cycles with MR different fractional values, once every MT steps, for MAXIT total allowed iterations. 
-  static const double frac[9]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-  // Fractions used to break a limit cycle.
-  complex double dx,x1,b,d,f,g,h,sq,gp,gm,g2,bx;
-  int iter, j;
-  double err, abx, abp, abm;
-  //int m=4;
-  for (iter=1;iter<=MAXIT;iter++) { 
-    *its=iter;
-    b=a[m];
-    err=cabs(b);
-    d=f=0.0;
-    abx=cabs(*x);
-    for (j=m-1;j>=0;j--) {
-      f=*x*f+d;
-      d=*x*d+b;
-      b=*x*b+a[j];
-      err=cabs(b)+abx*err;
-      //Loop over iterations up to allowed maximum.
-      //Efficient computation of the polynomial and its first two derivatives. f stores P00=2.
+  double EPSS=2.2204460492503131E-16;
+  int iter,j;
+  int MAXIT=MR*MT;
+  double abx,abp,abm,err;
+  complex double dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+  static double frac[MR+1] = {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0}; //Fractions used to break a limit cycle.
+  for (iter=1;iter<=MAXIT;iter++) 
+    { 
+      *its=iter;
+      b=a[m];
+      err=cabs(b); 
+      d=f=CMPLX(0.0,0.0); 
+      abx=cabs(*x);
+      for (j=m-1;j>=0;j--) 
+	{
+  	  f=*x*f+d; 
+	  d=*x*d+b; 
+	  b=*x*b+a[j]; 
+	  err=cabs(b)+abx*err;
+	  //Loop over iterations up to allowed maximum.
+	  //Efficient computation of the polynomial and its first two derivatives. f stores P′′/2.
+	}
+      err *= EPSS;
+      //Estimate of roundoff error in evaluating polynomial.
+      if (cabs(b) <= err) return; //We are on the root.
+      g=d/b; //The generic case: use Laguerre’s formula. 
+      g2=g*g;
+      h=g2-2.0*(f/b);
+      sq=csqrt((double) (m-1)*((((double) m)*h)-g2)); 
+      gp=g+sq;
+      gm=g-sq;
+      abp=cabs(gp);
+      abm=cabs(gm);
+      if (abp < abm) gp=gm;
+      dx=FMAX(abp,abm) > 0.0 ? CMPLX(((double) m),0.0)/gp
+	   : (1.0+abx)*CMPLX(cos((double)iter),sin((double)iter)); 
+      x1=*x-dx;
+      if (*x == x1) 
+	return; //Converged.
+      if (iter % MT) 
+	*x=x1;
+      else 
+	*x=*x-(frac[iter/MT]*dx);
+      //Every so often we take a fractional step, to break any limit cycle (itself a rare occur- rence).
     }
-    err *= EPS;
-    //Estimate of roundoff error in evaluating polynomial.
-    if (cabs(b) <= err) return;
-    g=d/b;
-    g2=g*g;
-    h=g2-2.0*f/b;
-    sq=csqrt(((double)(m-1))*(((double)(m))*h-g2));
-    gp=g+sq;
-    //We are on the root.
-    //The generic case: Use Laguerre’s formula.
-    gm=g-sq;
-    abp=cabs(gp);
-    abm=cabs(gm);
-    if (abp < abm) gp=gm;
-    dx=MAX(abp,abm) > 0.0 ? ((double)(m))/gp : (1.0+abx)*CMPLX(cos((double)iter),sin((double)iter)); //polar(1+abx,((double)(iter)));
-    x1=*x-dx;
-    if (*x == x1) return; //Converged.
-    if (iter % MT != 0) *x=x1;
-    else *x -= frac[iter/MT]*dx;
-    //Every so often we take a fractional step, to break any limit cycle (itself a rare occur- rence).
-  }
-  printf("too many iterations in laguer\n");
-  //Very unusual; can occur only for complex roots. Try a different starting guess.
+  printf("too many iterations in laguer");
+  //Very unusual — can occur only for complex roots. Try a different starting guess for the root.
+  return;
 }
 
-void zroots(complex double *a, complex double *roots, int polish, int m, double EPS) 
+void zroots(complex double *a, int m, complex double *radici, int polish, double EPS)
+/* Copy of coefficients for successive deflation. Loop over each root to be found.
+Start at zero to favor convergence to small-
+est remaining root, and find the root. Forward deflation.
+ Given the degree m and the m+1 complex coefficients a[0..m] of the polynomial
+this routine successively calls laguer and finds all m complex roots in roots[1..m]. The boolean variable polish should be input as true (1) if polishing (also by Laguerre’s method) is desired, false (0) if the roots will be subsequently polished by other means.*/
 {
-  //const double EPS=1.0E-14;//2.2204460492503130808E-16; //su linux funziona benissimo su mac no
-  int jj, i,its, j;
-  complex double x,b,c;
-  //int m=4;
-  complex double ad[5], ad_v[5];
- 
-  for(j=0;j<=m;j++) ad[j]=a[j];
-  for (j=m-1;j>=0;j--) {
-    x=0.0;
-    for(jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj]; 
-    laguer(ad_v,&x,&its,m);
-    if (fabs(cimag(x)) <= 2.0*EPS*fabs(creal(x)))
-      x=CMPLX(creal(x),0.0);
-    roots[j]=x;
-    b=ad[j+1];
-    for (jj=j;jj>=0;jj--) {
-      c=ad[jj];
-      ad[jj]=b;
-      b=x*b+c;
+  //void laguer(fcomplex a[], int m, fcomplex *x, int *its); 
+  int i,its,j,jj;
+  complex double roots[5];
+  complex double x,b,c,ad[20];
+  for (j=0;j<=m;j++) ad[j]=a[j]; 
+  for (j=m;j>=1;j--) 
+    {
+      x=CMPLX(0.0,0.0);
+      laguer(ad,j,&x,&its);
+      if (fabs(cimag(x)) <= 2.0*EPS*fabs(creal(x))) 
+	x=CMPLX(creal(x),0.0); 
+      roots[j]=x;
+      b=ad[j];
+      for (jj=j-1;jj>=0;jj--) {
+	c=ad[jj];
+	ad[jj]=b; 
+	b=x*b+c;
+      }
     }
-  }
   if (polish)
-    for (j=0;j<m;j++)
-      laguer(a,&roots[j],&its,m);
-  for (j=1;j<m;j++) {
-    x=roots[j];
-    for (i=j-1;i>=0;i--) {
-      if (creal(roots[i]) <= creal(x)) break;
-      roots[i+1]=roots[i];
+    for (j=1;j<=m;j++)
+      laguer(a,m,&roots[j],&its); 
+  for (j=2;j<=m;j++) 
+    {
+      x=roots[j];
+      for (i=j-1;i>=1;i--) 
+	{
+	  if (creal(roots[i]) <= creal(x)) break;
+	  roots[i+1]=roots[i];
+	}
+	roots[i+1]=x;
     }
-    roots[i+1]=x;
-  }
+  for (j=0; j < m; j++)
+    {
+      radici[j] = roots[j+1];
+    }
 }
+
 #ifdef USE_LAPACK
 #ifndef MD_MAC
 extern void dgebal_(char *, int *, double *, int *, int *, int *, double *, int *);
@@ -6834,7 +6848,6 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
 	err0 = calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
       else if (realcase[0]==0)
 	err0 = calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
-
 
       if (d3 <= 0)
 	{
