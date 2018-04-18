@@ -1954,6 +1954,12 @@ void usrInitBef(void)
     OprogStatus.avnggr    = 0;
     Oparams.Dt = 0.01;
 #ifdef EDHE_FLEX
+#ifdef POVRAY
+    strcpy(OprogStatus.povpcol,"Orange");
+    strcpy(OprogStatus.povcolA,"Red");
+    strcpy(OprogStatus.povcolB,"Green");
+    OprogStatus.povtransmit=0.7;
+#endif
     OprogStatus.optbm = 1;
 #endif
 #ifdef MD_EDHEFLEX_OPTNNL
@@ -8397,25 +8403,39 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs, "background{White}\n");
       fprintf(fs, "camera {\n");	
       fprintf(fs, "angle 22.5\n");
+      if (OprogStatus.povcx==0 && OprogStatus.povcy == 0 && OprogStatus.povcz ==0)
+	{
 #ifdef MD_LXYZ
-      fprintf(fs, "location <%f,%f,%f>\n", 2.5*L[0], 2.0*L[1], -5.2*L[2]);
+	  fprintf(fs, "location <%f,%f,%f>\n", 2.5*L[0], 2.0*L[1], -5.2*L[2]);
 #else
-      fprintf(fs, "location <%f,%f,%f>\n", 2.5*L, 2.0*L, -5.2*L);
+	  fprintf(fs, "location <%f,%f,%f>\n", 2.5*L, 2.0*L, -5.2*L);
 #endif
+	}
+      else
+	{
+	  fprintf(fs, "location <%f,%f,%f>\n", OprogStatus.povcx, OprogStatus.povcy, OprogStatus.povcz);
+	}
       fprintf(fs, "look_at <0,0,0>\n");
       fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
       fprintf(fs, "//aperture 0.4\n");
       fprintf(fs, "//blur_samples 20\n");
       fprintf(fs, "}\n");
       fprintf(fs, "#if(1)\n");
-      fprintf(fs, "// spotloght light source\n");
+      fprintf(fs, "// spotlight light source\n");
       fprintf(fs, "light_source {\n");
       fprintf(fs, "//<0, 10, -3>\n");
+      if (OprogStatus.povlx==0 && OprogStatus.povly==0 && OprogStatus.povlz==0)
+	{
 #ifdef MD_LXYZ
-      fprintf(fs, "<%f, %f, %f>\n", 10.0*L[0], 10.0*L[1], -10.0*L[2]);
+	  fprintf(fs, "<%f, %f, %f>\n", 10.0*L[0], 10.0*L[1], -10.0*L[2]);
 #else
-      fprintf(fs, "<%f, %f, %f>\n", 10.0*L, 10.0*L, -10.0*L);
+	  fprintf(fs, "<%f, %f, %f>\n", 10.0*L, 10.0*L, -10.0*L);
 #endif
+	}
+      else
+	{
+	  fprintf(fs, "<%f, %f, %f>\n", OprogStatus.povlx, OprogStatus.povly, OprogStatus.povlz);
+	}
       fprintf(fs, "color White\n");
       fprintf(fs, "spotlight\n");
       fprintf(fs, "radius 15\n");
@@ -8581,7 +8601,12 @@ void writeAllCor(FILE* fs, int saveAll)
 		R[i][0][0],R[i][0][1],R[i][0][2],R[i][1][0],R[i][1][1],R[i][1][2],R[i][2][0],R[i][2][1],R[i][2][2]);
 		//R[i][0][0],R[i][1][0],R[i][2][0],R[i][0][1],R[i][1][1],R[i][2][1],R[i][2][2],R[i][2][1],R[i][2][2]);
 	fprintf(fs,"translate <%.15G,%.15G,%.15G>\n", rx[i], ry[i], rz[i]);
-	fprintf(fs,"pigment{ color %s transmit 0.5}}\n",colsFlex[typeOfPart[i]%numcols]);
+	if (typeOfPart[i]==0 && strcmp(OprogStatus.povcolA,"auto"))
+	  fprintf(fs,"pigment{ color %s transmit %f}}\n",OprogStatus.povcolA, OprogStatus.povtransmit);
+	else if (typeOfPart[i]==1 && strcmp(OprogStatus.povcolB,"auto"))
+	  fprintf(fs,"pigment{ color %s transmit %f}}\n",OprogStatus.povcolB, OprogStatus.povtransmit);
+	else
+	  fprintf(fs,"pigment{ color %s transmit %f}}\n",colsFlex[typeOfPart[i]%numcols], OprogStatus.povtransmit);
 #else
 	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
 	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
@@ -8670,7 +8695,7 @@ void writeAllCor(FILE* fs, int saveAll)
 	       fprintf(fs, "sphere \n{\n");
 	       fprintf(fs, "<%f,%f,%f>, %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
 	       fprintf(fs, "rotate <0,0,90>\n");
-	       fprintf(fs, "pigment { color Orange transmit 0.5 }\n");
+	       fprintf(fs, "pigment { color %s transmit %f }\n", OprogStatus.povpcol, OprogStatus.povtransmit);
 	       fprintf(fs, "}\n");
 	     }
 #else
