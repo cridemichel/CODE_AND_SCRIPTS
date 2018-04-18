@@ -7690,7 +7690,10 @@ void usrInitAft(void)
   printf("[INFO] Grazing Try-Harder code DISABLED!\n");
 #endif
   if (mgl_mode==2)
-    InitEventList();
+    {
+      find_conciding_spots();
+      InitEventList();
+    }
   else
     StartRun();
 #ifdef MD_SPHERICAL_WALL
@@ -8650,6 +8653,13 @@ void writeAllCor(FILE* fs, int saveAll)
 	  rA[1] = ry[i];
 	  rA[2] = rz[i];
 	  BuildAtomPos(i, rA, R[i], ratA);
+
+#if 0
+       	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
+	     {
+	        printf("ratA %f %f %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2]); 
+	     }
+#endif
 #ifdef EDHE_FLEX
 #ifdef MD_FOUR_BEADS
 	 for (nn = 0; nn < 16; nn++)
@@ -8696,12 +8706,14 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif	
 #else
 #ifdef POVRAY
+	   //printf("PARTTYPE=%d numspots=%d\n", typeOfPart[i], typesArr[typeOfPart[i]].nspots);
 	   for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	     {
 	       /* ...and its patches */
 	       fprintf(fs, "sphere \n{\n");
 	       fprintf(fs, "<%f,%f,%f>, %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
-	       fprintf(fs, "rotate <0,0,90>\n");
+	        //printf("ratA %f %f %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2]); 
+	       //fprintf(fs, "rotate <0,0,90>\n");
 	       fprintf(fs, "pigment { color %s transmit %f }\n", OprogStatus.povpcol, OprogStatus.povtransmit);
 	       fprintf(fs, "}\n");
 	     }
