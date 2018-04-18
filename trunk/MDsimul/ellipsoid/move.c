@@ -11365,6 +11365,11 @@ void move(void)
   /* get next event */
   while (!ENDSIM)
     {
+      if (mgl_mode==2)
+	{
+	  ENDSIM=1;
+	  break;
+	}
 #if defined(EDHE_FLEX) && (defined(MD_RABBIT)|| defined(MD_NANOBODY)) 
       if (termination())
 	{

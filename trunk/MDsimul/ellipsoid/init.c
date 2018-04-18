@@ -7670,7 +7670,10 @@ void usrInitAft(void)
 #else
   printf("[INFO] Grazing Try-Harder code DISABLED!\n");
 #endif
-  StartRun();
+  if (mgl_mode==2)
+    InitEventList();
+  else
+    StartRun();
 #ifdef MD_SPHERICAL_WALL
   printf("[SPHERICAL WALL] checking bonds\n");
   if (OprogStatus.checkGrazing)
@@ -8388,7 +8391,11 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs, "background{White}\n");
       fprintf(fs, "camera {\n");	
       fprintf(fs, "angle 22.5\n");
+#ifdef MD_LXYZ
       fprintf(fs, "location <%f,%f,%f>\n", 2.5*L[0], 2.0*L[1], -5.2*L[2]);
+#else
+      fprintf(fs, "location <%f,%f,%f>\n", 2.5*L, 2.0*L, -5.2*L);
+#endif
       fprintf(fs, "look_at <0,0,0>\n");
       fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
       fprintf(fs, "//aperture 0.4\n");
@@ -8398,7 +8405,11 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs, "// spotloght light source\n");
       fprintf(fs, "light_source {\n");
       fprintf(fs, "//<0, 10, -3>\n");
+#ifdef MD_LXYZ
       fprintf(fs, "<%f, %f, %f>\n", 10.0*L[0], 10.0*L[1], -10.0*L[2]);
+#else
+      fprintf(fs, "<%f, %f, %f>\n", 10.0*L, 10.0*L, -10.0*L);
+#endif
       fprintf(fs, "color White\n");
       fprintf(fs, "spotlight\n");
       fprintf(fs, "radius 15\n");
@@ -8525,8 +8536,8 @@ void writeAllCor(FILE* fs, int saveAll)
 #endif
 #endif
 #else
-	  fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
-		  2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
+	fprintf(fs, tipodat2_mgl,rx[i], ry[i], rz[i], uxx[i], uxy[i], uxz[i], typesArr[typeOfPart[i]].sax[1], 
+		2.0*typesArr[typeOfPart[i]].sax[0], colsFlex[typeOfPart[i]%numcols]);
 #endif
 #endif
 #ifdef MC_SPHEROCYL
@@ -8555,6 +8566,13 @@ void writeAllCor(FILE* fs, int saveAll)
 		  colsFlex[typeOfPart[i]%numcols], typesArr[typeOfPart[i]].n[0],
 		  typesArr[typeOfPart[i]].n[1], typesArr[typeOfPart[i]].n[2]);
 #else
+#ifdef POVRAY
+	fprintf(fs, "sphere\n");
+	fprintf(fs, "{ 0, 1 scale <%f,%f,%f>\n", typesArr[typeOfPart[i]].sax[0], 
+		 typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2]);
+	fprintf(fs,"translate <%.15G,%.15G,%.15G>\n", rx[i], ry[i], rz[i]);
+	fprintf(fs,"pigment{ color %s transmit 0.5}}\n",colsFlex[typeOfPart[i]%numcols]);
+#else
 	if ( typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[0] &&
 	     typesArr[typeOfPart[i]].sax[1] ==  typesArr[typeOfPart[i]].sax[2])
 	  {
@@ -8566,6 +8584,7 @@ void writeAllCor(FILE* fs, int saveAll)
 		  uyz[i], uzx[i], uzy[i], uzz[i], typesArr[typeOfPart[i]].sax[0], 
 		  typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2],
 		  colsFlex[typeOfPart[i]%numcols]);
+#endif
 #endif
 #endif
 #else
@@ -8621,18 +8640,9 @@ void writeAllCor(FILE* fs, int saveAll)
 
 	 for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
  	   {
-#ifdef POVRAY
-	     /* ...and its patches */
-	     fprintf(fs, "sphere \n{\n");
-	     fprintf(fs, "<%f,%f,%f>, %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
-	     fprintf(fs, "rotate <0,0,90>\n");
-	     fprintf(fs, "pigment { color rgb <%f,%f,%f>}\n", rgb[0], rgb[1], rgb[2]);
-	     fprintf(fs, "}\n");
-#else
 	     fprintf(fs,"%.15f %.15f %.15f @ %.15G C[%s]\n", 
 		   ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5,
 		   colrgb);
-#endif
 	   }
 #if 0
 	   if (i%OprogStatus.polylen==0)	   
@@ -8643,10 +8653,21 @@ void writeAllCor(FILE* fs, int saveAll)
 		     ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
 #endif	
 #else
-
+#ifdef POVRAY
+	   for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
+	     {
+	       /* ...and its patches */
+	       fprintf(fs, "sphere \n{\n");
+	       fprintf(fs, "<%f,%f,%f>, %f\n", ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+	       fprintf(fs, "rotate <0,0,90>\n");
+	       fprintf(fs, "pigment { color Orange transmit 0.5 }\n");
+	       fprintf(fs, "}\n");
+	     }
+#else
 	  for (nn = 1; nn < typesArr[typeOfPart[i]].nspots+1; nn++)
 	    fprintf(fs,"%.15f %.15f %.15f @ %.15G C[orange]\n", 
 		    ratA[nn][0], ratA[nn][1], ratA[nn][2], typesArr[typeOfPart[i]].spots[nn-1].sigma*0.5);
+#endif
 #endif
 #endif
 #endif
