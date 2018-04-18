@@ -1959,6 +1959,13 @@ void usrInitBef(void)
     strcpy(OprogStatus.povcolA,"Red");
     strcpy(OprogStatus.povcolB,"Green");
     OprogStatus.povtransmit=0.7;
+    OprogStatus.povang=22.5;
+    OprogStatus.povcx=0;
+    OprogStatus.povcy=0;
+    OprogStatus.povcz=0;
+    OprogStatus.povlx=0;
+    OprogStatus.povly=0;
+    OprogStatus.povlz=0;  
 #endif
     OprogStatus.optbm = 1;
 #endif
@@ -8402,7 +8409,7 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs, "}\n");
       fprintf(fs, "background{White}\n");
       fprintf(fs, "camera {\n");	
-      fprintf(fs, "angle 22.5\n");
+      fprintf(fs, "angle %f\n", OprogStatus.povang);
       if (OprogStatus.povcx==0 && OprogStatus.povcy == 0 && OprogStatus.povcz ==0)
 	{
 #ifdef MD_LXYZ
