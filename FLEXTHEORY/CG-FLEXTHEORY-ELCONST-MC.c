@@ -1968,7 +1968,9 @@ int main(int argc, char**argv)
 	  else
 	    {
 	      if (contrib==0||contrib==1)
-		orient_donsager(&u1x, &u1y, &u1z, alpha, 0);
+		{
+		  orient_donsager(&u1x, &u1y, &u1z, alpha, 0);
+		}
 	      else 
 		orient_donsager(&u1x, &u1y, &u1z, alpha, 1);
 	    }
@@ -2025,7 +2027,9 @@ int main(int argc, char**argv)
 		  if (contrib==0||contrib==2)
 		    orient_donsager(&u2x, &u2y, &u2z, alpha,0);
 		  else 
-		    orient_donsager(&u2x, &u2y, &u2z, alpha,1);
+		    {
+		      orient_donsager(&u2x, &u2y, &u2z, alpha,1);
+		    }
 		}
 	    }
 	  place_CHROM(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);

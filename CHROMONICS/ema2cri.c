@@ -1,8 +1,8 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
-const int Npart=8000;
-double Lbox[3]={21.366463160334433,21.366463160334433,21.366463160334433};
+const int Npart=1000;
+double Lbox[3]={11.544156732644348,11.544156732644348,11.544156732644348};
 //double Lbox[3]={19.9255, 19.9255, 19.9255};
 char line[2048];
 void writehdr(FILE *f)
