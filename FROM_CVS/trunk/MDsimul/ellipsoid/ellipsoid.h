@@ -544,6 +544,7 @@ struct progStatus
   double povlx;// light source position
   double povly;
   double povlz;
+  double povang;
 #endif
   int optbm;
 #ifdef MD_SCALEPHI_STAGES
@@ -1136,6 +1137,7 @@ struct pascii opro_ascii[] =
   {"povlx",         &OS(povlx),                1,              1, "%.10G"},
   {"povly",         &OS(povly),                1,              1, "%.10G"},
   {"povlz",        &OS(povlz),                1,              1, "%.10G"},
+  {"povang",       &OS(povang),               1,              1, "%.10G"},
 #endif
   {"optbm",        &OS(optbm),                      1,               1, "%d"},
 #ifdef MD_SCALEPHI_STAGES
@@ -1767,6 +1769,7 @@ struct singlePar OsinglePar[] = {
   {"povlx"      , &OprogStatus.povlx, CT},
   {"povly"      , &OprogStatus.povly, CT},
   {"povlz"      , &OprogStatus.povlz, CT},
+  {"povang",      &OprogStatus.povang, CT},
 #endif
   {"optbm",      &OprogStatus.optbm,          INT},
 #ifdef MD_SCALEPHI_STAGES
