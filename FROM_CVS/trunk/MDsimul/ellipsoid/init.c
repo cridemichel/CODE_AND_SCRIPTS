@@ -287,6 +287,9 @@ char colsFlex[][256] = {"red","green","blue", "orange","cyan","OldLace","linen",
 "purple3","purple4","MediumPurple1","MediumPurple2","MediumPurple3","MediumPurple4","thistle1","thistle2","thistle3","thistle4","DarkBlue","dark","DarkCyan",
 "dark","DarkMagenta","dark","DarkRed","light","LightGreen", ""};
 #else
+#ifdef POVRAY
+char colsFlex[][256] = {"Red","Green","Blue","Yellow","Cyan","Magenta","Clear","White","Black","Gray05","Gray10","Gray15","Gray20","Gray25","Gray30","Gray35","Gray40","Gray45","Gray50","Gray55","Gray60","Gray65","Gray70","Gray75","Gray80","Gray85","Gray90","Gray95","DimGray","DimGrey","Gray","Grey","LightGray","LightGrey","VLightGray","VLightGrey","Aquamarine","BlueViolet","Brown","CadetBlue","Coral","CornflowerBlue","DarkGreen","DarkOliveGreen","DarkOrchid","DarkSlateBlue","DarkSlateGray","DarkSlateGrey","DarkTurquoise","Firebrick","ForestGreen","Gold","Goldenrod","GreenYellow","IndianRed","Khaki","LightBlue","LightSteelBlue","LimeGreen","Maroon","MediumAquamarine","MediumBlue","MediumForestGreen","MediumGoldenrod","MediumOrchid","MediumSeaGreen","MediumSlateBlue","MediumSpringGreen","MediumTurquoise","MediumVioletRed","MidnightBlue","Navy","NavyBlue","Orange","OrangeRed","Orchid","PaleGreen","Pink","Plum","Salmon","SeaGreen","Sienna","SkyBlue","SlateBlue","SpringGreen","SteelBlue","Tan","Thistle","Turquoise","Violet","VioletRed","Wheat","YellowGreen","SummerSky","RichBlue","Brass","Copper","Bronze","Bronze2","Silver","BrightGold","OldGold","Feldspar","Quartz","Mica","NeonPink","DarkPurple","NeonBlue","CoolCopper","MandarinOrange","LightWood","MediumWood","DarkWood","SpicyPink","SemiSweetChoc","BakersChoc","Flesh","NewTan","NewMidnightBlue","VeryDarkBrown","DarkBrown","DarkTan","GreenCopper","DkGreenCopper","DustyRose","HuntersGreen","Scarlet","Med_Purple","Light_Purple","Very_Light_Purple",""};
+#else
 char colsFlex[][256] = {"red","green","blue", "snow","gainsboro","OldLace","linen","PapayaWhip","blanched almond",
 "BlanchedAlmond","bisque","peach puff","PeachPuff","navajo white","moccasin","cornsilk","ivory","lemon chiffon",
 "LemonChiffon","seashell","honeydew","mint","MintCream","azure","alice","AliceBlue","lavender","lavender",
@@ -341,6 +344,7 @@ char colsFlex[][256] = {"red","green","blue", "snow","gainsboro","OldLace","line
 "MediumOrchid1","MediumOrchid2","MediumOrchid3","MediumOrchid4","DarkOrchid1","DarkOrchid2","DarkOrchid3","DarkOrchid4","purple1","purple2",
 "purple3","purple4","MediumPurple1","MediumPurple2","MediumPurple3","MediumPurple4","thistle1","thistle2","thistle3","thistle4","DarkBlue","dark","DarkCyan",
 "dark","DarkMagenta","dark","DarkRed","light","LightGreen", ""};
+#endif
 #endif
 #endif
 int numcols;
@@ -6013,6 +6017,8 @@ void usrInitAft(void)
        break;
      numcols++;
    }
+ if (mgl_mode==1||mgl_mode==2)
+   printf("number of flexcols=%d\n", numcols);
  OprogStatus.stepSDB = OprogStatus.stepSDA;
 #endif
   Nm = Oparams.parnumA;
@@ -8414,7 +8420,7 @@ void writeAllCor(FILE* fs, int saveAll)
       fprintf(fs, "spotlight\n");
       fprintf(fs, "radius 15\n");
       fprintf(fs, "falloff 20\n");
-      printf(fs, "tightness 10\n");
+      fprintf(fs, "tightness 10\n");
       fprintf(fs, "point_at <0, 0, 0>\n");
       fprintf(fs, "}\n");
       fprintf(fs, "#else\n");
@@ -8570,6 +8576,10 @@ void writeAllCor(FILE* fs, int saveAll)
 	fprintf(fs, "sphere\n");
 	fprintf(fs, "{ 0, 1 scale <%f,%f,%f>\n", typesArr[typeOfPart[i]].sax[0], 
 		 typesArr[typeOfPart[i]].sax[1], typesArr[typeOfPart[i]].sax[2]);
+	fprintf(fs, "rotate <0,0,90>\n");
+	fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+		R[i][0][0],R[i][0][1],R[i][0][2],R[i][1][0],R[i][1][1],R[i][1][2],R[i][2][0],R[i][2][1],R[i][2][2]);
+		//R[i][0][0],R[i][1][0],R[i][2][0],R[i][0][1],R[i][1][1],R[i][2][1],R[i][2][2],R[i][2][1],R[i][2][2]);
 	fprintf(fs,"translate <%.15G,%.15G,%.15G>\n", rx[i], ry[i], rz[i]);
 	fprintf(fs,"pigment{ color %s transmit 0.5}}\n",colsFlex[typeOfPart[i]%numcols]);
 #else
