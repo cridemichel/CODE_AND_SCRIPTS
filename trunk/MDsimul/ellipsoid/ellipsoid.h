@@ -502,6 +502,9 @@ struct LastBumpS
 };
 #endif
 #define ATOM_LIMIT 10000000
+#ifdef POVRAY
+#define POVCLEN 128
+#endif
 struct nebrTabStruct 
 {
   int *list;       /* ellissoidi nella NNL */
@@ -530,6 +533,18 @@ struct progStatus
   int iniFormat; /* 0 = binary 1 = ascii 2 = both */
   int endFormat; /* 0 = binary 1 = ascii 2 = both */
 #ifdef EDHE_FLEX
+#ifdef POVRAY
+  double povtransmit;
+  char povpcol[POVCLEN];
+  char povcolA[POVCLEN];
+  char povcolB[POVCLEN];
+  double povcx;// camera position
+  double povcy;
+  double povcz;
+  double povlx;// light source position
+  double povly;
+  double povlz;
+#endif
   int optbm;
 #ifdef MD_SCALEPHI_STAGES
   int growthType;
@@ -1110,6 +1125,18 @@ struct pascii opro_ascii[] =
   {"iniFormat",    &OS(iniFormat),                  1,               1, "%d"},
   {"endFormat",    &OS(endFormat),                  1,               1, "%d"},
 #ifdef EDHE_FLEX
+#ifdef POVRAY
+  {"povpcol",      OS(povpcol),                     1,   POVCLEN,   "%s"},
+  {"povcolA",      OS(povcolA),                     1,   POVCLEN,   "%s"},
+  {"povcolB",      OS(povcolB),                     1,   POVCLEN,   "%s"},
+  {"povtransmit",  &OS(povtransmit),                1,              1, "%.10G"},
+  {"povcx",         &OS(povcx),                1,              1, "%.10G"},
+  {"povcy",         &OS(povcy),                1,              1, "%.10G"},
+  {"povcz",         &OS(povcz),                1,              1, "%.10G"},
+  {"povlx",         &OS(povlx),                1,              1, "%.10G"},
+  {"povly",         &OS(povly),                1,              1, "%.10G"},
+  {"povlz",        &OS(povlz),                1,              1, "%.10G"},
+#endif
   {"optbm",        &OS(optbm),                      1,               1, "%d"},
 #ifdef MD_SCALEPHI_STAGES
   {"growthType",      &OS(growthType),                1,       1,  "%d" },
@@ -1729,6 +1756,18 @@ struct singlePar OsinglePar[] = {
   {"vbond",          &OprogStatus.vbond,                  CT},
 #endif
 #ifdef EDHE_FLEX
+#ifdef POVRAY
+  {"povpcol",  &OprogStatus.povpcol, STR},
+  {"povcolA",  &OprogStatus.povcolA, STR},
+  {"povcolB",  &OprogStatus.povcolB, STR},
+  {"povtransmit", &OprogStatus.povtransmit, CT},
+  {"povcx"      , &OprogStatus.povcx, CT},
+  {"povcy"      , &OprogStatus.povcy, CT},
+  {"povcz"      , &OprogStatus.povcz, CT},
+  {"povlx"      , &OprogStatus.povlx, CT},
+  {"povly"      , &OprogStatus.povly, CT},
+  {"povlz"      , &OprogStatus.povlz, CT},
+#endif
   {"optbm",      &OprogStatus.optbm,          INT},
 #ifdef MD_SCALEPHI_STAGES
   {"growthType",       &OprogStatus.growthType,  INT},
