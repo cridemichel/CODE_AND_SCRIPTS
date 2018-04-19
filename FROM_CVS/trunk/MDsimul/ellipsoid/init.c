@@ -1967,6 +1967,8 @@ void usrInitBef(void)
     OprogStatus.povly=0;
     OprogStatus.povlz=0;  
     OprogStatus.povnohdr=0;
+    OprogStatus.povbox=0;
+    OprogStatus.povboxthickness=0.03;
 #endif
     OprogStatus.optbm = 1;
 #endif
@@ -8460,6 +8462,27 @@ void writeAllCor(FILE* fs, int saveAll)
 	  fprintf(fs, "//point light source\n");
 	  fprintf(fs, "light_source { <10, 20, -10> color White }\n");
 	  fprintf(fs, "#end\n");	
+	  if (OprogStatus.povbox)
+	    {
+	      fprintf(fs,"#include \"shapes.inc\"\n");
+	      fprintf(fs,"object {\n");
+		// Wire_Box(A, B, WireRadius, Merge)
+#ifdef MD_LXYZ
+	      fprintf(fs,"Wire_Box(<%f,%f,%f>,<%f,%f,%f>, %f, 0",-L[0]*0.5,-L[1]*0.5,-L[2]*0.5,L[0]*0.5,L[1]*0.5,L[2]*0.5,
+		      OprogStatus.povboxthickness);
+#else
+	      fprintf(fs,"Wire_Box(<%f,%f,%f>,<%f,%f,%f>, %f, 0",-L*0.5,-L*0.5,-L*0.5,L*0.5,L*0.5,L*0.5,
+		      OprogStatus.povboxthickness);
+#endif
+	      fprintf(fs,"texture{");
+	      fprintf(fs,"pigment{ color rgb<0,0,0>}");
+	     // fprintf(fs,"finish {  phong 1}\n");
+	      fprintf(fs,"}\n"); // end of texture
+	      fprintf(fs,"scale<1,1,1>\n");
+	      fprintf(fs,"  rotate<0,0,0>\n");
+	      fprintf(fs,"  translate<0,0,0>");
+	      fprintf(fs," } //---------------------------------\n");
+	    }
 	}
 #else
 #ifdef MD_LXYZ
