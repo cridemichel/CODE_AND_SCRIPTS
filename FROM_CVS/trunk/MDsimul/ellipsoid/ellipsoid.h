@@ -545,6 +545,7 @@ struct progStatus
   double povly;
   double povlz;
   double povang;
+  int povnohdr;
 #endif
   int optbm;
 #ifdef MD_SCALEPHI_STAGES
@@ -1138,6 +1139,7 @@ struct pascii opro_ascii[] =
   {"povly",         &OS(povly),                1,              1, "%.10G"},
   {"povlz",        &OS(povlz),                1,              1, "%.10G"},
   {"povang",       &OS(povang),               1,              1, "%.10G"},
+  {"povnohdr",     &OS(povnohdr),             1,              1, "%d"},
 #endif
   {"optbm",        &OS(optbm),                      1,               1, "%d"},
 #ifdef MD_SCALEPHI_STAGES
@@ -1770,6 +1772,7 @@ struct singlePar OsinglePar[] = {
   {"povly"      , &OprogStatus.povly, CT},
   {"povlz"      , &OprogStatus.povlz, CT},
   {"povang",      &OprogStatus.povang, CT},
+  {"povnohdr",    &OprogStatus.povnohdr, INT},
 #endif
   {"optbm",      &OprogStatus.optbm,          INT},
 #ifdef MD_SCALEPHI_STAGES
