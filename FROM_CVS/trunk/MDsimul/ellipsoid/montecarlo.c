@@ -7060,6 +7060,123 @@ int cur_ii, cur_jj;
 #ifdef ELCONST_NEWALGO
 double qvecG;
 #endif
+#if defined(MC_KERN_FRENKEL) 
+//extern double KFthmax, KFcos2thmax;
+void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
+{
+  /* N.B. mette la particella i legata a j con posizione ed orientazione a caso */
+  /* dist_type=0 -> isotropic
+     dist_type=1 -> onsager */
+  double sphrad, rmin1, rmin2, rmin, rmax, drSq, verso, costh, rho, theta;
+  const int maxtrials=1000000;
+  double bondlen, dist=0.0, rA[3], rat[3], norm, normB, sax, cc[3], ene, uj[3], ui[3], u1[3];
+#ifndef MD_SPOT_GLOBAL_ALLOC
+  double ratAll[NA][3];
+#endif
+  double rB[3], normo;
+  int k, nbB=1;
+  double costh1, shift[3], Rl[3][3], vv[3];
+  double ox, oy, oz, d, dx, dy, dz, raggio;
+  int nbf, ierr, bonded, k1, k2, trials, nbold;
+  static double tottrials=0, calls=0;
+  rA[0] = rx[j];
+  rA[1] = ry[j];
+  rA[2] = rz[j];
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  RtA[k1][k2] = R[j][k1][k2];
+	  RtB[k1][k2] = R[i][k1][k2];
+	}
+    }
+  BuildAtomPosAt(j, nb+1, rA, RtA, rat);
+  for (k=0; k < 3; k++)
+    uj[k] = (rat[k]-rA[k])/calc_norm(typesArr[typeOfPart[j]].spots[nb].x);
+
+  /* considera lo spot 1 (tanto è equivalente) */
+  assign_bond_mapping(i,j);
+  raggio = typesArr[typeOfPart[i]].sax[0];
+  bondlen = raggio + OprogStatus.distKF;
+  trials=0;
+  if (!fake)
+    numbonds[i]=0;
+  *merr=0;
+  /* genero un vettore unitario intorno alla direzione del bond di j con un angolo pari a 2*\theta_{max} */
+  while (fabs(costh) <= OprogStatus.costhKF)
+    {
+      orient(&(u1[0]), &(u1[1]), &(u1[2]));
+      costh = scalProd(u1,uj);
+    }
+  /* genera una distanza tra raggio e raggio+distKF */
+  rho = raggio + ranf()*OprogStatus.distKF; 
+  /* centro di massa della particella */
+  rx[i] = rA[0] + rho*u1[0];
+  ry[i] = rA[1] + rho*u1[1];
+  rz[i] = rA[2] + rho*u1[2];
+
+  /* genero un orientazione di i in modo uniforme ed assicurando che sia legata */
+  vv[0] = rx[i] - rA[0];
+  vv[1] = ry[i] - rA[1];
+  vv[2] = rz[i] - rA[2];
+
+  do
+    {
+      if (dist_type==4)
+	{
+	  ui[0] = 1;
+	  ui[1] = 0;
+    	  ui[2] = 0;
+	}
+      else if (dist_type==0||dist_type==6)//|| (i < Oparams.parnum/2))
+	{
+	  orient(&(ui[0]), &(ui[1]), &(ui[2]));
+	}
+      else 
+	{
+	  orient_onsager(&(ui[0]), &(ui[1]), &(ui[2]), alpha);
+	}
+      costh1 = scalProd(vv,ui);
+    }
+  while (costh1 <= OprogStatus.costhKF);
+
+  versor_to_R(ui[0], ui[1], ui[2], Rl);
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2=0; k2 < 3; k2++)
+	{
+	  R[i][k1][k2] = Rl[k1][k2]; 
+	}
+    }
+
+  if (fake)
+    {
+      ene = -1;
+      /* qui si puo' controllare se effettivamente le particelle sono legate */
+      /* siccome la chimata con fake avviene per le simulazioni AVB allora bisogna
+       * anche rispettare le PBC */
+      pbc(i);
+    }
+  else
+    {
+      /* con il metodo ottimizzato creiamo un legame tra gli spot
+	 (i, nbB) e (j, nb) */
+      dist=find_bonds_covadd(i, j);
+      ene = calcpotene_GC(i);
+      if (ene >= 0)
+	{
+	  printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
+	  exit(-1);
+	}
+    }
+  calls += 1.0;
+  if (dist < 0.0)
+    {
+      totdist += dist;
+      distcc += 1.0;
+    }
+}
+#else
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
@@ -7638,6 +7755,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     printf("trials=%d avg_trials=%.15G\n", trials, tottrials/calls);
 #endif
 }
+#endif
 /* bonding moves */
 int are_bonded(int i, int j)
 {

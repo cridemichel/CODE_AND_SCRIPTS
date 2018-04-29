@@ -5912,6 +5912,9 @@ void create_bounding_sphere(void)
     }
 }
 #endif
+#ifdef MC_KERN_FRENKEL
+//double KFthmax, KFcos2thmax;
+#endif
 void usrInitAft(void)
 {
   long long int maxp;
@@ -5961,6 +5964,10 @@ void usrInitAft(void)
   double stocvar;
 #endif
   int a;
+#ifdef MC_KERN_FRENKEL
+ // KFthmax = arccos(OprogStatus.costhKF); 
+ // KFcos2thmax = cos(2.0*KFcos2thmax);
+#endif
   /*COORD_TYPE RCMx, RCMy, RCMz, Rx, Ry, Rz;*/
 #if defined(MAXPAR) && !defined(MD_DYNAMIC_OPROG)
   if (Oparams.parnum >= MAXPAR)
