@@ -7110,7 +7110,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     }
   while (costh <= OprogStatus.costhKF);
   /* genera una distanza tra raggio e raggio+distKF */
-  rho = raggio + ranf()*(OprogStatus.distKF-raggio); 
+  rho = 2.0*raggio + ranf()*(OprogStatus.distKF-2.0*raggio); 
   /* centro di massa della particella */
   rx[i] = rA[0] + rho*u1[0];
   ry[i] = rA[1] + rho*u1[1];
