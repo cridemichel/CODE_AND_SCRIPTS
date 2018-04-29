@@ -7103,13 +7103,14 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     numbonds[i]=0;
   *merr=0;
   /* genero un vettore unitario intorno alla direzione del bond di j con un angolo pari a 2*\theta_{max} */
-  while (fabs(costh) <= OprogStatus.costhKF)
+  do
     {
       orient(&(u1[0]), &(u1[1]), &(u1[2]));
       costh = scalProd(u1,uj);
     }
+  while (costh <= OprogStatus.costhKF);
   /* genera una distanza tra raggio e raggio+distKF */
-  rho = raggio + ranf()*OprogStatus.distKF; 
+  rho = raggio + ranf()*(OprogStatus.distKF-raggio); 
   /* centro di massa della particella */
   rx[i] = rA[0] + rho*u1[0];
   ry[i] = rA[1] + rho*u1[1];
@@ -7119,7 +7120,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   vv[0] = rx[i] - rA[0];
   vv[1] = ry[i] - rA[1];
   vv[2] = rz[i] - rA[2];
-
+  normo=calc_norm(vv);
+  for (k=0; k < 3; k++)
+    vv[k] /= normo;
   do
     {
       if (dist_type==4)
@@ -7137,6 +7140,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  orient_onsager(&(ui[0]), &(ui[1]), &(ui[2]), alpha);
 	}
       costh1 = scalProd(vv,ui);
+      //printf("costh1=%f costhKF=%f\n", costh1, OprogStatus.costhKF);
     }
   while (costh1 <= OprogStatus.costhKF);
 
@@ -7159,10 +7163,11 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     }
   else
     {
+      numbonds[i]=0;
       /* con il metodo ottimizzato creiamo un legame tra gli spot
 	 (i, nbB) e (j, nb) */
       dist=find_bonds_covadd(i, j);
-      ene = calcpotene_GC(i);
+      ene =calcpotene_GC(i);
       if (ene >= 0)
 	{
 	  printf("[WARNING] MCIN FAILED PARTICLES NOT BONDED!\n");
@@ -7170,11 +7175,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	}
     }
   calls += 1.0;
+#if 1
   if (dist < 0.0)
     {
       totdist += dist;
       distcc += 1.0;
     }
+#endif
 }
 #else
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
