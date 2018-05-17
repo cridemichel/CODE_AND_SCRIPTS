@@ -27,55 +27,56 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
     }
   while (!feof(f)) 
     {
-      cpos = ftell(f);
+      //cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
       fscanf(f, "%[^\n]\n",line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
+	  continue;
 	}
       if (nat < 3)
 	{
-	  fseek(f, cpos, SEEK_SET);
-	  fscanf(f, "%[^:]:", parname);
-	  //printf("[%s] parname=%s\n", fname, parname);
+	  //fseek(f, cpos, SEEK_SET);
+	  sscanf(line, "%[^:]:%s", parname,parval);
+	  printf("[%s] parname=%s parval=%s\n", fname, parname,parval);
 	  if (!strcmp(parname, "time"))
 	    {
-	      fscanf(f, "%[^\n]\n", parval);
+	      //sscanf(line, "%[^\n]\n", parval);
 	      *ti = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	      printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
   	  else if (!strcmp(parname, "refTime"))
 	    {
-	      fscanf(f, "%[^\n]\n", parval);
+	      //sscanf(line, "%[^\n]\n", parval);
 	      *refTime = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
 	  else if (!strcmp(parname, "curStep"))
 	    {
-	      fscanf(f, "%[^\n]\n", parval);
+	      //sscanf(line, "%[^\n]\n", parval);
 	      curstp = atoi(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
 	  else if (!strcmp(parname, "steplength"))
 	    {
-	      fscanf(f, "%[^\n]\n", parval);
+	      //sscanf(line, "%[^\n]\n", parval);
 	      dt = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }
-
-	  else
-	    fscanf(f, " %[^\n]\n", parval);
+	  //else
+	  //fscanf(f, " %[^\n]\n", parval);
 	}
       else
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
-	      if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
-		{
-		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-		}
+	      //if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
+		//{
+	      sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+      	      //printf("r[i=%d]=%f %f %f\n",i, r[0][i], r[1][i], r[2][i]);
+		//}
 	    }
  	  break; 
 	}
