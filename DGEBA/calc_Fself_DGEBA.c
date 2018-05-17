@@ -2,34 +2,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#define MAXPTS 10000
-#define MAXFILES 5000
+#define MAXPTS 1000
+#define Sqr(x) ((x)*(x))
 char **fname; 
-double L, time, *ti, *rotMSD, *MSD, *rotMSDA, *MSDA, *rotMSDB, *MSDB, *cc, *rotMSDcls[2], *MSDcls[2], *cc_cls[2];
-double **DR, **DR0;
-double *r0[3], *w0[3], *rt[3], *wt[3], *rtold[3];
-char parname[128], parval[256000], line[256000];
-char dummy[2048];
-int points=-1, foundDRs=0, foundrot=0, eventDriven=0, skip=1, clusters=0;
-int *isPercPart, stripStore=0;
+int *isPercPart;
+double time, *ti, *r0[3], *r1[3], L, refTime;
+int points=-1, assez, NP, NPA, clusters=0;
+char parname[128], parval[25600000], line[25600000];
+char dummy[2048000], cluststr[2048000];
 char *pnum;
-char inputfile[2048], cluststr[2048];
-double storerate = -1;
-int bakSaveMode = -1;
-void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
+double A0, A1, B0, B1, C0, C1, storerate=-1.0;
+int delq=1, bakSaveMode = -1, eventDriven=0, skip=0;
+void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 {
   FILE *f;
-  int atMax, nat=0, i, cpos;
-  double dt=-1;
-  int curstp=-1;
-
+  double r0, r1, r2, R[3][3];
+  int curstp, nat=0, i, cpos, a;
+  double dt;
   *ti = -1.0;
-  f = fopen(fname, "r");
-  if (stripStore)
-    atMax = 2;
-  else
-    atMax = 3; 
-  while (!feof(f) && nat < atMax) 
+  if (!(f = fopen(fname, "r")))
+    {
+      printf("ERROR: I can not open file %s\n", fname);
+      exit(-1);
+    }
+  while (!feof(f) && nat < 2) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -43,40 +39,16 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	  fseek(f, cpos, SEEK_SET);
 	  fscanf(f, "%[^:]:", parname);
 	  //printf("[%s] parname=%s\n", fname, parname);
-	  if (!strcmp(parname,"DR"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf %lf %lf ", &DR[i][0], &DR[i][1], &DR[i][2]);
-		}
-	      foundDRs = 1;
-	    }
-	  else if (!strcmp(parname,"sumox"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[0][i]); 
-		}
-	      foundrot = 1;
-	    }
-	  else if (!strcmp(parname,"sumoy"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[1][i]); 
-		}
-	    }
-	  else if (!strcmp(parname,"sumoz"))
-	    {
-	      for (i=0; i < NP; i++)
-		{
-		  fscanf(f, " %lf ", &w[2][i]); 
-		}
-	    }
-	  else if (!strcmp(parname, "time"))
+	  if (!strcmp(parname, "time"))
 	    {
 	      fscanf(f, "%[^\n]\n", parval);
 	      *ti = atof(parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	    }	
+  	  else if (!strcmp(parname, "refTime"))
+	    {
+	      fscanf(f, "%[^\n]\n", parval);
+	      *refTime = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
 	  else if (!strcmp(parname, "curStep"))
@@ -91,16 +63,11 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 	      dt = atof(parval);
 	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }
-	  else if (!strcmp(parname, "refTime"))
-	    {
-	      fscanf(f, "%[^\n]\n", parval);
-	      *refTime = atof(parval);
-	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
-	    }	
+
 	  else
 	    fscanf(f, " %[^\n]\n", parval);
 	}
-      else if (nat==atMax)
+      else
 	{
 	  for (i = 0; i < NP; i++) 
 	    {
@@ -110,21 +77,36 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 		  sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
 		}
 	    }
-	  break; 
+ 	  break; 
 	}
     }
-  /* N.B.nei codici non-event-driven non esiste il parametro time negli store 
-   * files ascii, quindi il tempo lo calcolo usando i passi correnti e il passo
-   * d'integrazione. */ 
-  if (*ti == -1)
+  if (*ti == -1.0)
     *ti = ((double)curstp)*dt;
   fclose(f);
 }
+#define KMODMAX 599
+#define NKSHELL 150
+double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
+double *sqReA[KMODMAX], *sqImA[KMODMAX], *sqReB[KMODMAX], *sqImB[KMODMAX];
+double *sqRe_cls[2][KMODMAX], *sqIm_cls[2][KMODMAX];
+double *cc[KMODMAX], *cc_cls[2][KMODMAX];
+char fname2[512];
+char inputfile[1024];
+int ntripl[]=
+#include "./ntripl.dat"
+int mesh[][NKSHELL][3]= 
+#include "./kmesh.dat"
+double twopi;
 void print_usage(void)
 {
-  printf("Usage: calcmsd [ --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
+  printf("calcfqtself [ --deltaq/-dq | --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
+  printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
+double qavg[KMODMAX];
+
+int qmin = 0, qmax = KMODMAX-1; 
+double qminpu = -1.0, qmaxpu = -1.0;
 void parse_param(int argc, char** argv)
 {
   int cc=1, extraparam=0;
@@ -138,6 +120,31 @@ void parse_param(int argc, char** argv)
 	{
 	  print_usage();
 	}
+      else if (!strcmp(argv[cc],"--qmin") || !strcmp(argv[cc],"-qm"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--clusters") || !strcmp(argv[cc],"-c"))
+	{
+	  clusters=1;
+	}
+      else if (!strcmp(argv[cc],"--qmax") || !strcmp(argv[cc],"-qM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmax = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--deltaq") || !strcmp(argv[cc],"-dq"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  delq = atoi(argv[cc]);
+	}
       else if (!strcmp(argv[cc],"--skip") || !strcmp(argv[cc],"-s"))
 	{
 	  cc++;
@@ -145,11 +152,21 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  skip = atoi(argv[cc]);
 	}
-      else if (!strcmp(argv[cc],"--clusters") || !strcmp(argv[cc],"-c"))
+      else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
 	{
-	  clusters=1;
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qminpu = atof(argv[cc]);
 	}
-      else if (cc == argc || extraparam == 2)
+      else if (!strcmp(argv[cc],"--qpumax") || !strcmp(argv[cc],"-qpuM"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  qmaxpu = atof(argv[cc]);
+	}
+      else if (cc == argc || extraparam == 4)
 	print_usage();
       else if (extraparam == 0)
 	{ 
@@ -160,65 +177,80 @@ void parse_param(int argc, char** argv)
       else if (extraparam == 1)
 	{
 	  extraparam++;
+	  //printf("qui2 argv[%d]:%s\n",cc, argv[cc]);
 	  points = atoi(argv[cc]);
+	  //printf("points:%d\n", points);
+	}
+      else if (extraparam == 2)
+	{
+	  extraparam++;
+	  qmin = atoi(argv[cc]);
+	  //printf("qmin=%d\n", qmin);
+	}
+      else if (extraparam == 3)
+	{
+	  extraparam++;
+	  qmax = atoi(argv[cc]);
 	}
       else
 	print_usage();
       cc++;
     }
 }
-int  *is2saveArr, notAll=0;
-char p2s[1024]="all";
-int par2saveArr(int NP)
+void set_qmin_qmax_from_q_pu(double scalFact)
 {
-  char *ns;
-  int first=1, i, cc;
-  char s1[32], s2[32];
-  if (!strcmp(p2s,"all")||!strcmp(p2s,"ALL"))
-    return 0;
-  ns = strtok(p2s, ",");
-  while(ns || first)
+  int qmod, mp;
+  for (qmod = 0; qmod < KMODMAX; qmod++)
     {
-      first = 0;
-      if (!ns && first)
-	ns = p2s;
-      if (sscanf(ns, "%[^-]-%s", s1, s2)==2)
+      qavg[qmod] = 0;
+      for (mp = 0; mp < ntripl[qmod]; mp++) 
 	{
-	  for (i=atoi(s1); i <= atoi(s2); i++)
-	    {
-	      is2saveArr[i] = 1;
-	    }
+	  qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
+			     Sqr(((double)mesh[qmod][mp][1]))+
+			     Sqr(((double)mesh[qmod][mp][2])));
 	}
-      else
-	is2saveArr[atoi(ns)]=1;
-      ns = strtok(NULL, ",");
+      qavg[qmod] *= scalFact/((double)ntripl[qmod]);
+      //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
     }
-  cc=0;
-  for (i=0; i < NP; i++)
-    if (is2saveArr[i])
-      cc++;
-  return cc;
+  if (qminpu != -1.0 && qminpu == qmaxpu)
+    {
+      qmin = rint(qminpu / (scalFact/2.0) - 2.0);
+      qmax = qmin;
+    }
+  else 
+    {
+      if (qminpu != -1.0 && qminpu >= 0.0)
+	qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
+      if (qmaxpu != -1.0 && qmaxpu > 0.0)
+	qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
+    }
 }
 
 int main(int argc, char **argv)
 {
-  FILE *f, *f2, *f3, *fA, *fB, *f2A, *f2B;
-  double *adjDr[3], Dr, Dw, A1, A2, A3, dr;
-  int c1, c2, c3, i, nfiles, nf, ii, nlines, nr1, nr2, a;
-  int NP, NPA=-1, NN=-1, fine, JJ, nat, maxl, maxnp, np, NP1, NP2;
-  double refTime=0.0, tmpdbl;
-  int isperc, kk, probNS=0;
+  FILE *f, *f2;
+  int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
+  int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
+  int qmod, NP1, NP2, kk, isperc; 
+  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
+  double costmp, sintmp;
+  twopi = acos(0)*4.0;	  
 #if 0
   if (argc <= 1)
     {
-      printf("Usage: calcmsd <listafile> [number of points]\n");
-      //printf("where NN il the lenght of the logarithmic block\n");
+      printf("Usage: calcfqself <lista_file> [points] [qmin] [qmax]\n");
+      printf("where points is the number of points of the correlation function\n");
       exit(-1);
     }
-#endif
+#endif 
   parse_param(argc, argv);
-  f2 = fopen(inputfile, "r");
+  //printf(">>qmin=%d\n", qmin);
   c2 = 0;
+  if (!(f2 = fopen(inputfile, "r")))
+    {
+      printf("ERROR: I can not open file %s\n", inputfile);
+      exit(-1);
+    }
   maxl = 0;
   while (!feof(f2))
     {
@@ -235,29 +267,22 @@ int main(int argc, char **argv)
       fname[ii] = malloc(sizeof(char)*maxl);
       fscanf(f2, "%[^\n]\n", fname[ii]); 
     }
-  fclose(f2);
-  probNS=0;
-  if (!(f = fopen("StoreInit", "r")))
+
+
+  if (!(f = fopen(fname[0], "r")))
     {
-      f = fopen(fname[0], "r");
-      probNS = 1;
+      printf("ERROR: I can not open file %s\n", fname[0]);
+      exit(-1);
     }
   nat = 0;
-  printf("fname=%s\n", fname[0]);
-  while (!feof(f) && nat < 3) 
+  while (!feof(f) && nat < 2) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (nat==3)
+	  if (nat==2)
 	    {
-#if 0
-	      is2saveArr = malloc(sizeof(int)*NP);
-	      notAll=par2saveArr(NP);		 
-	      if (notAll)
-		NP = notAll;
-#endif
 	      for (i=0; i < 2*NP; i++)
 		fscanf(f, "%[^\n]\n", line);
 	      fscanf(f, "%lf\n", &L);
@@ -266,19 +291,8 @@ int main(int argc, char **argv)
 	  continue;
 	}
       sscanf(line, "%[^:]:%[^\n]\n", parname, parval); 
-      printf("parnam=%s parval=%s\n", parname, parval);
-      if (!strcmp(parname,"storerate"))
-	{
-	  eventDriven = 1;
-	  storerate = atof(parval);
-	}
-      if (!strcmp(parname,"bakSavedMode"))
-	bakSaveMode = atoi(parval);
       if (!strcmp(parname,"parnum"))
 	{
-	      NP = atoi(parval);
-	      printf("NP=%d\n", NP);
-#if 0
 	  if (sscanf(parval, "%d %d ", &NP1, &NP2) < 2)
 	    {
 	      NP = atoi(parval);
@@ -288,102 +302,164 @@ int main(int argc, char **argv)
 	      NP = NP1+NP2;
 	      NPA = NP1;
 	    }
-#endif
 	}
-      if (!strcmp(parname,"stripStore"))
-	{
-	  stripStore = atoi(parval);
-	  if (stripStore && probNS)
-	    {
-	      printf("Store files are stripped, you have to supply StoreInit file!\n");
-	      exit(-1);
-	    }
-	}
-      if (!strcmp(parname,"parnumA"))
+      else if (!strcmp(parname,"parnumA"))
 	NPA = atoi(parval);
-      if (!strcmp(parname,"par2save"))
-	{
-	  strcpy(p2s, parval); 
-	}
-      if (nat==0 && !strcmp(parname,"NN"))
+      else if (nat==0 && !strcmp(parname,"NN"))
 	NN = atoi(parval);
+      else if (!strcmp(parname,"storerate"))
+	{
+	  storerate = atof(parval);
+	  eventDriven = 1;
+	}
+      else if (!strcmp(parname,"bakSavedMode"))
+	bakSaveMode = atoi(parval);
+      else if (!strcmp(parname, "a"))
+       	{
+	  fscanf(f, "%[^\n]\n", parval);
+	  sscanf(parval, "%lf %lf ", &A0, &A1);
+	}
+      else if (!strcmp(parname, "b"))
+	{
+	  fscanf(f, "%[^\n]\n", parval);
+	  sscanf(parval, "%lf %lf ", &B0, &B1);
+	}
+      else if (!strcmp(parname, "c"))
+	{
+	  fscanf(f, "%[^\n]\n", parval);
+	  sscanf(parval, "%lf %lf ", &C0, &C1);
+	}
     }
   fclose(f);
-  if (NPA == -1)
-    NPA = NP;
+#if 0
+  if (argc >= 3)
+    points = atoi(argv[2]);
+  else
+    points = NN;
+  if (argc >= 4)
+    qmin = atoi(argv[3]);
+  if (argc == 5)
+    qmax = atoi(argv[4]);
+#endif
+  if (!eventDriven)
+    L = cbrt(L);
+  invL = 1.0/L;
   if (points == -1)
-    points=NN;
+    points = NN;
+  scalFact = twopi * invL;
+  set_qmin_qmax_from_q_pu(scalFact);
+  if (qmax >= KMODMAX)
+    qmax = KMODMAX-1;
+  if (qmax < 0)
+    qmax = 0;
+  if (qmin < 0)
+    qmin = 0;
+  if (qmin >= KMODMAX)
+    qmin = KMODMAX-1;
+  
+  if (qmin > qmax)
+    {
+      printf("ERROR: qmin must be less than qmax\n");
+      exit(-1);
+    }
   if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
       || (eventDriven==0 && bakSaveMode <= 0)) 
     NN = 1;
   if (NN!=1)
     skip = 0;
-  
-  printf("NP=%d\n", NP);
   maxnp = NN + (nfiles-NN)/NN;
   if (points > maxnp)
     points = maxnp;
-  if (eventDriven==0)
-    L = cbrt(L);
-  ti = malloc(sizeof(double)*points);
-  rotMSD = malloc(sizeof(double)*points);
-  MSD = malloc(sizeof(double)*points);
-  MSDA = malloc(sizeof(double)*points);
-  MSDB = malloc(sizeof(double)*points);
-  rotMSDA = malloc(sizeof(double)*points);
-  rotMSDB = malloc(sizeof(double)*points);
-  cc = malloc(sizeof(double)*points);
-  if (clusters)
-    {
-      for (kk=0; kk < 2; kk++)
-	{
-	  cc_cls[kk] = malloc(sizeof(double)*points);
-	  MSDcls[kk] = malloc(sizeof(double)*points);
-	  rotMSDcls[kk] = malloc(sizeof(double)*points);
-	}
-    }
-  DR = malloc(sizeof(double*)*NP);
-  DR0= malloc(sizeof(double*)*NP);
-  for (ii = 0; ii < NP; ii++)
-    {
-      DR[ii]  = malloc(sizeof(double)*3);
-      DR0[ii] = malloc(sizeof(double)*3);
-    }
-  for (ii=0; ii < points; ii++)
-    {
-      ti[ii] = -1.0;
-      rotMSD[ii] = 0.0;
-      MSD[ii] = 0.0;
-      rotMSDA[ii] = 0.0;
-      MSDA[ii] = 0.0;
-      rotMSDB[ii] = 0.0;
-      MSDB[ii] = 0.0;
-      cc[ii]=0.0;
-      if (clusters)
-	{
-	  MSDcls[0][ii]=MSDcls[1][ii]=0.0;
-	  cc_cls[0][ii]=cc_cls[1][ii]= 0;
-	}
-    }
-    
-  if (NPA != NP)
-    printf("[MIXTURE] points=%d files=%d NP = %d NPA=%d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, NPA, L, NN, maxl);
-  else
-    printf("[MONODISPERSE] points=%d files=%d NP = %d L=%.15G NN=%d maxl=%d\n", points, nfiles, NP, L, NN, maxl);
+  printf("qmin=%d qmax=%d invL=%.15G NN=%d points=%d\n", qmin, qmax, invL, NN, points);
+  //printf("maxnp=%d points=%d\n",maxnp, points);
+  if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
+    assez = 0;
+  else if ((B0 > A0 && B0 > C0) || (B0 < A0 && B0 < C0))
+    assez = 1;
+  else if ((C0 > A0 && C0 > B0) || (C0 < A0 && C0 < B0))
+    assez = 2;
+  if (NPA == -1)
+    NPA = NP;
   if (eventDriven)
     printf("[ED] Event-Driven simulation\n");
   else
     printf("[MD] Time-Driven simulation\n");
+  if (NP==NPA)
+    {
+      printf("[MONODISPERSE] NP=%d\n", NP);
+    }
+  else
+    {
+      printf("[MIXTURE] NP=%d NPA=%d\n", NP, NPA);
+    }
+
+  //fprintf(stderr, "allocating %d items NN=%d NP=%d num files=%d maxnp=%d\n", points, NN, NP, nfiles, maxnp);
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
+    {
+      sqReA[qmod] = malloc(sizeof(double)*points);
+      sqImA[qmod] = malloc(sizeof(double)*points);
+      cc[qmod] = malloc(sizeof(double)*points);
+      if (clusters)
+	{
+	  for (kk=0; kk < 2; kk++)
+	    {
+	      cc_cls[kk][qmod] = malloc(sizeof(double)*points);
+	      sqRe_cls[kk][qmod] = malloc(sizeof(double)*points);
+	      sqIm_cls[kk][qmod] = malloc(sizeof(double)*points);
+	    }
+	}
+
+      if (NPA < NP)
+	{
+	  sqReB[qmod] = malloc(sizeof(double)*points);
+	  sqImB[qmod] = malloc(sizeof(double)*points);
+	}
+      //ccB[qmod] = malloc(sizeof(double)*points);
+    }
+  ti = malloc(sizeof(double)*points);
   for (a=0; a < 3; a++)
     {
       r0[a] = malloc(sizeof(double)*NP);
-      w0[a] = malloc(sizeof(double)*NP);
-      rt[a] = malloc(sizeof(double)*NP);
-      rtold[a] = malloc(sizeof(double)*NP);
-      wt[a] = malloc(sizeof(double)*NP);
-      adjDr[a] = malloc(sizeof(double)*NP); 
+      r1[a] = malloc(sizeof(double)*NP);
     }
-  
+
+  for (ii=0; ii < points; ii++)
+    ti[ii] = -1.0;
+  first = 0;
+  fclose(f2);
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
+    {
+      for (ii=0; ii < points; ii++)
+	{
+	  sqReA[qmod][ii] = 0.0;
+	  sqImA[qmod][ii] = 0.0;
+	  cc[qmod][ii] = 0.0;
+	  if (clusters)
+	    {
+	      for (kk=0; kk < 2; kk++)
+		{
+		  sqRe_cls[kk][qmod][ii] = 0.0;
+		  sqIm_cls[kk][qmod][ii] = 0.0;
+		  cc_cls[kk][qmod][ii] = 0.0;
+		}		  
+	    }
+	  if (NPA < NP)
+	    {
+	      sqReB[qmod][ii] = 0.0;
+	      sqImB[qmod][ii] = 0.0;
+	    }
+	  //ccB[qmod][ii] = 0.0;
+
+	}
+      for (iq=0; iq < ntripl[qmod]; iq++)
+	{
+	  qx[qmod][iq]=invL*twopi*mesh[qmod][iq][0];
+	  qy[qmod][iq]=invL*twopi*mesh[qmod][iq][1];
+	  qz[qmod][iq]=invL*twopi*mesh[qmod][iq][2];
+	}
+    }
+  c2 = 0;
+  JJ = 0;
   if (clusters)
     {
       sprintf(cluststr,"%s.clusters",fname[0]);
@@ -395,6 +471,7 @@ int main(int argc, char **argv)
 	  printf("I can not open %s file...\n", cluststr);
 	  exit(-1);
 	}
+
       while (!feof(f))
 	{
 	  fscanf(f, "%[^\n]\n", line);
@@ -405,18 +482,13 @@ int main(int argc, char **argv)
 		isPercPart[atoi(pnum)] = 1; 
 	      else
 		isPercPart[atoi(pnum)] = 0; 
-	      //printf("atopi(pnum):%d\n", atoi(pnum));
 	    } 
 	}
       fclose(f);
     } 
   for (nr1 = 0; nr1 < nfiles; nr1=nr1+NN+skip)
     {	
-      for (i=0; i < NP; i++)
-	for (a=0; a < 3; a++)
-	  adjDr[a][i] = 0.0;
-
-      readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR0);
+      readconf(fname[nr1], &time, &refTime, NP, r0);
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -424,7 +496,7 @@ int main(int argc, char **argv)
 	    {
 	      /* N.B. considera NN punti in maniera logaritmica e poi calcola i punti in maniera lineare 
 	       * distanziati di NN punti. */
-	      np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
+              np = (JJ == 0)?nr2-nr1:NN-1+JJ;	      
 	      if (nr2 >= nfiles || np >= points)
 		{
 		  fine = 1;
@@ -432,176 +504,157 @@ int main(int argc, char **argv)
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
-		
-	      if (nr2==nr1)
-		{
-		  for (i=0; i < NP; i++)
-		    for (a=0; a < 3; a++)
-		      rtold[a][i] = r0[a][i];
-		}
-	      else
-		{
-		  for (i=0; i < NP; i++)
-		    for (a=0; a < 3; a++)
-		      rtold[a][i] = rt[a][i];
-		}
-	      //printf("fname[%d]:%s\n", nr2, fname[nr2]);
-	      readconf(fname[nr2], &time, &refTime, NP, rt, wt, DR);
+	      readconf(fname[nr2], &time, &refTime, NP, r1);
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
-		  //printf("nr1=%d time=%.15G\n", np, ti[np]);
+		  //printf("np=%d time=%.15G\n", np, ti[np]);
 		}
   
-	      if (nr2 == nr1)
-		continue;
-	      for (i = 0; i < NP; i++)
-		{
-		  for (a = 0; a < 3; a++)
-		    {
-		      Dw = wt[a][i] - w0[a][i];
-		      Dr = rt[a][i] - r0[a][i];
-		      dr = rt[a][i] - rtold[a][i];
-		      if (foundDRs)
-			{
-			  adjDr[a][i] = L*(DR[i][a]-DR0[i][a]); 
-			}
-		      else
-			{
-			  if (eventDriven)
-			    {
-			      if (nr2 > nr1 && fabs(dr) > L*0.5)
-				if (dr > 0.0)
-				  adjDr[a][i] -= L;
-				else
-				  adjDr[a][i] += L;
-			    }
-			}
-		      //printf("adjDr[%d][%d]:%f\n", a, i, adjDr[a][i]);
+	      //if (nr2 == nr1)
+		//continue;
 
-		      tmpdbl = (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-		      MSD[np] += tmpdbl;
-		      if (clusters)
+	      for (qmod = qmin; qmod <= qmax; qmod+=delq)
+		{
+		  for(iq=0; iq < ntripl[qmod]; iq++)
+		    {
+		      sumReA=sumReB=0.0;
+		      sumImA=sumImB=0.0;
+		      for (i=0; i < NP; i++)
 			{
-			  if (isPercPart[i]==1)
-			    MSDcls[0][np] += tmpdbl;
-			  else if (isPercPart[i] == 0)
-			    MSDcls[1][np] += tmpdbl;
-			}	  
-		      if (foundrot)
-			{
-			  tmpdbl = Dw*Dw;
-			  rotMSD[np] += tmpdbl;
-			  if (clusters)
-			    {
-			      if (isPercPart[i]==1)
-				rotMSDcls[0][np] += tmpdbl;
-			      else if (isPercPart[i] == 0)
-				rotMSDcls[1][np] += tmpdbl;
-			    }	  
-			}
-		      if (NP != NPA)
-			{
+			  rxdummy = scalFact*((r0[0][i]-r1[0][i])*mesh[qmod][iq][0]
+			    +(r0[1][i]-r1[1][i])*mesh[qmod][iq][1]
+			    +(r0[2][i]-r1[2][i])*mesh[qmod][iq][2]);
+			  //printf("dummy:%.15G\n", rxdummy);
+			  costmp = cos(rxdummy);
+			  sintmp = sin(rxdummy);
 			  if (i < NPA)
 			    {
-			      MSDA[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-			      if (foundrot)
-				rotMSDA[np] += Dw*Dw;
+			      sumReA += costmp;
+			      sumImA += sintmp;
 			    }
 			  else
 			    {
-			      MSDB[np] += (Dr+adjDr[a][i])*(Dr+adjDr[a][i]);
-			      if (foundrot)
-				rotMSDB[np] += Dw*Dw;
+			      sumReB += costmp;
+			      sumImB += sintmp;
+			    }  
+			  if (clusters)
+			    {
+			      if (isPercPart[i]==1)
+				{
+				  sqRe_cls[0][qmod][np] += costmp;
+				  sqIm_cls[0][qmod][np] += sintmp;
+				  cc_cls[0][qmod][np] += 1.0;
+				}
+			      else if (isPercPart[i]==0)
+				{
+				  sqRe_cls[1][qmod][np] += costmp;
+				  sqIm_cls[1][qmod][np] += sintmp;
+				  cc_cls[1][qmod][np] += 1.0;
+				}
 			    }
 			}
+	    	      sqReA[qmod][np] += sumReA;
+    		      sqImA[qmod][np] += sumImA;
+		      if (NPA < NP)
+			{
+			  sqReB[qmod][np] += sumReB;
+			  sqImB[qmod][np] += sumImB;
+			}
+		      cc[qmod][np] += 1.0;
 		    }
-		  if (clusters)
-		    {
-		      if (isPercPart[i]==1)
-			cc_cls[0][np] += 1.0;  
-		      else if (isPercPart[i] == 0)
-			cc_cls[1][np] += 1.0;
-		    }	
+		  //printf("cc[%d][%d]=%.15G sqre=%.15G sqim=%.15G\n", qmod, np, cc[qmod][np],
+		  //	 sqRe[qmod][np], sqIm[qmod][np]);
 		}
-	      cc[np] += 1.0;
-	      //printf("cc[%d]:%f\n", nr2-nr1, cc[nr2-nr1]);
 	    }
 	}
     }
-  f = fopen("MSDcnf.dat", "w+");
-  if (foundrot)
-    f2 = fopen("rotMSDcnf.dat", "w+");
-  if (NP != NPA)
+
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
-      fA = fopen("MSDAcnf.dat", "w+");
-      if (foundrot)
-	f2A = fopen("rotMSDAcnf.dat", "w+");
-      fB = fopen("MSDBcnf.dat", "w+");
-      if (foundrot)
-	f2B = fopen("rotMSDBcnf.dat", "w+");
-    }
-  for (ii=1; ii < points; ii++)
-    {
-      //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
-      if (cc[ii] > 0 && ti[ii] > -1.0)
+      for (ii=0; ii < points; ii++)
 	{
-	  fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSD[ii]/cc[ii]/((double)NP), cc[ii]);
-	  if (foundrot)
-	    fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii]/((double)NP), cc[ii]);
-	}
-      if (NP != NPA)
-	{
-	  fprintf(fA, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDA[ii]/cc[ii]/((double)NPA), cc[ii]);
-	  if (foundrot)
-	    fprintf(f2A, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSD[ii]/cc[ii]/((double)NPA), cc[ii]);
-	  fprintf(fB, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDB[ii]/cc[ii]/((double)NP-NPA), cc[ii]);
-	  if (foundrot)
-	    fprintf(f2B, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSDB[ii]/cc[ii]/((double)NP-NPA), cc[ii]);
+	  //printf("cc[%d][%d]:%.15G\n", qmod, ii, cc[qmod][ii]);
+	  sqReA[qmod][ii] = sqReA[qmod][ii]/cc[qmod][ii];
+	  sqImA[qmod][ii] = sqImA[qmod][ii]/cc[qmod][ii];
+	  if (clusters)
+	    {
+	      for (kk=0; kk < 2; kk++)
+		{
+      		  sqRe_cls[kk][qmod][ii] = sqRe_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+    		  sqIm_cls[kk][qmod][ii] = sqIm_cls[kk][qmod][ii]/cc_cls[kk][qmod][ii];
+		}
+	    }
+	  if (NPA  < NP)
+	    {
+	      sqReB[qmod][ii] = sqReB[qmod][ii]/cc[qmod][ii];
+	      sqImB[qmod][ii] = sqImB[qmod][ii]/cc[qmod][ii];
+	    }
+	 // printf("qmod=%d ii=%d sqre=%.15G sqIm=%.15G cc=%.15G\n",  qmod, ii, sqRe[qmod][ii], sqIm[qmod][ii],
+	//	 cc[qmod][ii]);
 	}
     }
-  fclose(f);
-  if (foundrot)
-    fclose(f2);
-  if (NP != NPA)
+  for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
-      fclose(fA);
-      if (foundrot)
-	fclose(f2A);
-      fclose(fB);
-      if (foundrot)
-	fclose(f2B);
+      sprintf(fname2, "Fqs-%d",qmod);
+      if (!(f = fopen (fname2, "w+")))
+	{
+	  printf("ERROR: I can not open file %s\n", fname2);
+	  exit(-1);
+	}
+      //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
+      for (ii = 1; ii < points; ii++)
+	{
+	  if (NPA == NP)
+	    {
+	      if ((sqReA[qmod][ii]!=0.0 || sqImA[qmod][ii]!=0.0) && (ti[ii]> -1.0))
+		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[qmod][ii]/sqReA[qmod][0],
+			sqImA[qmod][ii]);
+	    }
+	  else
+	    {
+	      if ((sqReA[qmod][ii]!=0.0 || sqImA[qmod][ii]!=0.0) && (ti[ii]> -1.0))
+		fprintf(f, "%15G %.15G %.15G %.15G %.15G\n", ti[ii]-ti[0], sqReA[qmod][ii]/sqReA[qmod][0],
+			sqReB[qmod][ii]/sqReB[qmod][0], 
+			(sqReA[qmod][ii]+sqReB[qmod][ii])/(sqReA[qmod][0]+sqReB[qmod][0]), 
+			sqImA[qmod][ii]+sqImB[qmod][ii]);
+	    }
+	}
+      fclose(f);
     }
   if (clusters)
     {
-      f = fopen("MSDcnfClsPerc.dat", "w+");
-      f2 = fopen("rotMSDcnfClsPerc.dat","w+");
-      for (ii=1; ii < points; ii++)
+      for (qmod = qmin; qmod <= qmax; qmod+=delq)
 	{
-	  //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
-	  if (cc_cls[0][ii] > 0 && ti[ii] > -1.0)
+	  sprintf(fname2, "FqsClsPerc-%d",qmod);
+	  if (!(f = fopen (fname2, "w+")))
 	    {
-	      fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDcls[0][ii]/cc_cls[0][ii], cc_cls[0][ii]);
-	      if (foundrot)
-		fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSDcls[0][ii]/cc_cls[0][ii], cc_cls[0][ii]);
+	      printf("ERROR: I can not open file %s\n", fname2);
+	      exit(-1);
 	    }
-	}
-      fclose(f);
-      fclose(f2);
-      f = fopen("MSDcnfClsNotPerc.dat", "w+");
-      f2 = fopen("rotMSDcnfClsNotPerc.dat","w+");
-      for (ii=1; ii < points; ii++)
-	{
-	  //printf("cc[%d]=%f ti=%f\n", ii, cc[ii], ti[ii]);
-	  if (cc_cls[1][ii] > 0 && ti[ii] > -1.0)
+	  //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
+	  for (ii = 1; ii < points; ii++)
 	    {
-	      fprintf(f, "%.15G %.15G %f\n", ti[ii]-ti[0], MSDcls[1][ii]/cc_cls[1][ii], cc_cls[1][ii]);
-	      if (foundrot)
-		fprintf(f2, "%.15G %.15G %f\n", ti[ii]-ti[0], rotMSDcls[1][ii]/cc_cls[1][ii], cc_cls[1][ii]);
+	      if ((sqRe_cls[0][qmod][ii]!=0.0 || sqIm_cls[0][qmod][ii]!=0.0) && (ti[ii]> -1.0))
+    		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqRe_cls[0][qmod][ii]/sqRe_cls[0][qmod][0],
+			sqIm_cls[0][qmod][ii]);
 	    }
-	}
-      fclose(f);
-      fclose(f2);
+	  fclose(f);
+	  sprintf(fname2, "FqsClsNotPerc-%d",qmod);
+	  if (!(f = fopen (fname2, "w+")))
+	    {
+	      printf("ERROR: I can not open file %s\n", fname2);
+	      exit(-1);
+	    }
+	  //printf("SqReA[%d][0]:%.15G SqReB[][0]: %.15G\n", qmod, sqReA[qmod][0], sqReB[qmod][0]);
+	  for (ii = 1; ii < points; ii++)
+	    {
+	      if ((sqRe_cls[1][qmod][ii]!=0.0 || sqIm_cls[1][qmod][ii]!=0.0) && (ti[ii]> -1.0))
+    		fprintf(f, "%15G %.15G %.15G\n", ti[ii]-ti[0], sqRe_cls[1][qmod][ii]/sqRe_cls[1][qmod][0],
+			sqIm_cls[1][qmod][ii]);
+	    }
+	  fclose(f);
+}
     }
   return 0;
 }

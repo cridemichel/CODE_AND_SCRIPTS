@@ -109,7 +109,7 @@ char parname[128], parval[256000], line[256000];
 char dummy[2048];
 int NP, NPA=-1, ncNV, ncNV2, START, END, NT, NI;
 int check_percolation = 1, *nspots, particles_type=1, output_bonds=0, mix_type=-1, saveBonds=-1;
-int avgbondlen=1, calcordparam=0, save_conf_cluster_as_one=0, adj_orig=0;
+int avgbondlen=1, calcordparam=0, save_conf_cluster_as_one=0, adj_orig=0, save_cnf_cls_as_one=0;
 /* particles_type= 0 (sphere3-2), 1 (ellipsoidsDGEBA) */ 
 char inputfile[1024];
 int foundDRs=0, foundrot=0, *color, *color2, *clsdim, *clsdim2, *clsdimNV, *clscolNV, *clscol, 
@@ -987,7 +987,7 @@ void choose_image(int img, int *dix, int *diy, int *diz)
 }
 void print_usage(void)
 {
-  printf("Usage: clusters [-mc] [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] [--cls-as-one/-co] [--cls-ge|-cge] [--cls-le|-cle] [--cls-separate-files|-csf] <listafile>\n");
+  printf("Usage: clusters [-mc] [--ordpar/-op] [--medialog/-ml] [--ptype/-pt] [--noperc/-np] [--bonds/-b] [--average/-av] [--maxbonds] [--cls-as-one/-co] [--cls-ge|-cge <cls size>] [--cls-le|-cle <cls size>] [--cls-separate-files|-csf] [--cls-eq|-ceq <clssize>] [--save-cnf|-sc] <listafile>\n");
   exit(0);
 }
 
@@ -1046,6 +1046,10 @@ void parse_params(int argc, char** argv)
        else if (!strcmp(argv[cc],"--cls-separate-files") || !strcmp(argv[cc],"-csf" ))
 	{
 	  cls_sep_file=1;
+	}
+      else if (!strcmp(argv[cc],"--save-cnf") || !strcmp(argv[cc],"-sc" ))
+	{
+	  save_cnf_cls_as_one = 1;
 	}
       else if (!strcmp(argv[cc],"--cls-eq") || !strcmp(argv[cc],"-ceq" ))
 	{
@@ -1452,6 +1456,10 @@ void save_clusters_as_one(char *fname, int ncls, int NP, int thr, int mode)
   while(!feof(f))
     {
       fscanf(f, "%[^\n]\n)", line);
+      if (nat==0 && save_cnf_cls_as_one)
+	{
+	  fprintf(f2,"%s\n", line);
+	}
       if (nat==1 && first)
 	{
 	  fprintf(f2, "parnum: %d\n", totpart);
