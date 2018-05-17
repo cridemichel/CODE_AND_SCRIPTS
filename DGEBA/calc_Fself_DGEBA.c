@@ -7,7 +7,7 @@
 char **fname; 
 int *isPercPart;
 double time, *ti, *r0[3], *r1[3], L, refTime;
-int points=-1, assez, NP, NPA, clusters=0;
+int points=-1, assez, NP, NPA=-1, clusters=0;
 char parname[128], parval[25600000], line[25600000];
 char dummy[2048000], cluststr[2048000];
 char *pnum;
@@ -25,7 +25,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
       printf("ERROR: I can not open file %s\n", fname);
       exit(-1);
     }
-  while (!feof(f) && nat < 2) 
+  while (!feof(f)) 
     {
       cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
@@ -34,7 +34,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	{
 	  nat++;
 	}
-      if (nat < 2)
+      if (nat < 3)
 	{
 	  fseek(f, cpos, SEEK_SET);
 	  fscanf(f, "%[^:]:", parname);
@@ -275,13 +275,13 @@ int main(int argc, char **argv)
       exit(-1);
     }
   nat = 0;
-  while (!feof(f) && nat < 2) 
+  while (!feof(f)) 
     {
       fscanf(f, "%[^\n]\n)", line);
       if (!strcmp(line,"@@@"))
 	{
 	  nat++;
-	  if (nat==2)
+	  if (nat==3)
 	    {
 	      for (i=0; i < 2*NP; i++)
 		fscanf(f, "%[^\n]\n", line);
@@ -304,7 +304,9 @@ int main(int argc, char **argv)
 	    }
 	}
       else if (!strcmp(parname,"parnumA"))
-	NPA = atoi(parval);
+	{
+	  NPA = atoi(parval);
+	}
       else if (nat==0 && !strcmp(parname,"NN"))
 	NN = atoi(parval);
       else if (!strcmp(parname,"storerate"))
@@ -371,6 +373,7 @@ int main(int argc, char **argv)
   if (points > maxnp)
     points = maxnp;
   printf("qmin=%d qmax=%d invL=%.15G NN=%d points=%d\n", qmin, qmax, invL, NN, points);
+  printf("nfiles=%d NN=%d NP=%d NPA=%d\n", nfiles, NN, NP, NPA);
   //printf("maxnp=%d points=%d\n",maxnp, points);
   if ((A0 > B0 && A0 > C0) || (A0 < B0 && A0 < C0))
     assez = 0;
