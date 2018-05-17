@@ -27,7 +27,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
     }
   while (!feof(f)) 
     {
-      //cpos = ftell(f);
+      cpos = ftell(f);
       //printf("cpos=%d\n", cpos);
       fscanf(f, "%[^\n]\n",line);
       if (!strcmp(line,"@@@"))
@@ -39,12 +39,12 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	{
 	  //fseek(f, cpos, SEEK_SET);
 	  sscanf(line, "%[^:]:%s", parname,parval);
-	  printf("[%s] parname=%s parval=%s\n", fname, parname,parval);
+	  //printf("[%s] parname=%s parval=%s\n", fname, parname,parval);
 	  if (!strcmp(parname, "time"))
 	    {
 	      //sscanf(line, "%[^\n]\n", parval);
 	      *ti = atof(parval);
-	      printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
+	      //printf("[%s] TIME=%.15G %s\n",fname,*ti, parval);
 	    }	
   	  else if (!strcmp(parname, "refTime"))
 	    {
@@ -69,13 +69,14 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3])
 	}
       else
 	{
+	  fseek(f, cpos, SEEK_SET);
 	  for (i = 0; i < NP; i++) 
 	    {
 	      fscanf(f, "%[^\n]\n", line); 
 	      //if (!sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3)
 		//{
 	      sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
-      	      //printf("r[i=%d]=%f %f %f\n",i, r[0][i], r[1][i], r[2][i]);
+      	      //printf("file=%s r[i=%d]=%f %f %f\n",fname, i, r[0][i], r[1][i], r[2][i]);
 		//}
 	    }
  	  break; 
@@ -480,7 +481,7 @@ int main(int argc, char **argv)
 	{
 	  fscanf(f, "%[^\n]\n", line);
 	  isperc = atoi(strtok(line," "));
-	  while (pnum=strtok(NULL," "))
+	  while ((pnum=strtok(NULL," "))!=0)
 	    {
 	      if (isperc)
 		isPercPart[atoi(pnum)] = 1; 
