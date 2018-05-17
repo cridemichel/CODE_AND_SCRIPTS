@@ -510,6 +510,7 @@ int main(int argc, char **argv)
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
 	      readconf(fname[nr2], &time, &refTime, NP, r1);
+	      //printf("file=%s\n", fname[nr2]);
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
