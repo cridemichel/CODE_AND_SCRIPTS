@@ -48,90 +48,6 @@ double cchrom, csalt = 0.0; /* concentrazione del sale aggiunto molare */
 double ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
-struct boxS {
-  double R[3][3];
-  double x[3];
-  double sax[3];
-}
-struct amyloid {
-  double nD; /* spessore della fibra in protofilamenti*/
-  double nL; /* numero di box che costituiscono la fibra */
-  double nP; /* persistence length in numero di boxes */
-  double ribthick; /* profondità box (lungo direzione ortogonale al piano dell'amyloid ribbon) */
-  double Lbox;
-  double Dproto; /* diametro del protofilamento  Dproto*nD è la larghezza del box */
-  struct boxS *boxes;
-  struct boxS *boxesLab;
-  double R[3][3];
-  double rcm[3];
-  double boxsax[3];
-};
-typedef struct amyloid amyloidS;
-amyloidS amyloids[2];
-
- 
-void build_amyloid(int nL)
-{
-  double npitch, dth;
-  int jj, kk, i;
-  double xcm[3];
-
-  amyloids[0].boxes = malloc(sizeof(struct boxS)*amyloids[0].nL);
-  amyloids[1].boxes = malloc(sizeof(struct boxS)*amyloids[1].nL);
-  amyloids[0].boxesLab = malloc(sizeof(struct boxS)*amyloids[0].nL);
-  amyloids[1].boxesLab = malloc(sizeof(struct boxS)*amyloids[1].nL);
-
-  for (i=0; i < 1; i++)
-    {
-      amyloids[i].nD=6;
-      amyloids[i].nL=nL;
-      amyloids[i].nP=652;
-      amyloids[i].npitch=35;
-      amyloids[i].Lbox=2.3;/* altezza lungo l'asse dell'elica del box in nm (qui considero 4 ILQINS stacked 
-			      per ridurre il numero di box totali */ 
-      amyloids[i].Dproto=2.0;
-      amyloids[i].ribthick = 2.0; /* per ora lo spessore del foglietto è di un solo ILQINS quindi circa 2 nm */
-      amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
-      amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-      amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-    
-      dth=2.0*M_PI/amyloids[i].npitch;
-      // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
-      for (jj=0; jj < amyloids[i].nL; jj++)
-	{
-	  amyloids[i].boxes[jj].x[0]=((double)jj)*deltaxi;
-	  amyloids[i].boxes[jj].x[1]=0.0;
-	  amyloids[i].boxes[jj].x[2]=0.0;
-	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
-	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
-	  amyloids[i].boxes[jj].sax[2] = amyloids[i].ribthick/2.0;
-	  /* ...and now set orientation */
-	  amyloids[i].R[0][0]=1.0;
-	  amyloids[i].R[0][1]=0.0;
-	  amyloids[i].R[0][2]=0.0;
-	  amyloids[i].R[1][0]=0.0;
-	  amyloids[i].R[1][1]=cos(jj*dth);
-	  amyloids[i].R[1][2]=-sin(jj*th);
-	  amyloids[i].R[2][0]=0.0;
-	  amyloids[i].R[2][1]=sin(jj*th);
-	  amyloids[i].R[2][2]=-cos(jj*th);
-	}
-      xcm[0]=xcm[1]=xcm[2]=0.0;
-      for (jj=0; jj < amyloids[i].nL; jj++)
-	{
-	  for (kk=0; kk < 3; kk++)
-	    xcm[kk] += amyloids[i].boxes[jj].x[0]; 
-	} 
-
-      for (kk=0; kk < 3; kk++)
-	xcm[kk] /= amyloids[i].nL;
-      for (jj=0; jj < amyloids[i].nL; jj++)
-	{
-	  for (kk=0; kk < 3; kk++)
-	    amyloids[i].boxes[jj].x[kk] -= xcm[kk];
-    	}   
-    }
-}
 
 double Ucoul(double rab)
 {
@@ -233,6 +149,92 @@ double calc_yukawa(int i, int j, double distsq)
   else return 0.0;
 }
 #endif
+struct boxS {
+  double R[3][3];
+  double x[3];
+  double sax[3];
+};
+
+typedef struct amyloid {
+  double nD; /* spessore della fibra in protofilamenti*/
+  double nL; /* numero di box che costituiscono la fibra */
+  double nP; /* persistence length in numero di boxes */
+  double ribthick; /* profondità box (lungo direzione ortogonale al piano dell'amyloid ribbon) */
+  double npitch;
+  double Lbox;
+  double Dproto; /* diametro del protofilamento  Dproto*nD è la larghezza del box */
+  struct boxS *boxes;
+  struct boxS *boxesLab;
+  double R[3][3];
+  double rcm[3];
+  double boxsax[3];
+} amyloidS;
+
+amyloidS amyloids[2];
+
+ 
+void build_amyloid(int nL)
+{
+  double npitch, dth;
+  int jj, kk, i;
+  double xcm[3];
+
+  amyloids[0].boxes = malloc(sizeof(struct boxS)*amyloids[0].nL);
+  amyloids[1].boxes = malloc(sizeof(struct boxS)*amyloids[1].nL);
+  amyloids[0].boxesLab = malloc(sizeof(struct boxS)*amyloids[0].nL);
+  amyloids[1].boxesLab = malloc(sizeof(struct boxS)*amyloids[1].nL);
+
+  for (i=0; i < 1; i++)
+    {
+      amyloids[i].nD=6;
+      amyloids[i].nL=nL;
+      amyloids[i].nP=652;
+      amyloids[i].npitch=35;
+      amyloids[i].Lbox=2.3;/* altezza lungo l'asse dell'elica del box in nm (qui considero 4 ILQINS stacked 
+			      per ridurre il numero di box totali */ 
+      amyloids[i].Dproto=2.0;
+      amyloids[i].ribthick = 2.0; /* per ora lo spessore del foglietto è di un solo ILQINS quindi circa 2 nm */
+      amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
+      amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+      amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+    
+      dth=2.0*M_PI/amyloids[i].npitch;
+      // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
+      for (jj=0; jj < amyloids[i].nL; jj++)
+	{
+	  amyloids[i].boxes[jj].x[0]=((double)jj)*dth;
+	  amyloids[i].boxes[jj].x[1]=0.0;
+	  amyloids[i].boxes[jj].x[2]=0.0;
+	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
+	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
+	  amyloids[i].boxes[jj].sax[2] = amyloids[i].ribthick/2.0;
+	  /* ...and now set orientation */
+	  amyloids[i].R[0][0]=1.0;
+	  amyloids[i].R[0][1]=0.0;
+	  amyloids[i].R[0][2]=0.0;
+	  amyloids[i].R[1][0]=0.0;
+	  amyloids[i].R[1][1]=cos(jj*dth);
+	  amyloids[i].R[1][2]=-sin(jj*dth);
+	  amyloids[i].R[2][0]=0.0;
+	  amyloids[i].R[2][1]=sin(jj*dth);
+	  amyloids[i].R[2][2]=-cos(jj*dth);
+	}
+      xcm[0]=xcm[1]=xcm[2]=0.0;
+      for (jj=0; jj < amyloids[i].nL; jj++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    xcm[kk] += amyloids[i].boxes[jj].x[0]; 
+	} 
+
+      for (kk=0; kk < 3; kk++)
+	xcm[kk] /= amyloids[i].nL;
+      for (jj=0; jj < amyloids[i].nL; jj++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    amyloids[i].boxes[jj].x[kk] -= xcm[kk];
+    	}   
+    }
+}
 
 
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
@@ -316,13 +318,13 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 void saveAmyloidPovray(amyloidS amy, char *fname)
 {
   FILE *f;
-  int i, jj, kk;
+  int i, jj, kk, k1, k2, k3;
   double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
   f = fopen(fname, "w+");
 
   for (jj=0; jj < amy.nL; jj++)
     {
-      body2lab(amyl.boxes[jj].x,xbox,amy.rcm,amy.R);
+      body2lab(amy.boxes[jj].x,xbox,amy.rcm,amy.R);
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
@@ -350,13 +352,13 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
 	  x2[kk] = xbox[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
 	}
-      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x[2], x2[0],x2[1],x2[2]);
+      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x1[2], x2[0],x2[1],x2[2]);
       fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }");
       //pigment { Green transmit 0.7 }
       fprintf(f,"rotate <0,0,90>");
       //fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
 	//      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
-      fprintf(f,"translate <%.15G, %.15G, %.15G>");
+      fprintf(f,"translate <%.15G, %.15G, %.15G>", xbox[0], xbox[1], xbox[2]);
       fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL"); 
       fprintf(f,"ambient AMB diffuse DIFF");
       fprintf(f,"specular SPEC roughness ROUGH}");
@@ -365,11 +367,11 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 }
 double calcDistAmyloid()
 {
-  int iA, iB, k1, k2, k3;
+  int iA, iB, k1, k2, k3, jj;
   
   /* calc orientation matrix and position of boxes in the laboratory frame */
 
-  for (jj=0; jj < amyloids[0].nL)
+  for (jj=0; jj < amyloids[0].nL; jj++)
     {
       body2lab(amyloids[0].boxes[jj].x,amyloids[0].boxesLab[jj].x,amyloids[0].rcm,amyloids[0].R);
       for (k1 = 0; k1 < 3; k1++)
@@ -385,7 +387,7 @@ double calcDistAmyloid()
 	    }
 	}
     }
-  for (jj=0; jj < amyloids[1].nL)
+  for (jj=0; jj < amyloids[1].nL; jj++)
     {
       body2lab(amyloids[1].boxes[jj].x,amyloids[1].boxesLab[jj].x,amyloids[1].rcm,amyloids[1].R);
       for (k1 = 0; k1 < 3; k1++)
@@ -396,7 +398,7 @@ double calcDistAmyloid()
 	      for (k3 = 0; k3 < 3; k3++)
 		{
 		  /* matrix multiplication: riga * colonna */
-		  amyloids[1].boxesLab[jj].R[k1][k2] += amyloids[1].boxes[jj].R[i][k1][k3]*amyloids[1].R[k3][k2];
+		  amyloids[1].boxesLab[jj].R[k1][k2] += amyloids[1].boxes[jj].R[k1][k3]*amyloids[1].R[k3][k2];
 		}  
 	    }
 	}
