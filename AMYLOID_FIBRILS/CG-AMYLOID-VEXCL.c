@@ -313,9 +313,59 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
       x[k1] += rO[k1];
     }
 }
+void saveAmyloidPovray(amyloidS amy, char *fname)
+{
+  FILE *f;
+  int i, jj, kk;
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3];
+  f = fopen(fname, "w+");
+
+  for (jj=0; jj < amy.nL; jj++)
+    {
+      body2lab(amyl.boxes[jj].x,amy.boxesLab[jj].x,amy.rcm,amy.R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  R[k1][k2] += amy.boxes[jj].R[k1][k3]*amy.R[k3][k2];
+		}  
+	    }
+	}
+
+      fprintf(f,"box\n");	
+      fprintf(f,"{\n");
+      for (kk=0; kk < 3; kk++)
+	{
+  	  ux[kk]=amy.boxes[jj].R[kk][0];
+	  uy[kk]=amy.boxes[jj].R[kk][1];
+	  uz[kk]=amy.boxes[jj].R[kk][2];
+	}
+
+      for (kk=0; kk < 3; kk++)
+	{
+	  x1[kk] = amy.boxes[jj].rcm[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
+	  x2[kk] = amy.boxes[jj].rcm[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
+	}
+      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x[2], x2[0],x2[1],x2[2]);
+      fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }");
+      //pigment { Green transmit 0.7 }
+      fprintf(f,"rotate <0,0,90>");
+      fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+	      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
+      fprintf(f,"translate <%.15G, %.15G, %.15G>");
+      fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL"); 
+      fprintf(f,"ambient AMB diffuse DIFF");
+      fprintf(f,"specular SPEC roughness ROUGH}");
+    }
+  fclose(f);
+}
 double calcDistAmyloid()
 {
-  int iA, iB, k1, k2;
+  int iA, iB, k1, k2, k3;
   
   /* calc orientation matrix and position of boxes in the laboratory frame */
 
@@ -330,7 +380,7 @@ double calcDistAmyloid()
 	      for (k3 = 0; k3 < 3; k3++)
 		{
 		  /* matrix multiplication: riga * colonna */
-		  amyloids[0].boxesLab[jj].R[k1][k2] += amyloids[0].boxes[jj].R[i][k1][k3]*amyloids[0].R[k3][k2];
+		  amyloids[0].boxesLab[jj].R[k1][k2] += amyloids[0].boxes[jj].R[k1][k3]*amyloids[0].R[k3][k2];
 		}  
 	    }
 	}
@@ -828,10 +878,6 @@ void place_AMYLOID(double x, double y, double z, double ux, double uy, double uz
   double xp[3], rO[3], xl[3];
   double R[3][3];
   int k1, k2;
-#ifdef DEBUG
-  FILE *fd;
-  char fn[128];
-#endif
   FILE *f;
   int i; 
   rO[0] = x;
@@ -840,53 +886,13 @@ void place_AMYLOID(double x, double y, double z, double ux, double uy, double uz
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, R, gamma);
 
-#ifdef DEBUG 
-  sprintf(fn, "CHROM%d.mgl", which);
-  fd=fopen(fn, "w+");
-  fprintf(fd, ".Vol: %f\n", 10*10.*10);
-#endif
   /* ============ */
-#ifdef DEBUG
-  //printf("CHROMall[%d].sax[0]=%f\n", which, CHROMall[which].sax[0]);
-  fprintf(fd, "%f %f %f @ 0.1 C[blue]\n", rO[0]+ux*CHROMall[which].sax[0], rO[1]+uy*CHROMall[which].sax[0],
-	  rO[2]+uz*CHROMall[which].sax[0]);
-  fprintf(fd, "%f %f %f @ 0.1 C[blue]\n", rO[0]-ux*CHROMall[which].sax[0], rO[1]-uy*CHROMall[which].sax[0],
-	  rO[2]-uz*CHROMall[which].sax[0]);
-  fprintf(fd, "%f %f %f @ 0.1 C[red]\n", 0., 0., 1.);
-  fprintf(fd, "%f %f %f @ 0.1 C[red]\n", 0., 0., 0.);
-#endif
   for (k1=0; k1 < 3; k1++)
     {
-      CHROMall[which].rcm[k1] = rO[k1];
+      amyloids[which].rcm[k1] = rO[k1];
       for (k2=0; k2 < 3; k2++)
-	CHROMall[which].R[k1][k2] = R[k1][k2];
+	amyloids[which].R[k1][k2] = R[k1][k2];
     }
-#ifdef AMYLOID_ELEC
-  /* ============ */
-  for (i=0; i < nat; i++)
-    {
-      xp[0] = CHROMchain[i].x;
-      xp[1] = CHROMchain[i].y;
-      xp[2] = CHROMchain[i].z;
-      
-      //printf("1)chain %f %f %f\n", CHROMchain[i].x, CHROMchain[i].y, CHROMchain[i].z);
-      //printf("chain %f %f %f\n", CHROMchain[i].x, CHROMchain[i].y, CHROMchain[i].z);
-      body2lab(xp, xl, rO, R);
-      //printf("2)chain %f %f %f\n", CHROMchain[i].x, CHROMchain[i].y, CHROMchain[i].z);
-
-      CHROMs[which][i].x = xl[0];
-      CHROMs[which][i].y = xl[1];
-      CHROMs[which][i].z = xl[2];
-      CHROMs[which][i].atype = CHROMchain[i].atype;
-#ifdef DEBUG
-      fprintf(fd,"%f %f %f @ %f C[yellow]\n", xl[0], xl[1], xl[2], 0.1);
-#endif
-      CHROMs[which][i].rad = CHROMchain[i].rad;
-    }
-#endif
-#ifdef DEBUG
-  fclose(fd);
-#endif
 }
 /* ============================ >>> ranf <<< =============================== */
 double ranf_vb(void)
