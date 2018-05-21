@@ -484,11 +484,88 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 }
 void saveAmyloidPovray(amyloidS amy, char *fname)
 {
-  FILE *f;
+  double L=100;
+  FILE *f, *fs;
   int i, jj, kk, k1, k2, k3;
   double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
   f = fopen(fname, "w+");
-
+  fs=f;  
+  /* povray preamble */
+  fprintf(fs, "#declare RAD = off;\n");
+  fprintf(fs, "#declare DIFF=0.475;\n");
+  fprintf(fs, "#declare AMB=0.475;\n");
+  fprintf(fs, "#declare REFL=0.025;\n");
+  fprintf(fs, "#declare TRAN=0.0;\n");
+  fprintf(fs, "#declare ROUGH=0.001;\n");
+  fprintf(fs,"#declare SPEC=0.0;\n");
+  fprintf(fs,"#declare PHONG=1;\n");
+  fprintf(fs,"#declare PHONG_SIZE=10;\n");
+  fprintf(fs,"#include \"colors.inc\"\n");
+  fprintf(fs,"#include \"textures.inc\"\n");
+  fprintf(fs,"#include \"stones.inc\"\n");
+  fprintf(fs,"#include \"golds.inc\"\n");
+  fprintf(fs,"global_settings {\n");
+  fprintf(fs,"#if (RAD)\n");
+  fprintf(fs,"radiosity {\n");
+  fprintf(fs,"pretrace_start 0.08\n");
+  fprintf(fs,"pretrace_end 0.01\n");
+  fprintf(fs,"count 500\n");
+  fprintf(fs,"nearest_count 10\n");
+  fprintf(fs,"error_bound 0.02\n");
+  fprintf(fs,"recursion_limit 1\n");
+  fprintf(fs,"low_error_factor 0.2\n");
+  fprintf(fs,"gray_threshold 0.0\n");	
+  fprintf(fs,"minimum_reuse 0.015\n");
+  fprintf(fs, "brightness 0.6\n");
+  fprintf(fs, "adc_bailout 0.01/2\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "#end\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "background{White}\n");
+  fprintf(fs, "camera {\n");	
+  fprintf(fs, "angle %f\n", 30.0);
+  fprintf(fs, "location <%f,%f,%f>\n", 2.5*L, 2.0*L, -5.2*L);
+  fprintf(fs, "look_at <0,0,0>\n");
+  fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
+  fprintf(fs, "//aperture 0.4\n");
+  fprintf(fs, "//blur_samples 20\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "#if(1)\n");
+  fprintf(fs, "// spotlight light source\n");
+  fprintf(fs, "light_source {\n");
+  fprintf(fs, "//<0, 10, -3>\n");
+  fprintf(fs, "<%f, %f, %f>\n", 10.0*L, 10.0*L, -10.0*L);
+  fprintf(fs, "color White\n");
+  fprintf(fs, "spotlight\n");
+  fprintf(fs, "radius 15\n");
+  fprintf(fs, "falloff 20\n");
+  fprintf(fs, "tightness 10\n");
+  fprintf(fs, "point_at <0, 0, 0>\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "#else\n");
+  fprintf(fs, "//point light source\n");
+  fprintf(fs, "light_source { <10, 20, -10> color White }\n");
+  fprintf(fs, "#end\n");	
+#if 0
+  fprintf(fs,"#include \"shapes.inc\"\n");
+  fprintf(fs,"object {\n");
+  // Wire_Box(A, B, WireRadius, Merge)
+#ifdef MD_LXYZ
+  fprintf(fs,"Wire_Box(<%f,%f,%f>,<%f,%f,%f>, %f, 0",-L[0]*0.5,-L[1]*0.5,-L[2]*0.5,L[0]*0.5,L[1]*0.5,L[2]*0.5,
+	  OprogStatus.povboxthickness);
+#else
+  fprintf(fs,"Wire_Box(<%f,%f,%f>,<%f,%f,%f>, %f, 0",-L*0.5,-L*0.5,-L*0.5,L*0.5,L*0.5,L*0.5,
+	  OprogStatus.povboxthickness);
+#endif
+  fprintf(fs,"texture{");
+  fprintf(fs,"pigment{ color rgb<0,0,0>}");
+  // fprintf(fs,"finish {  phong 1}\n");
+  fprintf(fs,"}\n"); // end of texture
+  fprintf(fs,"scale<1,1,1>\n");
+  fprintf(fs,"  rotate<0,0,0>\n");
+  fprintf(fs,"  translate<0,0,0>");
+  fprintf(fs," } //---------------------------------\n");
+#endif
   for (jj=0; jj < amy.nL; jj++)
     {
       body2lab(amy.boxes[jj].x,xbox,amy.rcm,amy.R);
@@ -1457,6 +1534,9 @@ int main(int argc, char**argv)
   cc=0;
   
   build_amyloid(nL);
+
+  saveAmyloidPovray(amyloids[0],"amyfibr.pov");
+  exit(-1);
   L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], amyloids[0].boxsax[2]);
