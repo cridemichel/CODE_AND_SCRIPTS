@@ -9,6 +9,19 @@
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
+void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
 void print_matrix(double M[3][3])
 {
   int k1, k2;
@@ -493,25 +506,13 @@ double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3
 
 /* cylinder overlap routines here */
 double diamHC=2.0, lengthHC=2.0;
-void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
-{
-  int k1, k2;
-  for (k1=0; k1 < 3; k1++)
-    {
-      x[k1] = 0;
-      for (k2=0; k2 < 3; k2++)
-	{
-	  x[k1] += R[k2][k1]*xp[k2];
-       	} 
-      x[k1] += rO[k1];
-    }
-}
+
 void saveAmyloidPovray(amyloidS amy, char *fname)
 {
   double L=10;
   FILE *f, *fs;
   int i, jj, kk, k1, k2, k3;
-  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], x1p[3], x2p[3], x1pp[3], x2pp[3], xbox[3];
   f = fopen(fname, "w+");
   fs=f;  
   /* povray preamble */
@@ -548,7 +549,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs, "background{White}\n");
   fprintf(fs, "camera {\n");	
   fprintf(fs, "angle %f\n", 30.0);
-  fprintf(fs, "location <%f,%f,%f>\n", 2.5*L, 2.0*L, -5.2*L);
+  fprintf(fs, "location <%f,%f,%f>\n", 25*L, 20*L, -52*L);
   fprintf(fs, "look_at <0,0,0>\n");
   fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
   fprintf(fs, "//aperture 0.4\n");
@@ -558,7 +559,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs, "// spotlight light source\n");
   fprintf(fs, "light_source {\n");
   fprintf(fs, "//<0, 10, -3>\n");
-  fprintf(fs, "<%f, %f, %f>\n", 10.0*L, 10.0*L, -10.0*L);
+  fprintf(fs, "<%f, %f, %f>\n", 20.0*L, 20.0*L, -20.0*L);
   fprintf(fs, "color White\n");
   fprintf(fs, "spotlight\n");
   fprintf(fs, "radius 15\n");
@@ -611,28 +612,33 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
       //print_matrix(R);
       fprintf(f,"box\n");	
       fprintf(f,"{\n");
-      for (kk=0; kk < 3; kk++)
-	{
-  	  ux[kk]=R[kk][0];
-	  uy[kk]=R[kk][1];
-	  uz[kk]=R[kk][2];
-	}
+#if 0
       printf("ux=%f %f %f\n", ux[0], ux[1], ux[2]);
       printf("uy=%f %f %f\n", uy[0], uy[1], uy[2]);
       printf("uz=%f %f %f\n", uz[0], uz[1], uz[2]);
       printf("xbox %f %f %f\n", xbox[0], xbox[1], xbox[2]);
+#endif
       for (kk=0; kk < 3; kk++)
 	{
-	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
-	  x2[kk] = xbox[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
+	  x1p[kk] = amy.boxes[jj].sax[kk];
+	  x2p[kk] = -amy.boxes[jj].sax[kk];
+	}	  
+      //body2lab(x1p, x1, xbox, R);
+      //body2lab(x2p, x2, xbox, R);
+#if 0
+      for (kk=0; kk < 3; kk++)
+	{
+	  x1[kk] = ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
+	  x2[kk] = -ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
 	}
-      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>\n",x1[0],x1[1],x1[2], x2[0],x2[1],x2[2]);
-      fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }\n");
-      //pigment { Green transmit 0.7 }
-      fprintf(f,"rotate <0,0,90>\n");
-      //fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
-	//      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
-      fprintf(f,"translate <%.15G, %.15G, %.15G>", xbox[0], xbox[1], xbox[2]);
+#endif
+      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>\n",x1p[0],x1p[1],x1p[2], x2p[0],x2p[1],x2p[2]);
+      //fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }\n");
+      fprintf(f,"pigment { Red transmit 0.0 }\n");
+      //fprintf(f,"rotate <0,0,90>\n");
+      fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+	      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
+      fprintf(f,"translate <%.15G, %.15G, %.15G>\n", xbox[0], xbox[1], xbox[2]);
       fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL\n"); 
       fprintf(f,"ambient AMB diffuse DIFF\n");
       fprintf(f,"specular SPEC roughness ROUGH}\n");
