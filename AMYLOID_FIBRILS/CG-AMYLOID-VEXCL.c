@@ -673,12 +673,14 @@ double calcDistAmyloid()
     }
 
   for (iA=0; iA < amyloids[0].nL; iA++)
-    for (iB=0; iB < amyloids[0].nL; iB++)
+    for (iB=0; iB < amyloids[1].nL; iB++)
       {
 
 	if (calcDistBox(amyloids[0].boxesLab[iA].x,amyloids[0].boxes[iA].sax,amyloids[0].boxesLab[iA].R,
 		        amyloids[1].boxesLab[iB].x,amyloids[1].boxes[iB].sax,amyloids[1].boxesLab[iB].R) < 0.0)
-	  return -1;
+	  {
+	    return -1;
+	  }
       }
   return 1;
 }
