@@ -298,197 +298,7 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
-
-
-/* cylinder overlap routines here */
-double diamHC=2.0, lengthHC=2.0;
-void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
-{
-  int k1, k2;
-  for (k1=0; k1 < 3; k1++)
-    {
-      x[k1] = 0;
-      for (k2=0; k2 < 3; k2++)
-	{
-	  x[k1] += R[k2][k1]*xp[k2];
-       	} 
-      x[k1] += rO[k1];
-    }
-}
-void saveAmyloidPovray(amyloidS amy, char *fname)
-{
-  FILE *f;
-  int i, jj, kk, k1, k2, k3;
-  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
-  f = fopen(fname, "w+");
-
-  for (jj=0; jj < amy.nL; jj++)
-    {
-      body2lab(amy.boxes[jj].x,xbox,amy.rcm,amy.R);
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  for (k2 = 0; k2 < 3; k2++)
-	    {
-	      R[k1][k2] = 0.0;//R[i][k1][k2];
-	      for (k3 = 0; k3 < 3; k3++)
-		{
-		  /* matrix multiplication: riga * colonna */
-		  R[k1][k2] += amy.boxes[jj].R[k1][k3]*amy.R[k3][k2];
-		}  
-	    }
-	}
-
-      fprintf(f,"box\n");	
-      fprintf(f,"{\n");
-      for (kk=0; kk < 3; kk++)
-	{
-  	  ux[kk]=R[kk][0];
-	  uy[kk]=R[kk][1];
-	  uz[kk]=R[kk][2];
-	}
-
-      for (kk=0; kk < 3; kk++)
-	{
-	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
-	  x2[kk] = xbox[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
-	}
-      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x1[2], x2[0],x2[1],x2[2]);
-      fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }");
-      //pigment { Green transmit 0.7 }
-      fprintf(f,"rotate <0,0,90>");
-      //fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
-	//      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
-      fprintf(f,"translate <%.15G, %.15G, %.15G>", xbox[0], xbox[1], xbox[2]);
-      fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL"); 
-      fprintf(f,"ambient AMB diffuse DIFF");
-      fprintf(f,"specular SPEC roughness ROUGH}");
-    }
-  fclose(f);
-}
-double calcDistAmyloid()
-{
-  int iA, iB, k1, k2, k3, jj;
-  
-  /* calc orientation matrix and position of boxes in the laboratory frame */
-
-  for (jj=0; jj < amyloids[0].nL; jj++)
-    {
-      body2lab(amyloids[0].boxes[jj].x,amyloids[0].boxesLab[jj].x,amyloids[0].rcm,amyloids[0].R);
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  for (k2 = 0; k2 < 3; k2++)
-	    {
-	      amyloids[0].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
-	      for (k3 = 0; k3 < 3; k3++)
-		{
-		  /* matrix multiplication: riga * colonna */
-		  amyloids[0].boxesLab[jj].R[k1][k2] += amyloids[0].boxes[jj].R[k1][k3]*amyloids[0].R[k3][k2];
-		}  
-	    }
-	}
-    }
-  for (jj=0; jj < amyloids[1].nL; jj++)
-    {
-      body2lab(amyloids[1].boxes[jj].x,amyloids[1].boxesLab[jj].x,amyloids[1].rcm,amyloids[1].R);
-      for (k1 = 0; k1 < 3; k1++)
-	{
-	  for (k2 = 0; k2 < 3; k2++)
-	    {
-	      amyloids[1].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
-	      for (k3 = 0; k3 < 3; k3++)
-		{
-		  /* matrix multiplication: riga * colonna */
-		  amyloids[1].boxesLab[jj].R[k1][k2] += amyloids[1].boxes[jj].R[k1][k3]*amyloids[1].R[k3][k2];
-		}  
-	    }
-	}
-    }
-
-  for (iA=0; iA < amyloids[0].nL; iA++)
-    for (iB=0; iB < amyloids[0].nL; iB++)
-      {
-
-	if (calcDistBox(amyloids[0].boxesLab[iA].x,amyloids[0].boxes[iA].sax,amyloids[0].boxesLab[iA].R,
-		        amyloids[1].boxesLab[iB].x,amyloids[1].boxes[iB].sax,amyloids[1].boxesLab[iB].R) < 0.0)
-	  return -1
-      }
-  return 1;
-}
-
-
-/* ------------------------------- */
-static int iminarg1,iminarg2;
-#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
-        (iminarg1) : (iminarg2))
-#define MAXBIT 30 
-#define MAXDIM 6
-void sobseq(int *n, double x[])
-/*When n is negative, internally initializes a set of MAXBIT direction numbers for each of MAXDIM different Sobol’ sequences. When n is positive (but ≤MAXDIM), returns as the vector x[1..n] the next values from n of these sequences. (n must not be changed between initializations.)*/
-{
-  int j,k,l;
-  unsigned long i,im,ipp;
-  static double fac;
-  static unsigned long in,ix[MAXDIM+1],*iu[MAXBIT+1];
-  static unsigned long mdeg[MAXDIM+1]={0,1,2,3,3,4,4};
-  static unsigned long ip[MAXDIM+1]={0,0,1,1,2,1,4}; 
-  static unsigned long iv[MAXDIM*MAXBIT+1]={0,1,1,1,1,1,1,3,1,3,3,1,1,5,7,7,3,3,5,15,11,5,15,13,9};
-  if (*n < 0) 
-    { 
-      /*Initialize, don’t return a vector. */
-      for (k=1;k<=MAXDIM;k++) ix[k]=0;
-      in=0;
-      if (iv[1] != 1) return;
-      fac=1.0/(1L << MAXBIT);
-      for (j=1,k=0;j<=MAXBIT;j++,k+=MAXDIM) 
-	iu[j] = &iv[k];/* To allow both 1D and 2D addressing.*/
-      for (k=1;k<=MAXDIM;k++) 
-	{
-	  for (j=1;j<=mdeg[k];j++)
-	    iu[j][k] <<= (MAXBIT-j); /*Stored values only require normalization.*/
-	  for (j=mdeg[k]+1;j<=MAXBIT;j++) 
-	    {
-	      ipp=ip[k]; i=iu[j-mdeg[k]][k];
-	      i ^= (i >> mdeg[k]);
-	      for (l=mdeg[k]-1;l>=1;l--) 
-		{
-		  if (ipp & 1) i ^= iu[j-l][k];
-		  ipp >>= 1; 
-		}
-	      iu[j][k]=i;
-	    }
-	}
-    } 
-  else 
-    {
-      im=in++;
-      for (j=1;j<=MAXBIT;j++) {
-	if (!(im & 1)) break;
-	im >>= 1; }
-      if (j > MAXBIT) {
-	printf("MAXBIT too small in sobseq");
-	exit(-1);
-      } 
-      im=(j-1)*MAXDIM;
-      for (k=1;k<=IMIN(*n,MAXDIM);k++)
-	{
-	  ix[k] ^= iv[im+k]; 
-	  x[k]=ix[k]*fac;
-	}
-      /*XOR the appropriate direction num- ber into each component of the vector and convert to a floating number.
-       */
-    }
-}
-
-//#define NO_INTERP
-
-char dummy1[32], dummy2[32], atname[32], nbname[8];
-int nat, atnum, nbnum, len;
-long long int tot_trials, tt=0, ttini=0;
-double gamma1, gamma2, L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
-const double thetapts=100000;
-int type;
-
-double calcDistBox(double rcmB[3], double saxA[3], double RA[3][3],double rcmB[3], double saxB[3], double RB[3][3])
+double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3], double saxB[3], double RB[3][3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
   double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
@@ -656,6 +466,196 @@ double calcDistBox(double rcmB[3], double saxA[3], double RA[3][3],double rcmB[3
 
   return -1.0;
 }
+
+/* cylinder overlap routines here */
+double diamHC=2.0, lengthHC=2.0;
+void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
+void saveAmyloidPovray(amyloidS amy, char *fname)
+{
+  FILE *f;
+  int i, jj, kk, k1, k2, k3;
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
+  f = fopen(fname, "w+");
+
+  for (jj=0; jj < amy.nL; jj++)
+    {
+      body2lab(amy.boxes[jj].x,xbox,amy.rcm,amy.R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  R[k1][k2] += amy.boxes[jj].R[k1][k3]*amy.R[k3][k2];
+		}  
+	    }
+	}
+
+      fprintf(f,"box\n");	
+      fprintf(f,"{\n");
+      for (kk=0; kk < 3; kk++)
+	{
+  	  ux[kk]=R[kk][0];
+	  uy[kk]=R[kk][1];
+	  uz[kk]=R[kk][2];
+	}
+
+      for (kk=0; kk < 3; kk++)
+	{
+	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
+	  x2[kk] = xbox[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
+	}
+      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x1[2], x2[0],x2[1],x2[2]);
+      fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }");
+      //pigment { Green transmit 0.7 }
+      fprintf(f,"rotate <0,0,90>");
+      //fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+	//      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
+      fprintf(f,"translate <%.15G, %.15G, %.15G>", xbox[0], xbox[1], xbox[2]);
+      fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL"); 
+      fprintf(f,"ambient AMB diffuse DIFF");
+      fprintf(f,"specular SPEC roughness ROUGH}");
+    }
+  fclose(f);
+}
+double calcDistAmyloid()
+{
+  int iA, iB, k1, k2, k3, jj;
+  
+  /* calc orientation matrix and position of boxes in the laboratory frame */
+
+  for (jj=0; jj < amyloids[0].nL; jj++)
+    {
+      body2lab(amyloids[0].boxes[jj].x,amyloids[0].boxesLab[jj].x,amyloids[0].rcm,amyloids[0].R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      amyloids[0].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  amyloids[0].boxesLab[jj].R[k1][k2] += amyloids[0].boxes[jj].R[k1][k3]*amyloids[0].R[k3][k2];
+		}  
+	    }
+	}
+    }
+  for (jj=0; jj < amyloids[1].nL; jj++)
+    {
+      body2lab(amyloids[1].boxes[jj].x,amyloids[1].boxesLab[jj].x,amyloids[1].rcm,amyloids[1].R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      amyloids[1].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  amyloids[1].boxesLab[jj].R[k1][k2] += amyloids[1].boxes[jj].R[k1][k3]*amyloids[1].R[k3][k2];
+		}  
+	    }
+	}
+    }
+
+  for (iA=0; iA < amyloids[0].nL; iA++)
+    for (iB=0; iB < amyloids[0].nL; iB++)
+      {
+
+	if (calcDistBox(amyloids[0].boxesLab[iA].x,amyloids[0].boxes[iA].sax,amyloids[0].boxesLab[iA].R,
+		        amyloids[1].boxesLab[iB].x,amyloids[1].boxes[iB].sax,amyloids[1].boxesLab[iB].R) < 0.0)
+	  return -1;
+      }
+  return 1;
+}
+
+
+/* ------------------------------- */
+static int iminarg1,iminarg2;
+#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))
+#define MAXBIT 30 
+#define MAXDIM 6
+void sobseq(int *n, double x[])
+/*When n is negative, internally initializes a set of MAXBIT direction numbers for each of MAXDIM different Sobol’ sequences. When n is positive (but ≤MAXDIM), returns as the vector x[1..n] the next values from n of these sequences. (n must not be changed between initializations.)*/
+{
+  int j,k,l;
+  unsigned long i,im,ipp;
+  static double fac;
+  static unsigned long in,ix[MAXDIM+1],*iu[MAXBIT+1];
+  static unsigned long mdeg[MAXDIM+1]={0,1,2,3,3,4,4};
+  static unsigned long ip[MAXDIM+1]={0,0,1,1,2,1,4}; 
+  static unsigned long iv[MAXDIM*MAXBIT+1]={0,1,1,1,1,1,1,3,1,3,3,1,1,5,7,7,3,3,5,15,11,5,15,13,9};
+  if (*n < 0) 
+    { 
+      /*Initialize, don’t return a vector. */
+      for (k=1;k<=MAXDIM;k++) ix[k]=0;
+      in=0;
+      if (iv[1] != 1) return;
+      fac=1.0/(1L << MAXBIT);
+      for (j=1,k=0;j<=MAXBIT;j++,k+=MAXDIM) 
+	iu[j] = &iv[k];/* To allow both 1D and 2D addressing.*/
+      for (k=1;k<=MAXDIM;k++) 
+	{
+	  for (j=1;j<=mdeg[k];j++)
+	    iu[j][k] <<= (MAXBIT-j); /*Stored values only require normalization.*/
+	  for (j=mdeg[k]+1;j<=MAXBIT;j++) 
+	    {
+	      ipp=ip[k]; i=iu[j-mdeg[k]][k];
+	      i ^= (i >> mdeg[k]);
+	      for (l=mdeg[k]-1;l>=1;l--) 
+		{
+		  if (ipp & 1) i ^= iu[j-l][k];
+		  ipp >>= 1; 
+		}
+	      iu[j][k]=i;
+	    }
+	}
+    } 
+  else 
+    {
+      im=in++;
+      for (j=1;j<=MAXBIT;j++) {
+	if (!(im & 1)) break;
+	im >>= 1; }
+      if (j > MAXBIT) {
+	printf("MAXBIT too small in sobseq");
+	exit(-1);
+      } 
+      im=(j-1)*MAXDIM;
+      for (k=1;k<=IMIN(*n,MAXDIM);k++)
+	{
+	  ix[k] ^= iv[im+k]; 
+	  x[k]=ix[k]*fac;
+	}
+      /*XOR the appropriate direction num- ber into each component of the vector and convert to a floating number.
+       */
+    }
+}
+
+//#define NO_INTERP
+
+char dummy1[32], dummy2[32], atname[32], nbname[8];
+int nat, atnum, nbnum, len;
+long long int tot_trials, tt=0, ttini=0;
+double gamma1, gamma2, L, rx, ry, rz, alpha, dfons_sinth_max, fons_sinth_max;
+const double thetapts=100000;
+int type;
+
+
 //#define ALBERTA
 char fn[1024];
 #define MC_BENT_DBLCYL
@@ -1133,7 +1133,7 @@ double max2(double a, double b)
   else 
     return b;
 }
-#if 1
+#if 0
 double epsrtbl[21][2]={{0,87.740},{5,85.763},{10,83.832},{15,81.946},{20,80.103},{25,78.304},{30,76.546},{35,74.828},{40,73.151},{45,71.512},{50,69.910},{55,68.345},{60,66.815},{65,65.319},{70,63.857},{75,62.427},{80,61.027},{85,59.659},{90,58.319},{95,57.007},{100,55.720}};
 double epsr(double T)
 {
