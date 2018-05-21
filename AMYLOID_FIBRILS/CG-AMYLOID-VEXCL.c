@@ -222,13 +222,13 @@ void build_amyloid(int nL)
 
   for (i=0; i < 2; i++)
     {
-      amyloids[i].nD=6;
+      amyloids[i].nD=2; /* la larghezza del foglietto (perpendicolare all'elica) deve essere di 4 nm */
       amyloids[i].nP=652;
-      amyloids[i].npitch=35;
-      amyloids[i].Lbox=2.3;/* altezza lungo l'asse dell'elica del box in nm (qui considero 4 ILQINS stacked 
-			      per ridurre il numero di box totali */ 
-      amyloids[i].Dproto=2.0;
-      amyloids[i].ribthick = 2.0; /* per ora lo spessore del foglietto è di un solo ILQINS quindi circa 2 nm */
+      amyloids[i].npitch=35; /* il pitch di ogni fibra deve essere di 70 nm circa */
+      amyloids[i].Lbox=2.0;/* altezza lungo l'asse dell'elica del box in nm, l'unico vincolo è che sia abbastanza più piccola
+			      del pitch di 70 nm delle fibre */
+      amyloids[i].Dproto=2.0; /* ogni protofilamente ha un diametro di circa 2 nm */
+      amyloids[i].ribthick = 2.0; /* lo spessore del foglietto è di circa 2 nm */
       amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
       amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
       amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
