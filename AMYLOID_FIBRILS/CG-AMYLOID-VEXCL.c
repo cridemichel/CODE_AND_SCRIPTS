@@ -9,6 +9,27 @@
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
+void print_matrix(double M[3][3])
+{
+  int k1, k2;
+  int n=3;
+  printf("{");
+  for (k1 = 0; k1 < n; k1++)
+    {
+      printf("{");
+      for (k2 = 0; k2 < n; k2++)
+	{
+	  printf("%.15G", M[k1][k2]);
+	  if (k2 < n - 1)
+	    printf(", ");
+	}
+      printf("}");
+      if (k1 < n-1)
+	printf(",\n");
+    }
+  printf("}\n");
+}
+
 static double maxarg1,maxarg2;
 double CHROMheight=0.34;
 #ifdef AMYLOID_ELEC
@@ -203,9 +224,11 @@ void build_amyloid(int nL)
       // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
       for (jj=0; jj < amyloids[i].nL; jj++)
 	{
-	  amyloids[i].boxes[jj].x[0]=((double)jj)*dth;
+	  amyloids[i].boxes[jj].x[0]=((double)jj)*amyloids[i].Lbox;
+	  //printf("x=%f\n", amyloids[i].boxes[jj].x[0]);
 	  amyloids[i].boxes[jj].x[1]=0.0;
 	  amyloids[i].boxes[jj].x[2]=0.0;
+	  printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
 	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
 	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
 	  amyloids[i].boxes[jj].sax[2] = amyloids[i].ribthick/2.0;
@@ -218,13 +241,13 @@ void build_amyloid(int nL)
 	  amyloids[i].boxes[jj].R[1][2]=-sin(jj*dth);
 	  amyloids[i].boxes[jj].R[2][0]=0.0;
 	  amyloids[i].boxes[jj].R[2][1]=sin(jj*dth);
-	  amyloids[i].boxes[jj].R[2][2]=-cos(jj*dth);
+	  amyloids[i].boxes[jj].R[2][2]=cos(jj*dth);
 	}
       xcm[0]=xcm[1]=xcm[2]=0.0;
       for (jj=0; jj < amyloids[i].nL; jj++)
 	{
 	  for (kk=0; kk < 3; kk++)
-	    xcm[kk] += amyloids[i].boxes[jj].x[0]; 
+	    xcm[kk] += amyloids[i].boxes[jj].x[kk]; 
 	} 
 
       for (kk=0; kk < 3; kk++)
@@ -485,7 +508,7 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 }
 void saveAmyloidPovray(amyloidS amy, char *fname)
 {
-  double L=100;
+  double L=10;
   FILE *f, *fs;
   int i, jj, kk, k1, k2, k3;
   double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
@@ -570,6 +593,8 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   for (jj=0; jj < amy.nL; jj++)
     {
       body2lab(amy.boxes[jj].x,xbox,amy.rcm,amy.R);
+
+      printf(">>>rcm %f %f %f\n", amy.boxes[jj].x[0],amy.boxes[jj].x[1],amy.boxes[jj].x[2]);
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
@@ -583,6 +608,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 	    }
 	}
 
+      //print_matrix(R);
       fprintf(f,"box\n");	
       fprintf(f,"{\n");
       for (kk=0; kk < 3; kk++)
@@ -592,8 +618,9 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 	  uz[kk]=R[kk][2];
 	}
       printf("ux=%f %f %f\n", ux[0], ux[1], ux[2]);
-      printf("ux=%f %f %f\n", uy[0], uy[1], uy[2]);
-      printf("ux=%f %f %f\n", uz[0], uz[1], uz[2]);
+      printf("uy=%f %f %f\n", uy[0], uy[1], uy[2]);
+      printf("uz=%f %f %f\n", uz[0], uz[1], uz[2]);
+      printf("xbox %f %f %f\n", xbox[0], xbox[1], xbox[2]);
       for (kk=0; kk < 3; kk++)
 	{
 	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
@@ -805,25 +832,6 @@ void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3],
      Rout[k1][k2] = Ro[k1][k2]; 
 }
 #endif
-void print_matrix(double M[3][3], int n)
-{
-  int k1, k2;
-  printf("{");
-  for (k1 = 0; k1 < n; k1++)
-    {
-      printf("{");
-      for (k2 = 0; k2 < n; k2++)
-	{
-	  printf("%.15G", M[k1][k2]);
-	  if (k2 < n - 1)
-	    printf(", ");
-	}
-      printf("}");
-      if (k1 < n-1)
-	printf(",\n");
-    }
-  printf("}\n");
-}
 void versor_to_R_sym(double ox, double oy, double oz, double R[3][3])
 {
   int k;
@@ -877,11 +885,6 @@ void versor_to_R_sym(double ox, double oy, double oz, double R[3][3])
     R[k1][k2]=Rt[k1][k2];
 #endif
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
-#ifdef DEBUG
-  printf("==============\n");
-  print_matrix(R, 3);
-  printf("==============\n");
-#endif
 }
 
 void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
@@ -949,11 +952,6 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
     R[k1][k2]=Rt[k1][k2];
 #endif
   //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
-#ifdef DEBUG
-  printf("==============\n");
-  print_matrix(R, 3);
-  printf("==============\n");
-#endif
 }
 double RMDNA[2][3][3];
 void place_AMYLOID(double x, double y, double z, double ux, double uy, double uz, int which, double gamma)
@@ -1542,12 +1540,12 @@ int main(int argc, char**argv)
   L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
   for (kk=0; kk < 2; kk++)
     {
-      amyloids[kk].R[1][0]=1.0;
-      amyloids[kk].R[1][1]=0.0;
+      amyloids[kk].R[0][0]=1.0;
+      amyloids[kk].R[0][1]=0.0;
+      amyloids[kk].R[0][2]=0.0;
+      amyloids[kk].R[1][0]=0.0;
+      amyloids[kk].R[1][1]=1.0;
       amyloids[kk].R[1][2]=0.0;
-      amyloids[kk].R[2][0]=0.0;
-      amyloids[kk].R[2][1]=1.0;
-      amyloids[kk].R[2][2]=0.0;
       amyloids[kk].R[2][0]=0.0;
       amyloids[kk].R[2][1]=0.0;
       amyloids[kk].R[2][2]=1.0;
