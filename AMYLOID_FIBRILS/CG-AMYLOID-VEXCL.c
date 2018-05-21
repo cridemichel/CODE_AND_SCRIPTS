@@ -241,7 +241,7 @@ void build_amyloid(int nL)
 	  //printf("x=%f\n", amyloids[i].boxes[jj].x[0]);
 	  amyloids[i].boxes[jj].x[1]=0.0;
 	  amyloids[i].boxes[jj].x[2]=0.0;
-	  printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
+	  //printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
 	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
 	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
 	  amyloids[i].boxes[jj].sax[2] = amyloids[i].ribthick/2.0;
@@ -1746,9 +1746,11 @@ int main(int argc, char**argv)
 		}
 	    }
 	  place_AMYLOID(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
+#if 0
 	  saveAmyloidPovray(amyloids[0],"amyfibr0.pov");
 	  saveAmyloidPovray(amyloids[1],"amyfibr1.pov");
 	  exit(-1);
+#endif
 	  //place_AMYLOID(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
 #ifdef DEBUG
 	  exit(-1);
