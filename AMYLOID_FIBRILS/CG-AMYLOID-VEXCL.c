@@ -596,16 +596,17 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
 	  x2[kk] = xbox[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
 	}
-      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x1[2], x2[0],x2[1],x2[2]);
-      fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }");
+      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>\n",x1[0],x1[1],x1[2], x2[0],x2[1],x2[2]);
+      fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }\n");
       //pigment { Green transmit 0.7 }
-      fprintf(f,"rotate <0,0,90>");
+      fprintf(f,"rotate <0,0,90>\n");
       //fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
 	//      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
       fprintf(f,"translate <%.15G, %.15G, %.15G>", xbox[0], xbox[1], xbox[2]);
-      fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL"); 
-      fprintf(f,"ambient AMB diffuse DIFF");
-      fprintf(f,"specular SPEC roughness ROUGH}");
+      fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL\n"); 
+      fprintf(f,"ambient AMB diffuse DIFF\n");
+      fprintf(f,"specular SPEC roughness ROUGH}\n");
+      fprintf(f, "}\n");
     }
   fclose(f);
 }
@@ -1252,7 +1253,7 @@ int main(int argc, char**argv)
 #endif
   double Lx, Ly, Lz;
   FILE *fin, *fout, *f, *fread;
-  int ncontrib, cc, k, i, j, overlap, contrib, cont=0, nfrarg;
+  int ncontrib, cc, k, i, j, overlap, contrib, cont=0, nfrarg, kk;
   long long int fileoutits, outits;
   char fnin[1024],fnout[256];
   double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
@@ -1535,9 +1536,24 @@ int main(int argc, char**argv)
   
   build_amyloid(nL);
 
+  L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
+  for (kk=0; kk < 2; kk++)
+    {
+      amyloids[kk].R[1][0]=1.0;
+      amyloids[kk].R[1][1]=0.0;
+      amyloids[kk].R[1][2]=0.0;
+      amyloids[kk].R[2][0]=0.0;
+      amyloids[kk].R[2][1]=1.0;
+      amyloids[kk].R[2][2]=0.0;
+      amyloids[kk].R[2][0]=0.0;
+      amyloids[kk].R[2][1]=0.0;
+      amyloids[kk].R[2][2]=1.0;
+      amyloids[kk].rcm[0] = 0.0;
+      amyloids[kk].rcm[1] = 0.0;
+      amyloids[kk].rcm[2] = 0.0;
+    }
   saveAmyloidPovray(amyloids[0],"amyfibr.pov");
   exit(-1);
-  L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], amyloids[0].boxsax[2]);
 #if 1
