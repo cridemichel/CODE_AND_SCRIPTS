@@ -1113,53 +1113,7 @@ double estimate_maximum_dfons(double alpha)
   // printf("maxval=%f\n", maxval);
   return maxval;
 }
-void init_distbox(void)
-{
-  int i, k;
-  double max_x, max_y, max_z, distx, disty, distz;
-  max_x = 0.5*lengthHC;
-  //printf("max_x=%f len=%f\n", max_x, lengthHC);
-  max_y = 0.5*diamHC;
-  max_z = 0.5*diamHC;
-#ifdef AMYLOID_ELEC
-  /* maximum distance to z-axis */
-  for (i=0; i < nat; i++)
-    {
-	distx = fabs(CHROMchain[i].x) + CHROMchain[i].rad;
-	disty = fabs(CHROMchain[i].y) + CHROMchain[i].rad;
-	distz = fabs(CHROMchain[i].z) + CHROMchain[i].rad;
-#ifdef PARALLEL
-      if (numtemps > 1 || numconcs > 1)
-	{
-	  yukcutkD = maxyukcutkD;
-	}
-#endif
-      if (yukcutkD*0.5 > CHROMchain[i].rad)
-	{
-	  distx = fabs(CHROMchain[i].x) + yukcutkD*0.5;
-	  disty = fabs(CHROMchain[i].y) + yukcutkD*0.5;
-	  distz = fabs(CHROMchain[i].z) + yukcutkD*0.5;
-	}
-      if (distx > max_x)
-	max_x = distx;
-      if (disty > max_y)
-	max_y = disty;
-      if (distz > max_z)
-	max_z = distz;
-    }
-#endif 
-  //printf("maxax=%f %f %f\n", max_x, max_y, max_z);
-  for (k=0; k < 2; k++)
-    {
-      CHROMall[k].sax[0] = lengthHC*0.5;
-      CHROMall[k].sax[1] = diamHC*0.5;
-      CHROMall[k].sax[2] = diamHC*0.5;
-      CHROMall[k].boxsax[0] = max_x;
-      CHROMall[k].boxsax[1] = max_y;
-      CHROMall[k].boxsax[2] = max_z;
-    }
-  //printf("maxx=%f %f\n",CHROMall[0].sax[0],CHROMall[0].sax[1]);
-}
+
 double max3(double a, double b, double c)
 {
   double m;
@@ -1199,34 +1153,10 @@ double epsr(double T)
     }
 }
 #endif
-#ifdef AMYLOID_ELEC
-void build_AMYLOID_chain(int nat)
-{
-  int i;
-  double h, h0, dh;
-  h0 = -lengthHC*0.5+CHROMheight/2.0;
-  dh = CHROMheight;
-  h=h0;
-  //printf("nat=%d h0=%f dh=%f\n", nat, h0, dh);
-  for (i=0; i < nat; i+=2)
-    {
-      CHROMchain[i].x = h;
-      CHROMchain[i].y = diamHC*0.5-0.085;
-      CHROMchain[i].z = 0.0;
-      CHROMchain[i].rad = 0.085; /* raggio atomo ossigeno carico negativamente (in nm)*/
-      CHROMchain[i].atype = 1;
-      CHROMchain[i+1].x = h;
-      CHROMchain[i+1].y = -diamHC*0.5+0.085;
-      CHROMchain[i+1].z = 0.0;
-      CHROMchain[i+1].rad = 0.085;
-      CHROMchain[i+1].atype = 1;
-      h += dh;
-    }
-}
-#endif
 int main(int argc, char**argv)
 {
   double aaa;
+  int nL;
 #ifdef QUASIMC
 #ifdef USEGSL
   gsl_qrng *qsob;
@@ -1252,22 +1182,20 @@ int main(int argc, char**argv)
   if (argc < 7)
     {
 #ifdef AMYLOID_ELEC
-      printf("syntax:  CHROM-K11K22K33 <CHROM diam> <CHROM len> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [CHROM concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
+      printf("syntax:  AMYLOID-K11K22K33 <AMYLOID diam> <AMYLOID len> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits] [Temperature (in K)] [CHROM concentration in mg/ml] [yukawa cutoff in units of 1/kD] [epsr_prime (1.0-3.0, default=2 ] [delta_rab0 (default=2) ]\n");
 #else
-      printf("syntax:  CHROM-K11K22K33 <CHROM diam> <CHROM len> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
+      printf("syntax:  AMYLOID-K11K22K33 <AMYLOID diam> <AMYLOID len> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2> <fileoutits> [outits]\n");
 #endif
       exit(1);
     }
   diamHC=atof(argv[1]);
-  lengthHC=atof(argv[2]);
+  nL=atoi(argv[2]);
   alpha = atof(argv[3]);
   tot_trials=atoll(argv[4]);
   type = atoi(argv[5]);
   fileoutits = atoll(argv[6]);
  
-  CHROMheight=0.34; /* in nm */
-  lengthHC *= CHROMheight; 
-  printf("lengthHC=%f\n", lengthHC);
+  printf("length=%d\n", nL);
   if (argc == 7)
     outits=100*fileoutits;
   else
@@ -1482,20 +1410,11 @@ int main(int argc, char**argv)
   printf("yukawa cutoff=%.15G yuk_corr_fact=%.15G\n", yukcutkD, yuk_corr_fact);
 #endif
 #endif
-#ifdef AMYLOID_ELEC
-  nat = 2*(rint(lengthHC/CHROMheight)); /* two negative charges (e-) per SSY molecule */
-  CHROMchain = (struct CHROM*) malloc(sizeof(struct CHROM)*nat);
-  for (k=0; k < 2; k++)
-    CHROMs[k] = (struct CHROM*) malloc(sizeof(struct CHROM)*nat);
-#endif
   cont=0;
 #ifdef AMYLOID_ELEC
   nfrarg = 14;
 #else
   nfrarg = 9;
-#endif
-#ifdef AMYLOID_ELEC
-  build_AMYLOID_chain(nat);
 #endif
   if (argc == nfrarg)
     {
@@ -1535,10 +1454,10 @@ int main(int argc, char**argv)
   /* read the CG structure */
   cc=0;
   
-  init_distbox();
-  L=1.05*2.0*sqrt(Sqr(CHROMall[0].boxsax[0])+Sqr(CHROMall[0].boxsax[1])+Sqr(CHROMall[0].boxsax[2]))*3.0;
+  build_amyloid(nL);
+  L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f\n", CHROMall[0].boxsax[0], CHROMall[0].boxsax[1], CHROMall[0].boxsax[2]);
+  printf("box semiaxes=%f %f %f\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], amyloids[0].boxsax[2]);
 #if 1
   srand48((int)time(NULL));
 #else
