@@ -317,12 +317,12 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 {
   FILE *f;
   int i, jj, kk;
-  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3];
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], xbox[3];
   f = fopen(fname, "w+");
 
   for (jj=0; jj < amy.nL; jj++)
     {
-      body2lab(amyl.boxes[jj].x,amy.boxesLab[jj].x,amy.rcm,amy.R);
+      body2lab(amyl.boxes[jj].x,xbox,amy.rcm,amy.R);
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
@@ -340,22 +340,22 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
       fprintf(f,"{\n");
       for (kk=0; kk < 3; kk++)
 	{
-  	  ux[kk]=amy.boxes[jj].R[kk][0];
-	  uy[kk]=amy.boxes[jj].R[kk][1];
-	  uz[kk]=amy.boxes[jj].R[kk][2];
+  	  ux[kk]=R[kk][0];
+	  uy[kk]=R[kk][1];
+	  uz[kk]=R[kk][2];
 	}
 
       for (kk=0; kk < 3; kk++)
 	{
-	  x1[kk] = amy.boxes[jj].rcm[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
-	  x2[kk] = amy.boxes[jj].rcm[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
+	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
+	  x2[kk] = xbox[kk]-ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
 	}
       fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>",x1[0],x1[1],x[2], x2[0],x2[1],x2[2]);
       fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }");
       //pigment { Green transmit 0.7 }
       fprintf(f,"rotate <0,0,90>");
-      fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
-	      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
+      //fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+	//      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
       fprintf(f,"translate <%.15G, %.15G, %.15G>");
       fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL"); 
       fprintf(f,"ambient AMB diffuse DIFF");
