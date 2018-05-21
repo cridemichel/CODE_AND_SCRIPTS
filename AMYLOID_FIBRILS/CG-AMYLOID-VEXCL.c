@@ -243,8 +243,8 @@ void build_amyloid(int nL)
 	  amyloids[i].boxes[jj].x[2]=0.0;
 	  //printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
 	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
-	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
-	  amyloids[i].boxes[jj].sax[2] = amyloids[i].ribthick/2.0;
+	  amyloids[i].boxes[jj].sax[1] = amyloids[i].ribthick/2.0;
+	  amyloids[i].boxes[jj].sax[2] = amyloids[i].nD*amyloids[i].Dproto/2.0;
 	  /* ...and now set orientation */
 	  amyloids[i].boxes[jj].R[0][0]=1.0;
 	  amyloids[i].boxes[jj].R[0][1]=0.0;
@@ -559,7 +559,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs, "// spotlight light source\n");
   fprintf(fs, "light_source {\n");
   fprintf(fs, "//<0, 10, -3>\n");
-  fprintf(fs, "<%f, %f, %f>\n", 20.0*L, 20.0*L, -20.0*L);
+  fprintf(fs, "<%f, %f, %f>\n", 60.0*L, 60.0*L, -60.0*L);
   fprintf(fs, "color White\n");
   fprintf(fs, "spotlight\n");
   fprintf(fs, "radius 15\n");
@@ -1749,7 +1749,7 @@ int main(int argc, char**argv)
 	    }
 	  place_AMYLOID(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
 #if 1
-	  if (tt==0)
+	  if (tt==1)
 	    {
 	      saveAmyloidPovray(amyloids[0],"amyfibr0.pov");
 	      saveAmyloidPovray(amyloids[1],"amyfibr1.pov");
