@@ -179,15 +179,16 @@ void build_amyloid(int nL)
   int jj, kk, i;
   double xcm[3];
 
+  amyloids[0].nL=nL;
+  amyloids[1].nL=nL;
   amyloids[0].boxes = malloc(sizeof(struct boxS)*amyloids[0].nL);
   amyloids[1].boxes = malloc(sizeof(struct boxS)*amyloids[1].nL);
   amyloids[0].boxesLab = malloc(sizeof(struct boxS)*amyloids[0].nL);
   amyloids[1].boxesLab = malloc(sizeof(struct boxS)*amyloids[1].nL);
 
-  for (i=0; i < 1; i++)
+  for (i=0; i < 2; i++)
     {
       amyloids[i].nD=6;
-      amyloids[i].nL=nL;
       amyloids[i].nP=652;
       amyloids[i].npitch=35;
       amyloids[i].Lbox=2.3;/* altezza lungo l'asse dell'elica del box in nm (qui considero 4 ILQINS stacked 
@@ -209,15 +210,15 @@ void build_amyloid(int nL)
 	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
 	  amyloids[i].boxes[jj].sax[2] = amyloids[i].ribthick/2.0;
 	  /* ...and now set orientation */
-	  amyloids[i].R[0][0]=1.0;
-	  amyloids[i].R[0][1]=0.0;
-	  amyloids[i].R[0][2]=0.0;
-	  amyloids[i].R[1][0]=0.0;
-	  amyloids[i].R[1][1]=cos(jj*dth);
-	  amyloids[i].R[1][2]=-sin(jj*dth);
-	  amyloids[i].R[2][0]=0.0;
-	  amyloids[i].R[2][1]=sin(jj*dth);
-	  amyloids[i].R[2][2]=-cos(jj*dth);
+	  amyloids[i].boxes[jj].R[0][0]=1.0;
+	  amyloids[i].boxes[jj].R[0][1]=0.0;
+	  amyloids[i].boxes[jj].R[0][2]=0.0;
+	  amyloids[i].boxes[jj].R[1][0]=0.0;
+	  amyloids[i].boxes[jj].R[1][1]=cos(jj*dth);
+	  amyloids[i].boxes[jj].R[1][2]=-sin(jj*dth);
+	  amyloids[i].boxes[jj].R[2][0]=0.0;
+	  amyloids[i].boxes[jj].R[2][1]=sin(jj*dth);
+	  amyloids[i].boxes[jj].R[2][2]=-cos(jj*dth);
 	}
       xcm[0]=xcm[1]=xcm[2]=0.0;
       for (jj=0; jj < amyloids[i].nL; jj++)
@@ -578,7 +579,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 		{
 		  /* matrix multiplication: riga * colonna */
 		  R[k1][k2] += amy.boxes[jj].R[k1][k3]*amy.R[k3][k2];
-		}  
+		}
 	    }
 	}
 
@@ -590,7 +591,9 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 	  uy[kk]=R[kk][1];
 	  uz[kk]=R[kk][2];
 	}
-
+      printf("ux=%f %f %f\n", ux[0], ux[1], ux[2]);
+      printf("ux=%f %f %f\n", uy[0], uy[1], uy[2]);
+      printf("ux=%f %f %f\n", uz[0], uz[1], uz[2]);
       for (kk=0; kk < 3; kk++)
 	{
 	  x1[kk] = xbox[kk]+ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
