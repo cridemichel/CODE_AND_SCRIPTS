@@ -223,10 +223,10 @@ void build_amyloid(int nL)
   for (i=0; i < 2; i++)
     {
       amyloids[i].nD=2; /* la larghezza del foglietto (perpendicolare all'elica) deve essere di 4 nm */
-      amyloids[i].nP=652;
-      amyloids[i].npitch=35; /* il pitch di ogni fibra deve essere di 70 nm circa */
       amyloids[i].Lbox=2.0;/* altezza lungo l'asse dell'elica del box in nm, l'unico vincolo è che sia abbastanza più piccola
 			      del pitch di 70 nm delle fibre */
+      amyloids[i].npitch=(int)(70.0/amyloids[i].Lbox); /* il pitch di ogni fibra deve essere di 70 nm circa */
+      amyloids[i].nP=(int)(1980.0/amyloids[i].Lbox); /* persistence length in unità di Lbox */
       amyloids[i].Dproto=2.0; /* ogni protofilamente ha un diametro di circa 2 nm */
       amyloids[i].ribthick = 2.0; /* lo spessore del foglietto è di circa 2 nm */
       amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
@@ -549,7 +549,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs, "background{White}\n");
   fprintf(fs, "camera {\n");	
   fprintf(fs, "angle %f\n", 30.0);
-  fprintf(fs, "location <%f,%f,%f>\n", 25*L, 20*L, -52*L);
+  fprintf(fs, "location <%f,%f,%f>\n", 10*L, 10*L, -20*L);
   fprintf(fs, "look_at <0,0,0>\n");
   fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
   fprintf(fs, "//aperture 0.4\n");
