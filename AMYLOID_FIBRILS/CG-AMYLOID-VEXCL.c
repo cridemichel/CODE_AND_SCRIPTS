@@ -315,25 +315,49 @@ void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 }
 double calcDistAmyloid()
 {
-  int iA, iB;
+  int iA, iB, k1, k2;
   
   /* calc orientation matrix and position of boxes in the laboratory frame */
-
 
   for (jj=0; jj < amyloids[0].nL)
     {
       body2lab(amyloids[0].boxes[jj].x,amyloids[0].boxesLab[jj].x,amyloids[0].rcm,amyloids[0].R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      amyloids[0].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  amyloids[0].boxesLab[jj].R[k1][k2] += amyloids[0].boxes[jj].R[i][k1][k3]*amyloids[0].R[k3][k2];
+		}  
+	    }
+	}
     }
   for (jj=0; jj < amyloids[1].nL)
     {
       body2lab(amyloids[1].boxes[jj].x,amyloids[1].boxesLab[jj].x,amyloids[1].rcm,amyloids[1].R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      amyloids[1].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  amyloids[1].boxesLab[jj].R[k1][k2] += amyloids[1].boxes[jj].R[i][k1][k3]*amyloids[1].R[k3][k2];
+		}  
+	    }
+	}
     }
+
   for (iA=0; iA < amyloids[0].nL; iA++)
     for (iB=0; iB < amyloids[0].nL; iB++)
       {
 
-	if (calcDistBox(amyloids[0].boxesLab[iA].x,amyloids[0].boxesLab[iA].sax,amyloids[0].boxesLab[iA].R,
-		        amyloids[1].boxesLab[iB].x,amyloids[1].boxesLab[iB].sax,amyloids[1].boxesLab[iB].R) < 0.0)
+	if (calcDistBox(amyloids[0].boxesLab[iA].x,amyloids[0].boxes[iA].sax,amyloids[0].boxesLab[iA].R,
+		        amyloids[1].boxesLab[iB].x,amyloids[1].boxes[iB].sax,amyloids[1].boxesLab[iB].R) < 0.0)
 	  return -1
       }
   return 1;
