@@ -1746,10 +1746,12 @@ int main(int argc, char**argv)
 		}
 	    }
 	  place_AMYLOID(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
-#if 0
-	  saveAmyloidPovray(amyloids[0],"amyfibr0.pov");
-	  saveAmyloidPovray(amyloids[1],"amyfibr1.pov");
-	  exit(-1);
+#if 1
+	  if (tt==0)
+	    {
+	      saveAmyloidPovray(amyloids[0],"amyfibr0.pov");
+	      saveAmyloidPovray(amyloids[1],"amyfibr1.pov");
+	    }
 #endif
 	  //place_AMYLOID(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
 #ifdef DEBUG
