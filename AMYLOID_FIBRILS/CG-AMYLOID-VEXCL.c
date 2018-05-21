@@ -512,7 +512,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   double L=10;
   FILE *f, *fs;
   int i, jj, kk, k1, k2, k3;
-  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], x1p[3], x2p[3], x1pp[3], x2pp[3], xbox[3];
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], x1p[3], x2p[3], x1pp[3], x2pp[3], xbox[3], rb[3];
   f = fopen(fname, "w+");
   fs=f;  
   /* povray preamble */
@@ -591,11 +591,14 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs,"  translate<0,0,0>");
   fprintf(fs," } //---------------------------------\n");
 #endif
+
+  rb[0]=rb[1]=rb[2]=0;
+  
   for (jj=0; jj < amy.nL; jj++)
     {
-      body2lab(amy.boxes[jj].x,xbox,amy.rcm,amy.R);
+      body2lab(amy.boxes[jj].x,xbox,rb,amy.R);
 
-      printf(">>>rcm %f %f %f\n", amy.boxes[jj].x[0],amy.boxes[jj].x[1],amy.boxes[jj].x[2]);
+      //printf(">>>rcm %f %f %f\n", amy.boxes[jj].x[0],amy.boxes[jj].x[1],amy.boxes[jj].x[2]);
       for (k1 = 0; k1 < 3; k1++)
 	{
 	  for (k2 = 0; k2 < 3; k2++)
@@ -609,29 +612,13 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
 	    }
 	}
 
-      //print_matrix(R);
       fprintf(f,"box\n");	
       fprintf(f,"{\n");
-#if 0
-      printf("ux=%f %f %f\n", ux[0], ux[1], ux[2]);
-      printf("uy=%f %f %f\n", uy[0], uy[1], uy[2]);
-      printf("uz=%f %f %f\n", uz[0], uz[1], uz[2]);
-      printf("xbox %f %f %f\n", xbox[0], xbox[1], xbox[2]);
-#endif
       for (kk=0; kk < 3; kk++)
 	{
 	  x1p[kk] = amy.boxes[jj].sax[kk];
 	  x2p[kk] = -amy.boxes[jj].sax[kk];
 	}	  
-      //body2lab(x1p, x1, xbox, R);
-      //body2lab(x2p, x2, xbox, R);
-#if 0
-      for (kk=0; kk < 3; kk++)
-	{
-	  x1[kk] = ux[kk]*amy.boxes[jj].sax[0]+uy[kk]*amy.boxes[jj].sax[1]+uz[kk]*amy.boxes[jj].sax[2];
-	  x2[kk] = -ux[kk]*amy.boxes[jj].sax[0]-uy[kk]*amy.boxes[jj].sax[1]-uz[kk]*amy.boxes[jj].sax[2];
-	}
-#endif
       fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>\n",x1p[0],x1p[1],x1p[2], x2p[0],x2p[1],x2p[2]);
       //fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }\n");
       fprintf(f,"pigment { Red transmit 0.0 }\n");
@@ -1559,8 +1546,8 @@ int main(int argc, char**argv)
       amyloids[kk].rcm[1] = 0.0;
       amyloids[kk].rcm[2] = 0.0;
     }
-  saveAmyloidPovray(amyloids[0],"amyfibr.pov");
-  exit(-1);
+  //saveAmyloidPovray(amyloids[0],"amyfibr.pov");
+  //exit(-1);
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], amyloids[0].boxsax[2]);
 #if 1
@@ -1759,6 +1746,9 @@ int main(int argc, char**argv)
 		}
 	    }
 	  place_AMYLOID(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
+	  saveAmyloidPovray(amyloids[0],"amyfibr0.pov");
+	  saveAmyloidPovray(amyloids[1],"amyfibr1.pov");
+	  exit(-1);
 	  //place_AMYLOID(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
 #ifdef DEBUG
 	  exit(-1);
