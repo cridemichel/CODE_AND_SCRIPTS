@@ -691,9 +691,9 @@ void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
       fprintf(f, "}\n");
 #else
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G B %f %f %f C[%s]\n", 
-	   amy.boxes[jj].x[0], amy.boxes[jj].x[1], amy.boxes[jj].x[2], 
+	   xbox[0], xbox[1], xbox[2], 
 	   R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2],
-	   amy.boxes[jj].sax[0], amy.boxes[jj].sax[1], amy.boxes[jj].sax[2], "Red");
+	   amy.boxes[jj].sax[0], amy.boxes[jj].sax[1], amy.boxes[jj].sax[2], "red");
 #endif
     }
 }
