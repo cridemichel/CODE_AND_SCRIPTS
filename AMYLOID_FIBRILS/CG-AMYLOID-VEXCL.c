@@ -1,4 +1,22 @@
 //#include "./G-DNA-k2K22.h"
+/* ====================================== >>> PARAMETRI FIBRILLA  <<< ===================================== */
+
+#define AMY_LBOX_ALONG_AXIS 2.0 /* lunghezza del box lungo l'asse dell'elica della fibrilla 
+				   (questo parametro dipende dal livello di coarse-graining e comunque deve essere 
+				   abbastanza più piccolo del pitch delle fibrille )
+				   */ 
+
+#define AMY_NUM_PROTO 2 // numero di protofilamenti che compongono la fibrilla (2 è la popolazione più abbondante)
+
+#define AMY_D_PROTO 2.0 // diametro del protofilamento (2.0 nm)
+
+#define AMY_RIBBON_THICK 2.0 // spessore del ribbon in nm (2.0 nm)
+
+#define AMY_PITCH 70.0 // pitch della fibrilla in nm 
+
+#define AMY_PERS_LEN 1980 // persistence length in nm
+/* ========================================================================================================== */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -277,13 +295,13 @@ void build_amyloid(int nL)
 
   for (i=0; i < 2; i++)
     {
-      amyloids[i].nD=2; /* la larghezza del foglietto (perpendicolare all'elica) deve essere di 4 nm */
-      amyloids[i].Lbox=2.0;/* altezza lungo l'asse dell'elica del box in nm, l'unico vincolo è che sia abbastanza più piccola
+      amyloids[i].nD=AMY_NUM_PROTO; /* la larghezza del foglietto (perpendicolare all'elica) deve essere di 4 nm */
+      amyloids[i].Lbox=AMY_LBOX_ALONG_AXIS;/* altezza lungo l'asse dell'elica del box in nm, l'unico vincolo è che sia abbastanza più piccola
 			      del pitch di 70 nm delle fibre */
-      amyloids[i].npitch=(int)(70.0/amyloids[i].Lbox); /* il pitch di ogni fibra deve essere di 70 nm circa */
-      amyloids[i].nP=(int)(1980.0/amyloids[i].Lbox); /* persistence length in unità di Lbox */
-      amyloids[i].Dproto=2.0; /* ogni protofilamente ha un diametro di circa 2 nm */
-      amyloids[i].ribthick = 2.0; /* lo spessore del foglietto è di circa 2 nm */
+      amyloids[i].npitch=(int)(AMY_PITCH/amyloids[i].Lbox); /* il pitch di ogni fibra deve essere di 70 nm circa */
+      amyloids[i].nP=(int)(AMY_PERS_LEN/amyloids[i].Lbox); /* persistence length in unità di Lbox */
+      amyloids[i].Dproto=AMY_D_PROTO; /* ogni protofilamente ha un diametro di circa 2 nm */
+      amyloids[i].ribthick = AMY_RIBBON_THICK; /* lo spessore del foglietto è di circa 2 nm */
       amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
       amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
       amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
