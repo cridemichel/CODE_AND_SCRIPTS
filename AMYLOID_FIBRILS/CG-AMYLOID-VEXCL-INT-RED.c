@@ -30,6 +30,146 @@ double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
 #define MNBS 60
 #define TINY 1.0e-30
 #define BIG 1.0e30
+struct boxS {
+  double R[3][3];
+  double x[3];
+  double sax[3];
+};
+
+typedef struct amyloid {
+  double nD; /* spessore della fibra in protofilamenti*/
+  double nL; /* numero di box che costituiscono la fibra */
+  double nP; /* persistence length in numero di boxes */
+  double ribthick; /* profondità box (lungo direzione ortogonale al piano dell'amyloid ribbon) */
+  double npitch;
+  double Lbox;
+  double Dproto; /* diametro del protofilamento  Dproto*nD è la larghezza del box */
+  struct boxS *boxes;
+  struct boxS *boxesLab;
+  double R[3][3];
+  double rcm[3];
+  double boxsax[3];
+} amyloidS;
+
+amyloidS amyloids[2];
+void build_amyloid(int nL)
+{
+  double npitch, dth;
+  int jj, kk, i;
+  double xcm[3];
+
+  amyloids[0].nL=nL;
+  amyloids[1].nL=nL;
+  amyloids[0].boxes = malloc(sizeof(struct boxS)*amyloids[0].nL);
+  amyloids[1].boxes = malloc(sizeof(struct boxS)*amyloids[1].nL);
+  amyloids[0].boxesLab = malloc(sizeof(struct boxS)*amyloids[0].nL);
+  amyloids[1].boxesLab = malloc(sizeof(struct boxS)*amyloids[1].nL);
+
+  for (i=0; i < 2; i++)
+    {
+      amyloids[i].nD=2; /* la larghezza del foglietto (perpendicolare all'elica) deve essere di 4 nm */
+      amyloids[i].Lbox=2.0;/* altezza lungo l'asse dell'elica del box in nm, l'unico vincolo è che sia abbastanza più piccola
+			      del pitch di 70 nm delle fibre */
+      amyloids[i].npitch=(int)(70.0/amyloids[i].Lbox); /* il pitch di ogni fibra deve essere di 70 nm circa */
+      amyloids[i].nP=(int)(1980.0/amyloids[i].Lbox); /* persistence length in unità di Lbox */
+      amyloids[i].Dproto=2.0; /* ogni protofilamente ha un diametro di circa 2 nm */
+      amyloids[i].ribthick = 2.0; /* lo spessore del foglietto è di circa 2 nm */
+      amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
+      amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+      amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+    
+      dth=2.0*M_PI/amyloids[i].npitch;
+      // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
+      for (jj=0; jj < amyloids[i].nL; jj++)
+	{
+	  amyloids[i].boxes[jj].x[0]=((double)jj)*amyloids[i].Lbox;
+	  //printf("x=%f\n", amyloids[i].boxes[jj].x[0]);
+	  amyloids[i].boxes[jj].x[1]=0.0;
+	  amyloids[i].boxes[jj].x[2]=0.0;
+	  //printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
+	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
+	  amyloids[i].boxes[jj].sax[1] = amyloids[i].ribthick/2.0;
+	  amyloids[i].boxes[jj].sax[2] = amyloids[i].nD*amyloids[i].Dproto/2.0;
+	  /* ...and now set orientation */
+	  amyloids[i].boxes[jj].R[0][0]=1.0;
+	  amyloids[i].boxes[jj].R[0][1]=0.0;
+	  amyloids[i].boxes[jj].R[0][2]=0.0;
+	  amyloids[i].boxes[jj].R[1][0]=0.0;
+	  amyloids[i].boxes[jj].R[1][1]=cos(jj*dth);
+	  amyloids[i].boxes[jj].R[1][2]=-sin(jj*dth);
+	  amyloids[i].boxes[jj].R[2][0]=0.0;
+	  amyloids[i].boxes[jj].R[2][1]=sin(jj*dth);
+	  amyloids[i].boxes[jj].R[2][2]=cos(jj*dth);
+	}
+      xcm[0]=xcm[1]=xcm[2]=0.0;
+      for (jj=0; jj < amyloids[i].nL; jj++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    xcm[kk] += amyloids[i].boxes[jj].x[kk]; 
+	} 
+
+      for (kk=0; kk < 3; kk++)
+	xcm[kk] /= amyloids[i].nL;
+      for (jj=0; jj < amyloids[i].nL; jj++)
+	{
+	  for (kk=0; kk < 3; kk++)
+	    amyloids[i].boxes[jj].x[kk] -= xcm[kk];
+    	}   
+    }
+}
+
+
+double calcDistAmyloid(void)
+{
+  int iA, iB, k1, k2, k3, jj;
+  
+  /* calc orientation matrix and position of boxes in the laboratory frame */
+
+  for (jj=0; jj < amyloids[0].nL; jj++)
+    {
+      body2lab(amyloids[0].boxes[jj].x,amyloids[0].boxesLab[jj].x,amyloids[0].rcm,amyloids[0].R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      amyloids[0].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  amyloids[0].boxesLab[jj].R[k1][k2] += amyloids[0].boxes[jj].R[k1][k3]*amyloids[0].R[k3][k2];
+		}  
+	    }
+	}
+    }
+  for (jj=0; jj < amyloids[1].nL; jj++)
+    {
+      body2lab(amyloids[1].boxes[jj].x,amyloids[1].boxesLab[jj].x,amyloids[1].rcm,amyloids[1].R);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      amyloids[1].boxesLab[jj].R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  amyloids[1].boxesLab[jj].R[k1][k2] += amyloids[1].boxes[jj].R[k1][k3]*amyloids[1].R[k3][k2];
+		}  
+	    }
+	}
+    }
+
+  for (iA=0; iA < amyloids[0].nL; iA++)
+    for (iB=0; iB < amyloids[1].nL; iB++)
+      {
+
+	if (calcDistBox(amyloids[0].boxesLab[iA].x,amyloids[0].boxes[iA].sax,amyloids[0].boxesLab[iA].R,
+		        amyloids[1].boxesLab[iB].x,amyloids[1].boxes[iB].sax,amyloids[1].boxesLab[iB].R) < 0.0)
+	  {
+	    return -1;
+	  }
+      }
+  return 1;
+}
 
 static int imaxarg1,imaxarg2;
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
@@ -726,32 +866,27 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
-struct DNADallStr {
-  double R[3][3];
-  double rcm[3];
-  double sax[3];
-} DNADall[2];
-
-double calcDistBox(void)
+double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3], double saxB[3], double RB[3][3])
 {
   double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
   double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
   int k, k1, k2, existsParallelPair = 0;
   /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
    * maniera molto efficiente */ 
+  //return -1;
   for (k=0; k < 3; k++)
     {
-      rA[k] = DNADall[0].rcm[k];
-      rB[k] = DNADall[1].rcm[k];
-      EA[k] = DNADall[0].sax[k];
-      EB[k] = DNADall[1].sax[k];
+      rA[k] = rcmA[k];
+      rB[k] = rcmB[k];
+      EA[k] = saxA[k];
+      EB[k] = saxB[k];
     }
   for (k1 = 0; k1 < 3; k1++)
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  AA[k1][k2] = DNADall[0].R[k1][k2];
-	  BB[k1][k2] = DNADall[1].R[k1][k2];
+	  AA[k1][k2] = RA[k1][k2];
+	  BB[k1][k2] = RB[k1][k2];
 	}
     	DD[k1] = rA[k1] - rB[k1];
     }
@@ -908,14 +1043,6 @@ void vectProdVec(double *A, double *B, double *C)
 }
 //#define ALBERTA
 char fn[1024];
-struct DNA {
-  double x;
-  double y;
-  double z;
-  double rad;
-} *DNAchain;
-
-struct DNA *DNADs[2];
 double calc_norm(double *vec)
 {
   int k1;
@@ -1092,9 +1219,8 @@ void versor_to_R(double ox, double oy, double oz, double gamma, double R[3][3])
   printf("==============\n");
 #endif
 }
-double RMDNA[2][3][3];
 #if defined(EULER_ROT)
-void place_DNAD(double x, double y, double z, double cosphi12, double sinphi12, double costheta12, 
+void place_AMYLOID(double x, double y, double z, double cosphi12, double sinphi12, double costheta12, 
 		double sintheta12, double cosgamma12, double singamma12,
 		int which)
 {
@@ -1115,43 +1241,16 @@ void place_DNAD(double x, double y, double z, double cosphi12, double sinphi12, 
   R[2][0] = cosphi12*sintheta12;
   R[2][1] = sintheta12*sinphi12;
   R[2][2] = costheta12; 
-#ifdef DEBUG 
-  /*printf("costhe=%f sinth=%f cosphi=%f sinphi=%f cosgmma=%f singamma=%f\n", 
-	 costheta12, sintheta12, cosphi12, sinphi12, cosgamma12, singamma12);*/
-  print_matrix(R,3);
-  sprintf(fn, "DNAD%d.mgl", which);
-  fd=fopen(fn, "w+");
-  fprintf(fd, ".Vol: %f\n", L*L*L);
-#endif
   /* ============ */
   for (k1=0; k1 < 3; k1++)
     {
-      DNADall[which].rcm[k1] = rO[k1];
+      amyloids[which].rcm[k1] = rO[k1];
       for (k2=0; k2 < 3; k2++)
-	DNADall[which].R[k1][k2] = R[k1][k2];
+	amyloids[which].R[k1][k2] = R[k1][k2];
     }
-  for (i=0; i < nat; i++)
-    {
-      xp[0] = DNAchain[i].x;
-      xp[1] = DNAchain[i].y;
-      xp[2] = DNAchain[i].z;
-
-      body2lab(xp, xl, rO, R);
-      DNADs[which][i].x = xl[0];
-      DNADs[which][i].y = xl[1];
-      DNADs[which][i].z = xl[2];
-#ifdef DEBUG
-      fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
-#endif
-      DNADs[which][i].rad = DNAchain[i].rad;
-    }
-#ifdef DEBUG
-  fclose(fd);
-  exit(-1);
-#endif
 } 
 #else
-void place_DNAD(double x, double y, double z, double ux, double uy, double uz, double gamma, int which)
+void place_AMYLOID(double x, double y, double z, double ux, double uy, double uz, double gamma, int which)
 {
   double xp[3], rO[3], xl[3];
   double R[3][3];
@@ -1167,36 +1266,13 @@ void place_DNAD(double x, double y, double z, double ux, double uy, double uz, d
   rO[2] = z;
   /* build R here from the orientation (ux,uy,uz) */
   versor_to_R(ux, uy, uz, gamma, R);
-#ifdef DEBUG 
-  sprintf(fn, "DNAD%d.mgl", which);
-  fd=fopen(fn, "w+");
-  fprintf(fd, ".Vol: %f\n", L*L*L);
-#endif
   /* ============ */
   for (k1=0; k1 < 3; k1++)
     {
-      DNADall[which].rcm[k1] = rO[k1];
+      amyloids[which].rcm[k1] = rO[k1];
       for (k2=0; k2 < 3; k2++)
-	DNADall[which].R[k1][k2] = R[k1][k2];
+	amyloids[which].R[k1][k2] = R[k1][k2];
     }
-  for (i=0; i < nat; i++)
-    {
-      xp[0] = DNAchain[i].x;
-      xp[1] = DNAchain[i].y;
-      xp[2] = DNAchain[i].z;
-
-      body2lab(xp, xl, rO, R);
-      DNADs[which][i].x = xl[0];
-      DNADs[which][i].y = xl[1];
-      DNADs[which][i].z = xl[2];
-#ifdef DEBUG
-      fprintf(fd,"%f %f %f @ %f\n", xl[0], xl[1], xl[2], DNAchain[i].rad);
-#endif
-      DNADs[which][i].rad = DNAchain[i].rad;
-    }
-#ifdef DEBUG
-  fclose(fd);
-#endif
 }
 #endif
 /* ============================ >>> ranf <<< =============================== */
@@ -1359,32 +1435,6 @@ double estimate_maximum_dfons(double alpha)
   // printf("maxval=%f\n", maxval);
   return maxval;
 }
-void init_distbox(void)
-{
-  int i, k;
-  double max_x, max_y, max_z, distx, disty, distz;
-  /* maximum distance to z-axis */
-  for (i=0; i < nat; i++)
-    {
-      distx = fabs(DNAchain[i].x) + DNAchain[i].rad;
-      disty = fabs(DNAchain[i].y) + DNAchain[i].rad;
-      distz = fabs(DNAchain[i].z) + DNAchain[i].rad;
-      if (i==0 || distx > max_x)
-	max_x = distx;
-       if (i==0 || disty > max_y)
-	max_y = disty;
-       if (i==0 || distz > max_z)
-	max_z = distz;
-    } 
-  for (k=0; k < 2; k++)
-    {
-      DNADall[k].sax[0] = max_x*1.01;
-      DNADall[k].sax[1] = max_y*1.01;
-      DNADall[k].sax[2] = max_z*1.01;
-    }
-  //printf("maxx=%f %f\n",DNADall[0].sax[0],DNADall[0].sax[1]);
-}
-
 double max3(double a, double b, double c)
 {
   double m;
@@ -1439,43 +1489,36 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
   //versor_to_R(u1x, u1y, u1z, gamma1, DNADall[0].R);
   //versor_to_R(u2x, u2y, u2z, gamma2, DNADall[1].R);
 #ifdef EULER_ROT
-  place_DNAD(rcmx, rcmy, rcmz, cosphi12, sinphi12, costheta12, sintheta12, cosgamma12, singamma12, 1);
+  place_AMYLOID(rcmx, rcmy, rcmz, cosphi12, sinphi12, costheta12, sintheta12, cosgamma12, singamma12, 1);
 #else
   u2x = sintheta12*cosphi12;
   u2y = sintheta12*sinphi12;
   u2z = costheta12;  
-  place_DNAD(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
+  place_AMYLOID(rcmx, rcmy, rcmz, u2x, u2y, u2z, gamma12, 1);
 #endif
-  if (calcDistBox() < 0.0)
+  if (calcDistBox(amyloids[0].rcm,amyloids[0].boxsax,amyloids[0].R,
+		  amyloids[1].rcm,amyloids[1].boxsax,amyloids[1].R) < 0.0)
     {
-      for (i=0; i < nat; i++)
+      if (calcDistAmyloid() < 0.0)
 	{
-	  for (j=0; j < nat; j++)
+	  switch (type)
 	    {
-	      distsq = Sqr(DNADs[0][i].x-DNADs[1][j].x) + Sqr(DNADs[0][i].y-DNADs[1][j].y) + Sqr(DNADs[0][i].z-DNADs[1][j].z);
-	      sigijsq = Sqr(DNADs[0][i].rad + DNADs[1][j].rad);
-	      if (distsq < sigijsq)
-		{
-		  switch (type)
-		    {
-		    case 0:
-		      return XI1[nphi12][ntheta12];
-		      break;
-		    case 1:
-		      return rcmx*XI1[nphi12][ntheta12]+
-			rcmy*XI2[nphi12][ntheta12]+
-			rcmz*XI3[nphi12][ntheta12];
-		      break;
-		    case 2: /* K22 */
-		    case 3: /* K11 */
-		    case 4: /* K33 */
-		      return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
-			Sqr(rcmy)*XI2[nphi12][ntheta12]+
-			Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
-			rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
-		      break;
-		    }
-		}
+	    case 0:
+	      return XI1[nphi12][ntheta12];
+	      break;
+	    case 1:
+	      return rcmx*XI1[nphi12][ntheta12]+
+		rcmy*XI2[nphi12][ntheta12]+
+		rcmz*XI3[nphi12][ntheta12];
+	      break;
+	    case 2: /* K22 */
+	    case 3: /* K11 */
+	    case 4: /* K33 */
+	      return -(Sqr(rcmx)*XI1[nphi12][ntheta12]+
+		       Sqr(rcmy)*XI2[nphi12][ntheta12]+
+		       Sqr(rcmz)*XI3[nphi12][ntheta12]+rcmx*rcmy*XI4[nphi12][ntheta12]+
+		       rcmx*rcmz*XI5[nphi12][ntheta12]+rcmy*rcmz*XI6[nphi12][ntheta12]);
+	      break;
 	    }
 	}
     }
@@ -1776,181 +1819,6 @@ double miser_func(double x[])
   return quad3d(intfunc, 0.0, 2.0*M_PI);
 }
 #endif
-#ifdef PRINC_AXES
-double eigvec[3][3], *eigvec_n[3][3], eigvec_t[3][3];
-int eigenvectors=1;
-double It[3][3];
-void diagonalize(double M[3][3], double ev[3])
-{
-  double a[9], work[45];
-  char jobz, uplo;
-  int info, i, j, lda, lwork;
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) a[j+3*i]=M[j][i];		
-      //for(j=0; j<3; j++) a[j][i]=M[j][i];		
-    }	
-  lda = 3;
-  if (eigenvectors)
-    jobz='V';
-  else
-    jobz='N';
-  uplo='U';
-  lwork = 45;
-  dsyev_(&jobz, &uplo, &lda, a, &lda, ev, work, &lwork,  &info);  
-  if (!eigenvectors)
-    return;
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) eigvec[i][j]=a[j+3*i];		
-    }	
-}
-
-double pz[3];
-double Rlp[3][3];
-#if 0
-void build_ref_system(void)
-{
-  int k;
-  double sp, norm;
-  /* build the nematic reference system */
-  Rlp[2][1] = pz[0];
-  Rlp[2][1] = pz[1];
-  Rlp[2][2] = pz[2];
-  //printf("delr=%.15G nematic=%f %f %f\n", delr, nv[0], nv[1], nv[2]);
-  Rlp[0][0] = 1.0;
-  Rlp[0][1] = 1.0;
-  Rlp[0][2] = 1.0;
-  if (Rlp[0][0] == Rlp[2][0] && Rlp[0][1]==Rlp[2][1] && Rlp[0][2]==Rlp[2][2])
-    {
-      Rlp[0][0] = 1.0;
-      Rlp[0][1] = -1.0;
-      Rlp[0][2] = 1.0;
-    }
-  sp = 0;
-  for (k=0; k < 3 ; k++)
-    sp+=Rlp[0][k]*Rlp[2][k];
-  for (k=0; k < 3 ; k++)
-    Rlp[0][k] -= sp*Rlp[2][k];
-  norm = calc_norm(Rlp[0]);
-  for (k=0; k < 3 ; k++)
-    Rlp[0][k] = Rlp[0][k]/norm;
-  vectProdVec(Rlp[2], Rlp[0], Rlp[1]);
-}
-#endif
-void calc_It(void)
-{
-  int i, j, k;
-  double distSq, ri[3], rj[3];
-  double Icom[3][3];
-  for (j=0; j < 3; j++)
-    for (k=0; k < 3; k++)
-      It[j][k] = 0.0;
-  /* moment of inertia of centers of mass */
-  for (j=0; j < 3; j++)
-    for (k=0; k < 3; k++)
-      {
-	It[j][k] = 0.0;
-	for (i=0; i < nat; i++)
-	  {
-	    ri[0] = DNAchain[i].x; /* notare che il centro di massa è stato già riportato nell'origine ossia Rcm=(0,0,0) */
-	    ri[1] = DNAchain[i].y;
-	    ri[2] = DNAchain[i].z;
-	    distSq = Sqr(ri[0])+Sqr(ri[1])+Sqr(ri[2]);
-	    It[j][k] += ((j==k)?distSq:0.0) - ri[j]*ri[k];
-	  }
-      }
-}
-struct evStruct {
-  double eigvec[3];
-  double ev;
-  int idx;
-} evstruct[3], evstrTmp[3];
-
-int cmpfuncev (const void *p1, const void *p2)
-{
-  if (((struct evStruct*)p1)->ev < ((struct evStruct*)p2)->ev) 
-    return 1;
-  else
-    return -1;
-}
-void align_z_axis(void)
-{
-  double ev[3], St, xp[3], xl[3];
-  int numev, a, b, i, k1, k2;
-
-  calc_It();
-  //print_matrix(It, 3);
-  diagonalize(It, ev);
-#if 1
-  /* find min eigenval */
-  if (fabs(ev[0]) < fabs(ev[1]))
-    { 
-      St = ev[0];
-      numev=0;
-    }
-  else
-    {
-      St = ev[1];
-      numev=1;
-    }  
-  if (fabs(ev[2]) < St)
-    {
-      St = ev[2];
-      numev=2;
-    }
-#endif
-  evstruct[0].ev=ev[0];
-  evstruct[1].ev=ev[1];
-  evstruct[2].ev=ev[2];
-  printf("ev[0]=%f ev[1]=%f ev[2]=%f\n", ev[0], ev[1], ev[2]);
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      evstruct[a].eigvec[b] = eigvec[a][b];
-  //print_matrix(eigvec, 3);
-  evstruct[a].idx = a;
-
-  /* we need to preserve chirality, hence we shift eigenvectors in order to preserve their order
-     (e.g xyz -> zxy) */
-  for (a=0; a < 3; a++)
-    {
-      evstrTmp[(a + (2-numev))%3].ev = evstruct[a].ev;
-      for (b=0; b < 3; b++)
-	evstrTmp[(a + (2-numev))%3].eigvec[b] = evstruct[a].eigvec[b];
-    }
-  for (a=0; a < 3; a++)
-    {
-      evstruct[a].ev = evstrTmp[a].ev;
-      for (b=0; b < 3; b++)
-	evstruct[a].eigvec[b] = evstrTmp[a].eigvec[b];
-    }
-
-  //  qsort(&evstruct, 3, sizeof(struct evStruct), cmpfuncev);
-
-  printf("AFTER ev[0]=%f ev[1]=%f ev[2]=%f\n", evstruct[0].ev, evstruct[1].ev, evstruct[2].ev);
-  for (a=0; a < 3; a++)
-    for (b=0; b < 3; b++)
-      Rlp[a][b] = evstruct[a].eigvec[b]; /* ogni riga è un autovettore */
-
-  for (i=0; i < nat; i++)
-    {
-      xl[0] = DNAchain[i].x;
-      xl[1] = DNAchain[i].y;
-      xl[2] = DNAchain[i].z;
-      for (k1=0; k1 < 3; k1++)
-	{
-	  xp[k1] = 0;
-	  for (k2=0; k2 < 3; k2++)
-	    {
-	      xp[k1] += Rlp[k1][k2]*xl[k2];
-	    } 
-	}
-      DNAchain[i].x = xp[0];
-      DNAchain[i].y = xp[1];
-      DNAchain[i].z = xp[2];
-    }
-}
-#endif
 int main(int argc, char**argv)
 {
 #ifdef USE_MISER
@@ -1990,69 +1858,63 @@ int main(int argc, char**argv)
     {
 #ifdef GAUSS
 #ifdef QFGAUSS
-  printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
+  printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
 #else
 #ifdef MCGAMMA
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [rSugar] [nphi] [ntheta]\n");
+      printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta]\n");
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [rSugar] [nphi] [ntheta] [ngamma]\n");
+      printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
 #endif
 #endif
 #else
-      printf("syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
+      printf("syntax:  CG-DNA-k2K22 <AMYLOID length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
 #endif
       exit(1);
     }
-  strcpy(fnin,argv[1]);
-  fin=fopen(fnin,"r");
-  len=atoi(argv[2]);
-  alpha = atof(argv[3]);
-  tot_trials=atoll(argv[4]);
-  type = atoi(argv[5]);
-  fileoutits = atoll(argv[6]);
+  len=atoi(argv[1]);
+  alpha = atof(argv[2]);
+  tot_trials=atoll(argv[3]);
+  type = atoi(argv[4]);
+  fileoutits = atoll(argv[5]);
   
-  if (argc == 7)
+  if (argc == 6)
     outits=100*fileoutits;
   else
-    outits = atoll(argv[7]);
+    outits = atoll(argv[6]);
   
-  if (argc <= 8)
-    rSugar = 3.5;
-  else
-    rSugar = atof(argv[8]);
 #ifdef GAUSS 
-  if (argc <= 9)
+  if (argc <= 7)
     nphi = 10;
   else
-    nphi = atoi(argv[9]);
+    nphi = atoi(argv[7]);
 
-  if (argc <= 10)
+  if (argc <= 8)
     ntheta = 10;
   else
-    ntheta = atoi(argv[10]);
+    ntheta = atoi(argv[8]);
 
 #if !defined(MCGAMMA)  && !defined(QFGAUSS)
-  if (argc <= 10)
+  if (argc <= 9)
     ngamma = 10;
   else
-    ngamma = atoi(argv[10]);
+    ngamma = atoi(argv[9]);
 #endif
 
 #ifdef QFGAUSS
-  if (argc <= 11)
+  if (argc <= 9)
     nrcmx = 10;
   else
-    nrcmx = atoi(argv[11]);
+    nrcmx = atoi(argv[9]);
 
- if (argc <= 12)
+ if (argc <= 10)
     nrcmy = 10;
   else
-    nrcmy = atoi(argv[12]);
+    nrcmy = atoi(argv[10]);
 
-  if (argc <= 13)
+  if (argc <= 11)
     nrcmz = 10;
   else
-    nrcmz = atoi(argv[13]);
+    nrcmz = atoi(argv[11]);
 #endif
 #else
   if (argc <= 9)
@@ -2070,91 +1932,16 @@ int main(int argc, char**argv)
   vexcl = 0.0;
   ttini = 0;
 
-  /* ELISA: ATOM    39   Xe   G A   14      -5.687  -8.995  37.824 */
-  /* ALBERTA: HETATM    1  B            1     -1.067  10.243 -35.117 */
-  /* len here is the number of dodecamers, where 70 is the number of atoms per dodecamers
-     in our CG model */
-  nat = 70*len;
-  DNAchain = (struct DNA*) malloc(sizeof(struct DNA)*nat); 
-  for (k=0; k < 2; k++)
-    DNADs[k] = (struct DNA*) malloc(sizeof(struct DNA)*nat);
-  //L = 1.05*3.0*40*len; /* 4 nm is approximately the length of a 12 bp DNAD */ 
-  /* read the CG structure */
-  cc=0;
-  while (!feof(fin))
-    {
-#ifdef ALBERTA
-      fscanf(fin, "%s %d %s %d %lf %lf %lf ", dummy1, &atnum, atname, &nbnum, &rx, &ry, &rz);
-#else
-      fscanf(fin, "%s %d %s %s %s %d %lf %lf %lf ", dummy1, &atnum, atname, nbname, dummy2, &nbnum, &rx, &ry, &rz);
-#endif
-      DNAchain[cc].x = rx;
-      DNAchain[cc].y = ry;
-      DNAchain[cc].z = rz;
-      //printf("cc=%d (%f,%f,%f)\n", cc, rx, ry, rz);
-#ifdef ALBERTA
-      if (!strcmp(atname, "S"))
-	{
-	  DNAchain[cc].rad = rSugar;
-	}
-      else if (!strcmp(atname, "P"))
-	{
-	  DNAchain[cc].rad = 3.0;
-	}
-      else if (!strcmp(atname, "B"))
-	{
-	  DNAchain[cc].rad = 4.0;
-	}
-#else
-      if (!strcmp(atname, "Xe"))
-	{
-	  DNAchain[cc].rad = rSugar;
-	}
-      else if (!strcmp(atname, "B"))
-	{
-	  DNAchain[cc].rad = 3.0;
-	}
-      else if (!strcmp(atname, "Se"))
-	{
-	  DNAchain[cc].rad = 4.0;
-	}
-#endif     
-      else
-	{
-	  printf("Unrecognized atom name, exiting...\n");
-	  exit(1);
-	}
-      cc++;
-      if (cc >= nat)
-	break;
-    };
-  rcmx=rcmy=rcmz=0.0;
-  for (i=0; i < nat; i++)
-    {
-      rcmx += DNAchain[i].x;
-      rcmy += DNAchain[i].y;
-      rcmz += DNAchain[i].z;
-    }
-  rcmx /= (double) nat;
-  rcmy /= (double) nat;
-  rcmz /= (double) nat;
-  for (i=0; i < nat; i++)
-    {
-      DNAchain[i].x -= rcmx;
-      DNAchain[i].y -= rcmy;
-      DNAchain[i].z -= rcmz;
-    }
-  fclose(fin);
-#ifdef PRINC_AXES
-  printf("Aligning DNAD...\n");
-  align_z_axis();
-#endif
-  init_distbox();
+  build_amyloid(nL);
+
+  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
+#if 0 
   Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[2];
+#endif
   printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f rSugar=%f\n", DNADall[0].sax[0], DNADall[0].sax[1], DNADall[0].sax[2], rSugar);
+  printf("box semiaxes=%f %f %f rSugar=%f\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], amyloids[0].boxsax[2], rSugar);
 #ifdef MPI
   srand48(((int)time(NULL))+my_rank);
 #else
@@ -2414,9 +2201,9 @@ int main(int argc, char**argv)
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
 #ifdef EULER_ROT
-  place_DNAD(0.0, 0.0, 0.0, 1., 0., 1., 0., 1., 0., 0);      
+  place_AMYLOID(0.0, 0.0, 0.0, 1., 0., 1., 0., 1., 0., 0);      
 #else
-  place_DNAD(0.0, 0.0, 0.0, 0., 0., 1., 0., 0);      
+  place_AMYLOID(0.0, 0.0, 0.0, 0., 0., 1., 0., 0);      
 #endif
 #if 0
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
