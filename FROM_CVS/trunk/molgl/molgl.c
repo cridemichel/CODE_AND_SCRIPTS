@@ -15,6 +15,7 @@
 #include <zlib.h>
 #define SQ_CALC_NORM
 #define SQ_REND_SYM
+#define MGL_BOXES
 /* NOTA 27/04/2010: DELSQ*TWOPI/n1 e DELSQ*TWOPI/n2 sono i passi in radianti per stimare numericamente 
    il gradiente delle superquadriche */
 #define DELSQ 1E-5
@@ -1052,6 +1053,32 @@ void displayAtom(int nf, int nm, int na)
 	glDepthMask (GL_TRUE);*/
       //glDisable (GL_BLEND); 
     }
+#ifdef MGL_BOXES
+  else if (atom->common.type==MGL_ATOM_BOX)
+    {
+      /* qui si deve orientare il superellissoide */
+      for (k1 = 0; k1 < 4; k1++)
+	for (k2 = 0; k2 < 4; k2++)
+	  {
+	    if (k1 < 3 && k2 < 3)
+	      {
+		rotm[k1*4+k2]=atom->box.R[k2][k1];
+	      }
+	    else if (k1==3 && k2 ==3)
+	      rotm[15] = 1.0;
+	    else
+	      rotm[k1*4+k2] = 0.0;
+	    //printf("rotm[%d]:%f\n", k1*4+k2, rotm[k1*4+k2]);
+	  }
+      /* notare che x' = R x quindi:
+       * x = Inversa(R) x' = Trasposta(R) x'*/
+      glMultTransposeMatrixf(rotm);
+      glEnable(GL_NORMALIZE);
+      glScalef(atom->box.a, atom->box.b, atom->box.c);
+      glutSolidCube(1.0);
+      glDisable(GL_NORMALIZE);
+    }
+#endif
   else if (atom->common.type==MGL_ATOM_SUPQUADRICS)
     {
 
@@ -1966,7 +1993,33 @@ void assignAtom(int nf, int i, int a, const char* L)
   double t;
   at = &mols[nf][i].atom[a];
   //printf("read: %s\n", L);
-  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]] Q %s %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19) == 19)
+#ifdef MGL_BOXES
+  if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s B %s %s %s C[%[^]]]", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16) == 16)
+    {
+      at->common.rx = atof(s1);
+      at->common.ry = atof(s2);
+      at->common.rz = atof(s3);
+      at->common.type = MGL_ATOM_BOX;
+      /* nx, ny, nz sono le componenti del vettore normale al dischetto */
+      at->box.R[0][0] = atof(s4);
+      at->box.R[0][1] = atof(s5);
+      at->box.R[0][2] = atof(s6);
+      at->box.R[1][0] = atof(s7);
+      at->box.R[1][1] = atof(s8);
+      at->box.R[1][2] = atof(s9);
+      at->box.R[2][0] = atof(s10);
+      at->box.R[2][1] = atof(s11);
+      at->box.R[2][2] = atof(s12);
+      at->box.a = atof(s13);
+      at->box.b = atof(s14);
+      at->box.c = atof(s15);
+      at->common.greyLvl = 0; /*colIdxBW[j];// default value of grey level */
+      at->common.atcol  = parsecol(s16,&t, &(at->common.atred), &(at->common.atgreen), &(at->common.atblue));
+      at->common.transp = t;
+    }
+  else 
+#endif
+    if (sscanf(L,"%s %s %s %s %s %s %s %s %s %s %s %s @ %s %s %s C[%[^]]] Q %s %s %s ", s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19) == 19)
     {
       /*printf("Uso il raggio specificato per l'atomo [%d][%d]\n", i, j);
   	printf("Uso il livello di grigio: %d per l'atomo [%d][%d]",
