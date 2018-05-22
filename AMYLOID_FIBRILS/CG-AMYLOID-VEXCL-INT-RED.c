@@ -94,33 +94,32 @@ void build_amyloid(int nL)
       amyloids[i].nP=(int)(1980.0/amyloids[i].Lbox); /* persistence length in unità di Lbox */
       amyloids[i].Dproto=2.0; /* ogni protofilamente ha un diametro di circa 2 nm */
       amyloids[i].ribthick = 2.0; /* lo spessore del foglietto è di circa 2 nm */
-      amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
+      amyloids[i].boxsax[0] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
       amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-      amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-    
+      amyloids[i].boxsax[2] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
       dth=2.0*M_PI/amyloids[i].npitch;
       // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
       for (jj=0; jj < amyloids[i].nL; jj++)
 	{
-	  amyloids[i].boxes[jj].x[0]=((double)jj)*amyloids[i].Lbox;
 	  //printf("x=%f\n", amyloids[i].boxes[jj].x[0]);
+	  amyloids[i].boxes[jj].x[0]=0.0;
 	  amyloids[i].boxes[jj].x[1]=0.0;
-	  amyloids[i].boxes[jj].x[2]=0.0;
+	  amyloids[i].boxes[jj].x[2]=((double)jj)*amyloids[i].Lbox;
 	  //printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
-	  amyloids[i].boxes[jj].sax[0] = amyloids[i].Lbox/2.0;
-	  amyloids[i].boxes[jj].sax[1] = amyloids[i].ribthick/2.0;
-	  amyloids[i].boxes[jj].sax[2] = amyloids[i].nD*amyloids[i].Dproto/2.0;
+	  amyloids[i].boxes[jj].sax[0] = amyloids[i].ribthick/2.0;
+	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
+	  amyloids[i].boxes[jj].sax[2] = amyloids[i].Lbox/2.0;
 	  /* ...and now set orientation */
-	  amyloids[i].boxes[jj].R[0][0]=1.0;
-	  amyloids[i].boxes[jj].R[0][1]=0.0;
+	  
+	  amyloids[i].boxes[jj].R[0][0]=cos(jj*dth);
+	  amyloids[i].boxes[jj].R[0][1]=-sin(jj*dth);
 	  amyloids[i].boxes[jj].R[0][2]=0.0;
-	  amyloids[i].boxes[jj].R[1][0]=0.0;
+	  amyloids[i].boxes[jj].R[1][0]=sin(jj*dth);
 	  amyloids[i].boxes[jj].R[1][1]=cos(jj*dth);
-	  amyloids[i].boxes[jj].R[1][2]=-sin(jj*dth);
+	  amyloids[i].boxes[jj].R[1][2]=0.0;
 	  amyloids[i].boxes[jj].R[2][0]=0.0;
-	  amyloids[i].boxes[jj].R[2][1]=sin(jj*dth);
-	  amyloids[i].boxes[jj].R[2][2]=cos(jj*dth);
-	}
+	  amyloids[i].boxes[jj].R[2][1]=0.0;
+	  amyloids[i].boxes[jj].R[2][2]=1.0;}
       xcm[0]=xcm[1]=xcm[2]=0.0;
       for (jj=0; jj < amyloids[i].nL; jj++)
 	{
@@ -1831,7 +1830,7 @@ int main(int argc, char**argv)
     {
 #ifdef GAUSS
 #ifdef QFGAUSS
-  printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
+      printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
 #else
 #ifdef MCGAMMA
       printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta]\n");
@@ -1850,22 +1849,22 @@ int main(int argc, char**argv)
   type = atoi(argv[4]);
   fileoutits = atoll(argv[5]);
   
-  if (argc == 6)
+  if (argc <= 6)
     outits=100*fileoutits;
   else
     outits = atoll(argv[6]);
-  
 #ifdef GAUSS 
   if (argc <= 7)
     nphi = 10;
   else
     nphi = atoi(argv[7]);
-
   if (argc <= 8)
     ntheta = 10;
   else
-    ntheta = atoi(argv[8]);
-
+    {
+      ntheta = atoi(argv[8]);
+    }
+  printf("qui argc=%d\n", argc);
 #if !defined(MCGAMMA)  && !defined(QFGAUSS)
   if (argc <= 9)
     ngamma = 10;
@@ -1907,14 +1906,15 @@ int main(int argc, char**argv)
 
   build_amyloid(nL);
 
-  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
+  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*2.0;
 #if 0 
   Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[2];
 #endif
-  printf("nat=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nat, L, alpha, type, tot_trials);
-  printf("box semiaxes=%f %f %f rSugar=%f\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], amyloids[0].boxsax[2], rSugar);
+  printf("nL=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nL, L, alpha, type, tot_trials);
+  printf("box semiaxes=%f %f %f alpha=%f ntheta=%d nphi=%d\n", amyloids[0].boxsax[0], amyloids[0].boxsax[1], 
+	 amyloids[0].boxsax[2], alpha, ntheta, nphi);
 #ifdef MPI
   srand48(((int)time(NULL))+my_rank);
 #else
@@ -2200,11 +2200,11 @@ int main(int argc, char**argv)
   fout = fopen(fnout, "a+");
   if (type==0)
     //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-    fprintf(fout,"%.15 %.15G\n", Lx*Ly*Lz*vexcl/1E3, mis_var);
+    fprintf(fout,"%.15 %.15G\n", Lx*Ly*Lz*vexcl, mis_var);
   else if (type==1)
-    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl/1E4, mis_var); /* divido per 10^4 per convertire in nm */
+    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl, mis_var); /* divido per 10^4 per convertire in nm */
   else
-    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl/1E5, mis_var); /* divido per 10^5 per convertire in nm */
+    fprintf(fout,"%.15G %.15G\n", Lx*Ly*Lz*vexcl, mis_var); /* divido per 10^5 per convertire in nm */
 
   fclose(fout);
   return;
@@ -2277,20 +2277,20 @@ int main(int argc, char**argv)
 #ifdef QFGAUSS
   	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G\n", tt, vexcl/((double)tt));
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (vexcl/((double)tt))); /* divido per 10^5 per convertire in nm */
 
 #else
 	  if (type==0)
 	    //fprintf(fout,"%d %.15G %f %d\n", tt, L*L*L*vexcl/((double)tt)/1E3, vexcl, tt);
-	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt)/1E3);
+	    fprintf(fout,"%lld %.15G\n", tt, Lx*Ly*Lz*vexcl/((double)tt));
 	  else if (type==1)
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E4); /* divido per 10^4 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))); /* divido per 10^4 per convertire in nm */
 	  else
-	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))/1E5); /* divido per 10^5 per convertire in nm */
+	    fprintf(fout,"%lld %.15G\n", tt, (Lx*Ly*Lz*vexcl/((double)tt))); /* divido per 10^5 per convertire in nm */
 #endif
 	  fclose(fout);
 	}

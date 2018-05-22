@@ -1581,7 +1581,7 @@ int main(int argc, char**argv)
   
   build_amyloid(nL);
 
-  L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*3.0;
+  L=1.05*2.0*sqrt(Sqr(amyloids[0].boxsax[0])+Sqr(amyloids[0].boxsax[1])+Sqr(amyloids[0].boxsax[2]))*2.0;
   for (kk=0; kk < 2; kk++)
     {
       amyloids[kk].R[0][0]=1.0;
