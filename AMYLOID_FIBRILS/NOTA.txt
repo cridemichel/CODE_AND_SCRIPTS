@@ -1,0 +1,3 @@
+CG-AMYLOID-VEXCL-INT-RED usa un algoritmo ibrido monte carlo-integrazione di gauss per fare gli integrali
+relativi ai volumi esclusi
+mentre CG-AMYLOID-VEXCL usa un puro monte carlo (molto più lento a convergere!)
