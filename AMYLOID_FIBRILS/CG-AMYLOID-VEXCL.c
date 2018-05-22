@@ -560,9 +560,8 @@ double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3
 
 /* cylinder overlap routines here */
 double diamHC=2.0, lengthHC=2.0;
-void print_pov_header(FILE *fs)
+void print_pov_header(FILE *fs, double L)
 {
-  double L=10;
   /* povray preamble */
 #ifdef POVRAY
   fprintf(fs, "#declare RAD = off;\n");
@@ -699,13 +698,13 @@ void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
 }
 
 
-void saveAmyloidPovray(char *fname)
+void saveAmyloidPovray(char *fname, double L)
 {
   FILE *f;
   int kk;
   double dr[3]={0.0,0.0,0.0};
   f = fopen(fname, "w+");
-  print_pov_header(f);
+  print_pov_header(f, L);
 
   for (kk=0; kk < 3; kk++)
     dr[kk] = (amyloids[0].rcm[kk]+amyloids[1].rcm[kk])*0.5;
@@ -1829,9 +1828,9 @@ int main(int argc, char**argv)
 	  if (tt==1)
 	    {
 #ifdef POVRAY
-	      saveAmyloidPovray("amyfibr_both.pov");
+	      saveAmyloidPovray("amyfibr_both.pov", L);
 #else
-	      saveAmyloidPovray("amyfibr_both.mgl");
+	      saveAmyloidPovray("amyfibr_both.mgl", L);
 #endif
 	    }
 #endif
