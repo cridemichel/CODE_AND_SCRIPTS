@@ -692,7 +692,7 @@ void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
       fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G B %f %f %f C[%s]\n", 
 	   xbox[0], xbox[1], xbox[2], 
 	   R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2],
-	   amy.boxes[jj].sax[0], amy.boxes[jj].sax[1], amy.boxes[jj].sax[2], "red");
+	   2.0*amy.boxes[jj].sax[0], 2.0*amy.boxes[jj].sax[1], 2.0*amy.boxes[jj].sax[2], "red");
 #endif
     }
 }
@@ -1307,6 +1307,7 @@ double epsr(double T)
 #endif
 int main(int argc, char**argv)
 {
+  char fname[255];
   double aaa;
   int nL;
 #ifdef QUASIMC
@@ -1824,16 +1825,6 @@ int main(int argc, char**argv)
 		}
 	    }
 	  place_AMYLOID(rcmx, rcmy, rcmz, u2x, u2y, u2z, 1, gamma2);
-#if 1
-	  if (tt==1)
-	    {
-#ifdef POVRAY
-	      saveAmyloidPovray("amyfibr_both.pov", L);
-#else
-	      saveAmyloidPovray("amyfibr_both.mgl", L);
-#endif
-	    }
-#endif
 	  //place_AMYLOID(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
 #ifdef DEBUG
 	  exit(-1);
@@ -1880,6 +1871,20 @@ int main(int argc, char**argv)
 		  overlap = 1;
 		}
 	    }
+#if 1
+	  if (!overlap)//tt==1)
+	    {
+	      printf("OVERLAP=%d\n", overlap);
+#ifdef POVRAY
+	      sprintf(fname, "amyfibrils-%lld.pov", tt);
+#else
+	      sprintf(fname, "amyfibrils-%lld.mgl", tt);
+#endif
+	      saveAmyloidPovray(fname, L);
+	      //exit(-1);
+	    }
+#endif
+
 #ifdef AMYLOID_ELEC
 	  if (!overlap)
 	    {
