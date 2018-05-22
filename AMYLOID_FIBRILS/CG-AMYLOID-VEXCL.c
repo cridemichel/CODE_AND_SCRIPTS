@@ -302,10 +302,13 @@ void build_amyloid(int nL)
       amyloids[i].nP=(int)(AMY_PERS_LEN/amyloids[i].Lbox); /* persistence length in unità di Lbox */
       amyloids[i].Dproto=AMY_D_PROTO; /* ogni protofilamente ha un diametro di circa 2 nm */
       amyloids[i].ribthick = AMY_RIBBON_THICK; /* lo spessore del foglietto è di circa 2 nm */
-      amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
-      amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-      amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-    
+      //amyloids[i].boxsax[0] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
+      amyloids[i].boxsax[0] = 1.01*amyloids[i].Lbox*amyloids[i].nL/2.0;
+      //amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+      //amyloids[i].boxsax[2] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+      amyloids[i].boxsax[1] = 1.01*sqrt(Sqr(amyloids[i].nD*amyloids[i].Dproto)+Sqr(amyloids[i].Lbox))/2.0;
+      amyloids[i].boxsax[2] = amyloids[i].boxsax[1];
+         
       dth=2.0*M_PI/amyloids[i].npitch;
       // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
       for (jj=0; jj < amyloids[i].nL; jj++)

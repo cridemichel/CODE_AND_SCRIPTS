@@ -112,9 +112,13 @@ void build_amyloid(int nL)
       amyloids[i].nP= (int)(AMY_PERS_LEN/amyloids[i].Lbox); /* persistence length in unità di Lbox */
       amyloids[i].Dproto= AMY_D_PROTO; /* ogni protofilamente ha un diametro di circa 2 nm */
       amyloids[i].ribthick = AMY_RIBBON_THICK; /* lo spessore del foglietto è di circa 2 nm */
-      amyloids[i].boxsax[0] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-      amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
-      amyloids[i].boxsax[2] = amyloids[i].Lbox*(amyloids[i].nL+1)/2.0;
+      //amyloids[i].boxsax[0] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+      //amyloids[i].boxsax[1] = (amyloids[i].nD+1)*amyloids[i].Dproto/2.0;
+      amyloids[i].boxsax[0] = 1.01*sqrt(Sqr(amyloids[i].nD*amyloids[i].Dproto)+Sqr(amyloids[i].Lbox))/2.0;
+      amyloids[i].boxsax[1] = amyloids[i].boxsax[0];
+      //printf("1)oldval=%.15G newval: %.15G\n", (amyloids[i].nD+1)*amyloids[i].Dproto/2.0, amyloids[i].boxsax[0]); 
+      amyloids[i].boxsax[2] = 1.01*amyloids[i].Lbox*amyloids[i].nL/2.0;
+      //printf("2)oldval=%.15G newval: %.15G\n",(amyloids[i].Lbox*amyloids[i].nL+1)/2.0 ,1.01*amyloids[i].Lbox*amyloids[i].nL/2.0);
       dth=2.0*M_PI/amyloids[i].npitch;
       // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
       for (jj=0; jj < amyloids[i].nL; jj++)
@@ -128,7 +132,6 @@ void build_amyloid(int nL)
 	  amyloids[i].boxes[jj].sax[1] = amyloids[i].nD*amyloids[i].Dproto/2.0;
 	  amyloids[i].boxes[jj].sax[2] = amyloids[i].Lbox/2.0;
 	  /* ...and now set orientation */
-	  
 	  amyloids[i].boxes[jj].R[0][0]=cos(jj*dth);
 	  amyloids[i].boxes[jj].R[0][1]=-sin(jj*dth);
 	  amyloids[i].boxes[jj].R[0][2]=0.0;
@@ -137,7 +140,8 @@ void build_amyloid(int nL)
 	  amyloids[i].boxes[jj].R[1][2]=0.0;
 	  amyloids[i].boxes[jj].R[2][0]=0.0;
 	  amyloids[i].boxes[jj].R[2][1]=0.0;
-	  amyloids[i].boxes[jj].R[2][2]=1.0;}
+	  amyloids[i].boxes[jj].R[2][2]=1.0;
+	}
       xcm[0]=xcm[1]=xcm[2]=0.0;
       for (jj=0; jj < amyloids[i].nL; jj++)
 	{
@@ -151,6 +155,7 @@ void build_amyloid(int nL)
 	{
 	  for (kk=0; kk < 3; kk++)
 	    amyloids[i].boxes[jj].x[kk] -= xcm[kk];
+	 // printf("box %f %f %f\n", amyloids[i].boxes[jj].x[0], amyloids[i].boxes[jj].x[1], amyloids[i].boxes[jj].x[2]);
     	}   
     }
 }
