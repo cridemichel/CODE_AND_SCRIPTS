@@ -11,6 +11,7 @@
 #endif
 double thetaGlobalBondangle;
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+//#define POVRAY
 void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3], double theta)
 {
   double thetaSq, sinw, cosw;
@@ -563,6 +564,7 @@ void print_pov_header(FILE *fs)
 {
   double L=10;
   /* povray preamble */
+#ifdef POVRAY
   fprintf(fs, "#declare RAD = off;\n");
   fprintf(fs, "#declare DIFF=0.475;\n");
   fprintf(fs, "#declare AMB=0.475;\n");
@@ -638,6 +640,9 @@ void print_pov_header(FILE *fs)
   fprintf(fs,"  translate<0,0,0>");
   fprintf(fs," } //---------------------------------\n");
 #endif
+#else
+  fprintf(fs,".Vol: %G\n", L*L*L);
+#endif
 }
 void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
 {
@@ -665,7 +670,7 @@ void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
 		}
 	    }
 	}
-
+#ifdef POVRAY
       fprintf(f,"box\n");	
       fprintf(f,"{\n");
       for (kk=0; kk < 3; kk++)
@@ -684,6 +689,12 @@ void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
       fprintf(f,"ambient AMB diffuse DIFF\n");
       fprintf(f,"specular SPEC roughness ROUGH}\n");
       fprintf(f, "}\n");
+#else
+      fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G B %f %f %f C[%s]\n", 
+	   amy.boxes[jj].x[0], amy.boxes[jj].x[1], amy.boxes[jj].x[2], 
+	   R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2],
+	   amy.boxes[jj].sax[0], amy.boxes[jj].sax[1], amy.boxes[jj].sax[2], "Red");
+#endif
     }
 }
 
@@ -1817,7 +1828,11 @@ int main(int argc, char**argv)
 #if 1
 	  if (tt==1)
 	    {
+#ifdef POVRAY
 	      saveAmyloidPovray("amyfibr_both.pov");
+#else
+	      saveAmyloidPovray("amyfibr_both.mgl");
+#endif
 	    }
 #endif
 	  //place_AMYLOID(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
