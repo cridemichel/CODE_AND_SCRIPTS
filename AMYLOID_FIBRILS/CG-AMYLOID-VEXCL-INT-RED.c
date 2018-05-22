@@ -35,7 +35,19 @@ struct boxS {
   double x[3];
   double sax[3];
 };
-
+void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      for (k2=0; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
 typedef struct amyloid {
   double nD; /* spessore della fibra in protofilamenti*/
   double nL; /* numero di box che costituiscono la fibra */
@@ -52,6 +64,14 @@ typedef struct amyloid {
 } amyloidS;
 
 amyloidS amyloids[2];
+double scalProd(double *A, double *B)
+{
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
+}
 void build_amyloid(int nL)
 {
   double npitch, dth;
@@ -117,7 +137,174 @@ void build_amyloid(int nL)
     	}   
     }
 }
+double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3], double saxB[3], double RB[3][3])
+{
+  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
+  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
+  int k, k1, k2, existsParallelPair = 0;
+  /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
+   * maniera molto efficiente */ 
+  //return -1;
+  for (k=0; k < 3; k++)
+    {
+      rA[k] = rcmA[k];
+      rB[k] = rcmB[k];
+      EA[k] = saxA[k];
+      EB[k] = saxB[k];
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  AA[k1][k2] = RA[k1][k2];
+	  BB[k1][k2] = RB[k1][k2];
+	}
+    	DD[k1] = rA[k1] - rB[k1];
+    }
+  /* axis C0+s*A0 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[0][k1] =  scalProd(AA[0], BB[k1]);
+      fabscij[0][k1] = fabs(cij[0][k1]);
+      if ( fabscij[0][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[0] = scalProd(AA[0],DD);
+  RR = fabs(AD[0]);
+  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
+  R01 = EA[0] + R1;
+  if ( RR > R01 )
+    return 1.0; /* non si intersecano */
+  /* axis C0+s*A1 */
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      cij[1][k1] = scalProd(AA[1],BB[k1]);
+      fabscij[1][k1] = fabs(cij[1][k1]);
+      if ( fabscij[1][k1] == 1.0  )
+	existsParallelPair = 1;
+    }
+  AD[1] = scalProd(AA[1],DD);
+  RR = fabs(AD[1]);
+  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
+  R01 = EA[1] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*A2 */
+  for (k1= 0; k1 < 3; k1++)
+    {
+      cij[2][k1] = scalProd(AA[2], BB[k1]);
+      fabscij[2][k1] = fabs(cij[2][k1]);
+      if ( fabscij[2][k1] == 1.0 )
+	existsParallelPair = 1;
+    }
+  AD[2] = scalProd(AA[2],DD);
+  RR = fabs(AD[2]);
+  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
+  R01 = EA[2] + R1;
+  if ( RR > R01 )
+    return 1.0;
+  /* axis C0+s*B0 */
+  RR = fabs(scalProd(BB[0],DD));
+  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
+  R01 = R0 + EB[0];
+  if ( RR > R01 )
+    return 1.0;
 
+  /* axis C0+s*B1 */
+  RR = fabs(scalProd(BB[1],DD));
+  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
+  R01 = R0 + EB[1];
+  if ( RR > R01 )
+    return 1.0;
+  
+  /* axis C0+s*B2 */
+  RR = fabs(scalProd(BB[2],DD));
+  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
+  R01 = R0 + EB[2];
+  if ( RR > R01 )
+    return 1.0;
+
+  /* At least one pair of box axes was parallel, therefore the separation is
+   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
+   * the separation of the boxes. 
+   */
+  if ( existsParallelPair )
+    return -1.0;
+
+  /* axis C0+s*A0xB0 */
+  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
+  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
+  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB1 */
+  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
+  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
+  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A0xB2 */
+  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
+  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
+  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB0 */
+  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
+  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
+  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB1 */
+  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
+  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
+  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A1xB2 */
+  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
+  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
+  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB0 */
+  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
+  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
+  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB1 */
+  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
+  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
+  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  /* axis C0+s*A2xB2 */
+  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
+  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
+  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
+  R01 = R0 + R1;
+  if ( RR > R01 )
+    return 1.0;
+
+  return -1.0;
+}
 
 double calcDistAmyloid(void)
 {
@@ -268,7 +455,7 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 		}
 		*ave=summ/npts;
 		*var=FMAX(TINY,(summ2-summ*summ/npts)/(npts*npts));
-		printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
+		//printf("[npts < MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
 	}
 	else {
 		rmid=vector(1,ndim);
@@ -342,7 +529,7 @@ void miser(double (*func)(double []), double regn[], int ndim, unsigned long npt
 		free_vector(regn_temp,1,2*ndim);
 		*ave=fracl*avel+(1-fracl)*(*ave);
 		*var=fracl*fracl*varl+(1-fracl)*(1-fracl)*(*var);
-		printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
+		//printf("[npts > MNBS npts=%d] ave=%.15G  var=%.15G\n", npts, *ave, *var);
 		free_vector(rmid,1,ndim);
 	}
 	free_vector(pt,1,ndim);
@@ -858,182 +1045,6 @@ double qromb(double (*func)(double), double a, double b)
   return 0.0; /*Never get here.*/
 }
 
-double scalProd(double *A, double *B)
-{
-  int kk;
-  double R=0.0;
-  for (kk=0; kk < 3; kk++)
-    R += A[kk]*B[kk];
-  return R;
-}
-double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3], double saxB[3], double RB[3][3])
-{
-  double RR, R0, R1, cij[3][3], fabscij[3][3], AD[3], R01, DD[3];
-  double AA[3][3], BB[3][3], EA[3], EB[3], rA[3], rB[3];
-  int k, k1, k2, existsParallelPair = 0;
-  /* N.B. Trattandosi di parallelepipedi la loro interesezione si puo' calcolare in 
-   * maniera molto efficiente */ 
-  //return -1;
-  for (k=0; k < 3; k++)
-    {
-      rA[k] = rcmA[k];
-      rB[k] = rcmB[k];
-      EA[k] = saxA[k];
-      EB[k] = saxB[k];
-    }
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      for (k2 = 0; k2 < 3; k2++)
-	{
-	  AA[k1][k2] = RA[k1][k2];
-	  BB[k1][k2] = RB[k1][k2];
-	}
-    	DD[k1] = rA[k1] - rB[k1];
-    }
-  /* axis C0+s*A0 */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      cij[0][k1] =  scalProd(AA[0], BB[k1]);
-      fabscij[0][k1] = fabs(cij[0][k1]);
-      if ( fabscij[0][k1] == 1.0 )
-	existsParallelPair = 1;
-    }
-  AD[0] = scalProd(AA[0],DD);
-  RR = fabs(AD[0]);
-  R1 = EB[0]*fabscij[0][0]+EB[1]*fabscij[0][1]+EB[2]*fabscij[0][2];
-  R01 = EA[0] + R1;
-  if ( RR > R01 )
-    return 1.0; /* non si intersecano */
-  /* axis C0+s*A1 */
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      cij[1][k1] = scalProd(AA[1],BB[k1]);
-      fabscij[1][k1] = fabs(cij[1][k1]);
-      if ( fabscij[1][k1] == 1.0  )
-	existsParallelPair = 1;
-    }
-  AD[1] = scalProd(AA[1],DD);
-  RR = fabs(AD[1]);
-  R1 = EB[0]*fabscij[1][0]+EB[1]*fabscij[1][1]+EB[2]*fabscij[1][2];
-  R01 = EA[1] + R1;
-  if ( RR > R01 )
-    return 1.0;
-  /* axis C0+s*A2 */
-  for (k1= 0; k1 < 3; k1++)
-    {
-      cij[2][k1] = scalProd(AA[2], BB[k1]);
-      fabscij[2][k1] = fabs(cij[2][k1]);
-      if ( fabscij[2][k1] == 1.0 )
-	existsParallelPair = 1;
-    }
-  AD[2] = scalProd(AA[2],DD);
-  RR = fabs(AD[2]);
-  R1 = EB[0]*fabscij[2][0]+EB[1]*fabscij[2][1]+EB[2]*fabscij[2][2];
-  R01 = EA[2] + R1;
-  if ( RR > R01 )
-    return 1.0;
-  /* axis C0+s*B0 */
-  RR = fabs(scalProd(BB[0],DD));
-  R0 = EA[0]*fabscij[0][0]+EA[1]*fabscij[1][0]+EA[2]*fabscij[2][0];
-  R01 = R0 + EB[0];
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*B1 */
-  RR = fabs(scalProd(BB[1],DD));
-  R0 = EA[0]*fabscij[0][1]+EA[1]*fabscij[1][1]+EA[2]*fabscij[2][1];
-  R01 = R0 + EB[1];
-  if ( RR > R01 )
-    return 1.0;
-  
-  /* axis C0+s*B2 */
-  RR = fabs(scalProd(BB[2],DD));
-  R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
-  R01 = R0 + EB[2];
-  if ( RR > R01 )
-    return 1.0;
-
-  /* At least one pair of box axes was parallel, therefore the separation is
-   * effectively in 2D, i.e. checking the "edge" normals is sufficient for
-   * the separation of the boxes. 
-   */
-  if ( existsParallelPair )
-    return -1.0;
-
-  /* axis C0+s*A0xB0 */
-  RR = fabs(AD[2]*cij[1][0]-AD[1]*cij[2][0]);
-  R0 = EA[1]*fabscij[2][0] + EA[2]*fabscij[1][0];
-  R1 = EB[1]*fabscij[0][2] + EB[2]*fabscij[0][1];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A0xB1 */
-  RR = fabs(AD[2]*cij[1][1]-AD[1]*cij[2][1]);
-  R0 = EA[1]*fabscij[2][1] + EA[2]*fabscij[1][1];
-  R1 = EB[0]*fabscij[0][2] + EB[2]*fabscij[0][0];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A0xB2 */
-  RR = fabs(AD[2]*cij[1][2]-AD[1]*cij[2][2]);
-  R0 = EA[1]*fabscij[2][2] + EA[2]*fabscij[1][2];
-  R1 = EB[0]*fabscij[0][1] + EB[1]*fabscij[0][0];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A1xB0 */
-  RR = fabs(AD[0]*cij[2][0]-AD[2]*cij[0][0]);
-  R0 = EA[0]*fabscij[2][0] + EA[2]*fabscij[0][0];
-  R1 = EB[1]*fabscij[1][2] + EB[2]*fabscij[1][1];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A1xB1 */
-  RR = fabs(AD[0]*cij[2][1]-AD[2]*cij[0][1]);
-  R0 = EA[0]*fabscij[2][1] + EA[2]*fabscij[0][1];
-  R1 = EB[0]*fabscij[1][2] + EB[2]*fabscij[1][0];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A1xB2 */
-  RR = fabs(AD[0]*cij[2][2]-AD[2]*cij[0][2]);
-  R0 = EA[0]*fabscij[2][2] + EA[2]*fabscij[0][2];
-  R1 = EB[0]*fabscij[1][1] + EB[1]*fabscij[1][0];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A2xB0 */
-  RR = fabs(AD[1]*cij[0][0]-AD[0]*cij[1][0]);
-  R0 = EA[0]*fabscij[1][0] + EA[1]*fabscij[0][0];
-  R1 = EB[1]*fabscij[2][2] + EB[2]*fabscij[2][1];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A2xB1 */
-  RR = fabs(AD[1]*cij[0][1]-AD[0]*cij[1][1]);
-  R0 = EA[0]*fabscij[1][1] + EA[1]*fabscij[0][1];
-  R1 = EB[0]*fabscij[2][2] + EB[2]*fabscij[2][0];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  /* axis C0+s*A2xB2 */
-  RR = fabs(AD[1]*cij[0][2]-AD[0]*cij[1][2]);
-  R0 = EA[0]*fabscij[1][2] + EA[1]*fabscij[0][2];
-  R1 = EB[0]*fabscij[2][1] + EB[1]*fabscij[2][0];
-  R01 = R0 + R1;
-  if ( RR > R01 )
-    return 1.0;
-
-  return -1.0;
-}
 
 void vectProdVec(double *A, double *B, double *C)
 {
@@ -1060,19 +1071,7 @@ double calc_norm(double *vec)
     phosphate   B           3.0         
     base        Se          4.0    
 */
-void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
-{
-  int k1, k2;
-  for (k1=0; k1 < 3; k1++)
-    {
-      x[k1] = 0;
-      for (k2=0; k2 < 3; k2++)
-	{
-	  x[k1] += R[k2][k1]*xp[k2];
-       	} 
-      x[k1] += rO[k1];
-    }
-}
+
 #ifdef MC_BENT_DBLCYL
 /* apply a random rotation around the supplied axis because 
    bent cylinders do not have azimuthal symmetry */
@@ -1452,26 +1451,7 @@ double max2(double a, double b)
   else 
     return b;
 }
-double epsrtbl[21][2]={{0,87.740},{5,85.763},{10,83.832},{15,81.946},{20,80.103},{25,78.304},{30,76.546},{35,74.828},{40,73.151},{45,71.512},{50,69.910},{55,68.345},{60,66.815},{65,65.319},{70,63.857},{75,62.427},{80,61.027},{85,59.659},{90,58.319},{95,57.007},{100,55.720}};
-double epsr(double T)
-{
-  int i;
-  i = 0;
-  T = T - 273.15;
-  if (T <= 0.0 || T >= 100.0)
-    {
-      printf("Temperature must be between 0 and 100!\n");
-      exit(-1);
-    }
-  for (i=0; i < 21; i++)
-    {
-      if (T > epsrtbl[i][0])
-	{
-	  /* linear interpolation */
-	  return epsrtbl[i][1]+(T-epsrtbl[i][0])*(epsrtbl[i+1][1]-epsrtbl[i][1])/(epsrtbl[i+1][0]-epsrtbl[i][0]);
-	}
-    }
-}
+
 double integrandv1(double rcmx, double rcmy, double rcmz, 
 		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
 		    double alpha)
@@ -1837,7 +1817,7 @@ int main(int argc, char**argv)
   MPI_Status status;
 #endif
   char fn[256];
-  int aa, bb;
+  int aa, bb, nL;
   double ccc, totfact;
   int cc;
   double gamma1, gamma2;
@@ -1871,7 +1851,7 @@ int main(int argc, char**argv)
 #endif
       exit(1);
     }
-  len=atoi(argv[1]);
+  nL=len=atoi(argv[1]);
   alpha = atof(argv[2]);
   tot_trials=atoll(argv[3]);
   type = atoi(argv[4]);
@@ -1993,7 +1973,7 @@ int main(int argc, char**argv)
   fclose(fout);
   //Lx=Ly=Lz=L;
   printf("Lx=%f Ly=%f Lz=%f\n", Lx, Ly, Lz);
-  printf("type=%d ncontrib=%d\n", type, ncontrib);
+  printf("type=%d\n", type);
   alphasav=alpha;
 #if 0
   rcmysav=0.1;
