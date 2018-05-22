@@ -1872,7 +1872,7 @@ int main(int argc, char**argv)
 		}
 	    }
 #if 1
-	  if (tt < 1)
+	  if (tt <= 1)
 	    {
 	      printf("OVERLAP=%d\n", overlap);
 #ifdef POVRAY

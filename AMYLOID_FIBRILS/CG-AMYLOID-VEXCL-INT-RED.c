@@ -304,6 +304,159 @@ double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3
 
   return -1.0;
 }
+void print_pov_header(FILE *fs, double L)
+{
+  /* povray preamble */
+#ifdef POVRAY
+  fprintf(fs, "#declare RAD = off;\n");
+  fprintf(fs, "#declare DIFF=0.475;\n");
+  fprintf(fs, "#declare AMB=0.475;\n");
+  fprintf(fs, "#declare REFL=0.025;\n");
+  fprintf(fs, "#declare TRAN=0.0;\n");
+  fprintf(fs, "#declare ROUGH=0.001;\n");
+  fprintf(fs,"#declare SPEC=0.0;\n");
+  fprintf(fs,"#declare PHONG=1;\n");
+  fprintf(fs,"#declare PHONG_SIZE=10;\n");
+  fprintf(fs,"#include \"colors.inc\"\n");
+  fprintf(fs,"#include \"textures.inc\"\n");
+  fprintf(fs,"#include \"stones.inc\"\n");
+  fprintf(fs,"#include \"golds.inc\"\n");
+  fprintf(fs,"global_settings {\n");
+  fprintf(fs,"#if (RAD)\n");
+  fprintf(fs,"radiosity {\n");
+  fprintf(fs,"pretrace_start 0.08\n");
+  fprintf(fs,"pretrace_end 0.01\n");
+  fprintf(fs,"count 500\n");
+  fprintf(fs,"nearest_count 10\n");
+  fprintf(fs,"error_bound 0.02\n");
+  fprintf(fs,"recursion_limit 1\n");
+  fprintf(fs,"low_error_factor 0.2\n");
+  fprintf(fs,"gray_threshold 0.0\n");	
+  fprintf(fs,"minimum_reuse 0.015\n");
+  fprintf(fs, "brightness 0.6\n");
+  fprintf(fs, "adc_bailout 0.01/2\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "#end\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "background{White}\n");
+  fprintf(fs, "camera {\n");	
+  fprintf(fs, "angle %f\n", 30.0);
+  fprintf(fs, "location <%f,%f,%f>\n", -100*L, 0.0, 0.0);
+  fprintf(fs, "look_at <0,0,0>\n");
+  fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
+  fprintf(fs, "//aperture 0.4\n");
+  fprintf(fs, "//blur_samples 20\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "#if(1)\n");
+  fprintf(fs, "// spotlight light source\n");
+  fprintf(fs, "light_source {\n");
+  fprintf(fs, "//<0, 10, -3>\n");
+  fprintf(fs, "<%f, %f, %f>\n", 60.0*L, 60.0*L, -60.0*L);
+  fprintf(fs, "color White\n");
+  fprintf(fs, "spotlight\n");
+  fprintf(fs, "radius 15\n");
+  fprintf(fs, "falloff 20\n");
+  fprintf(fs, "tightness 10\n");
+  fprintf(fs, "point_at <0, 0, 0>\n");
+  fprintf(fs, "}\n");
+  fprintf(fs, "#else\n");
+  fprintf(fs, "//point light source\n");
+  fprintf(fs, "light_source { <10, 20, -10> color White }\n");
+  fprintf(fs, "#end\n");	
+#if 0
+  fprintf(fs,"#include \"shapes.inc\"\n");
+  fprintf(fs,"object {\n");
+  // Wire_Box(A, B, WireRadius, Merge)
+#ifdef MD_LXYZ
+  fprintf(fs,"Wire_Box(<%f,%f,%f>,<%f,%f,%f>, %f, 0",-L[0]*0.5,-L[1]*0.5,-L[2]*0.5,L[0]*0.5,L[1]*0.5,L[2]*0.5,
+	  OprogStatus.povboxthickness);
+#else
+  fprintf(fs,"Wire_Box(<%f,%f,%f>,<%f,%f,%f>, %f, 0",-L*0.5,-L*0.5,-L*0.5,L*0.5,L*0.5,L*0.5,
+	  OprogStatus.povboxthickness);
+#endif
+  fprintf(fs,"texture{");
+  fprintf(fs,"pigment{ color rgb<0,0,0>}");
+  // fprintf(fs,"finish {  phong 1}\n");
+  fprintf(fs,"}\n"); // end of texture
+  fprintf(fs,"scale<1,1,1>\n");
+  fprintf(fs,"  rotate<0,0,0>\n");
+  fprintf(fs,"  translate<0,0,0>");
+  fprintf(fs," } //---------------------------------\n");
+#endif
+#else
+  fprintf(fs,".Vol: %G\n", L*L*L);
+#endif
+}
+void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
+{
+  int i, jj, kk, k1, k2, k3;
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], x1p[3], x2p[3], x1pp[3], x2pp[3], xbox[3], rb[3];
+
+  
+  for (jj=0; jj < amy.nL; jj++)
+    {
+      for (kk=0; kk < 3; kk++)
+	rb[kk] = amy.rcm[kk]-dr[kk];
+
+      body2lab(amy.boxes[jj].x,xbox,rb,amy.R);
+
+      //printf(">>>rcm %f %f %f\n", amy.boxes[jj].x[0],amy.boxes[jj].x[1],amy.boxes[jj].x[2]);
+      for (k1 = 0; k1 < 3; k1++)
+	{
+	  for (k2 = 0; k2 < 3; k2++)
+	    {
+	      R[k1][k2] = 0.0;//R[i][k1][k2];
+	      for (k3 = 0; k3 < 3; k3++)
+		{
+		  /* matrix multiplication: riga * colonna */
+		  R[k1][k2] += amy.boxes[jj].R[k1][k3]*amy.R[k3][k2];
+		}
+	    }
+	}
+#ifdef POVRAY
+      fprintf(f,"box\n");	
+      fprintf(f,"{\n");
+      for (kk=0; kk < 3; kk++)
+	{
+	  x1p[kk] = amy.boxes[jj].sax[kk];
+	  x2p[kk] = -amy.boxes[jj].sax[kk];
+	}	  
+      fprintf(f,"<%.15G,%.15G,%.15G>, <%.15G,%.15G,%.15G>\n",x1p[0],x1p[1],x1p[2], x2p[0],x2p[1],x2p[2]);
+      //fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }\n");
+      fprintf(f,"pigment { Red transmit 0.0 }\n");
+      //fprintf(f,"rotate <0,0,90>\n");
+      fprintf(f, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+	      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
+      fprintf(f,"translate <%.15G, %.15G, %.15G>\n", xbox[0], xbox[1], xbox[2]);
+      fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL\n"); 
+      fprintf(f,"ambient AMB diffuse DIFF\n");
+      fprintf(f,"specular SPEC roughness ROUGH}\n");
+      fprintf(f, "}\n");
+#else
+      fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G B %f %f %f C[%s]\n", 
+	   xbox[0], xbox[1], xbox[2], 
+	   R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2],
+	   2.0*amy.boxes[jj].sax[0], 2.0*amy.boxes[jj].sax[1], 2.0*amy.boxes[jj].sax[2], "red");
+#endif
+    }
+}
+
+
+void saveAmyloidPovray(char *fname, double L)
+{
+  FILE *f;
+  int kk;
+  double dr[3]={0.0,0.0,0.0};
+  f = fopen(fname, "w+");
+  print_pov_header(f, L);
+
+  for (kk=0; kk < 3; kk++)
+    dr[kk] = (amyloids[0].rcm[kk]+amyloids[1].rcm[kk])*0.5;
+
+  print_one_amyloid(amyloids[0], f, dr);
+  print_one_amyloid(amyloids[1], f, dr);
+  fclose(f);
+}
 
 double calcDistAmyloid(void)
 {
@@ -1793,6 +1946,7 @@ double miser_func(double x[])
 #endif
 int main(int argc, char**argv)
 {
+  char fname[255];
 #ifdef USE_MISER
   double regn[4];
   double mis_ave, mis_var;
@@ -2271,6 +2425,20 @@ int main(int argc, char**argv)
 #else
       vexcl += quad3d(intfunc, 0.0, 2.0*M_PI)*totfact;
 #endif
+#if 1
+      if (tt <= 1)
+	{
+	  printf("OVERLAP=%d\n", overlap);
+#ifdef POVRAY
+	  sprintf(fname, "amyfibrils-%lld.pov", tt);
+#else
+	  sprintf(fname, "amyfibrils-%lld.mgl", tt);
+#endif
+	  saveAmyloidPovray(fname, L);
+	  //exit(-1);
+	}
+#endif
+
       if (tt > 0 && tt % fileoutits == 0)
 	{
 	  fout = fopen(fnout, "a+");
