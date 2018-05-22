@@ -7,7 +7,7 @@
 char **fname; 
 int *isPercPart;
 double time, *ti, *r0[3], *r1[3], L, refTime;
-int points=-1, assez, NP, NPA=-1, clusters=0;
+int points=-1, assez, NP, NPA=-1, clusters=0,physunits=0;
 char parname[128], parval[25600000], line[25600000];
 char dummy[2048000], cluststr[2048000];
 char *pnum;
@@ -101,7 +101,7 @@ int mesh[][NKSHELL][3]=
 double twopi;
 void print_usage(void)
 {
-  printf("calcfqtself [ --deltaq/-dq | --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --clusters/-c ] <lista_files> [points] [qmin] [qmax]\n");
+  printf("calcfqtself [ --deltaq/-dq | --skip/-s | --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --clusters/-c ] [--phys-units|pu] <lista_files> [points] [qmin] [qmax]\n");
   printf("where points is the number of points of the correlation function\n");
   exit(0);
 }
@@ -128,6 +128,10 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  qmin = atoi(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--phys-units") || !strcmp(argv[cc],"-pu"))
+	{
+	  physunits=1;
 	}
       else if (!strcmp(argv[cc],"--clusters") || !strcmp(argv[cc],"-c"))
 	{
@@ -234,7 +238,7 @@ int main(int argc, char **argv)
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
   int iq, NN, fine, JJ, maxl, nfiles, nat, np, maxnp;
   int qmod, NP1, NP2, kk, isperc; 
-  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact;
+  double invL, rxdummy, sumImA, sumReA, sumImB, sumReB, scalFact, qavg, qm;
   double costmp, sintmp;
   twopi = acos(0)*4.0;	  
 #if 0
@@ -602,7 +606,23 @@ int main(int argc, char **argv)
     }
   for (qmod = qmin; qmod <= qmax; qmod+=delq)
     {
-      sprintf(fname2, "Fqs-%d",qmod);
+      if (physunits)
+	{
+	  qavg=0.0;
+	  for(iq=0; iq < ntripl[qmod]; iq++)
+	    {
+	      qm=0.0;
+	      for (kk=0; kk < 3; kk++)
+		qm+=Sqr(mesh[qmod][iq][kk]);
+	      qavg += sqrt(qm);
+	    }
+	  qavg /= ntripl[qmod];
+	  sprintf(fname2, "Fqs-%f",qavg*2.0*M_PI/L);
+	}
+      else
+	{
+	  sprintf(fname2, "Fqs-%d",qmod);
+	}
       if (!(f = fopen (fname2, "w+")))
 	{
 	  printf("ERROR: I can not open file %s\n", fname2);
@@ -632,7 +652,23 @@ int main(int argc, char **argv)
     {
       for (qmod = qmin; qmod <= qmax; qmod+=delq)
 	{
-	  sprintf(fname2, "FqsClsPerc-%d",qmod);
+	  if (physunits)
+	    {
+	      qavg=0.0;
+	      for(iq=0; iq < ntripl[qmod]; iq++)
+		{
+		  qm=0.0;
+		  for (kk=0; kk < 3; kk++)
+		    qm+=Sqr(mesh[qmod][iq][kk]);
+		  qavg += sqrt(qm);
+		}
+	      qavg /= ntripl[qmod];
+	      sprintf(fname2, "FqsClsPerc-%f",qmod*2.0*M_PI/L);
+	    }
+	  else
+	    {
+	      sprintf(fname2, "FqsClsPerc-%d",qmod);
+	    }
 	  if (!(f = fopen (fname2, "w+")))
 	    {
 	      printf("ERROR: I can not open file %s\n", fname2);

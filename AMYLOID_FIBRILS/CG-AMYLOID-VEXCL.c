@@ -559,15 +559,9 @@ double calcDistBox(double rcmA[3], double saxA[3], double RA[3][3],double rcmB[3
 
 /* cylinder overlap routines here */
 double diamHC=2.0, lengthHC=2.0;
-
-void saveAmyloidPovray(amyloidS amy, char *fname)
+void print_pov_header(FILE *fs)
 {
   double L=10;
-  FILE *f, *fs;
-  int i, jj, kk, k1, k2, k3;
-  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], x1p[3], x2p[3], x1pp[3], x2pp[3], xbox[3], rb[3];
-  f = fopen(fname, "w+");
-  fs=f;  
   /* povray preamble */
   fprintf(fs, "#declare RAD = off;\n");
   fprintf(fs, "#declare DIFF=0.475;\n");
@@ -602,7 +596,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs, "background{White}\n");
   fprintf(fs, "camera {\n");	
   fprintf(fs, "angle %f\n", 30.0);
-  fprintf(fs, "location <%f,%f,%f>\n", 10*L, 10*L, -20*L);
+  fprintf(fs, "location <%f,%f,%f>\n", -100*L, 0.0, 0.0);
   fprintf(fs, "look_at <0,0,0>\n");
   fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
   fprintf(fs, "//aperture 0.4\n");
@@ -644,11 +638,18 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
   fprintf(fs,"  translate<0,0,0>");
   fprintf(fs," } //---------------------------------\n");
 #endif
+}
+void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
+{
+  int i, jj, kk, k1, k2, k3;
+  double R[3][3], ux[3], uy[3], uz[3], x1[3], x2[3], x1p[3], x2p[3], x1pp[3], x2pp[3], xbox[3], rb[3];
 
-  rb[0]=rb[1]=rb[2]=0;
   
   for (jj=0; jj < amy.nL; jj++)
     {
+      for (kk=0; kk < 3; kk++)
+	rb[kk] = amy.rcm[kk]-dr[kk];
+
       body2lab(amy.boxes[jj].x,xbox,rb,amy.R);
 
       //printf(">>>rcm %f %f %f\n", amy.boxes[jj].x[0],amy.boxes[jj].x[1],amy.boxes[jj].x[2]);
@@ -676,7 +677,7 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
       //fprintf(f," pigment { color rgb<0.0,0.9,0.2> transmit 0.0 }\n");
       fprintf(f,"pigment { Red transmit 0.0 }\n");
       //fprintf(f,"rotate <0,0,90>\n");
-      fprintf(fs, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
+      fprintf(f, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
 	      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
       fprintf(f,"translate <%.15G, %.15G, %.15G>\n", xbox[0], xbox[1], xbox[2]);
       fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL\n"); 
@@ -684,6 +685,22 @@ void saveAmyloidPovray(amyloidS amy, char *fname)
       fprintf(f,"specular SPEC roughness ROUGH}\n");
       fprintf(f, "}\n");
     }
+}
+
+
+void saveAmyloidPovray(char *fname)
+{
+  FILE *f;
+  int kk;
+  double dr[3]={0.0,0.0,0.0};
+  f = fopen(fname, "w+");
+  print_pov_header(f);
+
+  for (kk=0; kk < 3; kk++)
+    dr[kk] = (amyloids[0].rcm[kk]+amyloids[1].rcm[kk])*0.5;
+
+  print_one_amyloid(amyloids[0], f, dr);
+  print_one_amyloid(amyloids[1], f, dr);
   fclose(f);
 }
 double calcDistAmyloid()
@@ -1800,8 +1817,7 @@ int main(int argc, char**argv)
 #if 1
 	  if (tt==1)
 	    {
-	      saveAmyloidPovray(amyloids[0],"amyfibr0.pov");
-	      saveAmyloidPovray(amyloids[1],"amyfibr1.pov");
+	      saveAmyloidPovray("amyfibr_both.pov");
 	    }
 #endif
 	  //place_AMYLOID(0, 0, 0, u1x, u1y, u1z, 1, gamma1);
