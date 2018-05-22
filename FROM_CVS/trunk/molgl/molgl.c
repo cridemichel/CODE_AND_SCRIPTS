@@ -1075,6 +1075,7 @@ void displayAtom(int nf, int nm, int na)
       glMultTransposeMatrixf(rotm);
       glEnable(GL_NORMALIZE);
       glScalef(atom->box.a, atom->box.b, atom->box.c);
+      //printf("scale %f %f %f\n", atom->box.a, atom->box.b, atom->box.c);
       glutSolidCube(1.0);
       glDisable(GL_NORMALIZE);
     }
