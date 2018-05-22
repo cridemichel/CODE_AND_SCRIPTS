@@ -9,6 +9,60 @@
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
+double thetaGlobalBondangle;
+#define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+void add_rotation_around_axis(double ox, double oy, double oz, double Rin[3][3], double Rout[3][3], double theta)
+{
+  double thetaSq, sinw, cosw;
+  double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+  int k1, k2, k3;
+  /* pick a random rotation angle between 0 and 2*pi*/
+ 
+  /* set to be used in az. angle distro calculation */
+  thetaGlobalBondangle = theta;
+
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = Rin[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+//	  Ro[k1][k2] += M[k1][k3]*Rin[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     Rout[k1][k2] = Ro[k1][k2]; 
+}
+
 void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 {
   int k1, k2;
@@ -277,7 +331,6 @@ void build_amyloid(int nL)
 #define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
         (maxarg1) : (maxarg2))
 
-#define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 #define SYMMETRY
 #ifdef QUASIMC
   double sv[10];
@@ -886,10 +939,8 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
 {
   int k;
   double angle, u[3], sp, norm, up[3], xx, yy;
-#ifdef AMYLOID_ELEC
   double Rout[3][3];
   int k1, k2;
-#endif
   /* first row vector (note that cylinder symmetry axis which is x) */
   R[0][0] = ox;
   R[0][1] = oy;
@@ -930,13 +981,11 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
  
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
-#ifdef AMYLOID_ELEC
   /* add a random rotation around the axis (ox, oy, oz) */
   add_rotation_around_axis(ox, oy, oz, R, Rout, gamma);
   for (k1=0; k1 < 3; k1++)
     for (k2=0; k2 < 3; k2++)
       R[k1][k2] = Rout[k1][k2];
-#endif
 
 #if 0
   for (k1=0; k1 < 3 ; k1++)

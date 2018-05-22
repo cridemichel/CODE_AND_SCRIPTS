@@ -21,7 +21,6 @@ extern int my_rank;
 extern int numOfProcs; /* number of processeses in a communicator */
 #endif 
 //#define ELEC
-//#define ALBERTA
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
 /* ============ MISER ============== */
@@ -64,6 +63,7 @@ typedef struct amyloid {
 } amyloidS;
 
 amyloidS amyloids[2];
+
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -1064,13 +1064,6 @@ double calc_norm(double *vec)
 }
 
 #define MC_BENT_DBLCYL
-
-/*
-                pdb        radius (angstrom)
-    sugar       Xe          3.5        
-    phosphate   B           3.0         
-    base        Se          4.0    
-*/
 
 #ifdef MC_BENT_DBLCYL
 /* apply a random rotation around the supplied axis because 
