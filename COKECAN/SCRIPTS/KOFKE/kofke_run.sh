@@ -81,7 +81,7 @@ if [ "$KSTAT" = "predictor" ]
 then
 if [ "$NLKF" = "1" ]
 then
-#use trapezoid formula at begin
+#use trapezoid formula on start
 NEWP=`echo "${P0}*e((${DELB})*(${F0}))" | bc -l`
 echo $NEWP > $PFN
 NEWBETA=`echo "(${BETA0})+(${DELB})"| bc -l`
@@ -110,7 +110,7 @@ if [ "$NLKF" = "1" ]
 then
 echo "NEWP=" $NEWP "P0=" $P0 "Fp1=" $Fp1 " F0=" $F0 
 #echo "ECCOCI"
-#use trapezoid formula at begin
+#use trapezoid formula on start 
 NEWP=`echo "$P0*e(($DELB)*(($Fp1)+($F0))*0.5)" | bc -l`
 echo $NEWP > $PFN
 #NOTE: beta is the same as in predictor stage 
