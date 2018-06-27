@@ -6183,8 +6183,10 @@ void move_box_xyz(int *ierr)
     }
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
   rejectMove = 0;
   checkMoveKF=1;
+#endif
 #endif
 
   if (OprogStatus.useNNL)
@@ -6193,7 +6195,9 @@ void move_box_xyz(int *ierr)
     find_bonds_flex_all();
 
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
   checkMoveKF = 0;
+#endif
 #endif	
 
 #ifdef MC_FREEZE_BONDS
@@ -6498,8 +6502,10 @@ void move_box(int *ierr)
     }
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
-      rejectMove = 0;
-      checkMoveKF=1;
+#ifndef MC_BIFUNC_SPHERES
+  rejectMove = 0;
+  checkMoveKF=1;
+#endif
 #endif
 
   if (OprogStatus.useNNL)
@@ -6508,7 +6514,9 @@ void move_box(int *ierr)
     find_bonds_flex_all();
 
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
   checkMoveKF = 0;
+#endif
 #endif	
 
 #ifdef MC_FREEZE_BONDS
@@ -6662,6 +6670,9 @@ void update_bonds_MC(int ip)
       jj2 = bondscache2[kk] % (NANA);
       aa = jj2 / NA;
       bb = jj2 % NA;
+#ifdef MC_BIFUNC_SPHERES
+      remove_bond(jj, ip, bb, aa);
+#else
       if (checkMoveKF==1)
 	{
 #ifdef MC_AMYLOID_FIBRILS
@@ -6682,6 +6693,7 @@ void update_bonds_MC(int ip)
 	}
       else
 	remove_bond(jj, ip, bb, aa);
+#endif
     }
 #elif defined(MC_GAPDNA)
 #ifdef MD_LL_BONDS
@@ -6720,8 +6732,12 @@ void update_bonds_MC(int ip)
 #endif
     
 #ifdef MC_KERN_FRENKEL
+#ifdef MC_BIFUNC_SPHERES
+  numbonds[ip] = 0;
+#else
   if (!checkMoveKF)
     numbonds[ip] = 0;
+#endif
 #elif defined(MC_GAPDNA)
   if (!checkMoveKF)
     numbonds[ip] = 0;
@@ -7068,13 +7084,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   /* dist_type=0 -> isotropic
      dist_type=1 -> onsager */
   double sphrad, rmin1, rmin2, rmin, rmax, drSq, verso, costh, rho, theta;
-  const int maxtrials=1000000;
+  const int maxtrials=10000000;
   double bondlen, dist=0.0, rA[3], rat[3], norm, normB, sax, cc[3], ene, uj[3], ui[3], u1[3];
 #ifndef MD_SPOT_GLOBAL_ALLOC
   double ratAll[NA][3];
 #endif
   double rB[3], normo;
-  int k, nbB=1;
+  int co, k, nbB=1;
   double costh1, shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz, raggio;
   int nbf, ierr, bonded, k1, k2, trials, nbold;
@@ -7103,10 +7119,35 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     numbonds[i]=0;
   *merr=0;
   /* genero un vettore unitario intorno alla direzione del bond di j con un angolo pari a 2*\theta_{max} */
+  co=0;
   do
     {
+#if 1
+      if (dist_type==4)
+	{
+	  u1[0] = 1;
+	  u1[1] = 0;
+    	  u1[2] = 0;
+	}
+      else if (dist_type==0||dist_type==6)//|| (i < Oparams.parnum/2))
+	{
+	  orient(&(u1[0]), &(u1[1]), &(u1[2]));
+	}
+      else 
+	{
+	  orient_onsager(&(u1[0]), &(u1[1]), &(u1[2]), alpha);
+	}
+#else
       orient(&(u1[0]), &(u1[1]), &(u1[2]));
+#endif
       costh = scalProd(u1,uj);
+      co++;
+      if (co > maxtrials)
+	{
+	  printf("[MCIN KF - COM pos] maximum number of trials, aborting...\n");
+	  *merr=1;
+	  return;
+	}
     }
   while (costh <= OprogStatus.costhKF);
   /* genera una distanza tra raggio e raggio+distKF */
@@ -7123,8 +7164,12 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
   normo=calc_norm(vv);
   for (k=0; k < 3; k++)
     vv[k] /= normo;
+  co=0;
   do
     {
+#if 1
+      orient(&(ui[0]), &(ui[1]), &(ui[2]));
+#else
       if (dist_type==4)
 	{
 	  ui[0] = 1;
@@ -7139,8 +7184,16 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	{
 	  orient_onsager(&(ui[0]), &(ui[1]), &(ui[2]), alpha);
 	}
+#endif
       costh1 = scalProd(vv,ui);
       //printf("costh1=%f costhKF=%f\n", costh1, OprogStatus.costhKF);
+      co++;
+      if (co > maxtrials)
+	{
+	  printf("[MCIN KF - orientation] maximum number of trials, aborting...\n");
+	  *merr=1;
+	  return;
+	}
     }
   while (costh1 <= OprogStatus.costhKF);
 
@@ -7157,7 +7210,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
     {
       ene = -1;
       /* qui si puo' controllare se effettivamente le particelle sono legate */
-      /* siccome la chimata con fake avviene per le simulazioni AVB allora bisogna
+      /* siccome la chiamata con fake avviene per le simulazioni AVB allora bisogna
        * anche rispettare le PBC */
       pbc(i);
     }
@@ -12678,13 +12731,17 @@ int mcmotion(void)
 	}
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
       rejectMove = 0;
       checkMoveKF=1;
+#endif
 #endif
       update_bonds_MC(ip);
 
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
       checkMoveKF = 0;
+#endif
 #endif	
       /* qui basta calcolare l'energia della particella che sto muovendo */
 #ifdef MC_FREEZE_BONDS
@@ -13762,13 +13819,17 @@ int bigrot_move_outin(int bmtype) // bmtype=1 => out->in ; bmtype=0 => in->out
 	}
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
       rejectMove = 0;
       checkMoveKF=1;
+#endif
 #endif
       update_bonds_MC(np);
 
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
       checkMoveKF = 0;
+#endif
 #endif	
       /* qui basta calcolare l'energia della particella che sto muovendo */
 #ifdef MC_FREEZE_BONDS
@@ -14076,13 +14137,17 @@ int bigrot_move(void)
 	}
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
       rejectMove = 0;
       checkMoveKF=1;
+#endif
 #endif
       update_bonds_MC(np);
 
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
+#ifndef MC_BIFUNC_SPHERES
       checkMoveKF = 0;
+#endif
 #endif	
       /* qui basta calcolare l'energia della particella che sto muovendo */
 #ifdef MC_FREEZE_BONDS
