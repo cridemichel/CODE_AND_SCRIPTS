@@ -1077,8 +1077,10 @@ void find_bonds_one_BP(int i)
 #endif
 
 #if defined(MC_GAPDNA) || defined(MC_KERN_FRENKEL)
+#ifndef MC_BIFUNC_SPHERES
   if (checkMoveKF==1)
     rejectMove = 1;
+#endif
 #endif
   for (ns1 = 0; ns1 < typesArr[typeOfPart[i]].nspots; ns1++)
     {
@@ -1211,12 +1213,14 @@ void find_bonds_one_BP(int i)
 			    }
 #endif
 #ifdef MC_KERN_FRENKEL
+#ifndef MC_BIFUNC_SPHERES
 			  /* NOTA: questa soluzione va testata!!! */
 			  if (dists[nn] < 0 &&  bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]) && 
 			      checkMoveKF == 1 && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
 			    permbonds++;
 			  if (permbonds == 2)
 			    rejectMove = 0;
+#endif
 #elif defined(MC_GAPDNA)
 			  if (dists[nn] < 0 && (i/OprogStatus.polylen == j/OprogStatus.polylen) &&//bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]) &&
 			      checkMoveKF == 1 && mapbondsaFlex[nn] == 1 && mapbondsbFlex[nn] == 1)
@@ -1510,12 +1514,14 @@ void find_bonds_one(int i)
 		    {
 		      //printf("aa=%d bb=%d uno=%d due=%d\n", mapbondsaFlex[nn], mapbondsbFlex[nn], i/4, j/4);
 #ifdef MC_KERN_FRENKEL
+#ifndef MC_BIFUNC_SPHERES
 		      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn])
 			  && mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
 			{
 		  	  rejectMove = 1;
 			  continue;
 			}
+#endif
 #elif defined(MC_GAPDNA)
 #if 0
 	    	      if (checkMoveKF==1 && dists[nn] > 0.0 && bound(i, j, mapbondsaFlex[nn], mapbondsbFlex[nn]))
@@ -1550,12 +1556,14 @@ void find_bonds_one(int i)
 			{
 #ifdef MC_KERN_FRENKEL
 			  //printf("polylen=%d ncls=%d\n", OprogStatus.polylen, i/OprogStatus.polylen);
+#ifndef  MC_BIFUNC_SPHERES
 			  if ((i/OprogStatus.polylen != j/OprogStatus.polylen) && 
 			      mapbondsaFlex[nn] < 3 && mapbondsbFlex[nn] < 3)
 			    {
 			      //rejectMove = 1;
 			      continue;
 			    }
+#endif
 #elif defined(MC_GAPDNA)
 #if 0
 			  printf("i=%d j=%d numbonds[i]=%d numbonds[j]=%d\n", i, j, numbonds[i], numbonds[j]);
