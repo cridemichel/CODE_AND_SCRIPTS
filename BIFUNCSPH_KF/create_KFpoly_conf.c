@@ -42,8 +42,8 @@ int main(int argc, char **argv)
   fprintf(f,"2 2 2\n");
   fprintf(f, "1 1 1 1 2 0\n");
   fprintf(f,"2 0\n");
-  fprintf(f,"%f 0 0 %f\n",Diam*0.5, Diam*distKF);
-  fprintf(f,"%f 0 0 %f\n",-Diam*0.5, Diam*distKF);
+  fprintf(f,"0 0 %f %f\n",Diam*0.5, Diam*distKF);
+  fprintf(f,"0 0 %f %f\n",-Diam*0.5, Diam*distKF);
   fprintf(f,"0 0 0 0 1 0 0 100000\n");
   fprintf(f,"0 0 0 1 1 0 0 100000\n");
   fprintf(f,"0 1 0 1 1 0 0 100000\n");
@@ -53,9 +53,9 @@ int main(int argc, char **argv)
   ibeg = 0;
   numpoly=parnum/polylen;
   printf("numpoly=%d numpoly*polylen=%d\n", numpoly, numpoly*polylen);
-  drx = Diam*polylen; //0.500000000001;
-  dry = Diam;
-  drz = Diam;
+  drx = Diam*polylen*1.00001; //0.500000000001;
+  dry = Diam*1.00001;
+  drz = Diam*1.00001;
   if (parnum%polylen != 0)
     {
       printf("number of particles must a multiple of %d\n", polylen);
