@@ -254,9 +254,11 @@ int main(int argc, char **argv)
     NPA = NP;
   if (points == -1)
     points=NN;
+#if 1
   if ((eventDriven==1 && storerate <= 0.0 && bakSaveMode <= 0)
       || (eventDriven==0 && bakSaveMode <= 0)) 
     NN = 1;
+#endif
   if (NN!=1)
     skip = 0;
   
@@ -383,7 +385,8 @@ int main(int argc, char **argv)
 		}
 	      if (JJ > 0 && (nr2 - nr1) % NN != 0)
 		continue;
-		
+	      //if (JJ > 0)
+		//printf("nr2=%d nr1=%d nr2-nr1=%d NN=%d %d\n", nr2, nr2, nr2-nr1, (nr2-nr1)%NN);
 	      if (nr2==nr1)
 		{
 		  for (i=0; i < NP; i++)

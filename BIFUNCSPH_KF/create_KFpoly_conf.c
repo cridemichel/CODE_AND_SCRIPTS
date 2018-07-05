@@ -1,23 +1,34 @@
 #include<stdlib.h>
 #include<stdio.h>
+#include<math.h>
 double nx, ny, nz, L[3], *rx, *ry, *rz;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 int full, ibeg, numpoly;
 int main(int argc, char **argv)
 {
   FILE *f;
-  double Diam, del0, distKF=0.546;
+  double Diam, del0, distKF=0.546, phi, v0;
   int parnum=5848; //phi=0.299 i.e. coexistence according to Thuy's results using SUS
   int i, j, polylen=1;
   f = fopen(argv[1], "w+");
   Diam=1.0;
-  /* elongated box */
-  L[0] = 40.0*Diam;
-  L[1] = 16.0*Diam;
-  L[2] = 16.0*Diam;
-  printf("argc=%d\n", argc);
-  if (argc==3)
+  if (argc>=3)
     parnum=atoi(argv[2]);
+  if (argc>=4)
+    {  
+      phi=atof(argv[3]);
+      v0=(4.0*M_PI/3.0)*pow((Diam/2.0),3.0);
+      L[0]=L[1]=L[2]=cbrt((v0*parnum)/phi);
+     }
+  else 
+     {
+       /* elongated box */
+       L[0] = 40.0*Diam;
+       L[1] = 16.0*Diam;
+       L[2] = 16.0*Diam;
+     }
+  printf("argc=%d\n", argc);
+ 
   rx = malloc(sizeof(double)*parnum);
   ry = malloc(sizeof(double)*parnum);
   rz = malloc(sizeof(double)*parnum);
