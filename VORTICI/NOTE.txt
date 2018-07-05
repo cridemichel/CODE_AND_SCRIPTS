@@ -1,0 +1,4 @@
+TODO
+- calcolare la collettiva
+- calcolare parametri d'ordine per altri tipi di cristalle per vedere se c'è
+  una competizione tra vetri con diverse simmetrie oppure la competizione 
