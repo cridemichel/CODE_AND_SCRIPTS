@@ -1,6 +1,8 @@
 //#include "./G-DNA-k2K22.h"
 /* ====================================== >>> PARAMETRI FIBRILLA  <<< ===================================== */
 
+//#define POVRAY
+
 #define AMY_LBOX_ALONG_AXIS 2.0 /* lunghezza del box lungo l'asse dell'elica della fibrilla 
 				   (questo parametro dipende dal livello di coarse-graining e comunque deve essere 
 				   abbastanza più piccolo del pitch delle fibrille )
@@ -93,7 +95,7 @@ void build_amyloid(int nL)
 {
   double npitch, dth;
   int jj, kk, i;
-  double xcm[3];
+  double xcm[3], rE;
 
   amyloids[0].nL=nL;
   amyloids[1].nL=nL;
@@ -125,11 +127,18 @@ void build_amyloid(int nL)
       //printf("2)oldval=%.15G newval: %.15G\n",(amyloids[i].Lbox*amyloids[i].nL+1)/2.0 ,1.01*amyloids[i].Lbox*amyloids[i].nL/2.0);
       dth=2.0*M_PI/amyloids[i].npitch;
       // length_eucl=OprogStatus.npitch*OprogStatus.pitch;
+#ifdef NEW_MODEL
+      rE = amyloids[i].nD*amyloids[i].Dproto/2.0;
+#else
+      rE=0.0;
+#endif
       for (jj=0; jj < amyloids[i].nL; jj++)
 	{
 	  //printf("x=%f\n", amyloids[i].boxes[jj].x[0]);
-	  amyloids[i].boxes[jj].x[0]=0.0;
-	  amyloids[i].boxes[jj].x[1]=0.0;
+	  amyloids[i].boxes[jj].x[0]=rE*sin(jj*dth);
+	  amyloids[i].boxes[jj].x[1]=rE*cos(jj*dth);
+	  //amyloids[i].boxes[jj].x[0]=0.0;
+	  //amyloids[i].boxes[jj].x[1]=0.0;
 	  amyloids[i].boxes[jj].x[2]=((double)jj)*amyloids[i].Lbox;
 	  //printf("rcm %f %f %f\n", amyloids[i].boxes[jj].x[0],amyloids[i].boxes[jj].x[1],amyloids[i].boxes[jj].x[2]);
 	  amyloids[i].boxes[jj].sax[0] = amyloids[i].ribthick/2.0;
@@ -378,7 +387,7 @@ void print_pov_header(FILE *fs, double L)
   fprintf(fs, "// spotlight light source\n");
   fprintf(fs, "light_source {\n");
   fprintf(fs, "//<0, 10, -3>\n");
-  fprintf(fs, "<%f, %f, %f>\n", 60.0*L, 60.0*L, -60.0*L);
+  fprintf(fs, "<%f, %f, %f>\n", 0*L, 600.0*L, -600.0*L);
   fprintf(fs, "color White\n");
   fprintf(fs, "spotlight\n");
   fprintf(fs, "radius 15\n");
@@ -481,7 +490,7 @@ void saveAmyloidPovray(char *fname, double L)
     dr[kk] = (amyloids[0].rcm[kk]+amyloids[1].rcm[kk])*0.5;
 
   print_one_amyloid(amyloids[0], f, dr);
-  print_one_amyloid(amyloids[1], f, dr);
+  //print_one_amyloid(amyloids[1], f, dr);
   fclose(f);
 }
 
