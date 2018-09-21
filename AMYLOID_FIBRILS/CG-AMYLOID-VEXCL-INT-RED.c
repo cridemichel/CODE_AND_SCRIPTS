@@ -3,6 +3,7 @@
 
 //#define POVRAY
 
+//#define NEW_MODEL
 #define AMY_LBOX_ALONG_AXIS 2.0 /* lunghezza del box lungo l'asse dell'elica della fibrilla 
 				   (questo parametro dipende dal livello di coarse-graining e comunque deve essere 
 				   abbastanza più piccolo del pitch delle fibrille )
@@ -377,7 +378,7 @@ void print_pov_header(FILE *fs, double L)
   fprintf(fs, "background{White}\n");
   fprintf(fs, "camera {\n");	
   fprintf(fs, "angle %f\n", 30.0);
-  fprintf(fs, "location <%f,%f,%f>\n", -100*L, 0.0, 0.0);
+  fprintf(fs, "location <%f,%f,%f>\n", -L, L, 0.0);
   fprintf(fs, "look_at <0,0,0>\n");
   fprintf(fs, "//focal_point < 1, 1, -6> // pink sphere in focus\n");
   fprintf(fs, "//aperture 0.4\n");
@@ -464,6 +465,8 @@ void print_one_amyloid(amyloidS amy, FILE *f, double dr[3])
       fprintf(f, "matrix <%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,%.15G,0,0,0>\n",
 	      R[0][0],R[0][1],R[0][2],R[1][0],R[1][1],R[1][2],R[2][0],R[2][1],R[2][2]);
       fprintf(f,"translate <%.15G, %.15G, %.15G>\n", xbox[0], xbox[1], xbox[2]);
+      /* left-handed to right-handed, since POVRAY coordinate system is left-handed */
+      fprintf(f, "matrix <1,0,0,0,1,0,0,0,-1,0,0,0>\n");
       fprintf(f,"finish { phong PHONG phong_size PHONG_SIZE reflection REFL\n"); 
       fprintf(f,"ambient AMB diffuse DIFF\n");
       fprintf(f,"specular SPEC roughness ROUGH}\n");
