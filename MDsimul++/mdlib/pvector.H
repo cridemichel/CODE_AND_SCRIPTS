@@ -1,17 +1,17 @@
-template <int N> class pvector {
+template <class ntype, int N> class pvector {
     int vsize;
 public:
-    double v[N];
-    inline pvector<N> operator +(const pvector<N>& param)
+    ntype v[N];
+    inline pvector<ntype,N> operator +(const pvector<ntype,N>& param)
     {
 	int i;
-	pvector<N> lv;
+	pvector<ntype,N> lv;
 	for (i=0; i < N; i++)
 	  lv.v[i] = v[i] + param.v[i];
 	return lv;
     }
  
-    inline pvector<N> operator += (const pvector<N>& param)
+    inline pvector<ntype,N> operator += (const pvector<ntype,N>& param)
       {
        	int i;
 	for (i=0; i < N; i++)
@@ -19,50 +19,79 @@ public:
 	return *this;
       }
 
-    inline pvector<N> operator *(const double& param) 
+    inline pvector<ntype,N> operator *(const double& param) 
     {
         int i;
-	pvector<N> lv;
+	pvector<ntype,N> lv;
 	for (i=0; i < N; i++)
 	  lv.v[i] = v[i]*param;
 	return lv;
     }
+
+    friend pvector<ntype,N> operator *(const double& param, const pvector<ntype,N>& v) 
+      {
+	int i;
+	pvector<ntype,N> lv;
+	for (i=0; i < N; i++)
+	  lv.v[i] = v.v[i]*param;
+	return lv;
+      }
+
     inline double& operator[](const int& i)
       {
 	return v[i];
       }
-    inline double scalprod(const pvector<N>& v1, const pvector<N> &v2)
+    inline double dot(const pvector<ntype,N>& v1)
       {
 	int i;
 	double sum=0;
 	for (i=0; i < N; i++)
 	  {
-	    sum+=v1.v[i]*v2.v[i]; 
+	    sum+=v[i]*v1.v[i]; 
 	  }
 	return sum;
       }
-    inline pvector<N> vectprod(const pvector<N>& v1, const pvector<N> &v2)
+    inline double norm()
       {
-	pvector<N> v3;
-	v3.v[0] = v1.v[1]*v2.v[2] - v1.v[2]*v2.v[1];
-	v3.v[1] = v1.v[2]*v2.v[0] - v1.v[0]*v2.v[2];
-	v3.v[2] = v1.v[0]*v2.v[1] - v1.v[1]*v2.v[0];
-	return v3;
+	return (*this).dot(*this);
       }
+    // cross product
+    inline double cross(const pvector<ntype,N>& v1)
+      {
+	pvector<ntype,N> v2;
+	v2.v[0] = v[1]*v1.v[2] - v[2]*v1.v[1];
+	v2.v[1] = v[2]*v1.v[0] - v[0]*v1.v[2];
+	v2.v[2] = v[0]*v1.v[1] - v[1]*v1.v[0];
+	return v2;
+      }
+    //^ = cross product 
+    inline pvector<ntype,N> operator ^(const pvector<ntype,N> &vv)
+      {
+	return (*this).cross(vv);
+      }
+    //* dot product
+    inline double operator *(const pvector<ntype,N> &vv)
+      {
+	return (*this).dot(vv);
+      }
+    //friend double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2);
     void show(void)
       {
-	int i;
-	for (i=0; i < N; i++)
-	  printf("%.15G ", v[i]);
-	printf("\n");
+	show(NULL);
       }
     void show(const char* str)
       {
 	int i;
-	printf("[%s] ", str);
+	if (str!=NULL)
+	  printf("%s", str);
+	printf("{");
 	for (i=0; i < N; i++)
-	  printf("%.15G ", v[i]);
-	printf("\n");
+	  {
+	    printf("%.15G", v[i]);
+	    if (i < N-1)
+	      printf(",");
+	  }
+       	printf("}\n");
       }
     int size()
       {
@@ -77,13 +106,18 @@ public:
       {
       }
 };
-typedef pvector<8> pvec;
-// Lots of other methods here
-pvec operator*(const double& s, const pvec& v)
+template <class ntype, int N>
+double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2)
 {
   int i;
-  pvec lv;
-  for (i=0; i < lv.size(); i++)
-    lv.v[i] = v.v[i]*s;
-  return lv;
+  double sum=0;
+  for (i=0; i < N; i++)
+    {
+      sum+=v1.v[i]*v2.v[i]; 
+    }
+  return sum;
 }
+/* some predefined vectors useful for simulations */
+typedef pvector<double,2> vecd2;
+typedef pvector<double,3> vecd3;
+typedef pvector<double,4> vecd4;
