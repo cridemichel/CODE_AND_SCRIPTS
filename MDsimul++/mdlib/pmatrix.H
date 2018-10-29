@@ -76,19 +76,19 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	  for (i=0;i<j;i++) 
 	    { 
 	      /* This is equation (2.3.12) except for i = j. */
-	      sum=m1.m[i][j]; 
+	      sum=m1[i][j]; 
 	      for (k=0;k<i;k++) 
-		sum -= m1.m[i][k]*m1.m[k][j]; 
-	      m1.m[i][j]=sum; 
+		sum -= m1[i][k]*m1[k][j]; 
+	      m1[i][j]=sum; 
 	    } 
 	  big=0.0; /* Initialize for the search for largest pivot element. */ 
 	  for (i=j;i<n;i++) 
 	    { 
 	      /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
-	      sum=m1.m[i][j]; 
+	      sum=m1[i][j]; 
 	      for (k=0;k<j;k++)
-		sum -= m1.m[i][k]*m1.m[k][j]; 
-	      m[i][j]=sum; 
+		sum -= m1[i][k]*m1[k][j]; 
+	      m1[i][j]=sum; 
 	      if ( (dum=vv[i]*abs(sum)) >= big) 
 		{ 
 		  /* Is the  gure of merit for the pivot better than the best so far? */
@@ -102,9 +102,9 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      for (k=0;k<n;k++) 
 		{ 
 		  /* Yes, do so...*/ 
-		  dum=m1.m[imax][k]; 
-		  m1.m[imax][k]=m1.m[j][k]; 
-		  m1.m[j][k]=dum; 
+		  dum=m1[imax][k]; 
+		  m1[imax][k]=m1[j][k]; 
+		  m1[j][k]=dum; 
 		} 
 	      d = -d; 
 	      /* ...and change the parity of d. */ 
@@ -112,8 +112,8 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      /* Also interchange the scale factor.*/ 
 	    } 
 	  indx[j]=imax; 
-	  if (m1.m[j][j] == 0.0) 
-	    m1.m[j][j]=TINY; 
+	  if (m1[j][j] == 0.0) 
+	    m1[j][j]=TINY; 
 	  /* If the pivot element is zero the matrix is singular 
 	   * (at least to the precision of the algorithm). 
 	   * For some applications on singular matrices, 
@@ -121,8 +121,8 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	  if (j != n) 
 	    { 
 	      /* Now,  nally, divide by the pivot element.*/
-	      dum=1.0/(m1.m[j][j]); 
-	      for (i=j+1;i<n;i++) m1.m[i][j] *= dum; 
+	      dum=1.0/(m1[j][j]); 
+	      for (i=j+1;i<n;i++) m1[i][j] *= dum; 
 	    } 
 	} 
     }
@@ -136,12 +136,12 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	  /* When ii is set to a positive value, it will become the index of the  
 	   * rst nonvanishing element of b. Wenow do the forward substitution,
 	   * equation (2.3.6). The only new wrinkle is to unscramble the permutation as we go. */
-	  ip=indx.v[i];
-	  sum=b.v[ip];
+	  ip=indx[i];
+	  sum=b[ip];
 	  b[ip]=b[i]; 
 	  if (ii>-1) 
 	    for (j=ii;j<=i-1;j++) 
-	      sum -= m1.m[i][j]*b.v[j]; 
+	      sum -= m1[i][j]*b[j]; 
 	  else if (sum) 
 	    ii=i; 
 	  /* A nonzero element was encountered, so from now on we will have to do 
@@ -151,9 +151,9 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
       for (i=n-1;i>=0;i--) 
 	{ 
 	  /* Now we do the backsubstitution, equation (2.3.7).*/
-	  sum=b.v[i]; 
+	  sum=b[i]; 
 	  for (j=i+1;j<N;j++) 
-	    sum -= m1.m[i][j]*b.v[j]; b.v[i]=sum/m1.m[i][i]; 
+	    sum -= m1[i][j]*b[j]; b.v[i]=sum/m1[i][i]; 
 	  /* Store a component of the solution vector X. */ 
 	} /* All done! */
     }
@@ -164,7 +164,7 @@ public:
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m2.m[i][j] = m[i][j] +  m1.m[i][j];
+	  m2[i][j] = m[i][j] +  m1[i][j];
       return m2;
     }
     double det()
@@ -196,6 +196,7 @@ public:
 	pvector<int,N> indx;
 	mc=(*this);
 	ludcmp(mc,indx, d, ok); 
+	mc.show("mc");
 	for(m2=0;m2<N;m2++) 
 	  { 
 	    for(m1=0;m1<N;m1++) 
