@@ -32,7 +32,7 @@ public:
 // define inv() det() i.e. inverse and determinant
 // matrici quadrate NxN
 
-using namespace std;
+//using namespace std;
 template <class ntype> double abs(ntype a)
 {
   return abs((double)a);
