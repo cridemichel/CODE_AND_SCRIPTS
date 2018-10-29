@@ -128,7 +128,8 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 
   pvector<ntype,N> lubksb(pvector <int,N> indx, pvector<ntype,N> b)
     { 
-      /* the calling matrix (*this) must be the LU decomposition of a given matrix M 
+      /* the calling matrix (*this) must be the LU decomposition of a given matrix M
+       * with indx the raw permutations done to obtain LU from M, 
        * the return vector is the solution of A*x + b = 0 */
       int i,ii=0,ip,j; 
       double sum; 
@@ -210,6 +211,8 @@ public:
       pvector <ntype,N> col, col2;
       pvector<int,N> indx;
       // ludcmp returns the LU decomposition of actual matrix (*this)
+      // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
+      // for more details c2.3)
       LU=ludcmp(indx, d); 
       for(m2=0;m2<N;m2++) 
 	{ 
