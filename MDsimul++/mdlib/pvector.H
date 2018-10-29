@@ -37,7 +37,7 @@ public:
 	return lv;
       }
 
-    inline double& operator[](const int& i)
+    inline ntype& operator[](const int& i)
       {
 	return v[i];
       }
