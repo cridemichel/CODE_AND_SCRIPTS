@@ -43,30 +43,28 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 {
   using pmatrix<ntype,N,N>::m;
   int n;
-  void ludcmp(pmatrixq <ntype,N>& m1, pvector<int,N>& indx, double& d, int& ok)
+  pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d)
     {
-      /* A[i][j] = Aij 
-       * A x = b  
-       * per semplicità nel seguito si assume che l'ordine della matrice è 3 */
+      /* return the LU decomposition of calling matrix (i.e. *this) */
+      pmatrixq <ntype,N> m1;
       const double TINY=1E-20;
       int i,imax=-1,j,k,n;
       ntype big,dum,sum,temp; 
       ntype vv[N]; /* vv stores the implicit scaling of each row.*/
       d=1.0; /* No row interchanges yet. */
-      ok = 0;
       n=N;
+      m1 = (*this);
       for (i=0;i<n;i++) 
 	{ 
 	  /* Loop over rows to get the implicit scaling information.*/ 
 	  big=0.0; 
 	  for (j=0;j<n;j++)
 	    {
-	      if ((temp=abs(m1.m[i][j])) > big) big=temp; 
+	      if ((temp=abs(m1[i][j])) > big) big=temp; 
 	    }
 	  if (big == 0.0)
 	    {
-	      ok = 1;
-	      return;
+	      return m1;
 	    }
 	  /* No nonzero largest element. */
 	  vv[i]=1.0/big; /* Save the scaling.*/
@@ -125,10 +123,13 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      for (i=j+1;i<n;i++) m1[i][j] *= dum; 
 	    } 
 	} 
+      return m1;
     }
 
-  void lubksb(pmatrixq <ntype,N> m1, pvector <int,N> indx, pvector<ntype,N>& b)
+  pvector<ntype,N> lubksb(pvector <int,N> indx, pvector<ntype,N> b)
     { 
+      /* the calling matrix (*this) must be the LU decomposition of a given matrix M 
+       * the return vector is the solution of A*x + b = 0 */
       int i,ii=0,ip,j; 
       double sum; 
       for (i=0;i<N;i++) 
@@ -141,21 +142,22 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	  b[ip]=b[i]; 
 	  if (ii>-1) 
 	    for (j=ii;j<=i-1;j++) 
-	      sum -= m1[i][j]*b[j]; 
+	      sum -= m[i][j]*b[j]; 
 	  else if (sum) 
 	    ii=i; 
 	  /* A nonzero element was encountered, so from now on we will have to do 
 	   * the sums in the loop above. */ 
-	  b.v[i]=sum; 
+	  b[i]=sum; 
 	} 
       for (i=n-1;i>=0;i--) 
 	{ 
 	  /* Now we do the backsubstitution, equation (2.3.7).*/
 	  sum=b[i]; 
 	  for (j=i+1;j<N;j++) 
-	    sum -= m1[i][j]*b[j]; b.v[i]=sum/m1[i][i]; 
+	    sum -= m[i][j]*b[j]; b[i]=sum/m[i][i]; 
 	  /* Store a component of the solution vector X. */ 
 	} /* All done! */
+      return b;
     }
 public:
   inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
@@ -171,10 +173,10 @@ public:
     {
       double d;
       pmatrixq<ntype,N> m1;
-      int j, ok;
+      int j;
       pvector<int,N> indx;
-      m1=(*this);
-      ludcmp(m1,indx,d,ok);
+      // ludcmp return the LU decomposition of actual matrix (*this)
+      m1=ludcmp(indx,d);
       for(j=0;j<N;j++) 
 	d *= m1[j][j];
       return d;
@@ -202,24 +204,23 @@ public:
 
   pmatrixq<ntype,N> invgen()
     {
-      int m1, m2, ok; 
+      int m1, m2; 
       double d;
-      pmatrixq<ntype,N> b, mc;
-      pvector <ntype,N> col;
+      pmatrixq<ntype,N> om, LU;
+      pvector <ntype,N> col, col2;
       pvector<int,N> indx;
-      mc=(*this);
-      ludcmp(mc,indx, d, ok); 
-      mc.show("mc");
+      // ludcmp returns the LU decomposition of actual matrix (*this)
+      LU=ludcmp(indx, d); 
       for(m2=0;m2<N;m2++) 
 	{ 
 	  for(m1=0;m1<N;m1++) 
 	    col[m1]=0.0; 
 	  col[m2]=1.0; 
-	  lubksb(mc,indx,col);
+	  col=LU.lubksb(indx,col);
 	  for(m1=0;m1<N;m1++) 
-	    b.m[m1][m2]=col[m1]; 
+	    om[m1][m2]=col[m1]; 
 	}
-      return b;
+      return om;
     }
   pmatrixq<ntype,N> inv()
     {
