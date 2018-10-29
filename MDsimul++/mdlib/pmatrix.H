@@ -35,9 +35,8 @@ public:
 //using namespace std;
 template <class ntype> double abs(ntype a)
 {
-  return abs((double)a);
+  return abs(a);
 }
-
 
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
 {
