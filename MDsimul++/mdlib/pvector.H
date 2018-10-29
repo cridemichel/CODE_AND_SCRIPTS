@@ -5,7 +5,7 @@ public:
     inline pvector<ntype,N> operator +(const pvector<ntype,N>& param)
     {
 	int i;
-	pvector<ntype,N> lv;
+	static pvector<ntype,N> lv;
 	for (i=0; i < N; i++)
 	  lv.v[i] = v[i] + param.v[i];
 	return lv;
@@ -22,7 +22,7 @@ public:
     inline pvector<ntype,N> operator *(const double& param) 
     {
         int i;
-	pvector<ntype,N> lv;
+	static pvector<ntype,N> lv;
 	for (i=0; i < N; i++)
 	  lv.v[i] = v[i]*param;
 	return lv;
@@ -31,7 +31,7 @@ public:
     friend pvector<ntype,N> operator *(const double& param, const pvector<ntype,N>& v) 
       {
 	int i;
-	pvector<ntype,N> lv;
+	static pvector<ntype,N> lv;
 	for (i=0; i < N; i++)
 	  lv.v[i] = v.v[i]*param;
 	return lv;
@@ -58,7 +58,7 @@ public:
     // cross product
     inline double cross(const pvector<ntype,N>& v1)
       {
-	pvector<ntype,N> v2;
+	static pvector<ntype,N> v2;
 	v2.v[0] = v[1]*v1.v[2] - v[2]*v1.v[1];
 	v2.v[1] = v[2]*v1.v[0] - v[0]*v1.v[2];
 	v2.v[2] = v[0]*v1.v[1] - v[1]*v1.v[0];

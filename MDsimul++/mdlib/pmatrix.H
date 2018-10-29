@@ -21,6 +21,7 @@ public:
 // matrici quadrate NxN
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
       {
+	using pmatrix<ntype,N,N>::m;
 	int n;
 public:
     inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
@@ -29,16 +30,70 @@ public:
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m2.m[i][j] = (*this).m[i][j] +  m1.m[i][j];
+	  m2.m[i][j] = m[i][j] +  m1.m[i][j];
       return m2;
     }
-
+    double det()
+      {
+	switch (N)
+	  {
+	  case 1:
+	    return m[0][0];
+    	    break;
+	  case 2:
+	    return m[0][0]*m[1][1]-m[0][1]*m[1][0];
+	    break;
+	  case 3:
+	    return -m[0][2]*m[1][1]*m[2][0] + m[0][1]*m[1][2]*m[2][0] + 
+	      m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - 
+	      m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2]; 
+	    break;
+	  }
+      }
+    pmatrixq inv()
+      {
+	double invd;
+	switch (N)
+	  {
+	  case 1: 
+	    return 1.0/pmatrixq::m[0][0];
+	    break; 
+	  case 2:
+	    invd = 1.0/det();
+	    m[0][0] = m[1][1]*invd;
+	    m[0][1] = m[1][0]*invd;
+	    m[1][0] = m[0][1]*invd;
+	    m[1][1] = m[0][0]*invd;
+	    break;
+	  case 3:
+	    invd = 1.0/det();
+	    m[0][0] = -m[1][2]*m[2][1] + m[1][1]*m[2][2];
+	    m[0][1] =  m[0][2]*m[2][1] - m[0][1]*m[2][2];
+	    m[0][2] = -m[0][2]*m[1][1] + m[0][1]*m[1][2];
+	    m[1][0] =  m[1][2]*m[2][0] - m[1][0]*m[2][2];
+	    m[1][1] = -m[0][2]*m[2][0] + m[0][0]*m[2][2]; 
+	    m[1][2] =  m[0][2]*m[1][0] - m[0][0]*m[1][2]; 
+	    m[2][0] = -m[1][1]*m[2][0] + m[1][0]*m[2][1]; 
+	    m[2][1] =  m[0][1]*m[2][0] - m[0][0]*m[2][1];
+	    m[2][2] = -m[0][1]*m[1][0] + m[0][0]*m[1][1];
+	    m[0][0] *= invd;
+	    m[0][1] *= invd;
+	    m[0][2] *= invd;
+	    m[1][0] *= invd; 
+	    m[1][1] *= invd;
+	    m[1][2] *= invd;
+	    m[2][0] *= invd;
+	    m[2][1] *= invd; 
+	    m[2][2] *= invd; 	    
+	    break;
+	  }
+      }
     inline pmatrixq<ntype, N> operator += (const pmatrixq<ntype, N>& m1)
       {
 	int i, j;
 	for (i=0; i < N; i++)
 	  for (j=0; j < N; j++)
-	    pmatrixq::m[i][j] += m1.m[i][j];
+	    m[i][j] += m1.m[i][j];
 	return (*this);
       }
 
@@ -48,7 +103,7 @@ public:
 	static pmatrixq<ntype,N> m1;
 	for (i=0; i < N; i++)
 	  for (j=0; j < N; j++)
-	    m1[i][j] = pmatrixq::m[i][j]*param;
+	    m1[i][j] = m[i][j]*param;
 	return m1;
       }
 
@@ -75,7 +130,7 @@ public:
 	  {
 	    v2.v[i]=0;
 	    for (j=0; j < N; j++)
-	      v2.v[i] += pmatrixq::m[i][j]*v1.v[j];
+	      v2.v[i] += m[i][j]*v1.v[j];
 	  }
 	return v2;
       }
@@ -94,7 +149,7 @@ public:
       }
     inline double* operator[](const int& i)
       {
-	return &(pmatrixq::m[i][0]);
+	return &(m[i][0]);
       }
     inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
       {
@@ -122,7 +177,7 @@ public:
 	    printf("{");
 	    for (j=0; j < N; j++)
 	      { 
-		printf("%.15G", pmatrixq::m[i][j]);
+		printf("%.15G", m[i][j]);
 		if (j < N-1)
 		  printf(",");
 	      }
