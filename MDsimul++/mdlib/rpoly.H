@@ -105,7 +105,8 @@ public:
 	case 3:
 	  break;
 	case 4:
-	  oqs_quartic_solver(roots);
+	  solve_numrec(roots, ok);
+	  //oqs_quartic_solver(roots);
 	  break;
 	default:
 	  // use HQR from NUMERICAL RECIPE
