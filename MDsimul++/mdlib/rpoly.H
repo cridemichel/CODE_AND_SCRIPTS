@@ -981,6 +981,7 @@ template<class ntype, int N> void rpoly<ntype,N>::solve_numrec(pvector<complex<n
   const int m=N;
   ntype hess[N][N];
   int j, k;
+  coeff.show();
   for (k=0;k<m;k++) { //Construct the matrix.
     hess[0][k] = -coeff[m-k-1]/coeff[m];
     for (j=1;j<m;j++) hess[j][k]=0.0;
