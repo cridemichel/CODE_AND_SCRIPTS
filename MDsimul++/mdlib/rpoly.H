@@ -113,7 +113,7 @@ public:
 	    }
 	  else
 	    {
-
+	      solve_quadratic(roots);
 	    }
 	  break;
 	case 3:
