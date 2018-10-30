@@ -9,65 +9,56 @@
 #include "pvector.H"
 #include <limits>
 #define Sqr(x) ((x)*(x))
-//using namespace std;
-namespace rpolyns
-{
-  template <class ntype> ntype copysign(ntype a, ntype b)
-    {
-      return copysign(a,b);
-    }
-
-  template <class ntype> ntype abs(ntype a)
-    {
-      return abs(a);
-    }
-
-  template <class ntype> ntype sqrt(ntype a)
-    {
-      return sqrt(a);
-    }
-
-   template <class ntype> ntype acos(ntype a)
-    {
-      return acos(a);
-    }
-
-  template <class ntype> ntype cos(ntype a)
-    {
-      return cos(a);
-    }
-
-   template <class ntype> complex<ntype> sqrt(complex<ntype> a)
-    {
-      return sqrt(a);
-    }
- 
-   template <class ntype> ntype abs(complex<ntype> a)
-    {
-      return abs(a);
-    }
-}
-
-
 using namespace std;
-using namespace rpolyns;
 
 template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
-  pvector <ntype, N> coeff;
+  pvector<ntype, N> coeff;
   int n;
   ntype meps;
-  inline void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
-  inline void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
-  inline void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol);
-  inline void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0);
-  inline ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3);
-  inline ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
+  ntype oqs_max2(ntype a, ntype b)
+    {
+      if (a >= b)
+	return a;
+      else
+	return b;
+    }
+  ntype oqs_max3(ntype a, ntype b, ntype c)
+    {
+      ntype t;
+      t = oqs_max2(a,b);
+      return oqs_max2(t,c);
+    }
+  //void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
+  void oqs_quartic_solver(pvector<complex<ntype>,N-1>& roots);
+  void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
+  void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol);
+  void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0);
+  ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3);
+  ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
 	    			       complex<ntype> aq, complex<ntype> bq, complex<ntype> cq, complex<ntype> dq);
-  inline ntype oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, type bq, ntype cq, ntype dq);
-  inline ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq); 
-  inline void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
-  inline void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2]);
+  ntype oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq);
+  ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq); 
+  void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
+  void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2]);
 public:
+  void show(void)
+    {
+      show(NULL);
+    }
+  void show(const char* str)
+    {
+      int i;
+      if (str!=NULL)
+	printf("%s", str);
+      for (i=N; i >= 0; i--)
+	{
+	  printf("(%.15G)*x^%d", coeff[i], i);
+	  if (i > 0)
+	    printf("+");
+	  else 
+	    printf("\n");
+	}
+    }
   void set_coeff(pvector<ntype,N> v)
     {
       coeff = v;
@@ -80,7 +71,7 @@ public:
     {
       return n; 
     }
-  void find_roots(pvector<complex<ntype>,N> &roots)
+  void find_roots(pvector<complex<ntype>,N-1>&roots)
     {
       switch (degree())
 	{
@@ -105,7 +96,7 @@ public:
 
   rpoly()
     {
-      n=N;
+      n=N-1;
       meps = epsilon();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
@@ -123,23 +114,7 @@ public:
 
     }
 };
-namespace rpolyns
-{
-  template <class ntype> ntype oqs_max2(ntype a, ntype b)
-    {
-      if (a >= b)
-	return a;
-      else
-	return b;
-    }
-  template <class ntype> ntype oqs_max3(ntype a, ntype b, ntype c)
-    {
-      ntype t;
-      t = oqs_max2(a,b);
-      return oqs_max2(t,c);
-    }
-}
-template <class ntype, int N> void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
+template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
 {
  /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
   * where coefficients b and c are large (see sec. 2.2 in the manuscript) */ 
@@ -196,7 +171,7 @@ template <class ntype, int N> void oqs_solve_cubic_analytic_depressed_handle_inf
       sol = A+B;
     }
 }
-template <class ntype, int N> void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol)
+template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol)
 {
   /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
    * (see sec. 2.2 in the manuscript) */ 
@@ -230,12 +205,12 @@ template <class ntype, int N> void oqs_solve_cubic_analytic_depressed(ntype b, n
       sol = A+B; /* this is always largest root even if A=B */
     }
 }
-template <class ntype, int N> void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0)
+template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0)
 {
   /* find phi0 as the dominant root of the depressed and shifted cubic 
    * in eq. (64) (see also the discussion in sec. 2.2 of the manuscript) */
-  double rmax, g,h,gg,hh,aq,bq,cq,dq,s,diskr;
-  double maxtt, xxx, gx, x, xold, f, fold, df, xsq;
+  ntype rmax, g,h,gg,hh,aq,bq,cq,dq,s,diskr;
+  ntype maxtt, xxx, gx, x, xold, f, fold, df, xsq;
   int k, iter;
   diskr=9*a*a-24*b;                    
   /* eq. (67) */
@@ -261,12 +236,12 @@ template <class ntype, int N> void oqs_calc_phi0(ntype a, ntype b, ntype c, ntyp
   
   g=hh-4*dq-3*gg;                       /* eq. (60) */  
   h=(8*dq+hh-2*gg)*bq/3-cq*cq-dq*aq*aq; /* eq. (61) */          
-  oqs_solve_cubic_analytic_depressed(g, h, &rmax);
+  oqs_solve_cubic_analytic_depressed(g, h, rmax);
   for (k=0; k < 3; k++)
     {
       if (isnan(rmax) || isinf(rmax))
 	{
-	  oqs_solve_cubic_analytic_depressed_handle_inf(g, h, &rmax);
+	  oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
 	  break;
 	}
     }
@@ -283,7 +258,7 @@ template <class ntype, int N> void oqs_calc_phi0(ntype a, ntype b, ntype c, ntyp
   if (abs(h) > maxtt)
     maxtt = abs(h);
 
-  if (abs(f) > meps*maxtt)
+  if (abs(f) > maxtt)
     {
       for (iter=0; iter < 8; iter++)
 	{   
@@ -311,7 +286,7 @@ template <class ntype, int N> void oqs_calc_phi0(ntype a, ntype b, ntype c, ntyp
     }
   phi0 = x;
 }
-template <class ntype, int N> ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3)
+template <class ntype, int N> ntype  rpoly<ntype,N>::oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3)
 {
   /* Eq. (21) in the manuscript */
   ntype sum;
@@ -320,7 +295,7 @@ template <class ntype, int N> ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d,
   sum += (d==0)?abs(d2*l2*l2 + l3*l3):abs(((d2*l2*l2 + l3*l3)-d)/d);
   return sum;
 }
-template <class ntype, int N> ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
+template <class ntype, int N> ntype rpoly<ntype,N>::oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
 			   complex<ntype> aq, complex<ntype> bq, complex<ntype> cq, complex<ntype> dq)
 {
   /* Eq. (53) in the manuscript for complex alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq) */
@@ -331,7 +306,7 @@ template <class ntype, int N> ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, nt
   sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N> ntype oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, type bq, ntype cq, ntype dq)
+template <class ntype, int N> ntype rpoly<ntype,N>::oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq)
 {
   /* Eq. (53) in the manuscript for real alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq)*/
   ntype sum;
@@ -341,7 +316,7 @@ template <class ntype, int N> ntype oqs_calc_err_abcd(ntype a, ntype b, ntype c,
   sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N> ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq)
+template <class ntype, int N> ntype  rpoly<ntype,N>::oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq)
 {
   /* Eq. (40) in the manuscript */
   ntype sum;
@@ -350,7 +325,7 @@ template <class ntype, int N> ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, 
   sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N> void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ)
+template <class ntype, int N> void rpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ)
 {
   /* Newton-Raphson described in sec. 2.3 of the manuscript for complex
    * coefficients a,b,c,d */
@@ -429,7 +404,7 @@ template <class ntype, int N> void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d
   CQ=x[2];
   DQ=x[3];
 }
-template <class ntype, int N> void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2])
+template <class ntype, int N> void  rpoly<ntype,N>::oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2])
 { 
   ntype div,sqrtd,diskr,zmax,zmin;
   diskr=a*a-4*b;   
@@ -458,7 +433,7 @@ template <class ntype, int N> void oqs_solve_quadratic(ntype a, ntype b, complex
     }   
 }
 
-template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<ntype>,N>& roots)
+template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<complex<ntype>,N-1>& roots)
 {
   /* USAGE:
    *
@@ -471,7 +446,6 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
    * the four roots will be stored in the complex array roots roots[] 
    *
    * */
-#if 1
   complex<ntype> acx1, bcx1, ccx1, dcx1,acx,bcx,ccx,dcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
   ntype l2m[12], d2m[12], res[12], resmin, bl311, dml3l3, err0=0, err1=0, aq1, bq1, cq1, dq1; 
   ntype a,b,c,d,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3],gamma,del2;
@@ -485,7 +459,7 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
-  oqs_calc_phi0(a,b,c,d,&phi0);
+  oqs_calc_phi0(a,b,c,d,phi0);
   l1=a/2;          /* eq. (4) */                                        
   l3=b/6+phi0/2;   /* eq. (6) */                                
   del2=c-a*l3;     /* defined just after eq. (20) */                             
@@ -646,7 +620,7 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
 	{
 	  realcase[1] = 0;
 	  acx1 = l1;
-	  bcx1 = l3 + I*sqrt(d3);
+	  bcx1 = complex<ntype>(l3,sqrt(d3));
 	  ccx1 = l1;
 	  dcx1 = conj(bcx1);
 	  err1 = oqs_calc_err_abcd_cmplx(a, b, c, d, acx1, bcx1, ccx1, dcx1); 
@@ -674,7 +648,7 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
     {
       /* if alpha1, beta1, alpha2 and beta2 are real first refine 
        * the coefficient through a Newton-Raphson */
-      oqs_NRabcd(a,b,c,d,&aq,&bq,&cq,&dq);      
+      oqs_NRabcd(a,b,c,d,aq,bq,cq,dq);      
       /* finally calculate the roots as roots of p1(x) and p2(x) (see end of sec. 2.1) */
       oqs_solve_quadratic(aq,bq,qroots);
       roots[0]=qroots[0];
@@ -688,11 +662,11 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
       /* complex coefficients of p1 and p2 */
       if (whichcase==0) // d2!=0
 	{
-	  cdiskr=acx*acx/4-bcx;               
+	  cdiskr=acx*acx/complex<ntype>(4.0)-bcx;               
 	  /* calculate the roots as roots of p1(x) and p2(x) (see end of sec. 2.1) */
-	  zx1=-acx/2+sqrt(cdiskr);
-	  zx2=-acx/2-sqrt(cdiskr);
-	  if(cabs(zx1) > cabs(zx2))
+	  zx1=-acx/complex<ntype>(2.0)+sqrt(cdiskr);
+	  zx2=-acx/complex<ntype>(2.0)-sqrt(cdiskr);
+	  if(abs(zx1) > abs(zx2))
 	    zxmax=zx1;
 	  else
 	    zxmax=zx2;
@@ -705,20 +679,20 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
       else // d2 ~ 0
 	{
 	  /* never gets here! */
-	  cdiskr=sqrt(acx*acx-4.0*bcx);
-	  zx1 = -0.5*(acx+cdiskr);
-	  zx2 = -0.5*(acx-cdiskr);
-	  if (cabs(zx1) > cabs(zx2))
+	  cdiskr=sqrt(acx*acx-complex<ntype>(4.0)*bcx);
+	  zx1 = -complex<ntype>(0.5)*(acx+cdiskr);
+	  zx2 = -complex<ntype>(0.5)*(acx-cdiskr);
+	  if (abs(zx1) > abs(zx2))
 	    zxmax = zx1;
 	  else
 	    zxmax = zx2;
 	  zxmin = bcx/zxmax;
 	  roots[0] = zxmax;
 	  roots[1] = zxmin;
-	  cdiskr=sqrt(ccx*ccx-4.0*dcx);
-	  zx1 = -0.5*(ccx+cdiskr);
-	  zx2 = -0.5*(ccx-cdiskr);
-	  if (cabs(zx1) > cabs(zx2))
+	  cdiskr=sqrt(ccx*ccx-complex<ntype>(4.0)*dcx);
+	  zx1 = -complex<ntype>(0.5)*(ccx+cdiskr);
+	  zx2 = -complex<ntype>(0.5)*(ccx-cdiskr);
+	  if (abs(zx1) > abs(zx2))
 	    zxmax = zx1;
 	  else
 	    zxmax = zx2;
@@ -727,5 +701,4 @@ template <class ntype, int N> inline void oqs_quartic_solver(pvector<complex<nty
 	  roots[3]= zxmin;
 	}
     }
-#endif
 }
