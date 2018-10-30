@@ -45,9 +45,9 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
   void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2]);
   void balance(ntype a[N][N]);
-  void hqr(ntype a[N][N], pvector<complex<ntype>,N> wri, int& ok);
-  void QRfactorization(ntype hess[N][N], pvector<complex<ntype>,N> sol, int& ok);
-  void solve_numrec(pvector<complex<ntype>,N> csol, int& ok);
+  void hqr(ntype a[N][N], pvector<complex<ntype>,N>& wri, int& ok);
+  void QRfactorization(ntype hess[N][N], pvector<complex<ntype>,N>& sol, int& ok);
+  void solve_numrec(pvector<complex<ntype>,N>& csol, int& ok);
 public:
   void show(void)
     {
@@ -783,7 +783,7 @@ template<class ntype, int N> void rpoly<ntype,N>::balance(ntype a[N][N])
     }
 }
 
-template<class ntype, int N> void rpoly<ntype,N>::hqr(ntype a[N][N], pvector<complex<ntype>,N> wri, int& ok)
+template<class ntype, int N> void rpoly<ntype,N>::hqr(ntype a[N][N], pvector<complex<ntype>,N>& wri, int& ok)
 {
   int nn,m,l,k,j,its,i,mmin;
   ntype z,y,x,w,v,u,t,s,r=0.0,q=0.0,p=0.0, anorm=0.0;
@@ -964,13 +964,13 @@ template<class ntype, int N> void rpoly<ntype,N>::hqr(ntype a[N][N], pvector<com
       while (l+1 < nn);
     }
 }
-template<class ntype, int N> void rpoly<ntype,N>::QRfactorization(ntype hess[N][N], pvector<complex<ntype>,N> sol, int& ok)
+template<class ntype, int N> void rpoly<ntype,N>::QRfactorization(ntype hess[N][N], pvector<complex<ntype>,N>& sol, int& ok)
 {
   /* pag. 615 Num. Rec. */  
   balance(hess);
   hqr(hess, sol, ok);
 }
-template<class ntype, int N> void rpoly<ntype,N>::solve_numrec(pvector<complex<ntype>,N> csol, int& ok)
+template<class ntype, int N> void rpoly<ntype,N>::solve_numrec(pvector<complex<ntype>,N>& csol, int& ok)
 {
   /* Find all the roots of a polynomial with real coefficients, 
    * coeff[4]*x^4+coeff[3]*x^3+coeff[2]*x^2+coeff[1]*x+coeff[0], 
@@ -981,7 +981,6 @@ template<class ntype, int N> void rpoly<ntype,N>::solve_numrec(pvector<complex<n
   const int m=N;
   ntype hess[N][N];
   int j, k;
-  coeff.show();
   for (k=0;k<m;k++) { //Construct the matrix.
     hess[0][k] = -coeff[m-k-1]/coeff[m];
     for (j=1;j<m;j++) hess[j][k]=0.0;
