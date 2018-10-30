@@ -1,7 +1,13 @@
 #ifndef _PVECTOR_
 #define _PVECTOR_
+#include <limits>
+#include<cstdlib>
+#include<iostream>
+#include<iomanip>
+using namespace std;
 template <class ntype, int N> class pvector {
     int vsize;
+    int maxdigits;
 public:
     ntype v[N];
     inline pvector<ntype,N> operator +(const pvector<ntype,N>& param)
@@ -85,15 +91,15 @@ public:
       {
 	int i;
 	if (str!=NULL)
-	  printf("%s", str);
-	printf("{");
+	  cout << str;
+	cout << "{";
 	for (i=0; i < N; i++)
 	  {
-	    printf("%.15G", v[i]);
+	    cout << setprecision(maxdigits) << v[i];
 	    if (i < N-1)
-	      printf(",");
+	      cout << ",";
 	  }
-       	printf("}\n");
+       	cout << "}\n";
       }
     int size()
       {
@@ -102,6 +108,7 @@ public:
     pvector()
       {
 	vsize=N;
+	maxdigits=numeric_limits<ntype>::digits10;
       }
    
     ~pvector()

@@ -27,7 +27,6 @@ public:
     }
   ~pmatrix()
     {
-
     }
 };	
 // redefine also *= += and
@@ -46,7 +45,7 @@ using namespace matrixns;
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
 {
   using pmatrix<ntype,N,N>::m;
-  int n;
+  int n, maxdigits;
   pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d)
     {
       /* return the LU decomposition of calling matrix (i.e. *this) */
@@ -354,22 +353,22 @@ public:
     {
       int i, j;
       if (str!=NULL)
-	printf("%s", str);
-      printf("{");
+	cout << str;
+      cout << "{";
       for (i=0; i < N; i++)
 	{
-	  printf("{");
+	  cout << "{";
 	  for (j=0; j < N; j++)
 	    { 
-	      printf("%.15G", m[i][j]);
+	      cout << setprecision(maxdigits) << m[i][j];
 		if (j < N-1)
-		  printf(",");
+		  cout << ",";
 	      }
-	    printf("}");
+	    cout << "}";
 	    if (i < N-1)
-	      printf(",\n");
+	      cout << ",\n";
 	  }
-	printf("}\n");
+	cout << "}\n";
       }
     void show(void)
       {
@@ -383,6 +382,7 @@ public:
     pmatrixq()
       {
 	n=N;
+	maxdigits=std::numeric_limits<ntype>::digits10;
       }
    
     ~pmatrixq()

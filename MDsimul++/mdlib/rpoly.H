@@ -1,6 +1,6 @@
 // matrici NxM
-#include<stdio.h>
-#include<stdlib.h>
+//#include<stdio.h>
+//#include<stdlib.h>
 #include<cstdlib>
 #include<iostream>
 #include<iomanip>
@@ -18,7 +18,8 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
   int n, force_hqr;
   int imaxarg1,imaxarg2;
-  ntype meps;
+  ntype meps, maxf, maxf2, maxf3;
+  int maxdigits;
   ntype oqs_max2(ntype a, ntype b)
     {
       if (a >= b)
@@ -59,31 +60,31 @@ public:
     {
       int i;
       if (str!=NULL)
-	printf("%s", str);
+	cout <<  str;
       for (i=N; i >= 0; i--)
 	{
 	  if (coeff[i] > 0)
     	    {
 	      if (i < N)
-		printf("+");
+		cout << "+";
 	    }
 	  else
 	    { 
-	      printf("-");
+	      cout << "-";
 	    }
 	  if (i==0)
-	    printf("%.15G", abs(coeff[i]));
+	    cout << setprecision(maxdigits) << abs(coeff[i]);
 	  else if (i > 0 && abs(coeff[i]) != 1.0)
-	    printf("%.15G*", abs(coeff[i]));
+	    cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
 	 
 	  if ( i > 1)
 	    {
-	      printf("x^%d", i);
+	      cout << "x^" << i;
 	    }
 	  else if (i==1)
-	    printf("x");
+	    cout << "x";
 	}
-      printf("\n");
+      cout << "\n";
     }
   void set_coeff(pvector<ntype,N+1> v)
     {
@@ -100,6 +101,7 @@ public:
   void find_roots(pvector<complex<ntype>,N>& roots)
     {
       int ok;
+      ok=1;
       switch (degree())
 	{
 	case 1:
@@ -128,7 +130,9 @@ public:
 	  break;
 	case 4:
 	  if (force_hqr)
-	    solve_numrec(roots, ok);
+	    {
+	      solve_numrec(roots, ok);
+	    }
 	  else
 	    oqs_quartic_solver(roots);
 	  break;
@@ -137,6 +141,8 @@ public:
 	  solve_numrec(roots, ok);
 	  break;
 	}
+      if (!ok)
+	exit(-1);
     }
   void forcehqr()
     {
@@ -147,21 +153,28 @@ public:
     {
       return numeric_limits<ntype>::epsilon(); 
     }
-
+  ntype getmax()
+    {
+      return numeric_limits<ntype>::max();
+    }
   rpoly()
     {
       n=N;
       meps = epsilon();
+      maxf= getmax();
+      maxdigits = numeric_limits<ntype>::digits10;
       force_hqr=0;
+      maxf2 = pow(maxf,0.5)/10.0;
+      maxf3 = pow(maxf,1.0/3.0)/10.0;
+      //cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
+      //printf("%.15G\n", maxf);
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
 
   rpoly(pvector<ntype,N> v)
     {
-      n=N;
       coeff=v;
-      force_hqr=0;
-      meps = epsilon();
+      rpoly();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
 
@@ -281,7 +294,8 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depr
   Q = -b/3.0;
   R = 0.5*c;
   // these number could be made larger for long double */
-  if (abs(Q) > 1E102 || abs(R) > 1E154)
+  //if (abs(Q) > 1E102 || abs(R) > 1E154)
+  if (abs(Q) > maxf3 || abs(R) > maxf2)
     {
       oqs_solve_cubic_analytic_depressed_handle_inf(b, c, sol);
       return;
@@ -554,7 +568,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<co
   int realcase[2], whichcase, k1, k, kmin, nsol;
   if (coeff[4]==0.0)
     {
-      printf("That's not a quartic!\n");
+      cout << "That's not a quartic!\n";
       return;
     }
   a=coeff[3]/coeff[4];
@@ -929,7 +943,7 @@ template<class ntype, int N> void rpoly<ntype,N>::hqr(ntype a[N][N], pvector<com
 		  //No roots found.  Continue iteration.
 		  if (its == 480)
 		    {
-		      printf("Too many iterations in hqr");
+		      cout << "Too many iterations in hqr";
 		      ok=0;
 		      return;
 		      //exit(-1);
