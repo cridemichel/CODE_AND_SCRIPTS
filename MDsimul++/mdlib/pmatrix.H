@@ -37,7 +37,7 @@ public:
 //using namespace std;
 namespace matrixns
 {
-  template <class ntype> double abs(ntype a)
+  template <class ntype> ntype abs(ntype a)
     {
       return abs(a);
     }
