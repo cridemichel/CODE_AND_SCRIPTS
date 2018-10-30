@@ -53,7 +53,7 @@ using namespace std;
 using namespace rpolyns;
 
 template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
-  pvector <double, N> coeff;
+  pvector <ntype, N> coeff;
   int n;
   ntype meps;
   inline void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
@@ -68,6 +68,14 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   inline void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
   inline void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2]);
 public:
+  void set_coeff(pvector<ntype,N> v)
+    {
+      coeff = v;
+    }
+  pvector<ntype,N> get_coeff()
+    {
+      return coeff;
+    }
   int degree()
     {
       return n; 
@@ -94,9 +102,18 @@ public:
     {
       return numeric_limits<ntype>::epsilon(); 
     }
+
   rpoly()
     {
       n=N;
+      meps = epsilon();
+      //cout << "macheps= " << setprecision(35) << eps << "\n";
+    }
+
+  rpoly(pvector<ntype,N> v)
+    {
+      n=N;
+      coeff=v;
       meps = epsilon();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
