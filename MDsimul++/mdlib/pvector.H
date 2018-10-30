@@ -1,3 +1,5 @@
+#ifndef _PVECTOR_
+#define _PVECTOR_
 template <class ntype, int N> class pvector {
     int vsize;
 public:
@@ -121,3 +123,4 @@ double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2)
 typedef pvector<double,2> vecd2;
 typedef pvector<double,3> vecd3;
 typedef pvector<double,4> vecd4;
+#endif

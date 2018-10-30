@@ -1,43 +1,48 @@
+#ifndef _PMATRIX_
+#define _PMATRIX_
 // matrici NxM
 #include<stdio.h>
 #include<stdlib.h>
 #include<cstdlib>
 #include<cmath>
 #include "pvector.H"
- template <class ntype, int N, int M> class pmatrix {
-    int nr, nc;
+template <class ntype, int N, int M> class pmatrix {
+  int nr, nc;
 public:
-    ntype m[N][M]; // N riga M colonna
+  ntype m[N][M]; // N riga M colonna
 #if 0 // example of operator = overload <-- not needed anyway!!!
-    pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
-      {
-	int i,j;
-	for (i=0; i < N; i++)
-	  for (j=0; j < N; j++)
+  pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
+    {
+      int i,j;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
 	    m[i][j] = m1.m[i][j];
-	return (*this);
-      }
+      return (*this);
+    }
 #endif
-    pmatrix()
-      {
-	nr=N;
-	nc=M;
-      }
-    ~pmatrix()
-      {
+  pmatrix()
+    {
+      nr=N;
+      nc=M;
+    }
+  ~pmatrix()
+    {
 
-      }
+    }
 };	
 // redefine also *= += and
 // define inv() det() i.e. inverse and determinant
 // matrici quadrate NxN
 
 //using namespace std;
-template <class ntype> double abs(ntype a)
+namespace matrixns
 {
-  return abs(a);
+  template <class ntype> double abs(ntype a)
+    {
+      return abs(a);
+    }
 }
-
+using namespace matrixns;
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
 {
   using pmatrix<ntype,N,N>::m;
@@ -46,7 +51,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
     {
       /* return the LU decomposition of calling matrix (i.e. *this) */
       pmatrixq <ntype,N> m1;
-      const double TINY=1E-20;
+      const double TINY=1E-40;
       int i,imax=-1,j,k,n;
       ntype big,dum,sum,temp; 
       ntype vv[N]; /* vv stores the implicit scaling of each row.*/
@@ -387,3 +392,4 @@ public:
 
 typedef pmatrixq<double,3> pmatrix3d;
 typedef pmatrixq<int,3>    pmatrix3i;
+#endif
