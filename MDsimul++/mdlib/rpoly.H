@@ -16,7 +16,7 @@ using namespace std;
 
 template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
-  int n;
+  int n, force_hqr;
   int imaxarg1,imaxarg2;
   ntype meps;
   ntype oqs_max2(ntype a, ntype b)
@@ -33,6 +33,8 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
       return oqs_max2(t,c);
     }
   //void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
+  void solve_quadratic(pvector<complex<ntype>,N>& sol);
+  void solve_cubic_analytic(pvector<complex<ntype>,N>& sol);
   void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
   void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
   void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol);
@@ -95,24 +97,50 @@ public:
     {
       return n; 
     }
-  void find_roots(pvector<complex<ntype>,N>&roots)
+  void find_roots(pvector<complex<ntype>,N>& roots)
     {
       int ok;
       switch (degree())
 	{
+	case 1:
+	  cout << "What?!? You are not able to solve a linear equation come-on!";
+	  exit(-1);
+	  break;
 	case 2:
+	  if (force_hqr)
+	    {
+	      solve_numrec(roots, ok);
+	    }
+	  else
+	    {
+
+	    }
 	  break;
 	case 3:
+	  if (force_hqr)
+	    {
+	      solve_numrec(roots, ok);
+	    }
+	  else
+	    {
+	      solve_cubic_analytic(roots);
+	    }
 	  break;
 	case 4:
-	  solve_numrec(roots, ok);
-	  //oqs_quartic_solver(roots);
+	  if (force_hqr)
+	    solve_numrec(roots, ok);
+	  else
+	    oqs_quartic_solver(roots);
 	  break;
 	default:
 	  // use HQR from NUMERICAL RECIPE
 	  solve_numrec(roots, ok);
 	  break;
 	}
+    }
+  void forcehqr()
+    {
+      force_hqr=1;
     }
   // get machine precision for "ntype" type (ntype can float, double, long double)
   ntype epsilon()
@@ -124,6 +152,7 @@ public:
     {
       n=N;
       meps = epsilon();
+      force_hqr=0;
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
 
@@ -131,6 +160,7 @@ public:
     {
       n=N;
       coeff=v;
+      force_hqr=0;
       meps = epsilon();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
@@ -140,6 +170,52 @@ public:
 
     }
 };
+// quadratic equation
+template<class ntype, int N> void rpoly<ntype,N>::solve_quadratic(pvector<complex<ntype>,N>&sol)
+{
+  complex<ntype> r[2];
+  ntype a,b;
+  a = coeff[1]/coeff[2];
+  b = coeff[0]/coeff[2];
+  oqs_solve_quadratic(a, b, r);
+  sol[0] = r[0];
+  sol[1] = r[1];
+}
+// cubic polynomial
+template <class ntype, int N> void rpoly<ntype,N>::solve_cubic_analytic(pvector<complex<ntype>,N>& sol)
+{
+  /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
+   * according to the method described in Numerical Recipe book */  
+  ntype a, b, c, Q, R, theta, Q3, R2, A, B;
+  const ntype sqrt32=sqrt(3)/2.0;
+  a = coeff[2]/coeff[3];
+  b = coeff[1]/coeff[3];
+  c = coeff[0]/coeff[3];
+  Q = (Sqr(a) - 3.0*b)/9.0;
+  R = (2.0*Sqr(a)*a - 9.0*a*b + 27.0*c)/54.0;
+  Q3 = Sqr(Q)*Q;
+  R2 = Sqr(R);
+  if (R2 < Q3)
+    {
+      theta = acos(R/sqrt(Q3));
+      sol[0] = -2.0*sqrt(Q)*cos(theta/3.0)- a/3.0;
+      sol[1] = -2.0*sqrt(Q)*cos((theta+2.0*M_PI)/3.0) - a/3.0;
+      sol[2] = -2.0*sqrt(Q)*cos((theta-2.0*M_PI)/3.0) - a/3.0;
+    }
+  else
+    {
+      A = -copysign(1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+      sol[0] = (A+B) - a/3.0;
+      sol[1] = -0.5*(A+B)-a/3.0+complex<ntype>(0,1)*sqrt32*(A-B);
+      sol[2] = -0.5*(A+B)-a/3.0-complex<ntype>(0,1)*sqrt32*(A-B);
+    }
+}
+
+// quartics with OQS
 template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
 {
  /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
