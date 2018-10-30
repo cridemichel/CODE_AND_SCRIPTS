@@ -12,7 +12,7 @@
 using namespace std;
 
 template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
-  pvector<ntype, N> coeff;
+  pvector<ntype, N+1> coeff;
   int n;
   ntype meps;
   ntype oqs_max2(ntype a, ntype b)
@@ -29,7 +29,7 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
       return oqs_max2(t,c);
     }
   //void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
-  void oqs_quartic_solver(pvector<complex<ntype>,N-1>& roots);
+  void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
   void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
   void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol);
   void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0);
@@ -52,18 +52,34 @@ public:
 	printf("%s", str);
       for (i=N; i >= 0; i--)
 	{
-	  printf("(%.15G)*x^%d", coeff[i], i);
-	  if (i > 0)
-	    printf("+");
-	  else 
-	    printf("\n");
+	  if (coeff[i] > 0)
+    	    {
+	      if (i < N)
+		printf("+");
+	    }
+	  else
+	    { 
+	      printf("-");
+	    }
+	  if (i==0)
+	    printf("%.15G", abs(coeff[i]));
+	  else if (i > 0 && abs(coeff[i]) != 1.0)
+	    printf("%.15G*", abs(coeff[i]));
+	 
+	  if ( i > 1)
+	    {
+	      printf("x^%d", i);
+	    }
+	  else if (i==1)
+	    printf("x");
 	}
+      printf("\n");
     }
-  void set_coeff(pvector<ntype,N> v)
+  void set_coeff(pvector<ntype,N+1> v)
     {
       coeff = v;
     }
-  pvector<ntype,N> get_coeff()
+  pvector<ntype,N+1> get_coeff()
     {
       return coeff;
     }
@@ -71,7 +87,7 @@ public:
     {
       return n; 
     }
-  void find_roots(pvector<complex<ntype>,N-1>&roots)
+  void find_roots(pvector<complex<ntype>,N>&roots)
     {
       switch (degree())
 	{
@@ -96,7 +112,7 @@ public:
 
   rpoly()
     {
-      n=N-1;
+      n=N;
       meps = epsilon();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
@@ -433,7 +449,7 @@ template <class ntype, int N> void  rpoly<ntype,N>::oqs_solve_quadratic(ntype a,
     }   
 }
 
-template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<complex<ntype>,N-1>& roots)
+template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<complex<ntype>,N>& roots)
 {
   /* USAGE:
    *
