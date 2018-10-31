@@ -33,7 +33,8 @@ public:
 // define inv() det() i.e. inverse and determinant
 // matrici quadrate NxN
 
-//using namespace std;
+using namespace std;
+#if 0
 namespace matrixns
 {
   template <class ntype> ntype abs(ntype a)
@@ -42,6 +43,7 @@ namespace matrixns
     }
 }
 using namespace matrixns;
+#endif
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
 {
   using pmatrix<ntype,N,N>::m;
