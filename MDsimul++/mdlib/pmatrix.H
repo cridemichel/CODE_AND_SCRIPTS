@@ -44,6 +44,13 @@ namespace matrixns
 }
 using namespace matrixns;
 #endif
+#if 0
+template<int N>
+typename enable_if<N == 4>::type
+inverse4(void) {
+    return ;
+}
+#endif
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
 {
   using pmatrix<ntype,N,N>::m;
@@ -189,21 +196,22 @@ public:
     }
   double det()
     {
-      switch ((*this).size())
+      if constexpr (N==1)
 	{
-	case 1:
 	  return m[0][0];
-	  break;
-	case 2:
+	}
+      else if constexpr (N==2)
+	{
 	  return m[0][0]*m[1][1]-m[0][1]*m[1][0];
-	  break;
-	case 3:
+	}
+      else if constexpr (N==3)
+	{
 	  return -m[0][2]*m[1][1]*m[2][0] + m[0][1]*m[1][2]*m[2][0] + 
 	    m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - 
-	    m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2]; 
-	  break;
-	case 4:
-	  //printf("qui\n");
+	    m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
+	} 
+      else if constexpr (N == 4)
+	{	  
 	  return m[0][1]*m[1][3]*m[2][2]*m[3][0] - m[0][1]*m[1][2]*m[2][3]*m[3][0] - 
 	    m[0][0]*m[1][3]*m[2][2]*m[3][1] + m[0][0]*m[1][2]*m[2][3]*m[3][1] - 
 	    m[0][1]*m[1][3]*m[2][0]*m[3][2] + m[0][0]*m[1][3]*m[2][1]*m[3][2] + 
@@ -214,11 +222,9 @@ public:
 	     m[0][0]*m[1][1]*m[2][2])*m[3][3] + 
 	    m[0][2]*(-(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
 		     m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3]);
-	  break;
-	default:
-	  return detgen();
-	  break;
 	}
+      else 
+	return detgen();
     }
 
   pmatrixq<ntype,N> invgen()
@@ -247,19 +253,20 @@ public:
     {
       double invd;
       pmatrixq <ntype,N> m1;
-      switch ((*this).size())
+      if constexpr (N==1)
 	{
-	case 1: 
 	  m1[0][0]=1.0/m[0][0];
-	  break; 
-	case 2:
+	}
+      else if constexpr (N==2)
+	{
 	  invd = 1.0/det();
 	  m1[0][0] = m[1][1]*invd;
 	  m1[0][1] = m[1][0]*invd;
 	  m1[1][0] = m[0][1]*invd;
 	  m1[1][1] = m[0][0]*invd;
-	  break;
-	case 3:
+	}
+      else if constexpr (N==3)
+	{
 	  invd = 1.0/det();
 	  m1[0][0] = -m[1][2]*m[2][1] + m[1][1]*m[2][2];
 	  m1[0][1] =  m[0][2]*m[2][1] - m[0][1]*m[2][2];
@@ -279,8 +286,9 @@ public:
 	  m1[2][0] *= invd;
 	  m1[2][1] *= invd; 
 	  m1[2][2] *= invd; 	    
-	  break;
-	case 4:
+	}
+      else if constexpr (N==4)
+	{
 	  invd = 1.0/det();
 	  //printf("invD=%.15G\n", invd);
 	  m1[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
@@ -326,16 +334,14 @@ public:
 	  m1[2][0] *= invd;
 	  m1[2][1] *= invd; 
 	  m1[2][2] *= invd;
-  	  m1[2][3] *= invd;
+	  m1[2][3] *= invd;
 	  m1[3][0] *= invd;
 	  m1[3][1] *= invd; 
 	  m1[3][2] *= invd;
-  	  m1[3][3] *= invd;
-	  break;
-	default:
-	  m1=invgen(); 
-	  break;
+	  m1[3][3] *= invd;
 	}
+      else
+	m1=invgen(); 
       return m1;
     }
   inline pmatrixq<ntype, N> operator += (const pmatrixq<ntype, N>& m1)
