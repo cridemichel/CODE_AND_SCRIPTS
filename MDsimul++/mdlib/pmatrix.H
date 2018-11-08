@@ -457,7 +457,6 @@ public:
 	n=N;
 	maxdigits=std::numeric_limits<ntype>::digits10;
       }
-   
     ~pmatrixq()
       {
       }
