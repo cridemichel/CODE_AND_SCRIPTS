@@ -54,8 +54,8 @@ inverse4(void) {
 template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
 {
   using pmatrix<ntype,N,N>::m;
-  int n, maxdigits;
-  pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d)
+  //int n, maxdigits;
+  inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d)
     {
       /* return the LU decomposition of calling matrix (i.e. *this) */
       pmatrixq <ntype,N> m1;
@@ -138,7 +138,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
       return m1;
     }
 
-  pvector<ntype,N> lubksb(pvector <int,N> indx, pvector<ntype,N> b)
+  inline pvector<ntype,N> lubksb(pvector <int,N> indx, pvector<ntype,N> b)
     { 
       /* the calling matrix (*this) must be the LU decomposition of a given matrix M
        * with indx the raw permutations done to obtain LU from M, 
@@ -162,7 +162,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	   * the sums in the loop above. */ 
 	  b[i]=sum; 
 	} 
-      for (i=n-1;i>=0;i--) 
+      for (i=N-1;i>=0;i--) 
 	{ 
 	  /* Now we do the backsubstitution, equation (2.3.7).*/
 	  sum=b[i]; 
@@ -175,14 +175,14 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 public:
   inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
     {
-      static pmatrixq<ntype, N> m2;
+      pmatrixq<ntype, N> m2;
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m2[i][j] = m[i][j] +  m1[i][j];
       return m2;
     }
-  double detgen()
+  inline double detgen()
     {
       double d;
       pmatrixq<ntype,N> m1;
@@ -194,7 +194,7 @@ public:
 	d *= m1[j][j];
       return d;
     }
-  double det()
+  inline double det()
     {
       if constexpr (N==1)
 	{
@@ -352,21 +352,19 @@ public:
 	  m[i][j] += m1.m[i][j];
       return (*this);
     }
-
   inline pmatrixq<ntype, N> operator *(const double& param) 
     {
       int i,j;
-      static pmatrixq<ntype,N> m1;
+      pmatrixq<ntype,N> m1;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
       return m1;
     }
-
   friend pmatrixq<ntype,N> operator *(const double& param, const pmatrixq<ntype,N>& m1) 
     {
       int i, j;
-      static pmatrixq<ntype,N> m2;
+      pmatrixq<ntype,N> m2;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m2.m[i][j] = m1.m[i][j]*param;
@@ -411,13 +409,58 @@ public:
     {
       int i, j, j2;
       pmatrixq<ntype,N> m2;
-      for (i=0; i < N; i++)
+      if constexpr (N==1)
 	{
-	  for (j=0; j < N; j++)
+	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0];
+	}
+      else if constexpr (N==2)
+	{
+	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0];
+	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1];
+	  m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0];
+	  m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1]; 
+	}
+      else if constexpr (N==3)
+	{
+	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0];
+	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1];
+	  m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2];
+	  m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0] + pmatrixq::m[1][2]*m1.m[2][0];
+	  m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1] + pmatrixq::m[1][2]*m1.m[2][1];
+	  m2.m[1][2] = pmatrixq::m[1][0]*m1.m[0][2] + pmatrixq::m[1][1]*m1.m[1][2] + pmatrixq::m[1][2]*m1.m[2][2];
+	  m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0];
+	  m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1];
+	  m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2];  
+	} 
+      else if constexpr (N==4)
+	{
+	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0] + pmatrixq::m[0][3]*m1.m[3][0];
+	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1] + pmatrixq::m[0][3]*m1.m[3][1];
+	  m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2] + pmatrixq::m[0][3]*m1.m[3][2];
+	  m2.m[0][3] = pmatrixq::m[0][0]*m1.m[0][3] + pmatrixq::m[0][1]*m1.m[1][3] + pmatrixq::m[0][2]*m1.m[2][3] + pmatrixq::m[0][3]*m1.m[3][3];
+	  m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0] + pmatrixq::m[1][2]*m1.m[2][0] + pmatrixq::m[1][3]*m1.m[3][0];
+	  m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1] + pmatrixq::m[1][2]*m1.m[2][1] + pmatrixq::m[1][3]*m1.m[3][1];
+	  m2.m[1][2] = pmatrixq::m[1][0]*m1.m[0][2] + pmatrixq::m[1][1]*m1.m[1][2] + pmatrixq::m[1][2]*m1.m[2][2] + pmatrixq::m[1][3]*m1.m[3][2];
+	  m2.m[1][3] = pmatrixq::m[1][0]*m1.m[0][3] + pmatrixq::m[1][1]*m1.m[1][3] + pmatrixq::m[1][2]*m1.m[2][3] + pmatrixq::m[1][3]*m1.m[3][3];
+	  m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0] + pmatrixq::m[2][3]*m1.m[3][0];
+	  m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1] + pmatrixq::m[2][3]*m1.m[3][1];
+	  m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2] + pmatrixq::m[2][3]*m1.m[3][2];
+	  m2.m[2][3] = pmatrixq::m[2][0]*m1.m[0][3] + pmatrixq::m[2][1]*m1.m[1][3] + pmatrixq::m[2][2]*m1.m[2][3] + pmatrixq::m[2][3]*m1.m[3][3];
+	  m2.m[3][0] = pmatrixq::m[3][0]*m1.m[0][0] + pmatrixq::m[3][1]*m1.m[1][0] + pmatrixq::m[3][2]*m1.m[2][0] + pmatrixq::m[3][3]*m1.m[3][0];
+	  m2.m[3][1] = pmatrixq::m[3][0]*m1.m[0][1] + pmatrixq::m[3][1]*m1.m[1][1] + pmatrixq::m[3][2]*m1.m[2][1] + pmatrixq::m[3][3]*m1.m[3][1];
+	  m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
+	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
+	}
+      else
+	{
+	  for (i=0; i < N; i++)
 	    {
-	      m2[i][j]=0.0;
-	      for (j2=0; j2 < N; j2++)
-		m2[i][j] += pmatrixq::m[i][j2]*m1.m[j2][j];
+	      for (j=0; j < N; j++)
+		{
+		  m2.m[i][j]=0.0;
+		  for (j2=0; j2 < N; j2++)
+		    m2.m[i][j] += pmatrixq::m[i][j2]*m1.m[j2][j];
+	     	}
 	    }
 	}
       return m2;
@@ -433,7 +476,7 @@ public:
 	  cout << "{";
 	  for (j=0; j < N; j++)
 	    { 
-	      cout << setprecision(maxdigits) << m[i][j];
+	      cout << setprecision(std::numeric_limits<ntype>::digits10) << m[i][j];
 		if (j < N-1)
 		  cout << ",";
 	      }
@@ -452,14 +495,16 @@ public:
       {
 	return N;
       } 
+#if 0
     pmatrixq()
       {
-	n=N;
-	maxdigits=std::numeric_limits<ntype>::digits10;
+	//n=N;
+	//maxdigits=std::numeric_limits<ntype>::digits10;
       }
     ~pmatrixq()
       {
       }
+#endif
 };
 
 typedef pmatrixq<double,3> pmatrix3d;

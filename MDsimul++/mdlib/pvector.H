@@ -18,7 +18,6 @@ public:
 	  lv.v[i] = v[i] + param.v[i];
 	return lv;
     }
- 
     inline pvector<ntype,N> operator += (const pvector<ntype,N>& param)
       {
        	int i;
