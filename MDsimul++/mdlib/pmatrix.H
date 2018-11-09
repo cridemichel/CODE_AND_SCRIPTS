@@ -57,7 +57,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 {
   using pmatrix<ntype,N,N>::m;
   //int n, maxdigits;
-  inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d)
+  inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d) const
     {
       /* return the LU decomposition of calling matrix (i.e. *this) */
       pmatrixq <ntype,N> m1;
@@ -140,7 +140,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
       return m1;
     }
 
-  inline pvector<ntype,N> lubksb(pvector <int,N> indx, pvector<ntype,N> b)
+  inline pvector<ntype,N> lubksb(pvector <int,N> indx, pvector<ntype,N> b) const
     { 
       /* the calling matrix (*this) must be the LU decomposition of a given matrix M
        * with indx the raw permutations done to obtain LU from M, 
@@ -184,7 +184,7 @@ public:
 	  m2[i][j] = m[i][j] +  m1[i][j];
       return m2;
     }
-  inline double detgen()
+  inline double detgen() const
     {
       double d;
       pmatrixq<ntype,N> m1;
@@ -196,7 +196,7 @@ public:
 	d *= m1[j][j];
       return d;
     }
-  inline double det()
+  inline double det() const
     {
       if constexpr (N==1)
 	{
@@ -229,7 +229,7 @@ public:
 	return detgen();
     }
 
-  pmatrixq<ntype,N> invgen()
+  pmatrixq<ntype,N> invgen() const
     {
       int m1, m2; 
       double d;
@@ -251,7 +251,7 @@ public:
 	}
       return om;
     }
-  pmatrixq<ntype,N> inv()
+  pmatrixq<ntype,N> inv() const
     {
       double invd;
       pmatrixq <ntype,N> m1;
