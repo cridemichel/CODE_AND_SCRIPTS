@@ -57,6 +57,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 {
   using pmatrix<ntype,N,N>::m;
   //int n, maxdigits;
+  // il const vuol dire che il puntore this, passato ai membri di una classe implicitamente, viene passato come const
   inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d) const
     {
       /* return the LU decomposition of calling matrix (i.e. *this) */
