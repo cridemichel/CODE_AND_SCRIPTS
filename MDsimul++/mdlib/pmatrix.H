@@ -476,7 +476,7 @@ public:
 	  cout << "{";
 	  for (j=0; j < N; j++)
 	    { 
-	      cout << setprecision(std::numeric_limits<ntype>::digits10+5) << m[i][j];
+	      cout << setprecision(std::numeric_limits<ntype>::digits10) << m[i][j];
 		if (j < N-1)
 		  cout << ",";
 	      }
