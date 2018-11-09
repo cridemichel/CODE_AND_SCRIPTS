@@ -7,7 +7,7 @@
 #include<cmath>
 #include "pvector.H"
 template <class ntype, int N, int M> class pmatrix {
-  int nr, nc;
+  //int nr, nc;
 public:
   ntype m[N][M]; // N riga M colonna
 #if 0 // example of operator = overload <-- not needed anyway!!!
@@ -20,6 +20,7 @@ public:
       return (*this);
     }
 #endif
+#if 0
   pmatrix()
     {
       nr=N;
@@ -28,6 +29,7 @@ public:
   ~pmatrix()
     {
     }
+#endif
 };	
 // redefine also *= += and
 // define inv() det() i.e. inverse and determinant
@@ -344,12 +346,21 @@ public:
 	m1=invgen(); 
       return m1;
     }
-  inline pmatrixq<ntype, N> operator += (const pmatrixq<ntype, N>& m1)
+  inline pmatrixq<ntype, N>& operator += (const pmatrixq<ntype, N>& m1)
     {
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m[i][j] += m1.m[i][j];
+      return (*this);
+    }
+  // multiplication with scalars
+  inline pmatrixq<ntype, N>& operator *=(const double& param) 
+    {
+      int i,j;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m[i][j] *= param;
       return (*this);
     }
   inline pmatrixq<ntype, N> operator *(const double& param) 
@@ -359,6 +370,23 @@ public:
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
+      return m1;
+    }
+  inline pmatrixq<ntype, N>& operator /=(const double& param) 
+    {
+      int i,j;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m[i][j] /= param;
+      return (*this);
+    }
+  inline pmatrixq<ntype, N> operator /(const double& param) 
+    {
+      int i,j;
+      pmatrixq<ntype,N> m1;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m1[i][j] = m[i][j]/param;
       return m1;
     }
   friend pmatrixq<ntype,N> operator *(const double& param, const pmatrixq<ntype,N>& m1) 
@@ -371,10 +399,27 @@ public:
       return m2;
     }
   // multiply two NxN matrices
+  inline pmatrixq<ntype,N>& operator *=(const pmatrixq<ntype,N>& m1) 
+    {
+      *this = (*this).mul(m1);
+      return *this;
+    }
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>& m1) 
     {
       return (*this).mul(m1);	
     }
+
+   inline pmatrixq<ntype,N>& operator /=(const pmatrixq<ntype,N>& m1) 
+    {
+      *this = (*this).mul(m1.inv());	
+      return *this;
+    }
+  
+  inline pmatrixq<ntype,N> operator /(const pmatrixq<ntype,N>& m1) 
+    {
+      return (*this).mul(m1.inv());	
+    }
+  
   // matrix times vector
   inline pvector<ntype,N> operator *(const pvector<ntype,N>& v1) 
     {
@@ -465,6 +510,43 @@ public:
 	}
       return m2;
     }
+  // transpose
+  pmatrixq<ntype,N> transp()
+    {
+      int i, j;
+      pmatrixq<ntype,N> m1;
+      for (i=0; i < N; i++)
+	{
+	  for (j=0; j < N; j++)
+	    {
+	      m1[i][j] = m[j][i];
+	    }
+	}
+      return m1;
+    }
+  // get i-th column vector 
+  pvector<ntype,N> col(int i)
+    {
+      pvector<ntype,N> v;
+      int j;
+      for (j=0; j < N; j++)
+	{
+	  v[j] = m[j][i];
+	}
+      return v;
+    }
+  // get i-th row vector 
+  pvector<ntype,N> row(int i)
+    {
+      pvector<ntype,N> v;
+      int j;
+      for (j=0; j < N; j++)
+	{
+	  v[j] = m[i][j];
+	}
+      return v;
+    }
+  
   void show(const char* str)
     {
       int i, j;

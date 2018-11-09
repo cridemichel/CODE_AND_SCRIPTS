@@ -2,7 +2,7 @@
 OBJS= prova.o
 CXX=g++
 LDFLAGS=-g
-CFLAGS=-g
+CFLAGS=-g --std=c++17
 common: $(OBJS)
 
 prova: prova.o
