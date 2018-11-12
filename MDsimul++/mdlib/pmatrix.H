@@ -34,7 +34,6 @@ public:
 // redefine also *= += and
 // define inv() det() i.e. inverse and determinant
 // matrici quadrate NxN
-
 using namespace std;
 #if 0
 namespace matrixns
@@ -320,6 +319,7 @@ public:
       else if constexpr (N==4)
 	{
 	  invd = 1.0/det();
+	  
 	  //printf("invD=%.15G\n", invd);
 	  m1[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
 	    m[1][1]*m[2][3]*m[3][2] - m[1][2]*m[2][1]*m[3][3] + m[1][1]*m[2][2]*m[3][3];
