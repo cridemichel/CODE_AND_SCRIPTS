@@ -91,7 +91,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      /* This is equation (2.3.12) except for i = j. */
 	      sum=m1[i][j]; 
 	      for (k=0;k<i;k++) 
-		sum -= m1[i][k]*m1[k][j]; 
+		sum -= m1.m[i][k]*m1.m[k][j]; 
 	      m1[i][j]=sum; 
 	    } 
 	  big=0.0; /* Initialize for the search for largest pivot element. */ 
@@ -100,8 +100,8 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
 	      sum=m1[i][j]; 
 	      for (k=0;k<j;k++)
-		sum -= m1[i][k]*m1[k][j]; 
-	      m1[i][j]=sum; 
+		sum -= m1.m[i][k]*m1.m[k][j]; 
+	      m1.m[i][j]=sum; 
 	      if ( (dum=vv[i]*abs(sum)) >= big) 
 		{ 
 		  /* Is the  gure of merit for the pivot better than the best so far? */
@@ -115,9 +115,9 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      for (k=0;k<n;k++) 
 		{ 
 		  /* Yes, do so...*/ 
-		  dum=m1[imax][k]; 
-		  m1[imax][k]=m1[j][k]; 
-		  m1[j][k]=dum; 
+		  dum=m1.m[imax][k]; 
+		  m1[imax][k]=m1.m[j][k]; 
+		  m1.m[j][k]=dum; 
 		} 
 	      d = -d; 
 	      /* ...and change the parity of d. */ 
@@ -125,8 +125,8 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	      /* Also interchange the scale factor.*/ 
 	    } 
 	  indx[j]=imax; 
-	  if (m1[j][j] == 0.0) 
-	    m1[j][j]=TINY; 
+	  if (m1.m[j][j] == 0.0) 
+	    m1.m[j][j]=TINY; 
 	  /* If the pivot element is zero the matrix is singular 
 	   * (at least to the precision of the algorithm). 
 	   * For some applications on singular matrices, 
@@ -134,8 +134,8 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
 	  if (j != n) 
 	    { 
 	      /* Now,  nally, divide by the pivot element.*/
-	      dum=1.0/(m1[j][j]); 
-	      for (i=j+1;i<n;i++) m1[i][j] *= dum; 
+	      dum=1.0/(m1.m[j][j]); 
+	      for (i=j+1;i<n;i++) m1.m[i][j] *= dum; 
 	    } 
 	} 
       return m1;
@@ -176,13 +176,13 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
       return b;
     }
 public:
-  inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
+  inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1) const
     {
       pmatrixq<ntype, N> m2;
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m2[i][j] = m[i][j] +  m1[i][j];
+	  m2.m[i][j]= m[i][j] + m1.m[i][j];
       return m2;
     }
   inline double detgen() const
@@ -194,7 +194,7 @@ public:
       // ludcmp return the LU decomposition of actual matrix (*this)
       m1=ludcmp(indx,d);
       for(j=0;j<N;j++) 
-	d *= m1[j][j];
+	d *= m1.m[j][j];
       return d;
     }
   inline double det() const
@@ -248,7 +248,7 @@ public:
 	  col[m2]=1.0; 
 	  col=LU.lubksb(indx,col);
 	  for(m1=0;m1<N;m1++) 
-	    om[m1][m2]=col[m1]; 
+	    om.m[m1][m2]=col[m1]; 
 	}
       return om;
     }
@@ -258,90 +258,90 @@ public:
       pmatrixq <ntype,N> m1;
       if constexpr (N==1)
 	{
-	  m1[0][0]=1.0/m[0][0];
+	  m1.m[0][0]=1.0/m[0][0];
 	}
       else if constexpr (N==2)
 	{
 	  invd = 1.0/det();
-	  m1[0][0] = m[1][1]*invd;
-	  m1[0][1] = m[1][0]*invd;
-	  m1[1][0] = m[0][1]*invd;
-	  m1[1][1] = m[0][0]*invd;
+	  m1.m[0][0] = m[1][1]*invd;
+	  m1.m[0][1] = m[1][0]*invd;
+	  m1.m[1][0] = m[0][1]*invd;
+	  m1.m[1][1] = m[0][0]*invd;
 	}
       else if constexpr (N==3)
 	{
 	  invd = 1.0/det();
-	  m1[0][0] = -m[1][2]*m[2][1] + m[1][1]*m[2][2];
-	  m1[0][1] =  m[0][2]*m[2][1] - m[0][1]*m[2][2];
-	  m1[0][2] = -m[0][2]*m[1][1] + m[0][1]*m[1][2];
-	  m1[1][0] =  m[1][2]*m[2][0] - m[1][0]*m[2][2];
-	  m1[1][1] = -m[0][2]*m[2][0] + m[0][0]*m[2][2]; 
-	  m1[1][2] =  m[0][2]*m[1][0] - m[0][0]*m[1][2]; 
-	  m1[2][0] = -m[1][1]*m[2][0] + m[1][0]*m[2][1]; 
-	  m1[2][1] =  m[0][1]*m[2][0] - m[0][0]*m[2][1];
-	  m1[2][2] = -m[0][1]*m[1][0] + m[0][0]*m[1][1];
-	  m1[0][0] *= invd;
-	  m1[0][1] *= invd;
-	  m1[0][2] *= invd;
-	  m1[1][0] *= invd; 
-	  m1[1][1] *= invd;
-	  m1[1][2] *= invd;
-	  m1[2][0] *= invd;
-	  m1[2][1] *= invd; 
-	  m1[2][2] *= invd; 	    
+	  m1.m[0][0] = -m[1][2]*m[2][1] + m[1][1]*m[2][2];
+	  m1.m[0][1] =  m[0][2]*m[2][1] - m[0][1]*m[2][2];
+	  m1.m[0][2] = -m[0][2]*m[1][1] + m[0][1]*m[1][2];
+	  m1.m[1][0] =  m[1][2]*m[2][0] - m[1][0]*m[2][2];
+	  m1.m[1][1] = -m[0][2]*m[2][0] + m[0][0]*m[2][2]; 
+	  m1.m[1][2] =  m[0][2]*m[1][0] - m[0][0]*m[1][2]; 
+	  m1.m[2][0] = -m[1][1]*m[2][0] + m[1][0]*m[2][1]; 
+	  m1.m[2][1] =  m[0][1]*m[2][0] - m[0][0]*m[2][1];
+	  m1.m[2][2] = -m[0][1]*m[1][0] + m[0][0]*m[1][1];
+	  m1.m[0][0] *= invd;
+	  m1.m[0][1] *= invd;
+	  m1.m[0][2] *= invd;
+	  m1.m[1][0] *= invd; 
+	  m1.m[1][1] *= invd;
+	  m1.m[1][2] *= invd;
+	  m1.m[2][0] *= invd;
+	  m1.m[2][1] *= invd; 
+	  m1.m[2][2] *= invd; 	    
 	}
       else if constexpr (N==4)
 	{
 	  invd = 1.0/det();
 	  //printf("invD=%.15G\n", invd);
-	  m1[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
+	  m1.m[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
 	    m[1][1]*m[2][3]*m[3][2] - m[1][2]*m[2][1]*m[3][3] + m[1][1]*m[2][2]*m[3][3];
-	  m1[0][1] =m[0][3]*m[2][2]*m[3][1] - m[0][2]*m[2][3]*m[3][1] - m[0][3]*m[2][1]*m[3][2] + 
+	  m1.m[0][1] =m[0][3]*m[2][2]*m[3][1] - m[0][2]*m[2][3]*m[3][1] - m[0][3]*m[2][1]*m[3][2] + 
 	    m[0][1]*m[2][3]*m[3][2] + m[0][2]*m[2][1]*m[3][3] - m[0][1]*m[2][2]*m[3][3];
-	  m1[0][2] =-(m[0][3]*m[1][2]*m[3][1]) + m[0][2]*m[1][3]*m[3][1] + m[0][3]*m[1][1]*m[3][2] - 
+	  m1.m[0][2] =-(m[0][3]*m[1][2]*m[3][1]) + m[0][2]*m[1][3]*m[3][1] + m[0][3]*m[1][1]*m[3][2] - 
 	    m[0][1]*m[1][3]*m[3][2] - m[0][2]*m[1][1]*m[3][3] + m[0][1]*m[1][2]*m[3][3];
-	  m1[0][3] = m[0][3]*m[1][2]*m[2][1] - m[0][2]*m[1][3]*m[2][1] - m[0][3]*m[1][1]*m[2][2] +
+	  m1.m[0][3] = m[0][3]*m[1][2]*m[2][1] - m[0][2]*m[1][3]*m[2][1] - m[0][3]*m[1][1]*m[2][2] +
 	    m[0][1]*m[1][3]*m[2][2] + m[0][2]*m[1][1]*m[2][3] - m[0][1]*m[1][2]*m[2][3];
-	  m1[1][0] = m[1][3]*m[2][2]*m[3][0] - m[1][2]*m[2][3]*m[3][0] - m[1][3]*m[2][0]*m[3][2] + 
+	  m1.m[1][0] = m[1][3]*m[2][2]*m[3][0] - m[1][2]*m[2][3]*m[3][0] - m[1][3]*m[2][0]*m[3][2] + 
 	    m[1][0]*m[2][3]*m[3][2] + m[1][2]*m[2][0]*m[3][3] - m[1][0]*m[2][2]*m[3][3];
-	  m1[1][1] = -(m[0][3]*m[2][2]*m[3][0]) + m[0][2]*m[2][3]*m[3][0] + m[0][3]*m[2][0]*m[3][2] - 
+	  m1.m[1][1] = -(m[0][3]*m[2][2]*m[3][0]) + m[0][2]*m[2][3]*m[3][0] + m[0][3]*m[2][0]*m[3][2] - 
 	    m[0][0]*m[2][3]*m[3][2] - m[0][2]*m[2][0]*m[3][3] + m[0][0]*m[2][2]*m[3][3];
-	  m1[1][2] = m[0][3]*m[1][2]*m[3][0] - m[0][2]*m[1][3]*m[3][0] - m[0][3]*m[1][0]*m[3][2] + 
+	  m1.m[1][2] = m[0][3]*m[1][2]*m[3][0] - m[0][2]*m[1][3]*m[3][0] - m[0][3]*m[1][0]*m[3][2] + 
 	    m[0][0]*m[1][3]*m[3][2] + m[0][2]*m[1][0]*m[3][3] - m[0][0]*m[1][2]*m[3][3] ;
-	  m1[1][3] = -(m[0][3]*m[1][2]*m[2][0]) + m[0][2]*m[1][3]*m[2][0] + m[0][3]*m[1][0]*m[2][2] - 
+	  m1.m[1][3] = -(m[0][3]*m[1][2]*m[2][0]) + m[0][2]*m[1][3]*m[2][0] + m[0][3]*m[1][0]*m[2][2] - 
 	    m[0][0]*m[1][3]*m[2][2] - m[0][2]*m[1][0]*m[2][3] + m[0][0]*m[1][2]*m[2][3];
-	  m1[2][0] = -(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
+	  m1.m[2][0] = -(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
 	    m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3];
-	  m1[2][1] = m[0][3]*m[2][1]*m[3][0] - m[0][1]*m[2][3]*m[3][0] - m[0][3]*m[2][0]*m[3][1] + 
+	  m1.m[2][1] = m[0][3]*m[2][1]*m[3][0] - m[0][1]*m[2][3]*m[3][0] - m[0][3]*m[2][0]*m[3][1] + 
 	    m[0][0]*m[2][3]*m[3][1] + m[0][1]*m[2][0]*m[3][3] - m[0][0]*m[2][1]*m[3][3];
-	  m1[2][2] = -(m[0][3]*m[1][1]*m[3][0]) + m[0][1]*m[1][3]*m[3][0] + m[0][3]*m[1][0]*m[3][1] - 
+	  m1.m[2][2] = -(m[0][3]*m[1][1]*m[3][0]) + m[0][1]*m[1][3]*m[3][0] + m[0][3]*m[1][0]*m[3][1] - 
 	    m[0][0]*m[1][3]*m[3][1] - m[0][1]*m[1][0]*m[3][3] + m[0][0]*m[1][1]*m[3][3];
-	  m1[2][3] =m[0][3]*m[1][1]*m[2][0] - m[0][1]*m[1][3]*m[2][0] - m[0][3]*m[1][0]*m[2][1] + 
+	  m1.m[2][3] =m[0][3]*m[1][1]*m[2][0] - m[0][1]*m[1][3]*m[2][0] - m[0][3]*m[1][0]*m[2][1] + 
 	    m[0][0]*m[1][3]*m[2][1] + m[0][1]*m[1][0]*m[2][3] - m[0][0]*m[1][1]*m[2][3];
-	  m1[3][0] = m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + 
+	  m1.m[3][0] = m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + 
 	    m[1][0]*m[2][2]*m[3][1] + m[1][1]*m[2][0]*m[3][2] - m[1][0]*m[2][1]*m[3][2];
-	  m1[3][1] =-(m[0][2]*m[2][1]*m[3][0]) + m[0][1]*m[2][2]*m[3][0] + m[0][2]*m[2][0]*m[3][1] - 
+	  m1.m[3][1] =-(m[0][2]*m[2][1]*m[3][0]) + m[0][1]*m[2][2]*m[3][0] + m[0][2]*m[2][0]*m[3][1] - 
 	    m[0][0]*m[2][2]*m[3][1] - m[0][1]*m[2][0]*m[3][2] + m[0][0]*m[2][1]*m[3][2];
-	  m1[3][2] = m[0][2]*m[1][1]*m[3][0] - m[0][1]*m[1][2]*m[3][0] - m[0][2]*m[1][0]*m[3][1] + 
+	  m1.m[3][2] = m[0][2]*m[1][1]*m[3][0] - m[0][1]*m[1][2]*m[3][0] - m[0][2]*m[1][0]*m[3][1] + 
 	    m[0][0]*m[1][2]*m[3][1] + m[0][1]*m[1][0]*m[3][2] - m[0][0]*m[1][1]*m[3][2];
-	  m1[3][3] = -(m[0][2]*m[1][1]*m[2][0]) + m[0][1]*m[1][2]*m[2][0] + m[0][2]*m[1][0]*m[2][1] - 
+	  m1.m[3][3] = -(m[0][2]*m[1][1]*m[2][0]) + m[0][1]*m[1][2]*m[2][0] + m[0][2]*m[1][0]*m[2][1] - 
 	    m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
-	  m1[0][0] *= invd;
-	  m1[0][1] *= invd;
-	  m1[0][2] *= invd;
-	  m1[0][3] *= invd;
-	  m1[1][0] *= invd; 
-	  m1[1][1] *= invd;
-	  m1[1][2] *= invd;
-	  m1[1][3] *= invd;
-	  m1[2][0] *= invd;
-	  m1[2][1] *= invd; 
-	  m1[2][2] *= invd;
-	  m1[2][3] *= invd;
-	  m1[3][0] *= invd;
-	  m1[3][1] *= invd; 
-	  m1[3][2] *= invd;
-	  m1[3][3] *= invd;
+	  m1.m[0][0] *= invd;
+	  m1.m[0][1] *= invd;
+	  m1.m[0][2] *= invd;
+	  m1.m[0][3] *= invd;
+	  m1.m[1][0] *= invd; 
+	  m1.m[1][1] *= invd;
+	  m1.m[1][2] *= invd;
+	  m1.m[1][3] *= invd;
+	  m1.m[2][0] *= invd;
+	  m1.m[2][1] *= invd; 
+	  m1.m[2][2] *= invd;
+	  m1.m[2][3] *= invd;
+	  m1.m[3][0] *= invd;
+	  m1.m[3][1] *= invd; 
+	  m1.m[3][2] *= invd;
+	  m1.m[3][3] *= invd;
 	}
       else
 	m1=invgen(); 
@@ -370,7 +370,7 @@ public:
       pmatrixq<ntype,N> m1;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m1[i][j] = m[i][j]*param;
+	  m1.m[i][j] = m[i][j]*param;
       return m1;
     }
   inline pmatrixq<ntype, N>& operator /=(const double& param) 
@@ -387,7 +387,7 @@ public:
       pmatrixq<ntype,N> m1;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m1[i][j] = m[i][j]/param;
+	  m1.m[i][j] = m[i][j]/param;
       return m1;
     }
   friend pmatrixq<ntype,N> operator *(const double& param, const pmatrixq<ntype,N>& m1) 
@@ -447,7 +447,7 @@ public:
 	}
       return v2;
     }
-  inline ntype* operator[](const int& i)
+  inline ntype* operator[](const int& i) 
     {
       return &(m[i][0]);
     }
@@ -520,7 +520,7 @@ public:
 	{
 	  for (j=0; j < N; j++)
 	    {
-	      m1[i][j] = m[j][i];
+	      m1.m[i][j] = m[j][i];
 	    }
 	}
       return m1;
