@@ -182,7 +182,15 @@ public:
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m2.m[i][j] = m[i][j] + m1.m[i][j];
+	  {
+#if 1
+  	    m2.m[i][j] = m[i][j] + m1.m[i][j];
+#else
+	    // NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+	    // che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+	    (const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] + (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+#endif
+	  }
       return m2;
     }
 
