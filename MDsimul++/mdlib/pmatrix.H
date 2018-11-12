@@ -182,9 +182,10 @@ public:
       int i, j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m2.m[i][j] = m[i][j] +  m1.m[i][j];
+	  m2.m[i][j] = m[i][j] + m1.m[i][j];
       return m2;
     }
+
   inline double detgen() const
     {
       double d;
