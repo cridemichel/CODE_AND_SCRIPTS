@@ -257,7 +257,7 @@ public:
 	return detgen();
     }
 
-  pmatrixq<ntype,N> invgen() const
+  inline pmatrixq<ntype,N> invgen() const
     {
       int m1, m2; 
       double d;
@@ -512,7 +512,13 @@ public:
     {
       return (*this).mul(m1);	
     }
-
+#if 0
+  inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>&& m1) 
+    {
+      //cout << "qui\n";
+      return (*this).mul(m1);	
+    }
+#endif
    inline pmatrixq<ntype,N>& operator /=(const pmatrixq<ntype,N>& m1) 
     {
       *this = (*this).mul(m1.inv());	
