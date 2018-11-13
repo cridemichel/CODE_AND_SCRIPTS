@@ -7,28 +7,45 @@
 #include<cmath>
 #include "pvector.H"
 #define OPT_INV
+#define MOVE_SEMANTIC
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
-  ntype m[N][M]; // N riga M colonna
-#if 0 // example of operator = overload <-- not needed anyway!!!
+#ifndef MOVE_SEMANTIC 
+  ntype m[N][M];
+#else
+  ntype (*m)[M]; // N riga M colonna
+  // example of operator = overload <-- not needed anyway!!! 
   pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
     {
       int i,j;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	    m[i][j] = m1.m[i][j];
+	  m[i][j] = m1.m[i][j];
       return (*this);
     }
-#endif
-#if 0
+  pmatrix<ntype,N,M>& operator=(pmatrix<ntype,N,M>&& m1)
+    {
+      (*this).m=m1.m;
+      m1.m = nullptr;
+      return (*this);
+    }
+  pmatrix(pmatrix<ntype,N,M>&& m1)
+    {
+      //nr=N;
+      //nc=M;
+      (*this).m = m1.m;
+      m1.m=nullptr;
+    }
   pmatrix()
     {
-      nr=N;
-      nc=M;
+      //nr=N;
+      //nc=M;
+      m = new ntype[N][M];
     }
   ~pmatrix()
     {
+      delete[] m;
     }
 #endif
 };	
