@@ -1,7 +1,5 @@
 #ifndef _PMATRIX_
-/* N.B. inversione e somma vanno meglio delle GLM e di Armadillo,  
- * mentre la moltiplicazione va meglio delle GLM ma peggio da N=10 in poi
- * rispetto ad Armadillo. */
+/* N.B. fino a N=10 vanno meglio di GLM e armadillo in tutte le operazioni (somma, moltiplicazione e inversione). */
 #define _PMATRIX_
 // matrici NxM
 #include<stdio.h>
