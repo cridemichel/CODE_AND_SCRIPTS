@@ -1,4 +1,7 @@
 #ifndef _PMATRIX_
+/* N.B. inversione e somma vanno meglio delle GLM e di Armadillo 
+ * mentre la moltiplicazione va meglio delle GLM ma peggio (circa un fattore 2) da N=30 in poi
+ * rispetto ad Armadillo. */
 #define _PMATRIX_
 // matrici NxM
 #include<stdio.h>
@@ -7,7 +10,7 @@
 #include<cmath>
 #include "pvector.H"
 #define OPT_INV
-#define MOVE_SEMANTIC
+//#define MOVE_SEMANTIC
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
@@ -26,8 +29,9 @@ public:
     }
   pmatrix<ntype,N,M>& operator=(pmatrix<ntype,N,M>&& m1)
     {
+      auto mt = (*this).m;
       (*this).m=m1.m;
-      m1.m = nullptr;
+      m1.m = mt;
       return (*this);
     }
   pmatrix(pmatrix<ntype,N,M>&& m1)
@@ -579,7 +583,7 @@ public:
     }
   inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
     {
-      int i, j, j2;
+      int i, j, k;
       pmatrixq<ntype,N> m2;
       if constexpr (N==1)
 	{
@@ -625,14 +629,44 @@ public:
 	}
       else
 	{
-	  for (i=0; i < N; i++)
+	  if constexpr (N > 80)/* tiled matrix multiplication to optimize cache usage (from wikipedia!)*/
 	    {
-	      for (j=0; j < N; j++)
+	      int T=(int)sqrt(N);
+	      int I, J, K;
+	      ntype sum;
+	      for (I=0; I < N; I+=T)
 		{
-		  m2.m[i][j]=0.0;
-		  for (j2=0; j2 < N; j2++)
-		    m2.m[i][j] += pmatrixq::m[i][j2]*m1.m[j2][j];
-	     	}
+		  for (J=0; J < N; J+=T)
+		    {
+		      for (K=0; K < N; K+=T)
+			{
+			  for (i=I; i < min(I+T,N); i++)
+			    {
+			      for (j=J; j < min(J+T,N); j++)
+				{
+				  sum = 0.0;
+				  for (k=K; k < min(K+T,N); k++)
+				    sum += pmatrixq::m[i][k]*m1.m[k][j];
+				  if (K==0)
+				    m2.m[i][j]=0;
+				  m2.m[i][j] += sum;
+				}
+		    	    }
+			}
+		    }
+		}
+	    }
+	  else
+	    {
+	      for (i=0; i < N; i++)
+		{
+		  for (j=0; j < N; j++)
+		    {
+		      m2.m[i][j]=0.0;
+		      for (k=0; k < N; k++)
+			m2.m[i][j] += pmatrixq::m[i][k]*m1.m[k][j];
+		    }
+		}
 	    }
 	}
       return m2;
