@@ -627,8 +627,47 @@ public:
 	}
       else
 	{
-	  if constexpr (N > 80)/* tiled matrix multiplication to optimize cache usage (from wikipedia!)*/
+	  if constexpr (N > 10)/* tiled matrix multiplication to optimize cache usage (from wikipedia!)*/
 	    {
+#if 1
+	      if constexpr (N % 2==0) // it's even otherwise we have to pad
+		{
+		  pmatrixq<ntype,N/2> A11, A12, A21, A22, B11, B12, B22, B21,
+		    P1, P2, P3, P4, P5, P6, P7;
+		  // Strassen method applied by recursion
+		  for (i=0; i < N/2; i++) 
+		    for (j=0; j < N/2; j++) 
+		      {
+			A11[i][j] = m[i][j]; 
+			A12[i][j] = m[i][j+N/2];
+			A21[i][j] = m[i+N/2][j]; 
+			A22[i][j] = m[i+N/2][j+N/2];
+			B11[i][j] = m1.m[i][j]; 
+			B12[i][j] = m1.m[i][j+N/2];
+			B21[i][j] = m1.m[i+N/2][j]; 
+			B22[i][j] = m1.m[i+N/2][j+N/2];
+		      }
+		  P1 = (A11+A22)*(B11+B22);
+		  P2 = (A21+A22)*B11;
+		  P3 = A11*(B12-B22);
+		  P4 = A22*(B21-B11);
+		  P5 = (A11+A12)*B22;
+		  P6 = (A21-A11)*(B11+B12);
+		  P7 = (A12-A22)*(B21+B22);
+		  for (i=0; i < N/2; i++) 
+		    for (j=0; j < N/2; j++) 
+		      {
+			m2[i][j] = P1[i][j] + P4[i][j] - P5[i][j] + P7[i][j];
+			m2[i][j+N/2] = P3[i][j] + P5[i][j];
+			m2[i+N/2][j] = P2[i][j] + P4[i][j];
+			m2[i+N/2][j+N/2] = P1[i][j] + P3[i][j] - P2[i][j] + P6[i][j];
+		      }
+		}
+	      else
+		{
+		  // not implemented yet
+		}
+#else
 	      int T=(int)sqrt(N);
 	      int I, J, K;
 	      ntype sum;
@@ -653,6 +692,7 @@ public:
 			}
 		    }
 		}
+#endif
 	    }
 	  else
 	    {
