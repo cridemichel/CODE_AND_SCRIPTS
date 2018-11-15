@@ -8,17 +8,19 @@
 #include<cstdlib>
 #include<cmath>
 #include "pvector.H"
+const int NMAX = 50; // if N>NMAX use dynamic allocation of matrices
 #define OPT_INV
-//#define MOVE_SEMANTIC
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
-#ifndef MOVE_SEMANTIC 
   ntype m[N][M];
-#else
+};
+template <class ntype, int N, int M> class pmatrixd {
+  //int nr, nc;
+public:
   ntype (*m)[M]; // N riga M colonna
-  // example of operator = overload <-- not needed anyway!!! 
-  pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
+  // copy assignment
+  pmatrixd<ntype,N,M>& operator=(const pmatrixd<ntype,N,M>& m1)
     {
       int i,j;
       for (i=0; i < N; i++)
@@ -26,31 +28,43 @@ public:
 	  m[i][j] = m1.m[i][j];
       return (*this);
     }
-  pmatrix<ntype,N,M>& operator=(pmatrix<ntype,N,M>&& m1)
+  // move assignment
+  pmatrixd<ntype,N,M>& operator=(pmatrixd<ntype,N,M>&& m1)
     {
       auto mt = (*this).m;
       (*this).m=m1.m;
       m1.m = mt;
       return (*this);
     }
-  pmatrix(pmatrix<ntype,N,M>&& m1)
+  // copy constructor 
+  pmatrixd(const pmatrixd<ntype,N,M>& m1)
     {
       //nr=N;
       //nc=M;
+      m = new ntype[N][M];
+      m = m1;
+    }
+  // move constructor
+  pmatrixd(pmatrixd<ntype,N,M>&& m1)
+    {
+      //nr=N;
+      //nc=M;
+      //cout << "qui\n";
       (*this).m = m1.m;
       m1.m=nullptr;
     }
-  pmatrix()
+  // default constructor
+  pmatrixd()
     {
       //nr=N;
       //nc=M;
       m = new ntype[N][M];
     }
-  ~pmatrix()
+  // destructor
+  ~pmatrixd()
     {
       delete[] m;
     }
-#endif
 };	
 // redefine also *= += and
 // define inv() det() i.e. inverse and determinant
@@ -73,9 +87,13 @@ inverse4(void) {
     return ;
 }
 #endif
-template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N> 
+// for large matrices use dynamic allocation to avoid stack overflow!
+template <class ntype, int N> using pmatrixb = typename std::conditional<(N>NMAX),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type;
+ 
+template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>
+  //public std::conditional<(N>100),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type 
 {
-  using pmatrix<ntype,N,N>::m;
+  using pmatrixb<ntype,N>::m;
   //int n, maxdigits;
   // il const vuol dire che il puntore this, passato ai membri di una classe implicitamente, viene passato come const
   //using type = pmatrixq;
@@ -531,7 +549,7 @@ public:
     }
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>& m1) 
     {
-      return (*this).mul(m1);	
+      return std::move((*this).mul(m1));	
     }
 #if 0
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>&& m1) 
@@ -548,7 +566,7 @@ public:
   
   inline pmatrixq<ntype,N> operator /(const pmatrixq<ntype,N>& m1) 
     {
-      return (*this).mul(m1.inv());	
+      return std::move((*this).mul(m1.inv()));	
     }
   
   // matrix times vector
