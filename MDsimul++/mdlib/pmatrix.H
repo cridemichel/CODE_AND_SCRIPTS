@@ -8,6 +8,7 @@
 #include<cstdlib>
 #include<cmath>
 #include "pvector.H"
+//#define MOVE_SEMANTIC
 const int NMAX = 50; // if N>NMAX use dynamic allocation of matrices
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
@@ -28,6 +29,7 @@ public:
 	  m[i][j] = m1.m[i][j];
       return (*this);
     }
+#ifdef MOVE_SEMANTIC
   // move assignment
   pmatrixd<ntype,N,M>& operator=(pmatrixd<ntype,N,M>&& m1)
     {
@@ -36,14 +38,16 @@ public:
       m1.m = mt;
       return (*this);
     }
+#endif
   // copy constructor 
   pmatrixd(const pmatrixd<ntype,N,M>& m1)
     {
       //nr=N;
       //nc=M;
       m = new ntype[N][M];
-      m = m1;
+      (*this) = m1;
     }
+#ifdef MOVE_SEMANTIC
   // move constructor
   pmatrixd(pmatrixd<ntype,N,M>&& m1)
     {
@@ -53,6 +57,7 @@ public:
       (*this).m = m1.m;
       m1.m=nullptr;
     }
+#endif
   // default constructor
   pmatrixd()
     {
