@@ -1,6 +1,7 @@
 #ifndef _PMATRIX_
-/* N.B. fino a N=10 vanno meglio di GLM e armadillo in tutte le operazioni (somma, moltiplicazione e inversione). */
+/* N.B. fino a N=25 vanno meglio di GLM e armadillo in tutte le operazioni (somma, moltiplicazione e inversione). */
 #define _PMATRIX_
+#define USE_STRASSEN
 // matrici NxM
 #include<stdio.h>
 #include<stdlib.h>
@@ -9,8 +10,6 @@
 #include "pvector.H"
 #define OPT_INV
 //#define MOVE_SEMANTIC
-
-
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
@@ -628,17 +627,14 @@ public:
 	  m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
 	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	}
-      else if constexpr (N > 30) // 30 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+#ifdef USE_STRASSEN
+      else if constexpr (N > 40) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
 	{
 	  using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
-	  selftype A11, A12, A21, A22, B11, B12, B22, B21,
-		   P1, P2, P3, P4, P5, P6, P7;
 	  static constexpr int dN = N % 2;
 	  static constexpr int Np = N+dN;
-	  //if constexpr (dN==1)
-	  //cout << "dN=" << dN << "\n";
-	  // Strassen method applied by recursion
-	  // we pad with 0s if matrix is odd
+	  selftype A11, A12, A21, A22, B11, B12, B22, B21,
+		   P1, P2, P3, P4, P5, P6, P7;
 	  int ip, jp;
 	  for (i=0; i < Np/2; i++) 
 	    for (j=0; j <  Np/2; j++) 
@@ -677,8 +673,8 @@ public:
 		  }
 	      }
 	}
-#if 0
-      else if constexpr (N > 200)
+#else
+      else if constexpr (N > 30)
 	{
 	  /* tiled matrix multiplication to optimize cache usage (from wikipedia!) 
 	  */
