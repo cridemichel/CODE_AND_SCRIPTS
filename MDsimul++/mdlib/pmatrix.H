@@ -549,7 +549,7 @@ public:
     }
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>& m1) 
     {
-      return std::move((*this).mul(m1));	
+      return std::move((*this).mul(m1));// std:move is needed otherwise move constructor will not be used!!
     }
 #if 0
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>&& m1) 
@@ -566,7 +566,7 @@ public:
   
   inline pmatrixq<ntype,N> operator /(const pmatrixq<ntype,N>& m1) 
     {
-      return std::move((*this).mul(m1.inv()));	
+      return std::move((*this).mul(m1.inv()));// std:move is needed otherwise move constructor will not be used!!	
     }
   
   // matrix times vector
