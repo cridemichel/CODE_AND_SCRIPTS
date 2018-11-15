@@ -8,7 +8,7 @@
 #include<cstdlib>
 #include<cmath>
 #include "pvector.H"
-//#define MOVE_SEMANTIC
+#define MOVE_SEMANTIC
 const int NMAX = 50; // if N>NMAX use dynamic allocation of matrices
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
