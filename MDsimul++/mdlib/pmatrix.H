@@ -77,6 +77,7 @@ template <class ntype, int N> class pmatrixq: public pmatrix <ntype, N, N>
   using pmatrix<ntype,N,N>::m;
   //int n, maxdigits;
   // il const vuol dire che il puntore this, passato ai membri di una classe implicitamente, viene passato come const
+  //using type = pmatrixq;
   inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d) const
     {
       /* return the LU decomposition of calling matrix (i.e. *this) */
@@ -627,47 +628,58 @@ public:
 	}
       else
 	{
-	  if constexpr (N > 10)/* tiled matrix multiplication to optimize cache usage (from wikipedia!)*/
+	  if constexpr (N > 10)
 	    {
 #if 1
-	      if constexpr (N % 2==0) // it's even otherwise we have to pad
-		{
-		  pmatrixq<ntype,N/2> A11, A12, A21, A22, B11, B12, B22, B21,
-		    P1, P2, P3, P4, P5, P6, P7;
-		  // Strassen method applied by recursion
-		  for (i=0; i < N/2; i++) 
-		    for (j=0; j < N/2; j++) 
+	      using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
+	      selftype A11, A12, A21, A22, B11, B12, B22, B21,
+		  P1, P2, P3, P4, P5, P6, P7;
+	      static constexpr int dN = N % 2;
+	      static constexpr int Np = N+dN;
+	      //if constexpr (dN==1)
+		//cout << "dN=" << dN << "\n";
+	      // Strassen method applied by recursion
+	      // we pad with 0s if matrix is odd
+	      int ip, jp;
+	      for (i=0; i < Np/2; i++) 
+		for (j=0; j <  Np/2; j++) 
+		  {
+		    A11[i][j] = m[i][j];
+		    jp = j+Np/2;
+		    ip = i+Np/2; 
+		    A12[i][j] = (dN==1 && (jp==N))?0.0:m[i][jp];
+		    A21[i][j] = (dN==1 && (ip==N))?0.0:m[ip][j]; 
+		    A22[i][j] = (dN==1 && (ip==N||jp==N))?0.0:m[ip][jp];
+		    B11[i][j] = m1.m[i][j]; 
+		    B12[i][j] = (dN==1 && (jp==N))?0.0:m1.m[i][jp];
+		    B21[i][j] = (dN==1 && (ip==N))?0.0:m1.m[ip][j]; 
+		    B22[i][j] = (dN==1 && (ip==N||jp==N))?0.0:m1.m[ip][jp];
+		  }
+	      P1 = (A11+A22)*(B11+B22);
+	      P2 = (A21+A22)*B11;
+	      P3 = A11*(B12-B22);
+	      P4 = A22*(B21-B11);
+	      P5 = (A11+A12)*B22;
+	      P6 = (A21-A11)*(B11+B12);
+	      P7 = (A12-A22)*(B21+B22);
+	      for (i=0; i < Np/2; i++) 
+		for (j=0; j < Np/2; j++) 
+		  {
+		    m2[i][j] = P1[i][j] + P4[i][j] - P5[i][j] + P7[i][j];
+		    jp = j+Np/2;
+		    ip = i+Np/2; 
+		    if (jp < N)
+		      m2[i][jp] = P3[i][j] + P5[i][j];
+		    if (ip < N)
 		      {
-			A11[i][j] = m[i][j]; 
-			A12[i][j] = m[i][j+N/2];
-			A21[i][j] = m[i+N/2][j]; 
-			A22[i][j] = m[i+N/2][j+N/2];
-			B11[i][j] = m1.m[i][j]; 
-			B12[i][j] = m1.m[i][j+N/2];
-			B21[i][j] = m1.m[i+N/2][j]; 
-			B22[i][j] = m1.m[i+N/2][j+N/2];
+			m2[ip][j] = P2[i][j] + P4[i][j];
+			if (jp < N)
+			  m2[ip][jp] = P1[i][j] + P3[i][j] - P2[i][j] + P6[i][j];
 		      }
-		  P1 = (A11+A22)*(B11+B22);
-		  P2 = (A21+A22)*B11;
-		  P3 = A11*(B12-B22);
-		  P4 = A22*(B21-B11);
-		  P5 = (A11+A12)*B22;
-		  P6 = (A21-A11)*(B11+B12);
-		  P7 = (A12-A22)*(B21+B22);
-		  for (i=0; i < N/2; i++) 
-		    for (j=0; j < N/2; j++) 
-		      {
-			m2[i][j] = P1[i][j] + P4[i][j] - P5[i][j] + P7[i][j];
-			m2[i][j+N/2] = P3[i][j] + P5[i][j];
-			m2[i+N/2][j] = P2[i][j] + P4[i][j];
-			m2[i+N/2][j+N/2] = P1[i][j] + P3[i][j] - P2[i][j] + P6[i][j];
-		      }
-		}
-	      else
-		{
-		  // not implemented yet
-		}
+		  }
 #else
+	      /* tiled matrix multiplication to optimize cache usage (from wikipedia!) 
+	       * [ Strassen is much better though! ]*/
 	      int T=(int)sqrt(N);
 	      int I, J, K;
 	      ntype sum;
@@ -688,7 +700,7 @@ public:
 				    m2.m[i][j]=0;
 				  m2.m[i][j] += sum;
 				}
-		    	    }
+			    }
 			}
 		    }
 		}
