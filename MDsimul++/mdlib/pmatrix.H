@@ -107,6 +107,7 @@ void wrap_sgemm(float *C, float *A, float *B, int n)
 const int NMAX = 10; // if N>NMAX use dynamic allocation of matrices
 const int NMAXMUL = NMAX;
 const int NMAXINV = NMAX;
+const int NMAXSTRA = 40;
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
@@ -897,9 +898,9 @@ public:
 	  m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
 	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	}
-      else if constexpr (N > NMAXMUL) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
-	{
 #ifdef USE_LAPACK
+      else if constexpr (N > NMAX) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+	{
 	  if constexpr (is_same<ntype, double>::value)
 	    wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
 	  else if constexpr (is_same<ntype, float>::value)
@@ -912,14 +913,17 @@ public:
 	      mulblocks(m2, m1);
 #endif
 	    }
+	}
 #else
+      else if constexpr (N > NMAXSTRA) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+	{	
 #ifdef USE_STRASSEN
 	  mulstra(m2, m1);
 #else
 	  mulblock(m2, m1);
 #endif
-#endif
 	}
+#endif
       else
 	{
 	  for (i=0; i < N; i++)
