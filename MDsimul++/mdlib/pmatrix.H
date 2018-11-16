@@ -39,16 +39,16 @@ void wrap_degetrf(double *A, int *IPIV, int n)
   //int *IPIV = new int[N+1];
   int LWORK = n*n;
   int N=n;
-  //double *WORK = new double[LWORK];
+  double *WORK = new double[LWORK];
   int INFO;
   dgetrf_(&N,&N,A,&N,IPIV,&INFO);
+  delete [] WORK;
 }
 void wrap_segetrf(float *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
   int LWORK = n*n;
   int N=n;
-  //double *WORK = new double[LWORK];
   int INFO;
   sgetrf_(&N,&N,A,&N,IPIV,&INFO);
 
@@ -420,6 +420,23 @@ public:
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
+#ifdef USE_LAPACK
+      if constexpr (is_same<ntype, double>::value)
+	{    
+	  wrap_dgetri(&(m[0][0]), &(indx.v[0]), N);
+	  wrap_dgetrf(&(m[0][0]), &(indx.v[0]), N);
+	}
+      else if constexpr (is_same<ntype, float>::value)
+	{
+	  wrap_fgetri(&(m[0][0]), &(indx.v[0]), N);
+	  wrap_fgetrf(&(m[0][0]), &(indx.v[0]), N);
+	}
+      else 
+	{
+	}
+
+#else
+
       LU=ludcmp(indx, d); 
       for(m2=0;m2<N;m2++) 
 	{ 
@@ -431,6 +448,7 @@ public:
 	    om[m1][m2]=col[m1]; 
 	}
       return om;
+#endif
     }
   pmatrixq<ntype,N> inv() const
     {
