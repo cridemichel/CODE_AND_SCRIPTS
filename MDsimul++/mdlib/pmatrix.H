@@ -10,7 +10,7 @@
 #include "pvector.H"
 #define USE_LAPACK
 #ifdef USE_LAPACK
-#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
+//#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
 //  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
 //  g++ -framework accelerate to compile
