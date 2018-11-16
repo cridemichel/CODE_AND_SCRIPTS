@@ -18,11 +18,59 @@
 #include <cblas.h>
 #endif
 #ifndef __APPLE__
+extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
 	  double *A, int *LDA, double *B, int *LDB, double *BETA, double *C, int *LDC);      
 extern void sgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, float* ALPHA,
 	  double *A, int *LDA, float *B, int *LDB, float *BETA, float *C, int *LDC);      
+extern int dgetrf_(int *__m, int *__n, double *__a, int *__lda, int *__ipiv, int *__info);
+extern int sgetrf_(int *__m, int *__n, float *__a,  int *__lda, int *__ipiv, int *__info);
+extern int dgetri_(int *__n, double *__a, int *__lda,
+        int *__ipiv, double *__work, int*__lwork, int *__info);
+extern int sgetri_(int *__n, float *__a, int *__lda,
+        int *__ipiv, float *__work, int*__lwork, int *__info);
+}
 #endif
+extern "C" {
+}
+//LU decomposition lapack routines
+void wrap_degetrf(double *A, int *IPIV, int n)
+{
+  //int *IPIV = new int[N+1];
+  int LWORK = n*n;
+  int N=n;
+  //double *WORK = new double[LWORK];
+  int INFO;
+  dgetrf_(&N,&N,A,&N,IPIV,&INFO);
+}
+void wrap_segetrf(float *A, int *IPIV, int n)
+{
+  //int *IPIV = new int[N+1];
+  int LWORK = n*n;
+  int N=n;
+  //double *WORK = new double[LWORK];
+  int INFO;
+  sgetrf_(&N,&N,A,&N,IPIV,&INFO);
+
+}
+void wrap_degetri(double *A, int *IPIV, double *WORK, int n)
+{
+  //int *IPIV = new int[N+1];
+  int N=n;
+  int LWORK = n*n;
+  int INFO;
+  //double *WORK = new double[LWORK];
+  dgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
+}
+void wrap_degetri(float *A, int *IPIV, float *WORK, int n)
+{
+  //int *IPIV = new int[N+1];
+  int LWORK = n*n;
+  int N=n;
+  int INFO;
+  //double *WORK = new double[LWORK];
+  sgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
+}
 void wrap_dgemm(double *C, double *A, double *B, int n)
 {
   //C=A*B
@@ -68,7 +116,9 @@ void wrap_sgemm(float *C, float *A, float *B, int n)
 #endif
 
 #define MOVE_SEMANTIC
-const int NMAX = 50; // if N>NMAX use dynamic allocation of matrices
+const int NMAX = 10; // if N>NMAX use dynamic allocation of matrices
+const int NMAXMUL = NMAX;
+const int NMAXINV = NMAX;
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
@@ -786,7 +836,7 @@ public:
 	  m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
 	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	}
-      else if constexpr (N > 40) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+      else if constexpr (N > NMAXMUL) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
 	{
 #ifdef USE_LAPACK
 	  if constexpr (is_same<ntype, double>::value)
@@ -803,9 +853,9 @@ public:
 	    }
 #else
 #ifdef USE_STRASSEN
-	  m2 = mulstra(m1);
+	  mulstra(m2, m1);
 #else
-	  m2 = mulblock(m1);
+	  mulblock(m2, m1);
 #endif
 #endif
 	}
