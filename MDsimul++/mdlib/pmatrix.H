@@ -8,6 +8,65 @@
 #include<cstdlib>
 #include<cmath>
 #include "pvector.H"
+#define USE_LAPACK
+#ifdef USE_LAPACK
+#ifdef __APPLE__
+//  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
+// g++ -framework accelerate to compile
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
+#ifndef __APPLE__
+extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
+	  double *A, int *LDA, double *B, int *LDB, double *BETA, double *C, int *LDC);      
+extern void sgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, float* ALPHA,
+	  double *A, int *LDA, float *B, int *LDB, float *BETA, float *C, int *LDC);      
+#endif
+void wrap_dgemm(double *C, double *A, double *B, int n)
+{
+  //C=A*B
+  //double AT[MD_NBMAX*MD_NBMAX], BT[];
+  int LDA, LDB, LDC, M, N, K;
+  char c='c', ta='n', tb='n';
+  double ALPHA, BETA;
+  //for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    //{				/* have to transform the matrix */
+      //for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
+    //}						
+  M=N=K=n;
+  ALPHA=1.0;
+  BETA=0.0; 
+  LDA=LDB=LDC=n;
+#ifdef __APPLE__
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
+#else
+  dgemm_(&ta, &tb, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);      
+#endif
+}
+void wrap_sgemm(float *C, float *A, float *B, int n)
+{
+  //C=A*B
+  //double AT[MD_NBMAX*MD_NBMAX], BT[];
+  int LDA, LDB, LDC, M, N, K;
+  char c='c', ta='n', tb='n';
+  float ALPHA, BETA;
+  //for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
+    //{				/* have to transform the matrix */
+      //for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
+    //}						
+  M=N=K=n;
+  ALPHA=1.0;
+  BETA=0.0; 
+  LDA=LDB=LDC=n;
+#ifdef __APPLE__
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
+#else
+  sgemm_(&ta, &tb, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);      
+#endif
+}
+#endif
+
 #define MOVE_SEMANTIC
 const int NMAX = 50; // if N>NMAX use dynamic allocation of matrices
 #define OPT_INV
@@ -653,6 +712,9 @@ public:
 #ifdef USE_STRASSEN
       else if constexpr (N > 40) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
 	{
+#ifdef USE_LAPACK
+	  wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
+#else
 	  using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
 	  static constexpr int dN = N % 2;
 	  static constexpr int Np = N+dN;
@@ -695,6 +757,7 @@ public:
 		      m2[ip][jp] = P1[i][j] + P3[i][j] - P2[i][j] + P6[i][j];
 		  }
 	      }
+#endif
 	}
 #else
       else if constexpr (N > 30)
