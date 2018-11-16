@@ -1,5 +1,5 @@
 #ifndef _PMATRIX_
-/* N.B. fino a N=25 vanno meglio di GLM e armadillo in tutte le operazioni (somma, moltiplicazione e inversione). */
+/* N.B. le prestazione sono quelle di armadillo per N > 5 ma molto migliori per N < 5 */
 #define _PMATRIX_
 #define USE_STRASSEN
 // matrici NxM
@@ -10,7 +10,7 @@
 #include "pvector.H"
 #define USE_LAPACK
 #ifdef USE_LAPACK
-//#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
+#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
 //  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
 //  g++ -framework accelerate to compile
@@ -18,6 +18,7 @@
 //#include <lapacke.h>
 #include <Accelerate/Accelerate.h>
 #endif
+#define MOVE_SEMANTIC
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -103,10 +104,7 @@ void wrap_sgemm(float *C, float *A, float *B, int n)
 }
 #endif
 
-#define MOVE_SEMANTIC
 const int NMAX = 10; // if N>NMAX use dynamic allocation of matrices
-const int NMAXMUL = NMAX;
-const int NMAXINV = NMAX;
 const int NMAXSTRA = 40;
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
@@ -131,9 +129,7 @@ public:
   // move assignment
   pmatrixd<ntype,N,M>& operator=(pmatrixd<ntype,N,M>&& m1)
     {
-      auto mt = (*this).m;
-      (*this).m=m1.m;
-      m1.m = mt;
+      swap(m, m1.m);
       return (*this);
     }
 #endif
@@ -471,24 +467,29 @@ public:
       // for more details c2.3)
 #ifdef USE_LAPACK
       om = (*this);
-      if constexpr (is_same<ntype, double>::value)
-	{    
-	  int *IPIV = new int[N];
-	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
-	  wrap_dgetri(&(om.m[0][0]), IPIV, N);
-	  delete[] IPIV;
-	}
-      else if constexpr (is_same<ntype, float>::value)
+      if constexpr (N > NMAX)
 	{
-	  int *IPIV = new int[N];
-	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
-	  wrap_fgetri(&(om.m[0][0]), IPIV, N);
-	  delete[] IPIV;
+	  if constexpr (is_same<ntype, double>::value)
+	    {    
+	      int *IPIV = new int[N];
+	      wrap_dgetrf(&(om.m[0][0]), IPIV, N);
+	      wrap_dgetri(&(om.m[0][0]), IPIV, N);
+	      delete[] IPIV;
+	    }
+	  else if constexpr (is_same<ntype, float>::value)
+	    {
+	      int *IPIV = new int[N];
+	      wrap_fgetrf(&(om.m[0][0]), IPIV, N);
+	      wrap_fgetri(&(om.m[0][0]), IPIV, N);
+	      delete[] IPIV;
+	    }
+	  else 
+	    {
+	      invLUNR(om);
+	    }
 	}
-      else 
-	{
-	  invLUNR(om);
-	}
+      else
+	invLUNR(om);
 #else
       invLUNR(om);
 #endif
@@ -899,7 +900,7 @@ public:
 	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	}
 #ifdef USE_LAPACK
-      else if constexpr (N > NMAX) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+      else if constexpr (N > NMAX) 
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
@@ -907,11 +908,26 @@ public:
 	    wrap_fgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
 	  else
 	    {
+	      if constexpr (N > NMAXSTRA)
+		{
 #ifdef USE_STRASSEN
-	      mulstra(m2, m1);
+		  mulstra(m2, m1);
 #else
-	      mulblocks(m2, m1);
+    		  mulblocks(m2, m1);
 #endif
+		}
+	      else
+		{
+		  for (i=0; i < N; i++)
+		    {
+		      for (j=0; j < N; j++)
+			{
+			  m2.m[i][j]=0.0;
+			  for (k=0; k < N; k++)
+			    m2.m[i][j] += pmatrixq::m[i][k]*m1.m[k][j];
+			}
+		    }
+		}
 	    }
 	}
 #else
