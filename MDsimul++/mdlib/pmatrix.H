@@ -34,17 +34,15 @@ extern int sgetri_(int *__n, float *__a, int *__lda,
 extern "C" {
 }
 //LU decomposition lapack routines
-void wrap_degetrf(double *A, int *IPIV, int n)
+void wrap_dgetrf(double *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
   int LWORK = n*n;
   int N=n;
-  double *WORK = new double[LWORK];
   int INFO;
   dgetrf_(&N,&N,A,&N,IPIV,&INFO);
-  delete [] WORK;
 }
-void wrap_segetrf(float *A, int *IPIV, int n)
+void wrap_sgetrf(float *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
   int LWORK = n*n;
@@ -53,23 +51,25 @@ void wrap_segetrf(float *A, int *IPIV, int n)
   sgetrf_(&N,&N,A,&N,IPIV,&INFO);
 
 }
-void wrap_degetri(double *A, int *IPIV, double *WORK, int n)
+void wrap_dgetri(double *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
   int N=n;
   int LWORK = n*n;
   int INFO;
-  //double *WORK = new double[LWORK];
+  double *WORK = new double[LWORK];
   dgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
+  delete [] WORK;
 }
-void wrap_degetri(float *A, int *IPIV, float *WORK, int n)
+void wrap_sgetri(float *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
   int LWORK = n*n;
   int N=n;
   int INFO;
-  //double *WORK = new double[LWORK];
+  float *WORK = new float[LWORK];
   sgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
+  delete [] WORK;
 }
 void wrap_dgemm(double *C, double *A, double *B, int n)
 {
@@ -414,29 +414,30 @@ public:
     {
       int m1, m2; 
       double d;
-      pmatrixq<ntype,N> om, LU;
+      pmatrixq<ntype,N> om;
       pvector <ntype,N> col, col2;
       pvector<int,N> indx;
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
 #ifdef USE_LAPACK
+      om = (*this);
       if constexpr (is_same<ntype, double>::value)
 	{    
-	  wrap_dgetri(&(m[0][0]), &(indx.v[0]), N);
-	  wrap_dgetrf(&(m[0][0]), &(indx.v[0]), N);
+	  wrap_dgetri(&(om[0][0]), &(indx.v[0]), N);
+	  wrap_dgetrf(&(om[0][0]), &(indx.v[0]), N);
 	}
       else if constexpr (is_same<ntype, float>::value)
 	{
-	  wrap_fgetri(&(m[0][0]), &(indx.v[0]), N);
-	  wrap_fgetrf(&(m[0][0]), &(indx.v[0]), N);
+	  wrap_fgetri(&(om[0][0]), &(indx.v[0]), N);
+	  wrap_fgetrf(&(om[0][0]), &(indx.v[0]), N);
 	}
       else 
 	{
 	}
 
 #else
-
+      pmatrixq<ntype,N> LU;
       LU=ludcmp(indx, d); 
       for(m2=0;m2<N;m2++) 
 	{ 
@@ -447,8 +448,8 @@ public:
 	  for(m1=0;m1<N;m1++) 
 	    om[m1][m2]=col[m1]; 
 	}
-      return om;
 #endif
+      return om;
     }
   pmatrixq<ntype,N> inv() const
     {
