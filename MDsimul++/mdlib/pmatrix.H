@@ -663,6 +663,83 @@ public:
     {
       return &(m[i][0]);
     }
+
+  inline  void mulblock(pmatrixq<ntype,N>& m2, const pmatrixq<ntype,N>& m1)
+    {
+      /* tiled matrix multiplication to optimize cache usage (from wikipedia!) 
+      */
+      int i, j, k;
+      int T=(int)sqrt(N);
+      int I, J, K;
+      ntype sum;
+      for (I=0; I < N; I+=T)
+	{
+	  for (J=0; J < N; J+=T)
+	    {
+	      for (K=0; K < N; K+=T)
+		{
+		  for (i=I; i < min(I+T,N); i++)
+		    {
+		      for (j=J; j < min(J+T,N); j++)
+			{
+			  sum = 0.0;
+			  for (k=K; k < min(K+T,N); k++)
+			    sum += pmatrixq::m[i][k]*m1.m[k][j];
+			  if (K==0)
+			    m2.m[i][j]=0;
+			  m2.m[i][j] += sum;
+			}
+		    }
+		}
+	    }
+	}
+    }
+  inline void mulstra(pmatrixq<ntype,N>& m2, const pmatrixq<ntype,N>& m1)
+    {
+      int i, j, k;
+      using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
+      static constexpr int dN = N % 2;
+      static constexpr int Np = N+dN;
+      selftype A11, A12, A21, A22, B11, B12, B22, B21,
+	       P1, P2, P3, P4, P5, P6, P7;
+      int ip, jp;
+      for (i=0; i < Np/2; i++) 
+	for (j=0; j <  Np/2; j++) 
+	  {
+	    A11[i][j] = m[i][j];
+	    jp = j+Np/2;
+	    ip = i+Np/2; 
+	    A12[i][j] = (dN==1 && (jp==N))?0.0:m[i][jp];
+	    A21[i][j] = (dN==1 && (ip==N))?0.0:m[ip][j]; 
+	    A22[i][j] = (dN==1 && (ip==N||jp==N))?0.0:m[ip][jp];
+	    B11[i][j] = m1.m[i][j]; 
+	    B12[i][j] = (dN==1 && (jp==N))?0.0:m1.m[i][jp];
+	    B21[i][j] = (dN==1 && (ip==N))?0.0:m1.m[ip][j]; 
+	    B22[i][j] = (dN==1 && (ip==N||jp==N))?0.0:m1.m[ip][jp];
+	  }
+      P1 = (A11+A22)*(B11+B22);
+      P2 = (A21+A22)*B11;
+      P3 = A11*(B12-B22);
+      P4 = A22*(B21-B11);
+      P5 = (A11+A12)*B22;
+      P6 = (A21-A11)*(B11+B12);
+      P7 = (A12-A22)*(B21+B22);
+      for (i=0; i < Np/2; i++) 
+	for (j=0; j < Np/2; j++) 
+	  {
+	    m2[i][j] = P1[i][j] + P4[i][j] - P5[i][j] + P7[i][j];
+	    jp = j+Np/2;
+	    ip = i+Np/2; 
+	    if (jp < N)
+	      m2[i][jp] = P3[i][j] + P5[i][j];
+	    if (ip < N)
+	      {
+		m2[ip][j] = P2[i][j] + P4[i][j];
+		if (jp < N)
+		  m2[ip][jp] = P1[i][j] + P3[i][j] - P2[i][j] + P6[i][j];
+	      }
+	  }
+    }
   inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
     {
       int i, j, k;
@@ -709,88 +786,29 @@ public:
 	  m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
 	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	}
-#ifdef USE_STRASSEN
       else if constexpr (N > 40) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
 	{
 #ifdef USE_LAPACK
-	  wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
-#else
-	  using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
-	  static constexpr int dN = N % 2;
-	  static constexpr int Np = N+dN;
-	  selftype A11, A12, A21, A22, B11, B12, B22, B21,
-		   P1, P2, P3, P4, P5, P6, P7;
-	  int ip, jp;
-	  for (i=0; i < Np/2; i++) 
-	    for (j=0; j <  Np/2; j++) 
-	      {
-		A11[i][j] = m[i][j];
-		jp = j+Np/2;
-		ip = i+Np/2; 
-		A12[i][j] = (dN==1 && (jp==N))?0.0:m[i][jp];
-		A21[i][j] = (dN==1 && (ip==N))?0.0:m[ip][j]; 
-		A22[i][j] = (dN==1 && (ip==N||jp==N))?0.0:m[ip][jp];
-		B11[i][j] = m1.m[i][j]; 
-		B12[i][j] = (dN==1 && (jp==N))?0.0:m1.m[i][jp];
-		B21[i][j] = (dN==1 && (ip==N))?0.0:m1.m[ip][j]; 
-		B22[i][j] = (dN==1 && (ip==N||jp==N))?0.0:m1.m[ip][jp];
-	      }
-      	  P1 = (A11+A22)*(B11+B22);
-	  P2 = (A21+A22)*B11;
-	  P3 = A11*(B12-B22);
-	  P4 = A22*(B21-B11);
-	  P5 = (A11+A12)*B22;
-	  P6 = (A21-A11)*(B11+B12);
-	  P7 = (A12-A22)*(B21+B22);
-	  for (i=0; i < Np/2; i++) 
-	    for (j=0; j < Np/2; j++) 
-	      {
-		m2[i][j] = P1[i][j] + P4[i][j] - P5[i][j] + P7[i][j];
-		jp = j+Np/2;
-		ip = i+Np/2; 
-		if (jp < N)
-		  m2[i][jp] = P3[i][j] + P5[i][j];
-		if (ip < N)
-		  {
-		    m2[ip][j] = P2[i][j] + P4[i][j];
-		    if (jp < N)
-		      m2[ip][jp] = P1[i][j] + P3[i][j] - P2[i][j] + P6[i][j];
-		  }
-	      }
-#endif
-	}
-#else
-      else if constexpr (N > 30)
-	{
-	  /* tiled matrix multiplication to optimize cache usage (from wikipedia!) 
-	  */
-	  int T=(int)sqrt(N);
-	  int I, J, K;
-	  ntype sum;
-	  for (I=0; I < N; I+=T)
+	  if constexpr (is_same<ntype, double>::value)
+	    wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
+	  else if constexpr (is_same<ntype, float>::value)
+	    wrap_fgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
+	  else
 	    {
-	      for (J=0; J < N; J+=T)
-		{
-	    	  for (K=0; K < N; K+=T)
-	    	    {
-	    	      for (i=I; i < min(I+T,N); i++)
-	    		{
-	    		  for (j=J; j < min(J+T,N); j++)
-	    		    {
-	    		      sum = 0.0;
-	    		      for (k=K; k < min(K+T,N); k++)
-	    			sum += pmatrixq::m[i][k]*m1.m[k][j];
-	    		      if (K==0)
-	    			m2.m[i][j]=0;
-	    		      m2.m[i][j] += sum;
-	    		    }
-	    		}
-	    	    }
-		}
-	    }
-	  return m2;
-	}
+#ifdef USE_STRASSEN
+	      mulstra(m2, m1);
+#else
+	      mulblocks(m2, m1);
 #endif
+	    }
+#else
+#ifdef USE_STRASSEN
+	  m2 = mulstra(m1);
+#else
+	  m2 = mulblock(m1);
+#endif
+#endif
+	}
       else
 	{
 	  for (i=0; i < N; i++)
