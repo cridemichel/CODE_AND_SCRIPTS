@@ -433,6 +433,18 @@ public:
 	}
       else 
 	{
+	  pmatrixq<ntype,N> LU;
+	  pvector<int,N> indx;
+	  LU=ludcmp(indx, d); 
+	  for(m2=0;m2<N;m2++) 
+	    { 
+	      for(m1=0;m1<N;m1++) 
+		col[m1]=0.0; 
+	      col[m2]=1.0; 
+	      col=LU.lubksb(indx,col);
+	      for(m1=0;m1<N;m1++) 
+		om[m1][m2]=col[m1]; 
+	    }
 	}
       delete [] IPIV;
 #else
