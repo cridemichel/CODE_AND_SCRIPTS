@@ -22,9 +22,9 @@
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
-	  double *A, int *LDA, double *B, int *LDB, double *BETA, double *C, int *LDC);      
+	  const double *A, int *LDA, const double *B, int *LDB, double *BETA, double *C, int *LDC);      
 extern void sgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, float* ALPHA,
-	  float *A, int *LDA, float *B, int *LDB, float *BETA, float *C, int *LDC);      
+	  const float *A, int *LDA, const float *B, int *LDB, float *BETA, float *C, int *LDC);      
 extern int dgetrf_(int *__m, int *__n, double *__a, int *__lda, int *__ipiv, int *__info);
 extern int sgetrf_(int *__m, int *__n, float *__a,  int *__lda, int *__ipiv, int *__info);
 extern int dgetri_(int *__n, double *__a, int *__lda,
@@ -65,7 +65,7 @@ void wrap_sgetri(float *A, int *IPIV, int n)
   sgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
   delete [] WORK;
 }
-void wrap_dgemm(double *C, double *A, double *B, int n)
+void wrap_dgemm(double *C, const double *A, const double *B, int n)
 {
   //C=A*B
   double ALPHA, BETA;
@@ -99,8 +99,10 @@ void wrap_sgemm(float *C, float *A, float *B, int n)
 }
 #endif
 
-const int NMAX = 10; // if N>NMAX use dynamic allocation of matrices
+const int NMAX = 40; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
+const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
+const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
@@ -462,7 +464,7 @@ public:
       // for more details c2.3)
 #ifdef USE_LAPACK
       om = (*this);
-      if constexpr (N > NMAX)
+      if constexpr (N > NMAXINV)
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    {    
@@ -895,7 +897,7 @@ public:
 	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	}
 #ifdef USE_LAPACK
-      else if constexpr (N > NMAX) 
+      else if constexpr (N > NMAXMUL) 
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
