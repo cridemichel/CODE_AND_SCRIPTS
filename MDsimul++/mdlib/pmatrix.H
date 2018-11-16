@@ -314,7 +314,7 @@ public:
       pmatrixq<ntype, N> m2;
       int i, j;
       for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
+  	for (j=0; j < N; j++)
 	  {
 #if 1
   	    m2.m[i][j] = m[i][j] + m1.m[i][j];
@@ -324,7 +324,7 @@ public:
 	    (const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] + (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
 	  }
-      return m2;
+      return std::move(m2);
     }
   inline pmatrixq<ntype,N> operator -(const pmatrixq<ntype,N>& m1)
     {
@@ -341,7 +341,7 @@ public:
 	    (const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
 	  }
-      return m2;
+      return std::move(m2);
     }
 
 
@@ -650,7 +650,7 @@ public:
 	}
       else
 	m1=invgen(); 
-      return m1;
+      return std::move(m1);
     }
   inline pmatrixq<ntype, N>& operator += (const pmatrixq<ntype, N>& m1)
     {
