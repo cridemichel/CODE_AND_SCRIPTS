@@ -70,7 +70,7 @@ void wrap_dgemm(double *C, double *A, double *B, int n)
   //C=A*B
   double ALPHA, BETA;
   int LDA, LDB, LDC, M, N, K;
-  char c='c', ta='n', tb='n';
+  char ta='n', tb='n';
   M=N=K=n;
   ALPHA=1.0;
   BETA=0.0; 
@@ -84,14 +84,9 @@ void wrap_dgemm(double *C, double *A, double *B, int n)
 void wrap_sgemm(float *C, float *A, float *B, int n)
 {
   //C=A*B
-  //double AT[MD_NBMAX*MD_NBMAX], BT[];
   int LDA, LDB, LDC, M, N, K;
-  char c='c', ta='n', tb='n';
+  char ta='n', tb='n';
   float ALPHA, BETA;
-  //for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
-    //{				/* have to transform the matrix */
-      //for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
-    //}						
   M=N=K=n;
   ALPHA=1.0;
   BETA=0.0; 
@@ -809,7 +804,7 @@ public:
     }
   inline void mulstra(pmatrixq<ntype,N>& m2, const pmatrixq<ntype,N>& m1)
     {
-      int i, j, k;
+      int i, j;
       using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
       static constexpr int dN = N % 2;
       static constexpr int Np = N+dN;
