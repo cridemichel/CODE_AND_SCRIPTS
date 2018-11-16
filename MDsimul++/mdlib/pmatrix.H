@@ -10,19 +10,20 @@
 #include "pvector.H"
 #define USE_LAPACK
 #ifdef USE_LAPACK
+//#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
 //  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
-// g++ -framework accelerate to compile
+//  g++ -framework accelerate to compile
+//#include <cblas.h>
+//#include <lapacke.h>
 #include <Accelerate/Accelerate.h>
-#else
-#include <cblas.h>
 #endif
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
 	  double *A, int *LDA, double *B, int *LDB, double *BETA, double *C, int *LDC);      
 extern void sgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, float* ALPHA,
-	  double *A, int *LDA, float *B, int *LDB, float *BETA, float *C, int *LDC);      
+	  float *A, int *LDA, float *B, int *LDB, float *BETA, float *C, int *LDC);      
 extern int dgetrf_(int *__m, int *__n, double *__a, int *__lda, int *__ipiv, int *__info);
 extern int sgetrf_(int *__m, int *__n, float *__a,  int *__lda, int *__ipiv, int *__info);
 extern int dgetri_(int *__n, double *__a, int *__lda,
@@ -31,8 +32,6 @@ extern int sgetri_(int *__n, float *__a, int *__lda,
         int *__ipiv, float *__work, int*__lwork, int *__info);
 }
 #endif
-extern "C" {
-}
 //LU decomposition lapack routines
 void wrap_dgetrf(double *A, int *IPIV, int n)
 {
@@ -43,15 +42,13 @@ void wrap_dgetrf(double *A, int *IPIV, int n)
 }
 void wrap_sgetrf(float *A, int *IPIV, int n)
 {
-  //int *IPIV = new int[N+1];
   int N=n;
   int INFO;
   sgetrf_(&N,&N,A,&N,IPIV,&INFO);
 }
 void wrap_dgetri(double *A, int *IPIV, int n)
 {
-  //int *IPIV = new int[N+1];
-  int N=n, ISPEC=1;
+  int N=n;
   int LWORK = n*n;
   int INFO;
   double *WORK = new double[LWORK];
@@ -60,7 +57,6 @@ void wrap_dgetri(double *A, int *IPIV, int n)
 }
 void wrap_sgetri(float *A, int *IPIV, int n)
 {
-  //int *IPIV = new int[N+1];
   int LWORK = n*n;
   int N=n;
   int INFO;
