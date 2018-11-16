@@ -99,7 +99,7 @@ void wrap_sgemm(float *C, float *A, float *B, int n)
 }
 #endif
 
-const int NMAX = 40; // if N>NMAX use dynamic allocation of matrices
+const int NMAX = 35; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
 const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
