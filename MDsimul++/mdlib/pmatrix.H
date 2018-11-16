@@ -37,7 +37,6 @@ extern "C" {
 void wrap_dgetrf(double *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
-  int LWORK = n*n;
   int N=n;
   int INFO;
   dgetrf_(&N,&N,A,&N,IPIV,&INFO);
@@ -45,7 +44,6 @@ void wrap_dgetrf(double *A, int *IPIV, int n)
 void wrap_sgetrf(float *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
-  int LWORK = n*n;
   int N=n;
   int INFO;
   sgetrf_(&N,&N,A,&N,IPIV,&INFO);
@@ -53,7 +51,7 @@ void wrap_sgetrf(float *A, int *IPIV, int n)
 void wrap_dgetri(double *A, int *IPIV, int n)
 {
   //int *IPIV = new int[N+1];
-  int N=n;
+  int N=n, ISPEC=1;
   int LWORK = n*n;
   int INFO;
   double *WORK = new double[LWORK];
@@ -73,14 +71,9 @@ void wrap_sgetri(float *A, int *IPIV, int n)
 void wrap_dgemm(double *C, double *A, double *B, int n)
 {
   //C=A*B
-  //double AT[MD_NBMAX*MD_NBMAX], BT[];
+  double ALPHA, BETA;
   int LDA, LDB, LDC, M, N, K;
   char c='c', ta='n', tb='n';
-  double ALPHA, BETA;
-  //for (i=0; i<n; i++)		/* to call a Fortran routine from C we */
-    //{				/* have to transform the matrix */
-      //for(j=0; j<n; j++) AT[j+n*i]=a[j][i];		
-    //}						
   M=N=K=n;
   ALPHA=1.0;
   BETA=0.0; 
@@ -364,7 +357,7 @@ public:
     }
 
 
-  inline double detgen() const
+  inline double detgenNR() const
     {
       double d;
       pmatrixq<ntype,N> m1;
@@ -375,6 +368,70 @@ public:
       for(j=0;j<N;j++) 
 	d *= m1[j][j];
       return d;
+    }
+  inline double detgen() const
+    {
+      
+#ifdef USE_LAPACK
+      if constexpr (is_same<ntype, double>::value)
+	{
+	  double d=1.0;
+	  int j;	
+	  pmatrixq<ntype,N> om;
+	  int *IPIV = new int[N];
+	  om = *this;
+	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
+	  for(j=0;j<N;j++)
+	    { 
+	      d = d*om[j][j];
+	      if(IPIV[j]!=j) 
+		d*=-1.0;
+	    }
+	  delete [] IPIV;
+	  return d;
+	}
+      else if constexpr (is_same<ntype, float>::value)
+	{
+	  double d=1.0;
+	  int j;	
+	  pmatrixq<ntype,N> om;
+	  int *IPIV = new int[N];
+	  om = *this;
+	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
+	  for(j=0;j<N;j++)
+	    { 
+	      d = d*om[j][j];
+	      if(IPIV[j]!=j) 
+		d*=-1.0;
+	    }
+	  delete [] IPIV;
+	  return d;
+	}
+      else
+	{
+	  return detgenNR();
+	}
+#else
+      return detgenNR();
+#endif 
+    }
+  inline void invLUNR(pmatrixq<ntype,N>& om) const
+    {
+      pvector <ntype,N> col;
+      pmatrixq<ntype,N> LU;
+      int m2, m1;
+      double d;
+      pvector<int,N> indx;
+      LU=ludcmp(indx, d); 
+      for(m2=0;m2<N;m2++) 
+	{ 
+	  for(m1=0;m1<N;m1++) 
+	    col[m1]=0.0; 
+	  col[m2]=1.0; 
+	  col=LU.lubksb(indx,col);
+	  for(m1=0;m1<N;m1++) 
+	    om[m1][m2]=col[m1]; 
+	}
     }
   inline double det() const
     {
@@ -411,55 +468,32 @@ public:
 
   inline pmatrixq<ntype,N> invgen() const
     {
-      int m1, m2; 
-      double d;
       pmatrixq<ntype,N> om;
-      pvector <ntype,N> col, col2;
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
 #ifdef USE_LAPACK
-      int *IPIV = new int[N+1];
       om = (*this);
       if constexpr (is_same<ntype, double>::value)
 	{    
-	  wrap_dgetri(&(om[0][0]), IPIV, N);
-	  wrap_dgetrf(&(om[0][0]), IPIV, N);
+	  int *IPIV = new int[N];
+	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
+	  wrap_dgetri(&(om.m[0][0]), IPIV, N);
+	  delete[] IPIV;
 	}
       else if constexpr (is_same<ntype, float>::value)
 	{
-	  wrap_fgetri(&(om[0][0]), IPIV, N);
-	  wrap_fgetrf(&(om[0][0]), IPIV, N);
+	  int *IPIV = new int[N];
+	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
+	  wrap_fgetri(&(om.m[0][0]), IPIV, N);
+	  delete[] IPIV;
 	}
       else 
 	{
-	  pmatrixq<ntype,N> LU;
-	  pvector<int,N> indx;
-	  LU=ludcmp(indx, d); 
-	  for(m2=0;m2<N;m2++) 
-	    { 
-	      for(m1=0;m1<N;m1++) 
-		col[m1]=0.0; 
-	      col[m2]=1.0; 
-	      col=LU.lubksb(indx,col);
-	      for(m1=0;m1<N;m1++) 
-		om[m1][m2]=col[m1]; 
-	    }
+	  invLUNR(om);
 	}
-      delete [] IPIV;
 #else
-      pmatrixq<ntype,N> LU;
-      pvector<int,N> indx;
-      LU=ludcmp(indx, d); 
-      for(m2=0;m2<N;m2++) 
-	{ 
-	  for(m1=0;m1<N;m1++) 
-	    col[m1]=0.0; 
-	  col[m2]=1.0; 
-	  col=LU.lubksb(indx,col);
-	  for(m1=0;m1<N;m1++) 
-	    om[m1][m2]=col[m1]; 
-	}
+      invLUNR(om);
 #endif
       return om;
     }
