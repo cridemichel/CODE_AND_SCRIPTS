@@ -369,7 +369,7 @@ public:
 	d *= m1[j][j];
       return d;
     }
-  inline double detgen() const
+  inline ntype detgen() const
     {
       
 #ifdef USE_LAPACK
@@ -384,7 +384,7 @@ public:
 	  for(j=0;j<N;j++)
 	    { 
 	      d = d*om[j][j];
-	      if(IPIV[j]!=j) 
+	      if(IPIV[j]!=j+1) 
 		d*=-1.0;
 	    }
 	  delete [] IPIV;
@@ -401,7 +401,7 @@ public:
 	  for(j=0;j<N;j++)
 	    { 
 	      d = d*om[j][j];
-	      if(IPIV[j]!=j) 
+	      if(IPIV[j]!=j+1) 
 		d*=-1.0;
 	    }
 	  delete [] IPIV;
@@ -433,7 +433,7 @@ public:
 	    om[m1][m2]=col[m1]; 
 	}
     }
-  inline double det() const
+  inline ntype det() const
     {
       if constexpr (N==1)
 	{
