@@ -65,15 +65,15 @@ void wrap_sgetri(float *A, int *IPIV, int n)
   sgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
   delete [] WORK;
 }
-void wrap_dgemm(double *C, const double *A, const double *B, int n)
+void wrap_dgemm(double *C, const double *A, const double *B, int n, double alpha=1.0, double beta=0.0)
 {
-  //C=A*B
+  //C=A*B + beta*C if beta=0 C is not used as input
   double ALPHA, BETA;
   int LDA, LDB, LDC, M, N, K;
   char ta='n', tb='n';
   M=N=K=n;
-  ALPHA=1.0;
-  BETA=0.0; 
+  ALPHA=alpha;
+  BETA=beta; 
   LDA=LDB=LDC=n;
 #ifdef __APPLE__
   cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
@@ -81,15 +81,15 @@ void wrap_dgemm(double *C, const double *A, const double *B, int n)
   dgemm_(&ta, &tb, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);      
 #endif
 }
-void wrap_sgemm(float *C, float *A, float *B, int n)
+void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta=0.0)
 {
-  //C=A*B
+  //C=A*B + beta*C if beta=0 C is not used as input
   int LDA, LDB, LDC, M, N, K;
   char ta='n', tb='n';
   float ALPHA, BETA;
   M=N=K=n;
-  ALPHA=1.0;
-  BETA=0.0; 
+  ALPHA=alpha;
+  BETA=beta; 
   LDA=LDB=LDC=n;
 #ifdef __APPLE__
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
@@ -103,6 +103,7 @@ const int NMAX = 35; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
 const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
+#include<cstring>
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
@@ -902,7 +903,7 @@ public:
 	  if constexpr (is_same<ntype, double>::value)
 	    wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
 	  else if constexpr (is_same<ntype, float>::value)
-	    wrap_fgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
+	    wrap_sgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
 	  else
 	    {
 	      if constexpr (N > NMAXSTRA)
@@ -950,6 +951,27 @@ public:
 	    }
 	}
       return m2;
+    }
+  pmatrixq<ntype,N> muladd(const pmatrixq<ntype,N>& m1, const pmatrixq<ntype,N>& m2, ntype alpha=1.0, ntype beta=0.0)
+    {
+      // alpha*m*m1 + beta*m2
+#ifdef USE_LAPACK
+      if constexpr (N > NMAXMUL)
+	{
+	  if constexpr (is_same<ntype, double>::value)
+	    wrap_dgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	  else if constexpr (is_same<ntype, float>::value)
+	    wrap_sgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	  else
+	    {
+	      (*this) = alpha*m1*m2 + beta*(*this);
+	    }
+	}
+      else
+  	(*this) = alpha*m1*m2 + beta*(*this);
+
+      return std::move(*this);
+#endif
     }
   // transpose
   pmatrixq<ntype,N> transp()
