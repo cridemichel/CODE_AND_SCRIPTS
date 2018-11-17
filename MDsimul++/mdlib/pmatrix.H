@@ -851,6 +851,38 @@ public:
 	      }
 	  }
     }
+  void muladd(pmatrixq<ntype,N>& m1, pmatrixq<ntype,N>& m2, ntype alpha=1.0, ntype beta=0.0) 
+    {
+      // alpha*m*m1 + beta*m2
+#ifdef USE_LAPACK
+      if constexpr (N > NMAXMUL)
+	{
+	  if constexpr (is_same<ntype, double>::value)
+	    wrap_dgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	  else if constexpr (is_same<ntype, float>::value)
+	    wrap_sgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	  else
+	    {
+	      if (alpha==1.0 && beta==0)
+		(*this) = m1*m2; 
+	      else if (alpha==1.0 && beta==1.0)
+		(*this) = m1*m2 + (*this);
+	      else
+		(*this) = alpha*m1*m2 + beta*(*this);
+	    }
+	}
+      else
+	{
+       	  if (alpha==1.0 && beta==0)
+	    (*this) = m1*m2; 
+	  else if (alpha==1.0 && beta==1.0)
+	    (*this) = m1*m2 + (*this);
+	  else
+	    (*this) = alpha*m1*m2 + beta*(*this);
+	}
+#endif
+    }
+
   inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
     {
       int i, j, k;
@@ -952,28 +984,7 @@ public:
 	}
       return m2;
     }
-  pmatrixq<ntype,N> muladd(const pmatrixq<ntype,N>& m1, const pmatrixq<ntype,N>& m2, ntype alpha=1.0, ntype beta=0.0)
-    {
-      // alpha*m*m1 + beta*m2
-#ifdef USE_LAPACK
-      if constexpr (N > NMAXMUL)
-	{
-	  if constexpr (is_same<ntype, double>::value)
-	    wrap_dgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
-	  else if constexpr (is_same<ntype, float>::value)
-	    wrap_sgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
-	  else
-	    {
-	      (*this) = alpha*m1*m2 + beta*(*this);
-	    }
-	}
-      else
-  	(*this) = alpha*m1*m2 + beta*(*this);
-
-      return std::move(*this);
-#endif
-    }
-  // transpose
+   // transpose
   pmatrixq<ntype,N> transp()
     {
       int i, j;
