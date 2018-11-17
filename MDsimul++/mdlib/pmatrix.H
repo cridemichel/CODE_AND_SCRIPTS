@@ -98,7 +98,16 @@ void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta
 #endif
 }
 #endif
-
+#if 1
+template<typename T>
+T fastadd(T v) {
+  return v;
+}
+template<typename T, typename... Args>
+T fastadd(T first, Args... args) {
+  return first + fastadd(args...);
+}
+#endif
 const int NMAX = 35; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
@@ -882,7 +891,13 @@ public:
 	}
 #endif
     }
-
+  inline void fastadd(const pmatrixq<ntype,N>& m1,const pmatrixq<ntype,N>& m2)
+    {
+      int i, j;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m[i][j] += m1.m[i][j] + m2.m[i][j];
+    }
   inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
     {
       int i, j, k;
