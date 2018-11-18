@@ -10,7 +10,7 @@
 #include "pvector.H"
 #define USE_LAPACK
 #ifdef USE_LAPACK
-//#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
+#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
 //  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
 //  g++ -framework accelerate to compile
@@ -19,6 +19,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 #define MOVE_SEMANTIC
+
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -108,20 +109,23 @@ T fastadd(T first, Args... args) {
   return first + fastadd(args...);
 }
 #endif
-const int NMAX = 35; // if N>NMAX use dynamic allocation of matrices
+const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
 const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
+const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
 #include<cstring>
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
   ntype m[N][M];
+  constexpr static int dynamic = false;
 };
 template <class ntype, int N, int M> class pmatrixd {
   //int nr, nc;
 public:
+  constexpr static int dynamic = true;
   ntype (*m)[M]; // N riga M colonna
   // copy assignment
   pmatrixd<ntype,N,M>& operator=(const pmatrixd<ntype,N,M>& m1)
@@ -321,48 +325,82 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>
       return b;
     }
 public:
+  // addition
+
   inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
     {
-      pmatrixq<ntype, N> m2;
-      int i, j;
-      for (i=0; i < N; i++)
-  	for (j=0; j < N; j++)
-	  {
+      if constexpr (N <= NSTA && pmatrixq<ntype,N>::dynamic==false)
+	{
+	  static pmatrixq<ntype, N> m2;
+	  int i, j;
+	  for (i=0; i < N; i++)
+	    for (j=0; j < N; j++)
+	      {
 #if 1
-  	    m2.m[i][j] = m[i][j] + m1.m[i][j];
+      		m2.m[i][j] = m[i][j] + m1.m[i][j];
 #else
-	    // NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
-	    // che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
-	    (const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] + (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+    		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+    		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+    		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] + (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
-	  }
-      return std::move(m2);
+    	      }
+	  return m2;
+	}
+      else
+	{
+	  pmatrixq<ntype, N> m2;
+	  int i, j;
+	  for (i=0; i < N; i++)
+	    for (j=0; j < N; j++)
+    	      {
+      		m2.m[i][j] = m[i][j] + m1.m[i][j];
+    	      }
+	  return std::move(m2);
+	}
     }
   inline pmatrixq<ntype,N> operator -(const pmatrixq<ntype,N>& m1)
     {
-      pmatrixq<ntype, N> m2;
       int i, j;
-      for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
-	  {
+      if constexpr (N <= NSTA && pmatrixq<ntype,N>::dynamic==false)
+	{
+	  static pmatrixq<ntype, N> m2;
+	  for (i=0; i < N; i++)
+	    for (j=0; j < N; j++)
+	      {
 #if 1
-  	    m2.m[i][j] = m[i][j] - m1.m[i][j];
+      		m2.m[i][j] = m[i][j] - m1.m[i][j];
 #else
-	    // NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
-	    // che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
-	    (const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+    		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+    		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+    		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
 	  }
-      return std::move(m2);
+	  return m2;
+	}
+      else
+	{
+	  pmatrixq<ntype, N> m2;
+	  for (i=0; i < N; i++)
+	    for (j=0; j < N; j++)
+	      {
+#if 1
+      		m2.m[i][j] = m[i][j] - m1.m[i][j];
+#else
+    		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+    		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+    		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+#endif
+	  }
+	  return std::move(m2);
+	}
     }
-
 
   inline double detgenNR() const
     {
       double d;
-      pmatrixq<ntype,N> m1;
+      static pmatrixq<ntype,N> m1;
       int j;
-      pvector<int,N> indx;
+      static pvector<int,N> indx;
       // ludcmp return the LU decomposition of actual matrix (*this)
       m1=ludcmp(indx,d);
       for(j=0;j<N;j++) 
@@ -377,7 +415,7 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  pmatrixq<ntype,N> om;
+	  static pmatrixq<ntype,N> om;
 	  int *IPIV = new int[N];
 	  om = *this;
 	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
@@ -394,7 +432,7 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  pmatrixq<ntype,N> om;
+	  static pmatrixq<ntype,N> om;
 	  int *IPIV = new int[N];
 	  om = *this;
 	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
@@ -417,11 +455,11 @@ public:
     }
   inline void invLUNR(pmatrixq<ntype,N>& om) const
     {
-      pvector <ntype,N> col;
-      pmatrixq<ntype,N> LU;
+      static pvector <ntype,N> col;
+      static pmatrixq<ntype,N> LU;
       int m2, m1;
       double d;
-      pvector<int,N> indx;
+      static pvector<int,N> indx;
       LU=ludcmp(indx, d); 
       for(m2=0;m2<N;m2++) 
 	{ 
