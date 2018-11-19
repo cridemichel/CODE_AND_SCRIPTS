@@ -374,7 +374,12 @@ public:
   pmatrixq<ntype,N>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
 #endif
-#ifdef LAZY_EVAL
+#ifndef LAZY_EVAL
+  inline pmatrixq<ntype,N> operator+(const pmatrixq<ntype,N>& m1) const
+    {
+      return addition(m1);
+    }
+#endif
   // addition
   inline pmatrixq<ntype,N> addition(const pmatrixq<ntype,N>& m1) const
     {
@@ -407,7 +412,6 @@ public:
 	  return std::move(m2);
 	}
     }
-#endif
   inline pmatrixq<ntype,N> operator -(const pmatrixq<ntype,N>& m1)
     {
       int i, j;
