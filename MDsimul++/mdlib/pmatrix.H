@@ -130,7 +130,7 @@ const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
 const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
 const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
-const int NADD = 10;
+const int NADD = 5;// value below which does not use lazy evaluation for addition
 #include<cstring>
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
