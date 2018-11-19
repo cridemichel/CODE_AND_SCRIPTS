@@ -375,7 +375,7 @@ public:
     }
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>(PmOp<ntype,N, tipo, Lhs, Rhs> const& op) {
-      cout << "qui\n";
+      //cout << "qui\n";
        for (int i=0; i < N; i++)
 	for (int j=0; j < N; j++)
 	  m[i][j] = op.get_m(i,j);
