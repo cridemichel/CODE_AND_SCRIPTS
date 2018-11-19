@@ -119,9 +119,9 @@ struct AddOp {
         // empty body
     }
     inline ntype get_m(int i, int j) const {
-      if constexpr (tipo == 0)
+      if constexpr (tipo == 0)// mat + mat
 	return lhs.get_m(i,j) + rhs.get_m(i,j);
-      else if constexpr (tipo == 1)
+      else if constexpr (tipo == 1) // mat - mat
 	return lhs.get_m(i,j) - rhs.get_m(i,j);
       return 0;
     }
