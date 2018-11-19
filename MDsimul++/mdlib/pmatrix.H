@@ -19,7 +19,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 #define MOVE_SEMANTIC
-//#define LAZY_EVAL
+#define LAZY_EVAL
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -130,6 +130,7 @@ const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
 const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
 const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
+const int NADD = 10;
 #include<cstring>
 #define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
@@ -348,7 +349,15 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>
       return b;
     }
 public:
+
 #ifdef LAZY_EVAL
+#if 0
+  template<typename Lhs, typename Rhs>
+    operator AddOp<ntype, N, typename Lhs, typename Rhs>
+    {
+      return AddOp.get_m
+    }
+#endif
   template<typename Lhs, typename Rhs>
     pmatrixq<ntype,N>& operator=(AddOp<ntype,N, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
@@ -365,9 +374,9 @@ public:
   pmatrixq<ntype,N>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
 #endif
-#ifndef LAZY_EVAL
+#ifdef LAZY_EVAL
   // addition
-  inline pmatrixq<ntype,N> addition(const pmatrixq<ntype,N>& m1)
+  inline pmatrixq<ntype,N> addition(const pmatrixq<ntype,N>& m1) const
     {
       if constexpr (N <= NSTA && pmatrixq<ntype,N>::dynamic==false)
 	{
@@ -1171,10 +1180,19 @@ operator+(pmatrixq<ntype,N> const& p, AddOp<ntype, N ,Lhs, Rhs> const& rhs)
 }
 
 // add two points, yield a expression template    
-  template <typename ntype, int N> AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>> 
+  template <typename ntype, int N> 
+  typename std::conditional<(N<=NADD),pmatrixq<ntype,N>,AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
-  return AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs);
+  if constexpr (N <= NADD)
+    {
+      return lhs.addition(rhs);
+    }
+  else
+    {
+      //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
+      return AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs);
+    }
 }
   template <typename ntype, int N, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 AddOp<ntype, N, AddOp<ntype, N, LLhs, LRhs>, AddOp<ntype, N, RLhs, RRhs>> operator+(const AddOp<ntype, N, LLhs, LRhs> & leftOperandconst, const AddOp<ntype, N, RLhs, RRhs> & rightOperand)
