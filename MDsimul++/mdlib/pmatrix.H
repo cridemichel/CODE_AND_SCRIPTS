@@ -124,6 +124,20 @@ struct AddOp {
     Lhs const& get_lhs() const { return lhs; }
     Rhs const& get_rhs() const { return rhs; }
 };
+template<typename ntype, int N, typename Lhs, typename Rhs>
+struct SubOp {
+    Lhs const& lhs;
+    Rhs const& rhs;
+
+    SubOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
+        // empty body
+    }
+    inline ntype get_m(int i, int j) const {
+      return lhs.get_m(i,j) - rhs.get_m(i,j);
+    }
+    Lhs const& get_lhs() const { return lhs; }
+    Rhs const& get_rhs() const { return rhs; }
+};
 #endif
 const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
@@ -379,6 +393,10 @@ public:
     {
       return addition(m1);
     }
+  inline pmatrixq<ntype,N> operator-(const pmatrixq<ntype,N>& m1) const
+    {
+      return subtraction(m1);
+    }
 #endif
   // addition
   inline pmatrixq<ntype,N> addition(const pmatrixq<ntype,N>& m1) const
@@ -412,7 +430,7 @@ public:
 	  return std::move(m2);
 	}
     }
-  inline pmatrixq<ntype,N> operator -(const pmatrixq<ntype,N>& m1)
+  inline pmatrixq<ntype,N> subtraction(const pmatrixq<ntype,N>& m1)
     {
       int i, j;
       if constexpr (N <= NSTA && pmatrixq<ntype,N>::dynamic==false)
@@ -1169,6 +1187,7 @@ public:
 #endif
 };
 #ifdef LAZY_EVAL
+// ADDITION
 // add expression template with point at the right
   template<typename ntype, int N, typename Lhs, typename Rhs> AddOp<ntype,N, AddOp<ntype,N, Lhs, Rhs>, pmatrixq<ntype,N>> 
 operator+(AddOp<ntype,N, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
@@ -1184,25 +1203,70 @@ operator+(pmatrixq<ntype,N> const& p, AddOp<ntype, N ,Lhs, Rhs> const& rhs)
 }
 
 // add two points, yield a expression template    
+// se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
+// altrimenti resituisce AddOp e usa la lazy evaluation
   template <typename ntype, int N> 
+  // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
   typename std::conditional<(N<=NADD),pmatrixq<ntype,N>,AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
   if constexpr (N <= NADD)
     {
-      return lhs.addition(rhs);
+      return lhs.addition(rhs); //normal evaluation
     }
   else
     {
       //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
-      return AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs);
+      return AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
+// caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
   template <typename ntype, int N, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 AddOp<ntype, N, AddOp<ntype, N, LLhs, LRhs>, AddOp<ntype, N, RLhs, RRhs>> operator+(const AddOp<ntype, N, LLhs, LRhs> & leftOperandconst, const AddOp<ntype, N, RLhs, RRhs> & rightOperand)
 {
   return  AddOp<ntype, N, AddOp<ntype, N, LLhs, LRhs>, AddOp<ntype, N, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
+// SUBTRACTION
+// add expression template with point at the right
+  template<typename ntype, int N, typename Lhs, typename Rhs> SubOp<ntype,N, SubOp<ntype,N, Lhs, Rhs>, pmatrixq<ntype,N>> 
+operator-(SubOp<ntype,N, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
+{
+  return SubOp<ntype, N ,SubOp<ntype, N, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
+} 
+// add expression template with point at the left
+template<typename ntype, int N, typename Lhs, typename Rhs> SubOp< ntype, N, pmatrixq<ntype,N>, 
+  SubOp<ntype,N, Lhs, Rhs> > 
+operator-(pmatrixq<ntype,N> const& p, SubOp<ntype, N ,Lhs, Rhs> const& rhs) 
+{
+  return SubOp< ntype, N, pmatrixq<ntype,N>, SubOp<ntype, N, Lhs, Rhs> >(p, rhs);
+}
+
+// add two points, yield a expression template    
+// se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
+// altrimenti resituisce SubOp e usa la lazy evaluation
+  template <typename ntype, int N> 
+  // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
+  typename std::conditional<(N<=NADD),pmatrixq<ntype,N>,SubOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
+{
+  if constexpr (N <= NADD)
+    {
+      return lhs.subtraction(rhs); //normal evaluation
+    }
+  else
+    {
+      //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
+      return SubOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
+    }
+}
+// caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
+  template <typename ntype, int N, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+SubOp<ntype, N, SubOp<ntype, N, LLhs, LRhs>, SubOp<ntype, N, RLhs, RRhs>> operator+(const SubOp<ntype, N, LLhs, LRhs> & leftOperandconst, const SubOp<ntype, N, RLhs, RRhs> & rightOperand)
+{
+  return  SubOp<ntype, N, SubOp<ntype, N, LLhs, LRhs>, SubOp<ntype, N, RLhs, RRhs>>(leftOperandconst, rightOperand);
+}
+// MULTIPLICATION
+// TO IMPLEMENT
 #endif
 typedef pmatrixq<double,3> pmatrix3d;
 typedef pmatrixq<int,3>    pmatrix3i;
