@@ -115,14 +115,13 @@ template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 struct AddOp {
     Lhs const& lhs;
     Rhs const& rhs;
-    int optype=tipo;// 0 = add two mat 1=sub two mat 2=mul two mat
     AddOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
         // empty body
     }
     inline ntype get_m(int i, int j) const {
-      if (optype == 0)
+      if constexpr (tipo == 0)
 	return lhs.get_m(i,j) + rhs.get_m(i,j);
-      else if (optype == 1)
+      else if constexpr (tipo == 1)
 	return lhs.get_m(i,j) - rhs.get_m(i,j);
       return 0;
     }
