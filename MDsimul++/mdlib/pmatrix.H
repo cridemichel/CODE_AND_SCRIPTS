@@ -19,7 +19,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 #define MOVE_SEMANTIC
-
+#define LAZY_EVAL
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -109,6 +109,22 @@ T fastadd(T first, Args... args) {
   return first + fastadd(args...);
 }
 #endif
+#ifdef LAZY_EVAL
+template<typename ntype, int N, typename Lhs, typename Rhs>
+struct AddOp {
+    Lhs const& lhs;
+    Rhs const& rhs;
+
+    AddOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
+        // empty body
+    }
+    inline ntype get_m(int i, int j) const {
+      return lhs.get_m(i,j) + rhs.get_m(i,j);
+    }
+    Lhs const& get_lhs() const { return lhs; }
+    Rhs const& get_rhs() const { return rhs; }
+};
+#endif
 const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
 const int NMAXSTRA = 40;
 const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
@@ -128,7 +144,7 @@ public:
   constexpr static int dynamic = true;
   ntype (*m)[M]; // N riga M colonna
   // copy assignment
-  pmatrixd<ntype,N,M>& operator=(const pmatrixd<ntype,N,M>& m1)
+ pmatrixd<ntype,N,M>& operator=(const pmatrixd<ntype,N,M>& m1)
     {
       int i,j;
       for (i=0; i < N; i++)
@@ -325,8 +341,25 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>
       return b;
     }
 public:
+#ifdef LAZY_EVAL
+  template<typename Lhs, typename Rhs>
+    pmatrixq<ntype,N>& operator=(AddOp<ntype,N, Lhs, Rhs> const& op) {
+      for (int i=0; i < N; i++)
+	for (int j=0; j < N; j++)
+	  m[i][j] = op.get_m(i,j);
+      return (*this);
+    }
+  template<typename Lhs, typename Rhs>
+    pmatrixq<ntype,N>(AddOp<ntype,N, Lhs, Rhs> const& op) {
+       for (int i=0; i < N; i++)
+	for (int j=0; j < N; j++)
+	  m[i][j] = op.get_m(i,j);
+    }
+  pmatrixq<ntype,N>() = default;
+  inline ntype get_m(int i, int j) const {return m[i][j];}
+#endif
+#ifndef LAZY_EVAL
   // addition
-
   inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
     {
       if constexpr (N <= NSTA && pmatrixq<ntype,N>::dynamic==false)
@@ -358,6 +391,7 @@ public:
 	  return std::move(m2);
 	}
     }
+#endif
   inline pmatrixq<ntype,N> operator -(const pmatrixq<ntype,N>& m1)
     {
       int i, j;
@@ -409,7 +443,6 @@ public:
     }
   inline ntype detgen() const
     {
-      
 #ifdef USE_LAPACK
       if constexpr (is_same<ntype, double>::value)
 	{
@@ -1115,6 +1148,33 @@ public:
       }
 #endif
 };
+#ifdef LAZY_EVAL
+// add expression template with point at the right
+  template<typename ntype, int N, typename Lhs, typename Rhs> AddOp<ntype,N, AddOp<ntype,N, Lhs, Rhs>, pmatrixq<ntype,N>> 
+operator+(AddOp<ntype,N, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
+{
+  return AddOp<ntype, N ,AddOp<ntype, N, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
+} 
+// add expression template with point at the left
+template<typename ntype, int N, typename Lhs, typename Rhs> AddOp< ntype, N, pmatrixq<ntype,N>, 
+  AddOp<ntype,N, Lhs, Rhs> > 
+operator+(pmatrixq<ntype,N> const& p, AddOp<ntype, N ,Lhs, Rhs> const& rhs) 
+{
+  return AddOp< ntype, N, pmatrixq<ntype,N>, AddOp<ntype, N, Lhs, Rhs> >(p, rhs);
+}
+
+// add two points, yield a expression template    
+  template <typename ntype, int N> AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>> 
+operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
+{
+  return AddOp<ntype, N, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs);
+}
+  template <typename ntype, int N, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+AddOp<ntype, N, AddOp<ntype, N, LLhs, LRhs>, AddOp<ntype, N, RLhs, RRhs>> operator+(const AddOp<ntype, N, LLhs, LRhs> & leftOperandconst, const AddOp<ntype, N, RLhs, RRhs> & rightOperand)
+{
+  return  AddOp<ntype, N, AddOp<ntype, N, LLhs, LRhs>, AddOp<ntype, N, RLhs, RRhs>>(leftOperandconst, rightOperand);
+}
+#endif
 typedef pmatrixq<double,3> pmatrix3d;
 typedef pmatrixq<int,3>    pmatrix3i;
 #endif
