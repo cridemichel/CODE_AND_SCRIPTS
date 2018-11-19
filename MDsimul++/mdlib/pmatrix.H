@@ -19,7 +19,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 #define MOVE_SEMANTIC
-#define LAZY_EVAL
+//#define LAZY_EVAL
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -137,7 +137,14 @@ template <class ntype, int N, int M> class pmatrix {
 public:
   ntype m[N][M];
   constexpr static int dynamic = false;
-};
+  pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
+    {
+      int i,j;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m[i][j] = m1.m[i][j];
+      return (*this);
+    }};
 template <class ntype, int N, int M> class pmatrixd {
   //int nr, nc;
 public:
@@ -360,7 +367,7 @@ public:
 #endif
 #ifndef LAZY_EVAL
   // addition
-  inline pmatrixq<ntype,N> operator +(const pmatrixq<ntype,N>& m1)
+  inline pmatrixq<ntype,N> addition(const pmatrixq<ntype,N>& m1)
     {
       if constexpr (N <= NSTA && pmatrixq<ntype,N>::dynamic==false)
 	{
