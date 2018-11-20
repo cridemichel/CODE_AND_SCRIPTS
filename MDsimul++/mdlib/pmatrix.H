@@ -122,16 +122,13 @@ struct PmOp {
       else if constexpr (tipo == 3) // scalar * mat
 	return lhs*rhs.get_m(i,j);
 #if 0
-      else if constexpr (tipo == 4) // mat * mat <-- not worth 
+      else if constexpr (tipo == 4) // mat * vec <-- not worth 
 	{
 	  // get two matrices and the multiply them
 	  Lhs m1((double (*)[N])lhs.get_mat()),
-	  Rhs m2((double (*)[N])lhs.get_mat());
-	  return (m1.mul(m2))[i][j];
+	  Rhs m2((double*)lhs.get_vec());
+	  return matvec(Lhs,Rhs);
 	}
-      else if constexpr (tipo == 5) // mat * vec <-- not worth 
-	{
-	  return 0;
       else if constexpr (tipo == 6) // vec * mac <-- not worth 
 	return 0;
 #endif
