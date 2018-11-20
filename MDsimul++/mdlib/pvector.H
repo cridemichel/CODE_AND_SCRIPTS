@@ -23,7 +23,7 @@ struct PmOpV {
 	return lhs.get_v(i) - rhs.get_v(i);
       else if constexpr (tipo == 2) // vec * scalar
 	return lhs.get_v(i)*rhs;
-      else if constexpr (tipo == 3) // scalar * vec
+      else if constexpr (tipo == 3) // scalar * vec NOT IMPLEMENTED YET
 	return rhs.get_v(i)*lhs;
       return 0;
     }
@@ -196,12 +196,12 @@ public:
       return std::move(lv);
     }
 #endif
-  inline pvector<ntype,N> vecscal(const pvector<ntype,N>& v1, const double& param) 
+  inline pvector<ntype,N> vecscal(const double& param) const
     {
       int i;
       pvector<ntype,N> lv;
       for (i=0; i < N; i++)
-	lv.v[i] = v1.v[i]*param;
+	lv.v[i] = v[i]*param;
       return std::move(lv);
     }
   friend pvector<ntype,N> operator *(const ntype& param, const pvector<ntype,N>& v) 
@@ -408,8 +408,10 @@ inline operator*(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p)
 {
   return PmOpV<ntype, N, 2, PmOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, p);
 }
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, 2, PmOpV<ntype,N, tipo, Lhs, Rhs>, ntype> 
-inline operator*(pvector<ntype,N> lhs, const ntype& rhs)
+
+template<typename ntype, int N>
+  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype,N, 2, pvector<ntype,N>, ntype>>::type
+inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
 {
   if constexpr (N <= vecpars::NADD)
     {
