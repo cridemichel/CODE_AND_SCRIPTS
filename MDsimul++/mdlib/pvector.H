@@ -39,7 +39,6 @@ struct PmOpV {
       else if constexpr (tipo == 6) // vec * mac 
 	return 0;
 #endif
- 
     }
     Lhs const& get_lhs() const { return lhs; }
     Rhs const& get_rhs() const { return rhs; }
