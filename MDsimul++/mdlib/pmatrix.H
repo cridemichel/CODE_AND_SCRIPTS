@@ -121,18 +121,7 @@ struct PmOp {
 	return lhs.get_m(i,j)*rhs;
       else if constexpr (tipo == 3) // scalar * mat
 	return lhs*rhs.get_m(i,j);
-#if 0
-      else if constexpr (tipo == 4) // mat * vec <-- not worth 
-	{
-	  // get two matrices and the multiply them
-	  Lhs m1((double (*)[N])lhs.get_mat()),
-	  Rhs m2((double*)lhs.get_vec());
-	  return matvec(Lhs,Rhs);
-	}
-      else if constexpr (tipo == 6) // vec * mac <-- not worth 
-	return 0;
-#endif
-      return 0;
+     return 0;
     }
     Lhs const& get_lhs() const { return lhs; }
     Rhs const& get_rhs() const { return rhs; }
@@ -382,7 +371,7 @@ public:
     }
   pmatrixq<ntype,N>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
-  inline void* get_mat() const {return m;}
+  inline void* get_mptr() const {return m;}
 #endif
 #ifndef LAZY_EVAL
   inline pmatrixq<ntype,N> operator+(const pmatrixq<ntype,N>& m1) const

@@ -28,6 +28,18 @@ struct PmOpV {
       else if constexpr (tipo == 4) // vec * vec NOT IMPLEMENTED YET
 	return rhs.get_v(i)*lhs;
       return 0;
+#if 0
+      else if constexpr (tipo == 5) // mat * vec 
+	{
+	  // get two matrices and the multiply them
+	  Lhs m1((double (*)[N])lhs.get_mptr()),
+	  Rhs m2((double*)lhs.get_vptr());
+	  return matvec(Lhs,Rhs)[i];
+	}
+      else if constexpr (tipo == 6) // vec * mac 
+	return 0;
+#endif
+ 
     }
     Lhs const& get_lhs() const { return lhs; }
     Rhs const& get_rhs() const { return rhs; }
@@ -126,6 +138,7 @@ public:
     }
   pvector<ntype,N>() = default;
   inline ntype get_v(int i) const {return v[i];}
+  inline ntype get_vptr() const {return v;}
 #endif
 
 
