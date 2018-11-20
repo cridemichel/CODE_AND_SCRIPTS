@@ -103,28 +103,32 @@ void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta
 #endif
 #ifdef LAZY_EVAL
 //enum optypes {mulmat, addmat, submat}; 
-
+struct MOpTypes
+{  
+  static const int MatPlusMat=0, MatMinusMat=1, MatTimesScal=2, ScalTimesMat=3;
+};
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
-struct PmOp {
-    Lhs const& lhs;
-    Rhs const& rhs;
-    PmOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
-      // empty body
-    }
+struct PmOp 
+{
+  Lhs const& lhs;
+  Rhs const& rhs;
+  PmOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
+    // empty body
+  }
 
-    inline ntype get_m(int i, int j) const {
-      if constexpr (tipo == 0)// mat + mat
-	return lhs.get_m(i,j) + rhs.get_m(i,j);
-      else if constexpr (tipo == 1) // mat - mat
-	return lhs.get_m(i,j) - rhs.get_m(i,j);
-      else if constexpr (tipo == 2) // mat * scalar
-	return lhs.get_m(i,j)*rhs;
-      else if constexpr (tipo == 3) // scalar * mat
-	return lhs*rhs.get_m(i,j);
-     return 0;
-    }
-    Lhs const& get_lhs() const { return lhs; }
-    Rhs const& get_rhs() const { return rhs; }
+  inline ntype get_m(int i, int j) const {
+    if constexpr (tipo == MOpTypes::MatPlusMat)// mat + mat
+      return lhs.get_m(i,j) + rhs.get_m(i,j);
+    else if constexpr (tipo == MOpTypes::MatMinusMat) // mat - mat
+      return lhs.get_m(i,j) - rhs.get_m(i,j);
+    else if constexpr (tipo == MOpTypes::MatTimesScal) // mat * scalar [NOT IMPLEMENTED YET]
+      return lhs.get_m(i,j)*rhs;
+    else if constexpr (tipo == MOpTypes::ScalTimesMat) // scalar * mat [NOT IMPLEMENTED YET]
+      return lhs*rhs.get_m(i,j);
+    return 0;
+  }
+  Lhs const& get_lhs() const { return lhs; }
+  Rhs const& get_rhs() const { return rhs; }
 };
 #endif
 template <class ntype, int N, int M> class pmatrix {
@@ -1176,17 +1180,17 @@ public:
 #ifdef LAZY_EVAL
 // ADDITION
 // add expression template with point at the right
-  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp<ntype,N, 0, PmOp<ntype,N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>> 
+  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp<ntype,N,MOpTypes::MatPlusMat, PmOp<ntype,N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>> 
 inline operator+(PmOp<ntype, N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
 {
-  return PmOp<ntype, N, 0, PmOp<ntype, N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
+  return PmOp<ntype, N, MOpTypes::MatPlusMat, PmOp<ntype, N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp< ntype, N, 0, pmatrixq<ntype,N>, 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp< ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, 
   PmOp<ntype, N, tipo, Lhs, Rhs> > 
 inline operator+(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
-  return PmOp< ntype, N, 0, pmatrixq<ntype,N>, PmOp<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
+  return PmOp< ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, PmOp<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
 // add two points, yield a expression template    
@@ -1196,7 +1200,7 @@ inline operator+(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> cons
 
   template <typename ntype, int N> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,PmOp<ntype, N, 0, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,PmOp<ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
   if constexpr (N <= pmatrixq<ntype,N>::NADD)
@@ -1206,28 +1210,28 @@ inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
   else
     {
       //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
-      return PmOp<ntype, N, 0, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
+      return PmOp<ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
 template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline PmOp<ntype, N, 0, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOp<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOp<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline PmOp<ntype, N, MOpTypes::MatPlusMat, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOp<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOp<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
-  return  PmOp<ntype, N, 0, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  PmOp<ntype, N, MOpTypes::MatPlusMat, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // SUBTRACTION
 // add expression template with point at the right
-  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp<ntype,N, 1, PmOp<ntype,N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>> 
+  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp<ntype,N, MOpTypes::MatMinusMat, PmOp<ntype,N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>> 
 inline operator-(PmOp<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
 {
-  return PmOp<ntype, N, 1, PmOp<ntype, N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
+  return PmOp<ntype, N, MOpTypes::MatMinusMat, PmOp<ntype, N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp< ntype, N, 1, pmatrixq<ntype,N>, 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOp< ntype, N, MOpTypes::MatMinusMat,  pmatrixq<ntype,N>, 
   PmOp<ntype, N, tipo, Lhs, Rhs> > 
 inline operator-(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
-  return PmOp< ntype, N, 1, pmatrixq<ntype,N>, PmOp<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
+  return PmOp< ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, PmOp<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
 // add two points, yield a expression template    
@@ -1235,7 +1239,7 @@ inline operator-(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> cons
 // altrimenti resituisce PmOp e usa la lazy evaluation
   template <typename ntype, int N> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,PmOp<ntype, N, 1, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,PmOp<ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 inline operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
   if constexpr (N <= matpars::NADD)
@@ -1245,14 +1249,14 @@ inline operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
   else
     {
       //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
-      return PmOp<ntype, N, 1, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
+      return PmOp<ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline PmOp<ntype, N, 1, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOp<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOp<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline PmOp<ntype, N, MOpTypes::MatMinusMat, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOp<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOp<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
-  return  PmOp<ntype, N, 1, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  PmOp<ntype, N, MOpTypes::MatMinusMat, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
    
 ///

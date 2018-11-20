@@ -8,6 +8,11 @@ using namespace std;
 #define MOVE_SEMANTIC
 #define LAZY_EVAL
 #ifdef LAZY_EVAL
+struct VOpTypes
+{  
+  static const int VecPlusVec=0, VecMinusVec=1, VecTimesScal=2, ScalTimesVec=3;
+};
+
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 struct PmOpV {
     Lhs const& lhs;
@@ -17,15 +22,13 @@ struct PmOpV {
       //cout << "qui\n";
     }
     inline ntype get_v(int i) const {
-      if constexpr (tipo == 0)// vec + vec
+      if constexpr (tipo == VOpTypes::VecPlusVec)// vec + vec
 	return lhs.get_v(i) + rhs.get_v(i);
-      else if constexpr (tipo == 1) // vec - vec
+      else if constexpr (tipo == VOpTypes::VecMinusVec) // vec - vec
 	return lhs.get_v(i) - rhs.get_v(i);
-      else if constexpr (tipo == 2) // vec * scalar
+      else if constexpr (tipo == VOpTypes::VecTimesScal) // vec * scalar
 	return lhs.get_v(i)*rhs;
-      else if constexpr (tipo == 3) // scalar * vec NOT IMPLEMENTED YET
-	return rhs.get_v(i)*lhs;
-      else if constexpr (tipo == 4) // vec * vec NOT IMPLEMENTED YET
+      else if constexpr (tipo == VOpTypes::ScalTimesVec) // scalar * vec NOT IMPLEMENTED YET
 	return rhs.get_v(i)*lhs;
       return 0;
 #ifdef _I_DO_NOT_WANT_TO_IMPLEMENT_THIS_
@@ -302,17 +305,17 @@ double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2)
 #ifdef LAZY_EVAL
 // ADDITION
 // add expression template with point at the right
-  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, 0, PmOpV<ntype,N, tipo, Lhs, Rhs>, pvector<ntype,N>> 
+  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, VOpTypes::VecPlusVec, PmOpV<ntype,N, tipo, Lhs, Rhs>, pvector<ntype,N>> 
 inline operator+(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
 {
-  return PmOpV<ntype, N, 0, PmOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
+  return PmOpV<ntype, N, VOpTypes::VecPlusVec, PmOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV< ntype, N, 0, pvector<ntype,N>, 
   PmOpV<ntype, N, tipo, Lhs, Rhs> > 
 inline operator+(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
-  return PmOpV< ntype, N, 0, pvector<ntype,N>, PmOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
+  return PmOpV< ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, PmOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
 // add two points, yield a expression template    
@@ -321,7 +324,7 @@ inline operator+(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> cons
 
   template <typename ntype, int N> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype, N, 0, pvector<ntype,N>, pvector<ntype,N>>>::type
+  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
 inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs) 
 {
   if constexpr (N <= vecpars::NADD)
@@ -331,28 +334,28 @@ inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
   else
     {
       //cout << "qui N=" << N << " NSTA=" << vecpars::NSTA << "\n";
-      return PmOpV<ntype, N, 0, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
+      return PmOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
 template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline PmOpV<ntype, N, 0, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline PmOpV<ntype, N, VOpTypes::VecPlusVec, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
-  return  PmOpV<ntype, N, 0, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  PmOpV<ntype, N, VOpTypes::VecPlusVec, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // SUBTRACTION
 // add expression template with point at the right
-  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, 1, PmOpV<ntype,N, tipo, Lhs, Rhs>, pvector<ntype,N>> 
+  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, VOpTypes::VecMinusVec, PmOpV<ntype,N, tipo, Lhs, Rhs>, pvector<ntype,N>> 
 inline operator-(PmOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
 {
-  return PmOpV<ntype, N, 1, PmOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
+  return PmOpV<ntype, N, VOpTypes::VecMinusVec, PmOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV< ntype, N, 1, pvector<ntype,N>, 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV< ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, 
   PmOpV<ntype, N, tipo, Lhs, Rhs> > 
 inline operator-(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
-  return PmOpV< ntype, N, 1, pvector<ntype,N>, PmOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
+  return PmOpV< ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, PmOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
 // add two points, yield a expression template    
@@ -360,7 +363,7 @@ inline operator-(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> cons
 // altrimenti resituisce PmOpV e usa la lazy evaluation
 template <typename ntype, int N> 
 // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype, N, 1, pvector<ntype,N>, pvector<ntype,N>>>::type
+  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
 inline operator-(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs) 
 {
   if constexpr (N <= vecpars::NADD)
@@ -370,14 +373,14 @@ inline operator-(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
   else
     {
       //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
-      return PmOpV<ntype, N, 1, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
+      return PmOpV<ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline PmOpV<ntype, N, 1, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>> operator-(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline PmOpV<ntype, N, VOpTypes::VecMinusVec, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>> operator-(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
-  return  PmOpV<ntype, N, 1, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  PmOpV<ntype, N, VOpTypes::VecMinusVec, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
    
 ///
@@ -417,14 +420,14 @@ inline ntype operator*(pvector<ntype,N> const& vL, PmOpV<ntype, N, tipo, Lhs, Rh
   return vL*vR;
 }
 // PmOvV times scalar
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, 2, PmOpV<ntype,N, tipo, Lhs, Rhs>, ntype> 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, VOpTypes::VecTimesScal, PmOpV<ntype,N, tipo, Lhs, Rhs>, ntype> 
 inline operator*(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p)
 {
-  return PmOpV<ntype, N, 2, PmOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, p);
+  return PmOpV<ntype, N, VOpTypes::VecTimesScal, PmOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, p);
 }
 
 template<typename ntype, int N>
-  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype,N, 2, pvector<ntype,N>, ntype>>::type
+  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype,N, VOpTypes::VecTimesScal, pvector<ntype,N>, ntype>>::type
 inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
 {
   if constexpr (N <= vecpars::NADD)
@@ -434,7 +437,7 @@ inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
   else
     {
       //cout << "qui N=" << N << " NSTA=" << vecpars::NSTA << "\n";
-      return PmOpV<ntype, N, 2, pvector<ntype,N>, ntype>(lhs, rhs);
+      return PmOpV<ntype, N, VOpTypes::VecTimesScal, pvector<ntype,N>, ntype>(lhs, rhs);
     }
 }
 // PmOpV divided by scalar
