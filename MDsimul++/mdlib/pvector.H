@@ -8,11 +8,15 @@ using namespace std;
 #define MOVE_SEMANTIC
 #define LAZY_EVAL
 #ifdef LAZY_EVAL
+// possible types of operation that can be made lazy
 struct VOpTypes
 {  
   static const int VecPlusVec=0, VecMinusVec=1, VecTimesScal=2, ScalTimesVec=3;
 };
-
+//REMARK on Lazyness Mechanics:
+//each class it is an operation of Lhs and Rhs which store the values of the operands
+//only when the method get_v is called the operation is performed 
+//and this happens only when assign operator of pvector class is called (see below)
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 struct PmOpV {
     Lhs const& lhs;

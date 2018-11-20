@@ -102,7 +102,12 @@ void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta
 }
 #endif
 #ifdef LAZY_EVAL
-//enum optypes {mulmat, addmat, submat}; 
+//REMARK on Lazyness Mechanics:
+//each class it is an operation of Lhs and Rhs which store the values of the operands
+//only when the method get_m is called the operation is performed 
+//and this happens only as assign operator of pmatrixq class gets called (see below)
+//
+//Matrix operation types
 struct MOpTypes
 {  
   static const int MatPlusMat=0, MatMinusMat=1, MatTimesScal=2, ScalTimesMat=3;
