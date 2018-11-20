@@ -7,7 +7,9 @@
 #include<stdlib.h>
 #include<cstdlib>
 #include<cmath>
+#include<cstring>
 #include "pvector.H"
+#define OPT_INV
 #define USE_LAPACK
 #ifdef USE_LAPACK
 #undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
@@ -99,16 +101,6 @@ void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta
 #endif
 }
 #endif
-#if 1
-template<typename T>
-T fastadd(T v) {
-  return v;
-}
-template<typename T, typename... Args>
-T fastadd(T first, Args... args) {
-  return first + fastadd(args...);
-}
-#endif
 #ifdef LAZY_EVAL
 //enum optypes {mulmat, addmat, submat}; 
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
@@ -116,19 +108,8 @@ struct PmOp {
     Lhs const& lhs;
     Rhs const& rhs;
     PmOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
-        // empty body
+      // empty body
     }
-#if 0
-    // conversion operator
-    operator Lhs()
-      {
-	Lhs m;
-      	for (int i=0; i < N; i++)
-  	  for (int j=0; j < N; j++)
-  	    m[i][j] = get_m(i,j);
-	return m;
-      }
-#endif
     inline ntype get_m(int i, int j) const {
       if constexpr (tipo == 0)// mat + mat
 	return lhs.get_m(i,j) + rhs.get_m(i,j);
@@ -140,14 +121,6 @@ struct PmOp {
     Rhs const& get_rhs() const { return rhs; }
 };
 #endif
-const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
-const int NMAXSTRA = 40;
-const int NMAXINV = 10; // if N>NAMXINV use LAPACK LU DECOMP
-const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
-const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
-const int NADD = 5;// value below which does not use lazy evaluation for addition
-#include<cstring>
-#define OPT_INV
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
@@ -236,10 +209,21 @@ inverse4(void) {
     return ;
 }
 #endif
+//NMAX_=45, int MAXSTRA_=40, int NMAXINV_=40, int NMAXMUL_=10, int NSTA_=8, int NADD_=5
+struct matpars
+{
+  // params for my class
+  static const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
+  static const int NMAXSTRA = 40;
+  static const int NMAXINV = 40; // if N>NAMXINV use LAPACK LU DECOMP
+  static const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
+  static const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
+  static const int NADD = 5;// value below which does not use lazy evaluation for addition
+};
 // for large matrices use dynamic allocation to avoid stack overflow!
-template <class ntype, int N> using pmatrixb = typename std::conditional<(N>NMAX),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type;
- 
-template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>
+template <class ntype, int N> using pmatrixb = typename std::conditional<(N>matpars::NMAX),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type;
+
+template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public matpars
   //public std::conditional<(N>100),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type 
 {
   using pmatrixb<ntype,N>::m;
@@ -364,7 +348,6 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>
       return b;
     }
 public:
-
 #ifdef LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>& operator=(PmOp<ntype,N, tipo, Lhs, Rhs> const& op) {
@@ -1202,12 +1185,14 @@ inline operator+(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> cons
 // add two points, yield a expression template    
 // se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce PmOp e usa la lazy evaluation
+
+
   template <typename ntype, int N> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=NADD),pmatrixq<ntype,N>,PmOp<ntype, N, 0, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,PmOp<ntype, N, 0, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
-  if constexpr (N <= NADD)
+  if constexpr (N <= pmatrixq<ntype,N>::NADD)
     {
       return lhs.addition(rhs); //normal evaluation
     }
@@ -1243,10 +1228,10 @@ inline operator-(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> cons
 // altrimenti resituisce PmOp e usa la lazy evaluation
   template <typename ntype, int N> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=NADD),pmatrixq<ntype,N>,PmOp<ntype, N, 1, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,PmOp<ntype, N, 1, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 inline operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
-  if constexpr (N <= NADD)
+  if constexpr (N <= matpars::NADD)
     {
       return lhs.subtraction(rhs); //normal evaluation
     }
@@ -1269,75 +1254,76 @@ inline PmOp<ntype, N, 1, PmOp<ntype, N, tipo, LLhs, LRhs>, PmOp<ntype, N, tipo, 
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline pmatrixq<ntype,N> operator*(const PmOp<ntype, N, tipo, LLhs, LRhs> & leftOperand, const PmOp<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
-  pmatrixq<ntype, N> m1;
+  pmatrixq<ntype, N> mL, mR;
   for (int i=0; i < N; i++)
     for (int j=0; j < N; j++)
       {
-    	m1[i][j] = leftOperand.get_m(i,j)+rightOperand.get_m(i,j);
+    	mR[i][j] = leftOperand.get_m(i,j);
+	mL[i][j] = rightOperand.get_m(i,j);
       }
-  return m1;
+  return mR*mL;
 }
 // PmOp times pmatrixq
 //
 // left PmOp
    template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> pmatrixq<ntype,N> 
-inline operator*(PmOp<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
+inline operator*(PmOp<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& mR)
 {
-  pmatrixq<ntype, N> m1;
+  pmatrixq<ntype, N> mL;
   for (int i=0; i < N; i++)
     for (int j=0; j < N; j++)
       {
-    	m1[i][j] = lhs.get_m(i,j);
+    	mL[i][j] = lhs.get_m(i,j);
       }
-  return m1*p;
+  return mL*mR;
 } 
 // right PmOp
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>  
 pmatrixq<ntype,N>
-inline operator*(pmatrixq<ntype,N> const& p, PmOp<ntype, N, tipo, Lhs, Rhs> const& rhs) 
+inline operator*(pmatrixq<ntype,N> const& mL, PmOp<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
-  pmatrixq<ntype, N> m1;
+  pmatrixq<ntype, N> mR;
   for (int i=0; i < N; i++)
     for (int j=0; j < N; j++)
       {
-    	m1[i][j] = rhs.get_m(i,j);
+    	mR[i][j] = rhs.get_m(i,j);
       }
-  return p*m1;
+  return mL*mR;
 }
 // vector times PmOp
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
-inline pvector<ntype,N> operator *(const pvector<ntype,N> v1, PmOp<ntype, N, tipo, Lhs, Rhs> const& rhs) 
+inline pvector<ntype,N> operator *(const pvector<ntype,N> vL, PmOp<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
-  pmatrixq<ntype, N> m1;
+  pmatrixq<ntype, N> mR;
   for (int i=0; i < N; i++)
     for (int j=0; j < N; j++)
       {
-    	m1[i][j] = rhs.get_m(i,j);
+    	mR[i][j] = rhs.get_m(i,j);
       }
-  return v1*m1;
+  return vL*mR;
 }
 // PmOp times vector
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
-inline pvector<ntype,N> operator *(PmOp<ntype, N, tipo, Lhs, Rhs> const& lhs, const pvector<ntype,N> v1) 
+inline pvector<ntype,N> operator *(PmOp<ntype, N, tipo, Lhs, Rhs> const& lhs, const pvector<ntype,N> vR) 
 {
-  pmatrixq<ntype, N> m1;
+  pmatrixq<ntype, N> mL;
   for (int i=0; i < N; i++)
     for (int j=0; j < N; j++)
       {
-    	m1[i][j] = lhs.get_m(i,j);
+    	mL[i][j] = lhs.get_m(i,j);
       }
-  return m1*v1;
+  return mL*vR;
 }
 // PmOp times scalar
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
  inline pmatrixq<ntype, N> operator *(PmOp<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
     {
       int i,j;
-      pmatrixq<ntype,N> m1;
+      pmatrixq<ntype,N> mL;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m1[i][j] = lhs.get_m(i,j)*param;
-      return m1;
+	  mL[i][j] = lhs.get_m(i,j)*param;
+      return mL;
     }
   
 // PmOp divided by scalar
@@ -1345,11 +1331,11 @@ template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
  inline pmatrixq<ntype, N> operator /(PmOp<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
     {
       int i,j;
-      pmatrixq<ntype,N> m1;
+      pmatrixq<ntype,N> mL;
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
-	  m1[i][j] = lhs.get_m(i,j)/param;
-      return m1;
+	  mL[i][j] = lhs.get_m(i,j)/param;
+      return mL;
     }
 #endif
 typedef pmatrixq<double,3> pmatrix3d;
