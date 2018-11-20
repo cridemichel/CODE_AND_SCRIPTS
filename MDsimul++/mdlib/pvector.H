@@ -17,10 +17,10 @@ struct PmOpV {
       //cout << "qui\n";
     }
     inline ntype get_v(int i) const {
-      if constexpr (tipo == 0)// mat + mat
-	return lhs.get_v(i) + rhs.get_m(i);
-      else if constexpr (tipo == 1) // mat - mat
-	return lhs.get_v(i) - rhs.get_m(i);
+      if constexpr (tipo == 0)// vec + vec
+	return lhs.get_v(i) + rhs.get_v(i);
+      else if constexpr (tipo == 1) // vec - vec
+	return lhs.get_v(i) - rhs.get_v(i);
       return 0;
     }
     Lhs const& get_lhs() const { return lhs; }
@@ -297,7 +297,7 @@ inline operator+(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> cons
   typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype, N, 0, pvector<ntype,N>, pvector<ntype,N>>>::type
 inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs) 
 {
-  if constexpr (N <= pvector<ntype,N>::NADD)
+  if constexpr (N <= vecpars::NADD)
     {
       return lhs.addition(rhs); //normal evaluation
     }
@@ -348,7 +348,7 @@ inline operator-(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline PmOpV<ntype, N, 1, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>> operator+(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline PmOpV<ntype, N, 1, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>> operator-(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const PmOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
   return  PmOpV<ntype, N, 1, PmOpV<ntype, N, tipo, LLhs, LRhs>, PmOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
@@ -362,8 +362,8 @@ inline ntype operator*(const PmOpV<ntype, N, tipo, LLhs, LRhs> & leftOperand, co
   pvector<ntype, N> vR, vL;
   for (int i=0; i < N; i++)
     {
-      vL[i] = leftOperand.get_m(i);
-      vR[i] = rightOperand.get_m(i);
+      vL[i] = leftOperand.get_v(i);
+      vR[i] = rightOperand.get_v(i);
     }
   return vL*vR;
 }
@@ -375,7 +375,7 @@ inline operator*(PmOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> con
 {
   pvector<ntype, N> vL;
   for (int i=0; i < N; i++)
-    vL[i] = lhs.get_m(i);
+    vL[i] = lhs.get_v(i);
   return vL*vR;
 } 
 // right PmOpV
@@ -385,7 +385,7 @@ inline ntype operator*(pvector<ntype,N> const& vL, PmOpV<ntype, N, tipo, Lhs, Rh
   pvector<ntype, N> vR;
   for (int i=0; i < N; i++)
     {
-      vR[i] = rhs.get_m(i);
+      vR[i] = rhs.get_v(i);
     }
   return vL*vR;
 }
@@ -396,7 +396,7 @@ template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
       int i;
       pvector<ntype,N> vL;
       for (i=0; i < N; i++)
-	  vL[i] = lhs.get_m(i)*param;
+	  vL[i] = lhs.get_v(i)*param;
       return vL;
     }
   
@@ -407,7 +407,7 @@ template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
       int i;
       pvector<ntype,N> vL;
       for (i=0; i < N; i++)
-	  vL[i] = lhs.get_m(i)/param;
+	  vL[i] = lhs.get_v(i)/param;
       return vL;
     }
 #endif
