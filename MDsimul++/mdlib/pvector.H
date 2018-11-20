@@ -25,6 +25,8 @@ struct PmOpV {
 	return lhs.get_v(i)*rhs;
       else if constexpr (tipo == 3) // scalar * vec NOT IMPLEMENTED YET
 	return rhs.get_v(i)*lhs;
+      else if constexpr (tipo == 4) // vec * vec NOT IMPLEMENTED YET
+	return rhs.get_v(i)*lhs;
       return 0;
     }
     Lhs const& get_lhs() const { return lhs; }

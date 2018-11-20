@@ -103,6 +103,7 @@ void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta
 #endif
 #ifdef LAZY_EVAL
 //enum optypes {mulmat, addmat, submat}; 
+
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 struct PmOp {
     Lhs const& lhs;
@@ -110,11 +111,30 @@ struct PmOp {
     PmOp(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
       // empty body
     }
+
     inline ntype get_m(int i, int j) const {
       if constexpr (tipo == 0)// mat + mat
 	return lhs.get_m(i,j) + rhs.get_m(i,j);
       else if constexpr (tipo == 1) // mat - mat
 	return lhs.get_m(i,j) - rhs.get_m(i,j);
+      else if constexpr (tipo == 2) // mat * scalar
+	return lhs.get_m(i,j)*rhs;
+      else if constexpr (tipo == 3) // scalar * mat
+	return lhs*rhs.get_m(i,j);
+#if 0
+      else if constexpr (tipo == 4) // mat * mat <-- not worth 
+	{
+	  // get two matrices and the multiply them
+	  Lhs m1((double (*)[N])lhs.get_mat()),
+	  Rhs m2((double (*)[N])lhs.get_mat());
+	  return (m1.mul(m2))[i][j];
+	}
+      else if constexpr (tipo == 5) // mat * vec <-- not worth 
+	{
+	  return 0;
+      else if constexpr (tipo == 6) // vec * mac <-- not worth 
+	return 0;
+#endif
       return 0;
     }
     Lhs const& get_lhs() const { return lhs; }
@@ -365,6 +385,7 @@ public:
     }
   pmatrixq<ntype,N>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
+  inline void* get_mat() const {return m;}
 #endif
 #ifndef LAZY_EVAL
   inline pmatrixq<ntype,N> operator+(const pmatrixq<ntype,N>& m1) const
