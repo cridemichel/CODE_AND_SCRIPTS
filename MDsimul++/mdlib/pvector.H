@@ -21,6 +21,10 @@ struct PmOpV {
 	return lhs.get_v(i) + rhs.get_v(i);
       else if constexpr (tipo == 1) // vec - vec
 	return lhs.get_v(i) - rhs.get_v(i);
+      else if constexpr (tipo == 2) // vec * scalar
+	return lhs.get_v(i)*rhs;
+      else if constexpr (tipo == 3) // scalar * vec
+	return rhs.get_v(i)*lhs;
       return 0;
     }
     Lhs const& get_lhs() const { return lhs; }
@@ -115,9 +119,8 @@ public:
     }
   template<typename Lhs, typename Rhs, int tipo>
     pvector<ntype,N>(PmOpV<ntype,N, tipo, Lhs, Rhs> const& op) {
-      //cout << "qui\n";
       for (int i=0; i < N; i++)
-	v[i] = op.get_v();
+	v[i] = op.get_v(i);
     }
   pvector<ntype,N>() = default;
   inline ntype get_v(int i) const {return v[i];}
@@ -182,22 +185,32 @@ public:
       return *this;
     }
 
+  // vec times scalar
+#ifndef LAZY_EVAL
   inline pvector<ntype,N> operator *(const double& param) 
     {
       int i;
-      static pvector<ntype,N> lv;
+      pvector<ntype,N> lv;
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
-      return lv;
+      return std::move(lv);
     }
-
-  friend pvector<ntype,N> operator *(const double& param, const pvector<ntype,N>& v) 
+#endif
+  inline pvector<ntype,N> vecscal(const pvector<ntype,N>& v1, const double& param) 
     {
       int i;
-      static pvector<ntype,N> lv;
+      pvector<ntype,N> lv;
+      for (i=0; i < N; i++)
+	lv.v[i] = v1.v[i]*param;
+      return std::move(lv);
+    }
+  friend pvector<ntype,N> operator *(const ntype& param, const pvector<ntype,N>& v) 
+    {
+      int i;
+      pvector<ntype,N> lv;
       for (i=0; i < N; i++)
 	lv.v[i] = v.v[i]*param;
-      return lv;
+      return std::move(lv);
     }
 
   inline ntype& operator[](const int& i)
@@ -303,7 +316,7 @@ inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
     }
   else
     {
-      //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
+      //cout << "qui N=" << N << " NSTA=" << vecpars::NSTA << "\n";
       return PmOpV<ntype, N, 0, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
@@ -389,20 +402,28 @@ inline ntype operator*(pvector<ntype,N> const& vL, PmOpV<ntype, N, tipo, Lhs, Rh
     }
   return vL*vR;
 }
-// PmOpV times scalar
-template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
- inline pvector<ntype, N> operator *(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
+// PmOvV times scalar
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, 2, PmOpV<ntype,N, tipo, Lhs, Rhs>, ntype> 
+inline operator*(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p)
+{
+  return PmOpV<ntype, N, 2, PmOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, p);
+}
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV<ntype,N, 2, PmOpV<ntype,N, tipo, Lhs, Rhs>, ntype> 
+inline operator*(pvector<ntype,N> lhs, const ntype& rhs)
+{
+  if constexpr (N <= vecpars::NADD)
     {
-      int i;
-      pvector<ntype,N> vL;
-      for (i=0; i < N; i++)
-	  vL[i] = lhs.get_v(i)*param;
-      return vL;
+      return lhs.vecscal(rhs); //normal evaluation
     }
-  
+  else
+    {
+      //cout << "qui N=" << N << " NSTA=" << vecpars::NSTA << "\n";
+      return PmOpV<ntype, N, 2, pvector<ntype,N>, ntype>(lhs, rhs);
+    }
+}
 // PmOpV divided by scalar
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
- inline pvector<ntype, N> operator /(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
+ inline pvector<ntype, N> operator /(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& param) 
     {
       int i;
       pvector<ntype,N> vL;
