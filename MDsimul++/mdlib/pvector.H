@@ -28,7 +28,7 @@ struct PmOpV {
       else if constexpr (tipo == 4) // vec * vec NOT IMPLEMENTED YET
 	return rhs.get_v(i)*lhs;
       return 0;
-#if 0
+#ifdef _I_DO_NOT_WANT_TO_IMPLEMENT_THIS_
       else if constexpr (tipo == 5) // mat * vec 
 	{
 	  // get two matrices and the multiply them
