@@ -311,7 +311,7 @@ inline operator+(PmOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> co
   return PmOpV<ntype, N, VOpTypes::VecPlusVec, PmOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV< ntype, N, 0, pvector<ntype,N>, 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> PmOpV< ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, 
   PmOpV<ntype, N, tipo, Lhs, Rhs> > 
 inline operator+(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
@@ -322,8 +322,8 @@ inline operator+(pvector<ntype,N> const& p, PmOpV<ntype, N, tipo, Lhs, Rhs> cons
 // se N < NSTA restituisce pvector e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce PmOpV e usa la lazy evaluation
 
-  template <typename ntype, int N> 
-  // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
+template <typename ntype, int N> 
+// conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
   typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,PmOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
 inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs) 
 {
