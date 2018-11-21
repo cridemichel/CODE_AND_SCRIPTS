@@ -367,6 +367,7 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public m
       return b;
     }
 public:
+#if 1
   // TODO: make this static
   inline pmatrixq<ntype,N> I() const
     {
@@ -376,6 +377,7 @@ public:
 	  MI[i][j] = (i==j)?1.0:0.0;
       return std::move(MI);
     }
+#endif
 #ifdef LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>& operator=(AnOpM<ntype,N, tipo, Lhs, Rhs> const& op) {
