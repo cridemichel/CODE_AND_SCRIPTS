@@ -124,6 +124,7 @@ public:
       delete[] v;
     }
 };	
+//choose dynamnic or static base class depending on N
 template <class ntype, int N> using pvecbase = typename std::conditional<(N>vecpars::NMAX),pvecdyn <ntype, N>,pvecsta <ntype, N>>::type;
 template <class ntype, int N> class pvector : public pvecbase<ntype,N>, vecpars {
   using pvecbase<ntype,N>::v;
