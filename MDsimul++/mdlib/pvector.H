@@ -68,13 +68,16 @@ template <class ntype, int N> class pvecsta {
 public:
   ntype v[N];
   constexpr static int dynamic = false;
+#if 0
   pvecsta<ntype,N>& operator=(const pvecsta<ntype,N>& v1)
     {
       int i;
       for (i=0; i < N; i++)
 	  v[i] = v1.v[i];
       return (*this);
-    }};
+    }
+#endif
+};
 // template for a dynamic vector (i.e. allocated with new)
 template <class ntype, int N> class pvecdyn {
   //int nr, nc;
