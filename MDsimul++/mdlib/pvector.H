@@ -309,15 +309,14 @@ double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2)
 #ifdef LAZY_EVAL
 // ADDITION
 // add expression template with point at the right
-  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> AnOpV<ntype,N, VOpTypes::VecPlusVec, AnOpV<ntype,N, tipo, Lhs, Rhs>, pvector<ntype,N>> 
-inline operator+(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
+  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
+inline auto operator+(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
 {
   return AnOpV<ntype, N, VOpTypes::VecPlusVec, AnOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> AnOpV< ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, 
-  AnOpV<ntype, N, tipo, Lhs, Rhs> > 
-inline operator+(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
+inline auto operator+(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
   return AnOpV< ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, AnOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
@@ -343,21 +342,20 @@ inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
 template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline AnOpV<ntype, N, VOpTypes::VecPlusVec, AnOpV<ntype, N, tipo, LLhs, LRhs>, AnOpV<ntype, N, tipo, RLhs, RRhs>> operator+(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline auto operator+(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
   return  AnOpV<ntype, N, VOpTypes::VecPlusVec, AnOpV<ntype, N, tipo, LLhs, LRhs>, AnOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // SUBTRACTION
 // add expression template with point at the right
-  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> AnOpV<ntype,N, VOpTypes::VecMinusVec, AnOpV<ntype,N, tipo, Lhs, Rhs>, pvector<ntype,N>> 
-inline operator-(AnOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
+  template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
+inline auto operator-(AnOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
 {
   return AnOpV<ntype, N, VOpTypes::VecMinusVec, AnOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
 } 
 // add expression template with point at the left
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> AnOpV< ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, 
-  AnOpV<ntype, N, tipo, Lhs, Rhs> > 
-inline operator-(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator-(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
   return AnOpV< ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, AnOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
@@ -382,7 +380,7 @@ inline operator-(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline AnOpV<ntype, N, VOpTypes::VecMinusVec, AnOpV<ntype, N, tipo, LLhs, LRhs>, AnOpV<ntype, N, tipo, RLhs, RRhs>> operator-(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+inline auto operator-(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
   return  AnOpV<ntype, N, VOpTypes::VecMinusVec, AnOpV<ntype, N, tipo, LLhs, LRhs>, AnOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
@@ -424,8 +422,8 @@ inline ntype operator*(pvector<ntype,N> const& vL, AnOpV<ntype, N, tipo, Lhs, Rh
   return vL*vR;
 }
 // PmOvV times scalar
-template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> AnOpV<ntype,N, VOpTypes::VecTimesScal, AnOpV<ntype,N, tipo, Lhs, Rhs>, ntype> 
-inline operator*(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p)
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
+inline auto operator*(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p)
 {
   return AnOpV<ntype, N, VOpTypes::VecTimesScal, AnOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, p);
 }
@@ -446,7 +444,7 @@ inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
 }
 // AnOpV divided by scalar
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
- inline pvector<ntype, N> operator /(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& param) 
+ inline auto operator /(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& param) 
     {
       int i;
       pvector<ntype,N> vL;
