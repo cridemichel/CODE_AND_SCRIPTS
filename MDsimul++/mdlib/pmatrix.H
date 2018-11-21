@@ -34,8 +34,42 @@ extern int dgetri_(int *__n, double *__a, int *__lda,
         int *__ipiv, double *__work, int*__lwork, int *__info);
 extern int sgetri_(int *__n, float *__a, int *__lda,
         int *__ipiv, float *__work, int*__lwork, int *__info);
+extern void dgemv_(char* TRANSA, int* M, int *N, double* ALPHA,
+	  const double *A, int *LDA, const double *X, int *incx, double *BETA, double *Y, int *incy);  
+extern void sgemv_(char* TRANSA, int* M, int *N, float* ALPHA,
+	  const float *A, int *LDA, const float *X, int *incx, float *BETA, float *Y, int *incy);      
 }
 #endif
+//Matrix times vector
+void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha=1.0, double beta=0.0)
+{
+  double ALPHA, BETA;
+  int LDA, M, N, incx=1, incy=1;
+  M=N=n;
+  ALPHA=alpha;
+  BETA=beta; 
+  LDA=n;
+#ifdef __APPLE__
+  cblas_dgemv(CblasRowMajor, (ta=='t')?CblasNoTrans:CblasTrans, n, n, alpha, A, LDA, X, 1, beta, Y, 1);
+#else
+  dgemv_(&ta, &M, &N, &ALPHA, A, &LDA, X, &incx, &BETA, Y, &incy);
+#endif
+}
+
+void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha=1.0, float beta=0.0)
+{
+  float ALPHA, BETA;
+  int LDA, M, N, incx=1, incy=1;
+  M=N=n;
+  ALPHA=alpha;
+  BETA=beta; 
+  LDA=n;
+#ifdef __APPLE__
+  cblas_sgemv(CblasRowMajor, (ta=='t')?CblasNoTrans:CblasTrans, n, n, alpha, A, LDA, X, 1, beta, Y, 1);
+#else
+  sgemv_(&ta, &M, &N, &ALPHA, A, &LDA, X, &incx, &BETA, Y, &incy);
+#endif
+}
 //LU decomposition lapack routines
 void wrap_dgetrf(double *A, int *IPIV, int n)
 {
@@ -895,12 +929,40 @@ public:
     {
       int i, j;
       pvector <ntype,N> v2;
+#ifdef USE_LAPACK
+      if constexpr (N > NMAXMUL) 
+	{
+	  if constexpr (is_same<ntype, double>::value)
+	    wrap_dgemv('t', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
+	  else if constexpr (is_same<ntype, float>::value)
+	    wrap_sgemv('t', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
+	  else
+	    {
+	      for (i=0; i < N; i++)
+		{
+		  v2.v[i]=0;
+		  for (j=0; j < N; j++)
+		    v2.v[i] += m[i][j]*v1.v[j];
+		}
+	    }
+	}
+      else
+	{
+    	  for (i=0; i < N; i++)
+	    {
+    	      v2.v[i]=0;
+	      for (j=0; j < N; j++)
+		v2.v[i] += m[i][j]*v1.v[j];
+	    }
+	}
+#else	
       for (i=0; i < N; i++)
 	{
 	  v2.v[i]=0;
 	  for (j=0; j < N; j++)
 	    v2.v[i] += m[i][j]*v1.v[j];
 	}
+#endif
       return v2;
     }
   // transpose of v1 times m1
@@ -908,12 +970,34 @@ public:
     {
       int i, j;
       pvector <ntype,N> v2;
+#ifdef USE_LAPACK
+      if constexpr (N > NMAXMUL) 
+	{
+	  if constexpr (is_same<ntype, double>::value)
+	    wrap_dgemv('n', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
+	  else if constexpr (is_same<ntype, float>::value)
+	    wrap_sgemv('n', &(v2.m[0][0]), &(m[0][0]), &(v1.v[0]), N);
+	  else
+	    {
+    	      v2.v[i]=0;
+    	      for (j=0; j < N; j++)
+    		v2.v[i] += v1.v[j]*m1.m[j][i];
+	    }
+	}
+      else
+	{
+    	  v2.v[i]=0;
+	  for (j=0; j < N; j++)
+	    v2.v[i] += v1.v[j]*m1.m[j][i];
+	}
+#else	
       for (i=0; i < N; i++)
 	{
 	  v2.v[i]=0;
 	  for (j=0; j < N; j++)
 	    v2.v[i] += v1.v[j]*m1.m[j][i];
 	}
+#endif
       return v2;
     }
   inline ntype* operator[](const int& i)

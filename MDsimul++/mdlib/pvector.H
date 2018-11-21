@@ -130,10 +130,10 @@ public:
 //choose dynamnic or static base class depending on N
 template <class ntype, int N> using pvecbase = typename std::conditional<(N>vecpars::NMAX),pvecdyn <ntype, N>,pvecsta <ntype, N>>::type;
 template <class ntype, int N> class pvector : public pvecbase<ntype,N>, vecpars {
-  using pvecbase<ntype,N>::v;
   //int vsize;
-  static const int maxdigits=numeric_limits<ntype>::digits10;
 public:
+  using pvecbase<ntype,N>::v;
+  static const int maxdigits=numeric_limits<ntype>::digits10;
 #ifdef LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
     pvector<ntype,N>& operator=(AnOpV<ntype,N, tipo, Lhs, Rhs> const& op) {
