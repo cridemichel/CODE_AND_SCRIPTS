@@ -177,7 +177,11 @@ public:
 	  int i;
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] + v1.v[i];
-	  return std::move(v2);
+
+	  if constexpr (N > NMAX)
+	    return std::move(v2);
+	  else
+	    return v2;
 	}
     }
   inline pvector<ntype,N> subtraction(const pvector<ntype,N>& v1) const
@@ -195,7 +199,10 @@ public:
 	  pvector<ntype, N> v2;
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] - v1.v[i];
-	  return std::move(v2);
+	  if constexpr (N > NMAX)
+	    return std::move(v2);
+	  else
+	    return v2;
 	}
     }
 
@@ -215,7 +222,11 @@ public:
       pvector<ntype,N> lv;
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
-      return std::move(lv);
+
+      if constexpr (N > NMAX)
+	return std::move(lv);
+      else
+	return lv;
     }
 #endif
   inline pvector<ntype,N> vecscal(const double& param) const
@@ -224,7 +235,10 @@ public:
       pvector<ntype,N> lv;
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
-      return std::move(lv);
+      if constexpr (N > NMAX)
+	return std::move(lv);
+      else
+	return lv;
     }
   friend pvector<ntype,N> operator *(const ntype& param, const pvector<ntype,N>& v) 
     {
@@ -232,7 +246,11 @@ public:
       pvector<ntype,N> lv;
       for (i=0; i < N; i++)
 	lv.v[i] = v.v[i]*param;
-      return std::move(lv);
+
+      if constexpr (N > NMAX)
+	return std::move(lv);
+      else
+	return lv;
     }
 
   inline ntype& operator[](const int& i)

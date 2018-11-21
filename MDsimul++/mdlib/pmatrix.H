@@ -141,6 +141,7 @@ template <class ntype, int N, int M> class pmatrix {
 public:
   ntype m[N][M];
   constexpr static int dynamic = false;
+#if 0
   pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
     {
       int i,j;
@@ -148,7 +149,9 @@ public:
 	for (j=0; j < N; j++)
 	  m[i][j] = m1.m[i][j];
       return (*this);
-    }};
+    }
+#endif
+};
 template <class ntype, int N, int M> class pmatrixd {
   //int nr, nc;
 public:
@@ -375,7 +378,7 @@ public:
       for (auto i=0; i < N; i++)
 	for (auto j=0; j < N; j++)
 	  MI[i][j] = (i==j)?1.0:0.0;
-      return std::move(MI);
+     return MI;
     }
 #endif
 #ifdef LAZY_EVAL
@@ -436,7 +439,10 @@ public:
     	      {
       		m2.m[i][j] = m[i][j] + m1.m[i][j];
     	      }
-	  return std::move(m2);
+	  if constexpr (N > NMAX)
+	    return std::move(m2);
+	  else
+	    return m2;
 	}
     }
   inline pmatrixq<ntype,N> subtraction(const pmatrixq<ntype,N>& m1) const
@@ -472,7 +478,10 @@ public:
     		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
 	  }
-	  return std::move(m2);
+	  if constexpr (N > NMAX)
+	    return std::move(m2);
+	  else 
+	    return m2;
 	}
     }
 
@@ -780,7 +789,11 @@ public:
 	}
       else
 	m1=invgen(); 
-      return std::move(m1);
+
+      if constexpr (N > NMAX)
+	return std::move(m1);
+      else
+	return m1;
     }
   inline pmatrixq<ntype, N>& operator += (const pmatrixq<ntype, N>& m1)
     {
@@ -851,7 +864,10 @@ public:
     }
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>& m1) 
     {
-      return std::move((*this).mul(m1));// std:move is needed otherwise move constructor will not be used!!
+      if constexpr (N > NMAX)
+   	return std::move((*this).mul(m1));// std:move is needed otherwise move constructor will not be used!!
+      else
+   	return (*this).mul(m1);// std:move is needed otherwise move constructor will not be used!!
     }
 #if 0
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>&& m1) 
@@ -868,7 +884,10 @@ public:
   
   inline pmatrixq<ntype,N> operator /(const pmatrixq<ntype,N>& m1) 
     {
-      return std::move((*this).mul(m1.inv()));// std:move is needed otherwise move constructor will not be used!!	
+      if constexpr (N > NMAX)
+   	return std::move((*this).mul(m1.inv()));// std:move is needed otherwise move constructor will not be used!!	
+      else 
+	return (*this).mul(m1.inv());
     }
   
   // matrix times vector
@@ -1047,6 +1066,7 @@ public:
 	} 
       else if constexpr (N==4)
 	{
+	  //cout << pmatrix<ntype,N,N>::dynamic;
 	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0] + pmatrixq::m[0][3]*m1.m[3][0];
 	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1] + pmatrixq::m[0][3]*m1.m[3][1];
 	  m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2] + pmatrixq::m[0][3]*m1.m[3][2];
