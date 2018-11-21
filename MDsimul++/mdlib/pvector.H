@@ -51,7 +51,7 @@ struct AnOpV {
     Rhs const& get_rhs() const { return rhs; }
 };
 #endif
-//NMAX_=45, int MAXSTRA_=40, int NMAXINV_=40, int NMAXMUL_=10, int NSTA_=8, int NADD_=5
+//NMAX_=45, int MAXSTRA_=40, int NMAXINV_=40, int NMAXMUL_=10, int NSTA_=8, int NLAZY_=5
 struct vecpars
 {
   // params for my class
@@ -60,7 +60,7 @@ struct vecpars
   static const int NMAXINV = 40; // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
   static const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
-  static const int NADD = 5;// value below which does not use lazy evaluation for addition
+  static const int NLAZY = 5;// value below which does not use lazy evaluation for addition
 };
 
 // template for a static vector
@@ -327,11 +327,11 @@ inline auto operator+(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs>
 // altrimenti resituisce AnOpV e usa la lazy evaluation
 
 template <typename ntype, int N> 
-// conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,AnOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
+// conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
+  typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
 inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs) 
 {
-  if constexpr (N <= vecpars::NADD)
+  if constexpr (N <= vecpars::NLAZY)
     {
       return lhs.addition(rhs); //normal evaluation
     }
@@ -365,11 +365,11 @@ inline auto operator-(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs>
 // se N < NSTA restituisce pvector e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpV e usa la lazy evaluation
 template <typename ntype, int N> 
-// conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,AnOpV<ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
+// conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
+  typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
 inline operator-(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs) 
 {
-  if constexpr (N <= vecpars::NADD)
+  if constexpr (N <= vecpars::NLAZY)
     {
       return lhs.subtraction(rhs); //normal evaluation
     }
@@ -430,10 +430,10 @@ inline auto operator*(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p
 }
 
 template<typename ntype, int N>
-  typename std::conditional<(N<=vecpars::NADD),pvector<ntype,N>,AnOpV<ntype,N, VOpTypes::VecTimesScal, pvector<ntype,N>, ntype>>::type
+  typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype,N, VOpTypes::VecTimesScal, pvector<ntype,N>, ntype>>::type
 inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
 {
-  if constexpr (N <= vecpars::NADD)
+  if constexpr (N <= vecpars::NLAZY)
     {
       return lhs.vecscal(rhs); //normal evaluation
     }

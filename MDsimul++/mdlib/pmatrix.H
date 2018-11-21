@@ -224,7 +224,7 @@ inverse4(void) {
     return ;
 }
 #endif
-//NMAX_=45, int MAXSTRA_=40, int NMAXINV_=40, int NMAXMUL_=10, int NSTA_=8, int NADD_=5
+//NMAX_=45, int MAXSTRA_=40, int NMAXINV_=40, int NMAXMUL_=10, int NSTA_=8, int NLAZY_=5
 struct matpars
 {
   // params for my class
@@ -233,8 +233,12 @@ struct matpars
   static const int NMAXINV = 40; // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
   static const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
-  static const int NADD = 5;// value below which does not use lazy evaluation for addition
+  static const int NLAZY = 5;// value below which does not use lazy evaluation for addition
 };
+// identity matrix recursively defined
+//
+
+
 // for large matrices use dynamic allocation to avoid stack overflow!
 template <class ntype, int N> using pmatrixb = typename std::conditional<(N>matpars::NMAX),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type;
 
@@ -364,7 +368,7 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public m
     }
 public:
   // TODO: make this static
-  inline auto I() const
+  inline pmatrixq<ntype,N> I() const
     {
       pmatrixq<ntype,N> MI;
       for (auto i=0; i < N; i++)
@@ -1210,11 +1214,11 @@ inline auto operator+(pmatrixq<ntype,N> const& p, AnOpM<ntype, N, tipo, Lhs, Rhs
 // se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int N> 
-  // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,AnOpM<ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+  // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
+  typename std::conditional<(N<=matpars::NLAZY),pmatrixq<ntype,N>,AnOpM<ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
-  if constexpr (N <= pmatrixq<ntype,N>::NADD)
+  if constexpr (N <= pmatrixq<ntype,N>::NLAZY)
     {
       return lhs.addition(rhs); //normal evaluation
     }
@@ -1248,11 +1252,11 @@ inline auto operator-(pmatrixq<ntype,N> const& p, AnOpM<ntype, N, tipo, Lhs, Rhs
 // se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int N> 
-  // conditional restituisce il giusto tipo in base alla condizione (N <= NADD)
-  typename std::conditional<(N<=matpars::NADD),pmatrixq<ntype,N>,AnOpM<ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
+  // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
+  typename std::conditional<(N<=matpars::NLAZY),pmatrixq<ntype,N>,AnOpM<ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>>::type
 inline operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs) 
 {
-  if constexpr (N <= matpars::NADD)
+  if constexpr (N <= matpars::NLAZY)
     {
       return lhs.subtraction(rhs); //normal evaluation
     }
