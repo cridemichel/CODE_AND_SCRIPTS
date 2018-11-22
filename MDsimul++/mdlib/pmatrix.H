@@ -20,7 +20,7 @@
 //#include <lapacke.h>
 #include <Accelerate/Accelerate.h>
 #endif
-#define MOVE_SEMANTIC
+#define MAT_MOVE_SEMANTIC
 #define MAT_LAZY_EVAL
 #ifndef __APPLE__
 extern "C" {
@@ -215,7 +215,7 @@ public:
 	  m[i][j] = m1.m[i][j];
       return (*this);
     }
-#ifdef MOVE_SEMANTIC
+#ifdef MAT_MOVE_SEMANTIC
   // move assignment
   pmatrixd<ntype,N,M>& operator=(pmatrixd<ntype,N,M>&& m1)
     {
@@ -231,7 +231,7 @@ public:
       m = new ntype[N][M];
       (*this) = m1;
     }
-#ifdef MOVE_SEMANTIC
+#ifdef MAT_MOVE_SEMANTIC
   // move constructor
   pmatrixd(pmatrixd<ntype,N,M>&& m1)
     {
@@ -675,6 +675,9 @@ public:
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    {    
+	      // Transpose(Inverse(M))=Inverse(Transpose(M))
+	      // hence we do not have to do anything to account
+	      // for column major order of lapack/blas routines
 	      int *IPIV = new int[N];
 	      wrap_dgetrf(&(om.m[0][0]), IPIV, N);
 	      wrap_dgetri(&(om.m[0][0]), IPIV, N);
@@ -1581,19 +1584,6 @@ inline auto operator /(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& 
 {
   return AnOpM<ntype,N,MOpTypes::MatDivScal,AnOpM<ntype,N,tipo,Lhs,Rhs>, ntype>(lhs,rhs);
 }
-#if 0
-// AnOpM divided by scalar
-template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
- inline auto operator /(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
-    {
-      int i,j;
-      pmatrixq<ntype,N> mL;
-      for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
-	  mL[i][j] = lhs.get_m(i,j)/param;
-      return mL;
-    }
-#endif
 #endif
 typedef pmatrixq<double,3> pmatrix3d;
 typedef pmatrixq<int,3>    pmatrix3i;

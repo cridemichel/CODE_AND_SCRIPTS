@@ -5,7 +5,7 @@
 #include<iostream>
 #include<iomanip>
 using namespace std;
-#define MOVE_SEMANTIC
+#define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy
@@ -97,7 +97,7 @@ public:
 	  v[i] = v1.v[i];
       return (*this);
     }
-#ifdef MOVE_SEMANTIC
+#ifdef VEC_MOVE_SEMANTIC
   // move assignment
   pvecdyn<ntype,N>& operator=(pvecdyn<ntype,N>&& v1)
     {
@@ -113,7 +113,7 @@ public:
       v = new ntype[N];
       (*this) = v1;
     }
-#ifdef MOVE_SEMANTIC
+#ifdef VEC_MOVE_SEMANTIC
   // move constructor
   pvecdyn(pvecdyn<ntype,N>&& v1)
     {
