@@ -186,22 +186,14 @@ struct AnOpM
   Rhs const& get_rhs() const { return rhs; }
 };
 #endif
+// static base class
 template <class ntype, int N, int M> class pmatrix {
   //int nr, nc;
 public:
   ntype m[N][M];
   constexpr static int dynamic = false;
-#if 0
-  pmatrix<ntype,N,M>& operator=(const pmatrix<ntype,N,M>& m1)
-    {
-      int i,j;
-      for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
-	  m[i][j] = m1.m[i][j];
-      return (*this);
-    }
-#endif
 };
+// dynamic base class (with move assignment and move constructor properly defined)
 template <class ntype, int N, int M> class pmatrixd {
   //int nr, nc;
 public:
@@ -227,8 +219,6 @@ public:
   // copy constructor 
   pmatrixd(const pmatrixd<ntype,N,M>& m1)
     {
-      //nr=N;
-      //nc=M;
       m = new ntype[N][M];
       (*this) = m1;
     }
@@ -236,9 +226,6 @@ public:
   // move constructor
   pmatrixd(pmatrixd<ntype,N,M>&& m1)
     {
-      //nr=N;
-      //nc=M;
-      //cout << "qui\n";
       (*this).m = m1.m;
       m1.m=nullptr;
     }
@@ -246,9 +233,6 @@ public:
   // default constructor
   pmatrixd()
     {
-      //nr=N;
-      //nc=M;
-      //cout << " //nel costruttore//\n ";
       m = new ntype[N][M];
     }
   // destructor
@@ -257,28 +241,8 @@ public:
       delete[] m;
     }
 };	
-// redefine also *= += and
-// define inv() det() i.e. inverse and determinant
 // matrici quadrate NxN
 using namespace std;
-#if 0
-namespace matrixns
-{
-  template <class ntype> ntype abs(ntype a)
-    {
-      return abs(a);
-    }
-}
-using namespace matrixns;
-#endif
-#if 0
-template<int N>
-typename enable_if<N == 4>::type
-inverse4(void) {
-    return ;
-}
-#endif
-//NMAX_=45, int MAXSTRA_=40, int NMAXINV_=40, int NMAXMUL_=10, int NSTA_=8, int NLAZY_=5
 struct matpars
 {
   // params for my class
