@@ -139,9 +139,9 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 #endif
 #ifdef LAZY_EVAL
 //REMARK on Lazyness Mechanics:
-//each class it is an operation of Lhs and Rhs which store the values of the operands
-//only when the method get_m is called the operation is performed 
-//and this happens only as assign operator of pmatrixq class gets called (see below)
+//each class it is an operation of Lhs and Rhs, this class stores the values of the operands
+//and only when the method get_m is called the operation is performed.
+//Evaluation happens only as assign operator of pmatrixq class gets called (see below)
 //
 //Matrix operation types
 struct MOpTypes
@@ -159,13 +159,21 @@ struct AnOpM
 
   inline ntype get_m(int i, int j) const {
     if constexpr (tipo == MOpTypes::MatPlusMat)// mat + mat
-      return lhs.get_m(i,j) + rhs.get_m(i,j);
+      {
+	return lhs.get_m(i,j) + rhs.get_m(i,j);
+      }
     else if constexpr (tipo == MOpTypes::MatMinusMat) // mat - mat
-      return lhs.get_m(i,j) - rhs.get_m(i,j);
+      {
+	return lhs.get_m(i,j) - rhs.get_m(i,j);
+      }
     else if constexpr (tipo == MOpTypes::MatTimesScal) // mat * scalar [NOT IMPLEMENTED YET]
-      return lhs.get_m(i,j)*rhs;
+      {
+	return lhs.get_m(i,j)*rhs;
+      }
     else if constexpr (tipo == MOpTypes::ScalTimesMat) // scalar * mat [NOT IMPLEMENTED YET]
-      return lhs*rhs.get_m(i,j);
+      {
+	return lhs*rhs.get_m(i,j);
+      }
     return 0;
   }
   Lhs const& get_lhs() const { return lhs; }//unused
