@@ -954,13 +954,6 @@ public:
       else
    	return (*this).mul(m1);// std:move is needed otherwise move constructor will not be used!!
     }
-#if 0
-  inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>&& m1) 
-    {
-      //cout << "qui\n";
-      return (*this).mul(m1);	
-    }
-#endif
    inline pmatrixq<ntype,N>& operator /=(const pmatrixq<ntype,N>& m1) 
     {
       *this = (*this).mul(m1.inv());	
@@ -1438,7 +1431,47 @@ inline auto operator-(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperandconst
 {
   return  AnOpM<ntype, N, MOpTypes::MatMinusMat, AnOpM<ntype, N, tipo, LLhs, LRhs>, AnOpM<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
-   
+// DIVISION
+// AnOpM divided by AnOpM
+ template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator/(AnOpM<ntype,N, tipo, LLhs, LRhs> const& lhs, AnOpM<ntype,N, tipo, RLhs, RRhs> const& rhs)
+{
+  pmatrixq<ntype, N> mL, mR;
+  int i, j;
+  for (i=0; i < N; i++)
+    for (j=0; j < N; j++)
+      {
+	mL[i][j] = lhs.get_m(i,j);
+	mR[i][j] = rhs.get_m(i,j);
+      }
+  return mL/mR;
+}
+// AnOpM divided by matrix
+ template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator/(AnOpM<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& mR)
+{
+  pmatrixq<ntype, N> mL;
+  int i, j;
+  for (i=0; i < N; i++)
+    for (j=0; j < N; j++)
+      {
+	mL[i][j] = lhs.get_m(i,j);
+      }
+  return mL*mR;
+}
+// matrix divided by AnOpM 
+ template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator/(pmatrixq<ntype,N> const& mL, AnOpM<ntype,N, tipo, Lhs, Rhs> const& rhs)
+{
+  pmatrixq<ntype, N> mR;
+  int i, j;
+  for (i=0; i < N; i++)
+    for (j=0; j < N; j++)
+      {
+	mL[i][j] = rhs.get_m(i,j);
+      }
+  return mL/mR;
+}
 ///
 // MULTIPLICATION 
 //
@@ -1550,7 +1583,6 @@ inline auto operator /(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& 
 {
   return AnOpM<ntype,N,MOpTypes::MatDivScal,AnOpM<ntype,N,tipo,Lhs,Rhs>, ntype>(lhs,rhs);
 }
-  
 #if 0
 // AnOpM divided by scalar
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
