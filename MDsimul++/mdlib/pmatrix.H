@@ -1,5 +1,5 @@
 #ifndef _PMATRIX_
-/* N.B. le prestazione sono quelle di armadillo per N > 5 ma molto migliori per N < 5 */
+/* N.B. current status: better than armadillo and glm */
 #define _PMATRIX_
 //#define USE_STRASSEN
 // matrici NxM
@@ -73,7 +73,6 @@ void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float 
 //LU decomposition lapack routines
 void wrap_dgetrf(double *A, int *IPIV, int n)
 {
-  //int *IPIV = new int[N+1];
   int N=n;
   int INFO;
   dgetrf_(&N,&N,A,&N,IPIV,&INFO);
@@ -115,7 +114,8 @@ void wrap_dgemm(double *C, const double *A, const double *B, const int n, double
 #ifdef __APPLE__
   cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
 #else
-  // LAPACK and BLAS use column major convention hence we have to swap A and B
+  // LAPACK and BLAS use column major (matrix is a sequence of columns, i.e.
+  // ABC|DEF|GHI is a matrix with columns ABC, DEF and GHI) convention hence we have to swap A and B
   dgemm_(&ta, &tb, &M, &N, &K, &ALPHA, B, &LDA, A, &LDB, &BETA, C, &LDC);      
 #endif
 }
@@ -139,9 +139,10 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 #endif
 #ifdef MAT_LAZY_EVAL
 //REMARK on Lazyness Mechanics:
-//each class it is an operation of Lhs and Rhs, this class stores the values of the operands
-//and only when the method get_m is called the operation is performed.
-//Evaluation happens only as assign operator of pmatrixq class gets called (see below)
+//each class is an operation with operands Lhs and Rhs, the instance of the class (i.e. the object)
+//stores the values of the operands and only when the method get_m is called the operation is performed.
+//Evaluation happens only as assign operator of pmatrixq class gets called (see below) or casting 
+//is enforced.
 //
 //Matrix operation types
 struct MOpTypes
@@ -167,15 +168,15 @@ struct AnOpM
       {
 	return lhs.get_m(i,j) - rhs.get_m(i,j);
       }
-    else if constexpr (tipo == MOpTypes::MatTimesScal) // mat * scalar [NOT IMPLEMENTED YET]
+    else if constexpr (tipo == MOpTypes::MatTimesScal) // mat * scalar 
       {
 	return lhs.get_m(i,j)*rhs;
       }
-    else if constexpr (tipo == MOpTypes::ScalTimesMat) // scalar * mat [NOT IMPLEMENTED YET]
+    else if constexpr (tipo == MOpTypes::ScalTimesMat) // scalar * mat 
       {
 	return lhs*rhs.get_m(i,j);
       }
-    else if constexpr (tipo == MOpTypes::MatDivScal) // scalar * mat [NOT IMPLEMENTED YET]
+    else if constexpr (tipo == MOpTypes::MatDivScal) // scalar * mat 
       {
 	return lhs.get_m(i,j)/rhs;
       }
