@@ -141,7 +141,8 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 //REMARK on Lazyness Mechanics:
 //each class is an operation with operands Lhs and Rhs, the instance of the class (i.e. the object)
 //stores the values of the operands and only when the method get_m is called the operation is performed.
-//Evaluation happens only as assign operator of pmatrixq class gets called (see below) or casting 
+//Evaluation happens only as assign operator of pmatrixq class gets called (see below) or constructor is called 
+//with an AnOpM argument.
 //is enforced.
 //
 //Matrix operation types
@@ -247,28 +248,24 @@ struct matpars
 {
   // params for my class
   static const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
-  static const int NMAXSTRA = 40;
+  static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
   static const int NMAXINV = 40; // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
-  static const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
+  static const int NSTA = 8;// value below which static objects are declared in operator funcs (only if m is not dynamically allocated)
   static const int NLAZY = 5;// value below which does not use lazy evaluation for addition
 };
-// identity matrix recursively defined
-//
-
-
 // for large matrices use dynamic allocation to avoid stack overflow!
+// conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
+// case)
 template <class ntype, int N> using pmatrixb = typename std::conditional<(N>matpars::NMAX),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type;
 
 template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public matpars
-  //public std::conditional<(N>100),pmatrixd <ntype, N, N>,pmatrix <ntype, N, N>>::type 
 {
   using pmatrixb<ntype,N>::m;
-  //int n, maxdigits;
-  // il const vuol dire che il puntore this, passato ai membri di una classe implicitamente, viene passato come const
-  //using type = pmatrixq;
+  // il const vuol dire che il puntatore this, passato ai membri di una classe implicitamente, viene passato come const
   inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d) const
     {
+      /* LU decomposition routine  borrowed from Numerical Recipe */
       /* return the LU decomposition of calling matrix (i.e. *this) */
       pmatrixq <ntype,N> m1;
       const double TINY=1E-40;
@@ -385,8 +382,7 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public m
       return b;
     }
 public:
-#if 1
-  // TODO: make this static
+  // Build identity matrix, simple as that
   inline pmatrixq<ntype,N> I() const
     {
       pmatrixq<ntype,N> MI;
@@ -395,8 +391,9 @@ public:
 	  MI[i][j] = (i==j)?1.0:0.0;
      return MI;
     }
-#endif
 #ifdef MAT_LAZY_EVAL
+  // -= and += are overloaded in such a way that if rvalue is an AnOpM (lazy class)
+  // they trigger lazy expression evalution 
   template<typename Lhs, typename Rhs, int tipo>
     inline pmatrixq<ntype, N>& operator -= (AnOpM<ntype,N, tipo, Lhs, Rhs> const& op)
       {
@@ -416,6 +413,7 @@ public:
 	  m[i][j] += op.get_m(i,j);
       return (*this);
     }
+  // assignment operator triggers evaluation of lazy expressions
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>& operator=(AnOpM<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
