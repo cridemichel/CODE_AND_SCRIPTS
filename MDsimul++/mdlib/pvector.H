@@ -6,8 +6,8 @@
 #include<iomanip>
 using namespace std;
 #define MOVE_SEMANTIC
-#define LAZY_EVAL
-#ifdef LAZY_EVAL
+#define VEC_LAZY_EVAL
+#ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy
 struct VOpTypes
 {  
@@ -31,7 +31,9 @@ struct AnOpV {
       else if constexpr (tipo == VOpTypes::VecMinusVec) // vec - vec
 	return lhs.get_v(i) - rhs.get_v(i);
       else if constexpr (tipo == VOpTypes::VecTimesScal) // vec * scalar
-	return lhs.get_v(i)*rhs;
+	{
+	  return lhs.get_v(i)*rhs;
+	}
       else if constexpr (tipo == VOpTypes::ScalTimesVec) // scalar * vec NOT IMPLEMENTED YET
 	return rhs.get_v(i)*lhs;
       return 0;
@@ -55,12 +57,9 @@ struct AnOpV {
 struct vecpars
 {
   // params for my class
-  static const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
-  static const int NMAXSTRA = 40;
-  static const int NMAXINV = 40; // if N>NAMXINV use LAPACK LU DECOMP
-  static const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
-  static const int NSTA = 8;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
-  static const int NLAZY = 5;// value below which does not use lazy evaluation for addition
+  static const int NMAX = 1000; // if N>NMAX use dynamic allocation of matrices
+  static const int NSTA = 50;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
+  static const int NLAZY = 25;// value below which does not use lazy evaluation for addition
 };
 
 // template for a static vector
@@ -134,7 +133,7 @@ template <class ntype, int N> class pvector : public pvecbase<ntype,N>, vecpars 
 public:
   using pvecbase<ntype,N>::v;
   static const int maxdigits=numeric_limits<ntype>::digits10;
-#ifdef LAZY_EVAL
+#ifdef VEC_LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
     pvector<ntype,N>& operator=(AnOpV<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
@@ -152,7 +151,7 @@ public:
 #endif
 
 
-#ifndef LAZY_EVAL
+#ifndef VEC_LAZY_EVAL
   //ntype v[N];
   inline pvector<ntype,N> operator +(const pvector<ntype,N>& param)
     {
@@ -218,7 +217,7 @@ public:
     }
 
   // vec times scalar
-#ifndef LAZY_EVAL
+#ifndef VEC_LAZY_EVAL
   inline pvector<ntype,N> operator *(const double& param) 
     {
       int i;
@@ -328,7 +327,7 @@ double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2)
     }
   return sum;
 }
-#ifdef LAZY_EVAL
+#ifdef VEC_LAZY_EVAL
 // ADDITION
 // add expression template with point at the right
   template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 

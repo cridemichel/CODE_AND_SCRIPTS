@@ -21,7 +21,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 #define MOVE_SEMANTIC
-#define LAZY_EVAL
+#define MAT_LAZY_EVAL
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -137,7 +137,7 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 #endif
 }
 #endif
-#ifdef LAZY_EVAL
+#ifdef MAT_LAZY_EVAL
 //REMARK on Lazyness Mechanics:
 //each class it is an operation of Lhs and Rhs, this class stores the values of the operands
 //and only when the method get_m is called the operation is performed.
@@ -242,6 +242,7 @@ public:
     {
       //nr=N;
       //nc=M;
+      //cout << " //nel costruttore//\n ";
       m = new ntype[N][M];
     }
   // destructor
@@ -425,7 +426,7 @@ public:
      return MI;
     }
 #endif
-#ifdef LAZY_EVAL
+#ifdef MAT_LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>& operator=(AnOpM<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
@@ -444,9 +445,10 @@ public:
   inline ntype get_m(int i, int j) const {return m[i][j];}
   inline void* get_mptr() const {return m;}
 #endif
-#ifndef LAZY_EVAL
+#ifndef MAT_LAZY_EVAL
   inline pmatrixq<ntype,N> operator+(const pmatrixq<ntype,N>& m1) const
     {
+      //cout << "sono qui<<<<<<<<<<<<\n";
       return addition(m1);
     }
   inline pmatrixq<ntype,N> operator-(const pmatrixq<ntype,N>& m1) const
@@ -1318,7 +1320,7 @@ public:
       }
 #endif
 };
-#ifdef LAZY_EVAL
+#ifdef MAT_LAZY_EVAL
 // ADDITION
 // add expression template with point at the right
   template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
