@@ -1360,7 +1360,7 @@ inline auto operator+(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype
 {
   return AnOpM<ntype, N, MOpTypes::MatPlusMat, AnOpM<ntype, N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
 } 
-// add expression template with point at the left
+// matrix plus AnOpM 
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator+(pmatrixq<ntype,N> const& p, AnOpM<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
@@ -1385,12 +1385,11 @@ inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
       return AnOpM<ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
-// caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
 // AnOpM plus AnOpM
-template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator+(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator+(const AnOpM<ntype, N, tipoL, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype, N, tipoR, RLhs, RRhs> & rightOperand)
 {
-  return  AnOpM<ntype, N, MOpTypes::MatPlusMat, AnOpM<ntype, N, tipo, LLhs, LRhs>, AnOpM<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  AnOpM<ntype, N, MOpTypes::MatPlusMat, AnOpM<ntype, N, tipoL, LLhs, LRhs>, AnOpM<ntype, N, tipoR, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // SUBTRACTION
 // AnOpM minus matrix
@@ -1424,17 +1423,16 @@ inline operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
       return AnOpM<ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
-// caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
 // AnOpM plus AnOpM
-  template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator-(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+  template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator-(const AnOpM<ntype, N, tipoL, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype, N, tipoR, RLhs, RRhs> & rightOperand)
 {
-  return  AnOpM<ntype, N, MOpTypes::MatMinusMat, AnOpM<ntype, N, tipo, LLhs, LRhs>, AnOpM<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  AnOpM<ntype, N, MOpTypes::MatMinusMat, AnOpM<ntype, N, tipoL, LLhs, LRhs>, AnOpM<ntype, N, tipoR, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // DIVISION
 // AnOpM divided by AnOpM
- template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator/(AnOpM<ntype,N, tipo, LLhs, LRhs> const& lhs, AnOpM<ntype,N, tipo, RLhs, RRhs> const& rhs)
+ template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator/(AnOpM<ntype,N, tipoL, LLhs, LRhs> const& lhs, AnOpM<ntype,N, tipoR, RLhs, RRhs> const& rhs)
 {
   pmatrixq<ntype, N> mL, mR;
   int i, j;
@@ -1476,8 +1474,8 @@ inline auto operator/(pmatrixq<ntype,N> const& mL, AnOpM<ntype,N, tipo, Lhs, Rhs
 // MULTIPLICATION 
 //
 // AnOpM times AnOpM
-  template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator*(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperand, const AnOpM<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+  template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator*(const AnOpM<ntype, N, tipoL, LLhs, LRhs> & leftOperand, const AnOpM<ntype, N, tipoR, RLhs, RRhs> & rightOperand)
 {
   pmatrixq<ntype, N> mL, mR;
   for (int i=0; i < N; i++)

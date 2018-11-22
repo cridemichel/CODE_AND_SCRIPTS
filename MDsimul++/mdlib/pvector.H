@@ -11,7 +11,7 @@ using namespace std;
 // possible types of operation that can be made lazy
 struct VOpTypes
 {  
-  static const int VecPlusVec=0, VecMinusVec=1, VecTimesScal=2, ScalTimesVec=3;
+  static const int VecPlusVec=0, VecMinusVec=1, VecTimesScal=2, ScalTimesVec=3, VecDivScal=4;
 };
 //REMARK on Lazyness Mechanics:
 //each class it is an operation of Lhs and Rhs which store the values of the operands
@@ -34,8 +34,14 @@ struct AnOpV {
 	{
 	  return lhs.get_v(i)*rhs;
 	}
-      else if constexpr (tipo == VOpTypes::ScalTimesVec) // scalar * vec NOT IMPLEMENTED YET
-	return rhs.get_v(i)*lhs;
+      else if constexpr (tipo == VOpTypes::ScalTimesVec) // scalar * vec 
+	{
+	  return rhs.get_v(i)*lhs;
+	}
+      else if constexpr (tipo == VOpTypes::VecDivScal) // scalar div vec 
+	{
+	  return lhs.get_v(i)/rhs;
+	}
       return 0;
 #ifdef _I_DO_NOT_WANT_TO_IMPLEMENT_THIS_
       else if constexpr (tipo == 5) // mat * vec 
@@ -242,7 +248,6 @@ public:
       return *this;
     }
 
-
   // vec times scalar
 #ifndef VEC_LAZY_EVAL
   inline pvector<ntype,N> operator *(const double& param) 
@@ -269,6 +274,7 @@ public:
       else
 	return lv;
     }
+#ifndef VEC_LAZY_EVAL
   friend pvector<ntype,N> operator *(const ntype& param, const pvector<ntype,N>& v) 
     {
       int i;
@@ -281,7 +287,7 @@ public:
       else
 	return lv;
     }
-
+#endif
   inline ntype& operator[](const int& i)
     {
       return v[i];
@@ -356,7 +362,7 @@ double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2)
 }
 #ifdef VEC_LAZY_EVAL
 // ADDITION
-// add expression template with point at the right
+// AnOpV plus vector 
   template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator+(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
 {
@@ -369,10 +375,9 @@ inline auto operator+(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs>
   return AnOpV< ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, AnOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
-// add two points, yield a expression template    
+// vector plus vector 
 // se N < NSTA restituisce pvector e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpV e usa la lazy evaluation
-
 template <typename ntype, int N> 
 // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
   typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>>::type
@@ -388,27 +393,27 @@ inline operator+(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
       return AnOpV<ntype, N, VOpTypes::VecPlusVec, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
-// caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
-template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator+(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+//AnOpV plus AnOpV
+template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator+(const AnOpV<ntype, N, tipoL, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipoR, RLhs, RRhs> & rightOperand)
 {
-  return  AnOpV<ntype, N, VOpTypes::VecPlusVec, AnOpV<ntype, N, tipo, LLhs, LRhs>, AnOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  AnOpV<ntype, N, VOpTypes::VecPlusVec, AnOpV<ntype, N, tipoL, LLhs, LRhs>, AnOpV<ntype, N, tipoR, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // SUBTRACTION
-// add expression template with point at the right
+// AnOpV minus vector
   template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator-(AnOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& p)
 {
   return AnOpV<ntype, N, VOpTypes::VecMinusVec, AnOpV<ntype, N, tipo, Lhs, Rhs>, pvector<ntype,N>>(lhs, p);
 } 
-// add expression template with point at the left
+// vector minus AnOpV 
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 inline auto operator-(pvector<ntype,N> const& p, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
   return AnOpV< ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, AnOpV<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
-// add two points, yield a expression template    
+// vector minus vector
 // se N < NSTA restituisce pvector e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpV e usa la lazy evaluation
 template <typename ntype, int N> 
@@ -426,18 +431,18 @@ inline operator-(pvector<ntype,N> const& lhs, pvector<ntype,N> const& rhs)
       return AnOpV<ntype, N, VOpTypes::VecMinusVec, pvector<ntype,N>, pvector<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
-// caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
-  template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator-(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+// AnOpV time AnOpV
+  template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator-(const AnOpV<ntype, N, tipoL, LLhs, LRhs> & leftOperandconst, const AnOpV<ntype, N, tipoR, RLhs, RRhs> & rightOperand)
 {
-  return  AnOpV<ntype, N, VOpTypes::VecMinusVec, AnOpV<ntype, N, tipo, LLhs, LRhs>, AnOpV<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
+  return  AnOpV<ntype, N, VOpTypes::VecMinusVec, AnOpV<ntype, N, tipoL, LLhs, LRhs>, AnOpV<ntype, N, tipoR, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
    
 ///
 // Scalar product of two AnOpV
 //
-  template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline ntype operator*(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperand, const AnOpV<ntype, N, tipo, RLhs, RRhs> & rightOperand)
+  template <typename ntype, int N, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline ntype operator*(const AnOpV<ntype, N, tipoL, LLhs, LRhs> & leftOperand, const AnOpV<ntype, N, tipoR, RLhs, RRhs> & rightOperand)
 {
   pvector<ntype, N> vR, vL;
   for (int i=0; i < N; i++)
@@ -449,7 +454,6 @@ inline ntype operator*(const AnOpV<ntype, N, tipo, LLhs, LRhs> & leftOperand, co
 }
 // AnOpV times pvector
 //
-// left AnOpV
    template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> ntype 
 inline operator*(AnOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> const& vR)
 {
@@ -458,7 +462,7 @@ inline operator*(AnOpV<ntype,N, tipo, Lhs, Rhs> const& lhs, pvector<ntype,N> con
     vL[i] = lhs.get_v(i);
   return vL*vR;
 } 
-// right AnOpV
+// vector times right AnOpV
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>  
 inline ntype operator*(pvector<ntype,N> const& vL, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
@@ -469,13 +473,35 @@ inline ntype operator*(pvector<ntype,N> const& vL, AnOpV<ntype, N, tipo, Lhs, Rh
     }
   return vL*vR;
 }
-// PmOvV times scalar
+// scalar times AnOvV 
+template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
+inline auto operator*(const ntype& lhs, AnOpV<ntype, N, tipo, Lhs, Rhs> const& rhs)
+{
+  return AnOpV<ntype, N, VOpTypes::ScalTimesVec, ntype, AnOpV<ntype, N, tipo, Lhs, Rhs>>(lhs, rhs);
+}
+// scalar times vector
+template<typename ntype, int N>
+  typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype,N, VOpTypes::ScalTimesVec, ntype, pvector<ntype,N>>>::type
+inline operator*(const ntype& lhs, pvector<ntype,N> const& rhs)
+{
+  if constexpr (N <= vecpars::NLAZY)
+    {
+      return rhs.vecscal(lhs); //normal evaluation
+    }
+  else
+    {
+      //cout << "qui N=" << N << " NSTA=" << vecpars::NSTA << "\n";
+      return AnOpV<ntype, N, VOpTypes::ScalTimesVec, ntype, pvector<ntype,N>>(lhs, rhs);
+    }
+}
+
+// AnOpV times scalar
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator*(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& p)
 {
   return AnOpV<ntype, N, VOpTypes::VecTimesScal, AnOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, p);
 }
-
+// PmOvV times scalar
 template<typename ntype, int N>
   typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype,N, VOpTypes::VecTimesScal, pvector<ntype,N>, ntype>>::type
 inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
@@ -490,16 +516,28 @@ inline operator*(pvector<ntype,N> const& lhs, const ntype& rhs)
       return AnOpV<ntype, N, VOpTypes::VecTimesScal, pvector<ntype,N>, ntype>(lhs, rhs);
     }
 }
-// AnOpV divided by scalar
-template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
- inline auto operator /(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& param) 
+// vector divided by scalar 
+  template <typename ntype, int N >
+typename std::conditional<(N<=vecpars::NLAZY),pvector<ntype,N>,AnOpV<ntype,N, VOpTypes::VecDivScal, pvector<ntype,N>, ntype>>::type
+inline operator /(pvector<ntype,N> const& lhs, const ntype& rhs) 
+{
+  if constexpr (N <= vecpars::NLAZY)
     {
-      int i;
-      pvector<ntype,N> vL;
-      for (i=0; i < N; i++)
-	  vL[i] = lhs.get_v(i)/param;
-      return vL;
+      return lhs.vecscal(1.0/rhs); //normal evaluation
     }
+  else
+    {
+      //cout << "qui N=" << N << " NSTA=" << vecpars::NSTA << "\n";
+      return AnOpV<ntype, N, VOpTypes::VecDivScal, pvector<ntype,N>, ntype>(lhs, rhs);
+    }
+}
+
+// AnOpV divided by scalar
+  template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator /(AnOpV<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& rhs) 
+{
+  return AnOpV<ntype, N, VOpTypes::VecDivScal, AnOpV<ntype, N, tipo, Lhs, Rhs>, ntype>(lhs, rhs);
+}
 #endif
 
 /* some predefined vectors useful for simulations */
