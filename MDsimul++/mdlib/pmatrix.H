@@ -138,12 +138,12 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 }
 #endif
 #ifdef MAT_LAZY_EVAL
-//REMARK on Lazyness Mechanics:
-//each class is an operation with operands Lhs and Rhs, the instance of the class (i.e. the object)
+//REMARK on Lazyness Logic:
+//each class is an operation with operands Lhs and Rhs, the instance of the class (i.e. the object created
+//when an operator is parsed by the compiler)
 //stores the values of the operands and only when the method get_m is called the operation is performed.
-//Evaluation happens only as assign operator of pmatrixq class gets called (see below) or constructor is called 
-//with an AnOpM argument.
-//is enforced.
+//Evaluation is triggered as assign operator of pmatrixq class gets called (see below) or constructor is called 
+//with an AnOpM argument (i.e. a casting from AnOpM to pmatrixq type).
 //
 //Matrix operation types
 struct MOpTypes
@@ -157,9 +157,9 @@ struct AnOpM
   Lhs const& lhs;
   Rhs const& rhs;
   AnOpM(Lhs const& lhs, Rhs const& rhs):lhs(lhs), rhs(rhs) {
-    // empty body
+    // empty body only initialize operands 
   }
-
+  // LAZY operations
   inline ntype get_m(int i, int j) const {
     if constexpr (tipo == MOpTypes::MatPlusMat)// mat + mat
       {
@@ -177,7 +177,7 @@ struct AnOpM
       {
 	return lhs*rhs.get_m(i,j);
       }
-    else if constexpr (tipo == MOpTypes::MatDivScal) // scalar * mat 
+    else if constexpr (tipo == MOpTypes::MatDivScal) // mat / scalar 
       {
 	return lhs.get_m(i,j)/rhs;
       }
@@ -247,12 +247,12 @@ using namespace std;
 struct matpars
 {
   // params for my class
-  static const int NMAX = 45; // if N>NMAX use dynamic allocation of matrices
+  static const int NMAX = 45;     // if N>NMAX use dynamic allocation of matrices
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
-  static const int NMAXINV = 40; // if N>NAMXINV use LAPACK LU DECOMP
-  static const int NMAXMUL = 10; // if N>NMAXMUL use BLAS multiplication routines
-  static const int NSTA = 8;// value below which static objects are declared in operator funcs (only if m is not dynamically allocated)
-  static const int NLAZY = 5;// value below which does not use lazy evaluation for addition
+  static const int NMAXINV = 40;  // if N>NAMXINV use LAPACK LU DECOMP
+  static const int NMAXMUL = 10;  // if N>NMAXMUL use BLAS multiplication routines
+  static const int NSTA = 8;      // value below which static objects are declared in operator funcs (only if m is not dynamically allocated)
+  static const int NLAZY = 5;     // value below which does not use lazy evaluation for addition
 };
 // for large matrices use dynamic allocation to avoid stack overflow!
 // conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
@@ -389,7 +389,7 @@ public:
       for (auto i=0; i < N; i++)
 	for (auto j=0; j < N; j++)
 	  MI[i][j] = (i==j)?1.0:0.0;
-     return MI;
+      return MI;
     }
 #ifdef MAT_LAZY_EVAL
   // -= and += are overloaded in such a way that if rvalue is an AnOpM (lazy class)
@@ -397,7 +397,7 @@ public:
   template<typename Lhs, typename Rhs, int tipo>
     inline pmatrixq<ntype, N>& operator -= (AnOpM<ntype,N, tipo, Lhs, Rhs> const& op)
       {
-      	int i, j;
+	int i, j;
 	for (i=0; i < N; i++)
 	  for (j=0; j < N; j++)
 	    m[i][j] -= op.get_m(i,j);
@@ -406,13 +406,13 @@ public:
 
   template<typename Lhs, typename Rhs, int tipo>
     inline pmatrixq<ntype, N>& operator += (AnOpM<ntype,N, tipo, Lhs, Rhs> const& op)
-    {
-      int i, j;
-      for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
-	  m[i][j] += op.get_m(i,j);
-      return (*this);
-    }
+      {
+	int i, j;
+	for (i=0; i < N; i++)
+	  for (j=0; j < N; j++)
+	    m[i][j] += op.get_m(i,j);
+	return (*this);
+      }
   // assignment operator triggers evaluation of lazy expressions
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>& operator=(AnOpM<ntype,N, tipo, Lhs, Rhs> const& op) {
@@ -423,8 +423,7 @@ public:
     }
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>(AnOpM<ntype,N, tipo, Lhs, Rhs> const& op) {
-      //cout << "qui\n";
-       for (int i=0; i < N; i++)
+      for (int i=0; i < N; i++)
 	for (int j=0; j < N; j++)
 	  m[i][j] = op.get_m(i,j);
     }
@@ -433,9 +432,9 @@ public:
   inline void* get_mptr() const {return m;}
 #endif
 #ifndef MAT_LAZY_EVAL
+  // if lazyness is disabled (e.g. matrices are small) these functions get called
   inline pmatrixq<ntype,N> operator+(const pmatrixq<ntype,N>& m1) const
     {
-      //cout << "sono qui<<<<<<<<<<<<\n";
       return addition(m1);
     }
   inline pmatrixq<ntype,N> operator-(const pmatrixq<ntype,N>& m1) const
@@ -454,13 +453,13 @@ public:
 	    for (j=0; j < N; j++)
 	      {
 #if 1
-      		m2.m[i][j] = m[i][j] + m1.m[i][j];
+		m2.m[i][j] = m[i][j] + m1.m[i][j];
 #else
-    		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
-    		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
-    		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] + (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] + (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
-    	      }
+	      }
 	  return m2;
 	}
       else
@@ -469,9 +468,9 @@ public:
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
-    	      {
-      		m2.m[i][j] = m[i][j] + m1.m[i][j];
-    	      }
+	      {
+		m2.m[i][j] = m[i][j] + m1.m[i][j];
+	      }
 	  if constexpr (N > NMAX)
 	    return std::move(m2);
 	  else
@@ -488,13 +487,13 @@ public:
 	    for (j=0; j < N; j++)
 	      {
 #if 1
-      		m2.m[i][j] = m[i][j] - m1.m[i][j];
+		m2.m[i][j] = m[i][j] - m1.m[i][j];
 #else
-    		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
-    		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
-    		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
-	  }
+	      }
 	  return m2;
 	}
       else
@@ -504,13 +503,13 @@ public:
 	    for (j=0; j < N; j++)
 	      {
 #if 1
-      		m2.m[i][j] = m[i][j] - m1.m[i][j];
+		m2.m[i][j] = m[i][j] - m1.m[i][j];
 #else
-    		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
-    		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
-    		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
+		// NOTA: const_cast rimuove l'attributo const ad m1 e rende possibile l'applicazione dell'operatore [] 
+		// che restituisce ntype*, che non è const (altimenti si ottiene un errore nella compilazione).
+		(const_cast<pmatrixq<ntype,N>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,N>&>(m1))[i][j];
 #endif
-	  }
+	      }
 	  if constexpr (N > NMAX)
 	    return std::move(m2);
 	  else 
@@ -533,6 +532,7 @@ public:
   inline ntype detgen() const
     {
 #ifdef USE_LAPACK
+      // LAPACK and BLAS are available only for float and double
       if constexpr (is_same<ntype, double>::value)
 	{
 	  double d=1.0;
@@ -583,6 +583,7 @@ public:
       double d;
       static pvector<int,N> indx;
       LU=ludcmp(indx, d); 
+      // inversion of a matrix through numerical recipes routines
       for(m2=0;m2<N;m2++) 
 	{ 
 	  for(m1=0;m1<N;m1++) 
@@ -595,6 +596,7 @@ public:
     }
   inline ntype det() const
     {
+      // for small matrices determinant is evaluated explicitly 
       if constexpr (N==1)
 	{
 	  return m[0][0];
@@ -623,6 +625,7 @@ public:
 		     m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3]);
 	}
       else 
+	// use numerical recipe or LAPACK LU decomposition (see detgen)
 	return detgen();
     }
 
@@ -684,10 +687,6 @@ public:
       else if constexpr (N==3)
 	{
 #ifdef OPT_INV
-	  //return -m[0][2]*m[1][1]*m[2][0] + m[0][1]*m[1][2]*m[2][0] + 
-	    //m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - 
-	   // m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
-
 	  ntype m11m20= m[1][1]*m[2][0];
 	  ntype m12m20= m[1][2]*m[2][0];
 	  ntype m10m21= m[1][0]*m[2][1];
@@ -732,7 +731,7 @@ public:
 	{
 #ifdef OPT_INV
 	  ntype s0 = m[0][0] * m[1][1] - m[1][0] * m[0][1];
-      	  ntype s1 = m[0][0] * m[1][2] - m[1][0] * m[0][2];
+	  ntype s1 = m[0][0] * m[1][2] - m[1][0] * m[0][2];
 	  ntype s2 = m[0][0] * m[1][3] - m[1][0] * m[0][3];
 	  ntype s3 = m[0][1] * m[1][2] - m[1][1] * m[0][2];
 	  ntype s4 = m[0][1] * m[1][3] - m[1][1] * m[0][3];
@@ -762,7 +761,7 @@ public:
 	  m1[2][0] = ( m[1][0] * c4 - m[1][1] * c2 + m[1][3] * c0) * invd;
 	  m1[2][1] = (-m[0][0] * c4 + m[0][1] * c2 - m[0][3] * c0) * invd;
 	  m1[2][2] = ( m[3][0] * s4 - m[3][1] * s2 + m[3][3] * s0) * invd;
-      	  m1[2][3] = (-m[2][0] * s4 + m[2][1] * s2 - m[2][3] * s0) * invd;
+	  m1[2][3] = (-m[2][0] * s4 + m[2][1] * s2 - m[2][3] * s0) * invd;
 
 	  m1[3][0] = (-m[1][0] * c3 + m[1][1] * c1 - m[1][2] * c0) * invd;
 	  m1[3][1] = ( m[0][0] * c3 - m[0][1] * c1 + m[0][2] * c0) * invd;
@@ -771,8 +770,6 @@ public:
 
 #else
 	  invd = 1.0/det();
-	  
-	  //printf("invD=%.15G\n", invd);
 	  m1[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
 	    m[1][1]*m[2][3]*m[3][2] - m[1][2]*m[2][1]*m[3][3] + m[1][1]*m[2][2]*m[3][3];
 	  m1[0][1] =m[0][3]*m[2][2]*m[3][1] - m[0][2]*m[2][3]*m[3][1] - m[0][3]*m[2][1]*m[3][2] + 
@@ -839,7 +836,7 @@ public:
 	  m[i][j] += m1.m[i][j];
       return (*this);
     }
-  
+
   inline pmatrixq<ntype, N>& operator -= (const pmatrixq<ntype, N>& m1)
     {
       int i, j;
@@ -859,6 +856,7 @@ public:
     }
 
 #ifdef MAT_LAZY_EVAL
+  // used if lazyness is disable (e.g. for small matrices)
   pmatrixq<ntype,N> matscal(const ntype& param)
     {
       int i,j;
@@ -916,24 +914,24 @@ public:
   inline pmatrixq<ntype,N> operator *(const pmatrixq<ntype,N>& m1) 
     {
       if constexpr (N > NMAX)
-   	return std::move((*this).mul(m1));// std:move is needed otherwise move constructor will not be used!!
+	return std::move((*this).mul(m1));// std:move is needed otherwise move constructor will not be used!!
       else
-   	return (*this).mul(m1);// std:move is needed otherwise move constructor will not be used!!
+	return (*this).mul(m1);
     }
-   inline pmatrixq<ntype,N>& operator /=(const pmatrixq<ntype,N>& m1) 
+  inline pmatrixq<ntype,N>& operator /=(const pmatrixq<ntype,N>& m1) 
     {
       *this = (*this).mul(m1.inv());	
       return *this;
     }
-  
+
   inline pmatrixq<ntype,N> operator /(const pmatrixq<ntype,N>& m1) 
     {
       if constexpr (N > NMAX)
-   	return std::move((*this).mul(m1.inv()));// std:move is needed otherwise move constructor will not be used!!	
+	return std::move((*this).mul(m1.inv()));// std:move is needed otherwise move constructor will not be used!!	
       else 
 	return (*this).mul(m1.inv());
     }
-  
+
   // matrix times vector
   inline pvector<ntype,N> operator *(const pvector<ntype,N>& v1) 
     {
@@ -958,9 +956,9 @@ public:
 	}
       else
 	{
-    	  for (i=0; i < N; i++)
+	  for (i=0; i < N; i++)
 	    {
-    	      v2.v[i]=0;
+	      v2.v[i]=0;
 	      for (j=0; j < N; j++)
 		v2.v[i] += m[i][j]*v1.v[j];
 	    }
@@ -989,14 +987,14 @@ public:
 	    wrap_sgemv('n', &(v2.m[0][0]), &(m[0][0]), &(v1.v[0]), N);
 	  else
 	    {
-    	      v2.v[i]=0;
-    	      for (j=0; j < N; j++)
-    		v2.v[i] += v1.v[j]*m1.m[j][i];
+	      v2.v[i]=0;
+	      for (j=0; j < N; j++)
+		v2.v[i] += v1.v[j]*m1.m[j][i];
 	    }
 	}
       else
 	{
-    	  v2.v[i]=0;
+	  v2.v[i]=0;
 	  for (j=0; j < N; j++)
 	    v2.v[i] += v1.v[j]*m1.m[j][i];
 	}
@@ -1047,6 +1045,7 @@ public:
     }
   inline void mulstra(pmatrixq<ntype,N>& m2, const pmatrixq<ntype,N>& m1)
     {
+      // strassen algorithm for matrix multiplication recursively defined (see Matrix Computations book)
       int i, j;
       using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
       static constexpr int dN = N % 2;
@@ -1117,7 +1116,7 @@ public:
 	}
       else
 	{
-       	  if (alpha==1.0 && beta==0)
+	  if (alpha==1.0 && beta==0)
 	    (*this) = m1*m2; 
 	  else if (alpha==1.0 && beta==1.0)
 	    (*this) = m1*m2 + (*this);
@@ -1126,19 +1125,11 @@ public:
 	}
 #endif
     }
-#if 0
-  inline void fastadd(const pmatrixq<ntype,N>& m1,const pmatrixq<ntype,N>& m2)
-    {
-      int i, j;
-      for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
-	  m[i][j] += m1.m[i][j] + m2.m[i][j];
-    }
-#endif
   inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
     {
       int i, j, k;
       pmatrixq<ntype,N> m2;
+      // for small matrices we use explicit expressions for multiplication
       if constexpr (N==1)
 	{
 	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0];
@@ -1196,7 +1187,7 @@ public:
 #ifdef USE_STRASSEN
 		  mulstra(m2, m1);
 #else
-    		  mulblock(m2, m1);
+		  mulblock(m2, m1);
 #endif
 		}
 	      else
@@ -1240,7 +1231,7 @@ public:
       else
 	return m2;
     }
-   // transpose
+  // transpose
   pmatrixq<ntype,N> transp()
     {
       int i, j;
@@ -1276,7 +1267,7 @@ public:
 	}
       return v;
     }
-  
+
   void show(const char* str)
     {
       int i, j;
@@ -1289,34 +1280,24 @@ public:
 	  for (j=0; j < N; j++)
 	    { 
 	      cout << setprecision(std::numeric_limits<ntype>::digits10) << m[i][j];
-		if (j < N-1)
-		  cout << ",";
-	      }
-	    cout << "}";
-	    if (i < N-1)
-	      cout << ",\n";
-	  }
-	cout << "}\n";
-      }
-    void show(void)
-      {
-	show(NULL);
-      }
+	      if (j < N-1)
+		cout << ",";
+	    }
+	  cout << "}";
+	  if (i < N-1)
+	    cout << ",\n";
+	}
+      cout << "}\n";
+    }
+  void show(void)
+    {
+      show(NULL);
+    }
 
-    int size()
-      {
-	return N;
-      } 
-#if 0
-    pmatrixq()
-      {
-	//n=N;
-	//maxdigits=std::numeric_limits<ntype>::digits10;
-      }
-    ~pmatrixq()
-      {
-      }
-#endif
+  int size()
+    {
+      return N;
+    } 
 };
 #ifdef MAT_LAZY_EVAL
 // ADDITION
@@ -1347,7 +1328,6 @@ inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
     }
   else
     {
-      //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
       return AnOpM<ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, pmatrixq<ntype,N>>(lhs, rhs); // lazy evaluation
     }
 }
