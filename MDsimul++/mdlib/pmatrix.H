@@ -971,7 +971,10 @@ public:
 	    v2.v[i] += m[i][j]*v1.v[j];
 	}
 #endif
-      return v2;
+      if (N > vecpars::NMAX)
+	return std::move(v2);
+      else
+	return v2;
     }
   // transpose of v1 times m1
   friend pvector<ntype,N> operator *(const pvector<ntype,N> v1, const pmatrixq<ntype,N>& m1) 
@@ -1006,14 +1009,17 @@ public:
 	    v2.v[i] += v1.v[j]*m1.m[j][i];
 	}
 #endif
-      return v2;
+      if (N > vecpars::NMAX)
+	return std::move(v2);
+      else
+	return v2;
     }
   inline ntype* operator[](const int& i)
     {
       return &(m[i][0]);
     }
 
-  inline  void mulblock(pmatrixq<ntype,N>& m2, const pmatrixq<ntype,N>& m1)
+  inline void mulblock(pmatrixq<ntype,N>& m2, const pmatrixq<ntype,N>& m1)
     {
       /* tiled matrix multiplication to optimize cache usage (from wikipedia!) 
       */

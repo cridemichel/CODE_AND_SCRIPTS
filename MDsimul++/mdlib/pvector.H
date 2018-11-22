@@ -73,15 +73,6 @@ template <class ntype, int N> class pvecsta {
 public:
   ntype v[N];
   constexpr static int dynamic = false;
-#if 0
-  pvecsta<ntype,N>& operator=(const pvecsta<ntype,N>& v1)
-    {
-      int i;
-      for (i=0; i < N; i++)
-	  v[i] = v1.v[i];
-      return (*this);
-    }
-#endif
 };
 // template for a dynamic vector (i.e. allocated with new)
 template <class ntype, int N> class pvecdyn {
@@ -108,8 +99,6 @@ public:
   // copy constructor 
   pvecdyn(const pvecdyn<ntype,N>& v1)
     {
-      //nr=N;
-      //nc=M;
       v = new ntype[N];
       (*this) = v1;
     }
@@ -141,6 +130,7 @@ public:
   static const int maxdigits=numeric_limits<ntype>::digits10;
 #ifdef VEC_LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
+  // += operator triggers evaluation of lazy expression
   inline pvector<ntype,N> operator += (AnOpV<ntype,N, tipo, Lhs, Rhs> const& op)
     {
       int i;
@@ -149,6 +139,7 @@ public:
       return *this;
     }
 
+  // -= operator triggers evaluation of lazy expression
   template<typename Lhs, typename Rhs, int tipo>
   inline pvector<ntype,N> operator -= (AnOpV<ntype,N, tipo, Lhs, Rhs> const& op)
     {
@@ -157,12 +148,14 @@ public:
 	v[i] -= op.get_v[i];
       return *this;
     }
+  // assignment operator triggers evaluation of lazy expression
   template<typename Lhs, typename Rhs, int tipo>
     pvector<ntype,N>& operator=(AnOpV<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
 	v[i] = op.get_v(i);
       return (*this);
     }
+  // constructor with AnOpV argument triggers evaluation of lazy expression
   template<typename Lhs, typename Rhs, int tipo>
     pvector<ntype,N>(AnOpV<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
@@ -173,9 +166,8 @@ public:
   inline ntype get_vptr() const {return v;}
 #endif
 
-
 #ifndef VEC_LAZY_EVAL
-  //ntype v[N];
+  // these methods are used if lazyness is not used at all
   inline pvector<ntype,N> operator +(const pvector<ntype,N>& param)
     {
       return addition(param);
@@ -184,8 +176,8 @@ public:
     {
       return subtraction(param);
     }
-
 #endif
+  // methods used if lazyness is disabled (e.g. for vectors with few elemenits)
   // addition
   inline pvector<ntype,N> addition(const pvector<ntype,N>& v1) const
     {
@@ -232,6 +224,7 @@ public:
 	}
     }
 
+  // += for pvectors 
   inline pvector<ntype,N> operator += (const pvector<ntype,N>& param)
     {
       int i;
@@ -239,7 +232,7 @@ public:
 	v[i] += param.v[i];
       return *this;
     }
-
+  // -= for pvectors
   inline pvector<ntype,N> operator -= (const pvector<ntype,N>& param)
     {
       int i;
@@ -248,8 +241,9 @@ public:
       return *this;
     }
 
-  // vec times scalar
 #ifndef VEC_LAZY_EVAL
+  // used if lazyned is completely disabled
+  // vec times scalar
   inline pvector<ntype,N> operator *(const double& param) 
     {
       int i;
@@ -292,6 +286,7 @@ public:
     {
       return v[i];
     }
+  // scalar product
   inline ntype dot(const pvector<ntype,N>& v1)
     {
       int i;
@@ -302,6 +297,7 @@ public:
 	}
       return sum;
     }
+  // norm 
   inline double norm()
     {
       return (*this).dot(*this);
@@ -325,7 +321,6 @@ public:
     {
       return (*this).dot(vv);
     }
-  //friend double scalprod(const pvector<ntype,N>& v1, const pvector<ntype,N>& v2);
   void show(void)
     {
       show(NULL);
