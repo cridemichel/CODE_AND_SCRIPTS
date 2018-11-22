@@ -26,6 +26,7 @@ struct AnOpV {
       // empty body
       //cout << "qui\n";
     }
+    // lazy operations
     inline ntype get_v(int i) const {
       if constexpr (tipo == VOpTypes::VecPlusVec)// vec + vec
 	return lhs.get_v(i) + rhs.get_v(i);
@@ -80,7 +81,7 @@ template <class ntype, int N> class pvecdyn {
   //int nr, nc;
 public:
   constexpr static int dynamic = true;
-  ntype (*v); // N elements
+  ntype (*v); 
   // copy assignment
   pvecdyn<ntype,N>& operator=(const pvecdyn<ntype,N>& v1)
     {
