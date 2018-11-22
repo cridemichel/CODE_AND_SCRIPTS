@@ -102,7 +102,7 @@ void wrap_sgetri(float *A, int *IPIV, int n)
   sgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
   delete [] WORK;
 }
-void wrap_dgemm(double *C, const double *A, const double *B, int n, double alpha=1.0, double beta=0.0)
+void wrap_dgemm(double *C, const double *A, const double *B, const int n, double alpha=1.0, double beta=0.0)
 {
   //C=A*B + beta*C if beta=0 C is not used as input
   double ALPHA, BETA;
@@ -115,10 +115,11 @@ void wrap_dgemm(double *C, const double *A, const double *B, int n, double alpha
 #ifdef __APPLE__
   cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
 #else
-  dgemm_(&ta, &tb, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);      
+  // LAPACK and BLAS use column major convention hence we have to swap A and B
+  dgemm_(&ta, &tb, &M, &N, &K, &ALPHA, B, &LDA, A, &LDB, &BETA, C, &LDC);      
 #endif
 }
-void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta=0.0)
+void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0, float beta=0.0)
 {
   //C=A*B + beta*C if beta=0 C is not used as input
   int LDA, LDB, LDC, M, N, K;
@@ -131,7 +132,8 @@ void wrap_sgemm(float *C, float *A, float *B, int n, float alpha=1.0, float beta
 #ifdef __APPLE__
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
 #else
-  sgemm_(&ta, &tb, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);      
+  // LAPACK and BLAS use column major convention hence we have to swap A and B
+  sgemm_(&ta, &tb, &M, &N, &K, &ALPHA, B, &LDA, A, &LDB, &BETA, C, &LDC);      
 #endif
 }
 #endif
@@ -1088,9 +1090,13 @@ public:
       if constexpr (N > NMAXMUL)
 	{
 	  if constexpr (is_same<ntype, double>::value)
-	    wrap_dgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	    {
+	      wrap_dgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	    }
 	  else if constexpr (is_same<ntype, float>::value)
-	    wrap_sgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	    {
+	      wrap_sgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]), N, alpha, beta);
+	    }
 	  else
 	    {
 	      if (alpha==1.0 && beta==0)
@@ -1221,7 +1227,10 @@ public:
 		}
 	    }
 	}
-      return m2;
+      if constexpr (N > NMAX)
+	return std::move(m2);
+      else
+	return m2;
     }
    // transpose
   pmatrixq<ntype,N> transp()
