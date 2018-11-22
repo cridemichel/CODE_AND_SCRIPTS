@@ -13,10 +13,11 @@ struct VOpTypes
 {  
   static const int VecPlusVec=0, VecMinusVec=1, VecTimesScal=2, ScalTimesVec=3, VecDivScal=4;
 };
-//REMARK on Lazyness Mechanics:
+//REMARK on Lazyness Logic:
 //each class it is an operation of Lhs and Rhs which store the values of the operands
 //only when the method get_v is called the operation is performed 
 //and this happens only when assign operator of pvector class is called (see below)
+// or constructor with AnOpV argument is called
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 struct AnOpV {
     Lhs const& lhs;
