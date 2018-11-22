@@ -146,7 +146,8 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 //Matrix operation types
 struct MOpTypes
 {  
-  static const int MatPlusMat=0, MatMinusMat=1, MatTimesScal=2, ScalTimesMat=3;
+  static const int MatPlusMat=0, MatMinusMat=1, MatTimesScal=2, ScalTimesMat=3,
+	       MatDivScal=4;
 };
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 struct AnOpM 
@@ -173,6 +174,10 @@ struct AnOpM
     else if constexpr (tipo == MOpTypes::ScalTimesMat) // scalar * mat [NOT IMPLEMENTED YET]
       {
 	return lhs*rhs.get_m(i,j);
+      }
+    else if constexpr (tipo == MOpTypes::MatDivScal) // scalar * mat [NOT IMPLEMENTED YET]
+      {
+	return lhs.get_m(i,j)/rhs;
       }
     return 0;
   }
@@ -427,6 +432,25 @@ public:
     }
 #endif
 #ifdef MAT_LAZY_EVAL
+  template<typename Lhs, typename Rhs, int tipo>
+    inline pmatrixq<ntype, N>& operator -= (AnOpM<ntype,N, tipo, Lhs, Rhs> const& op)
+      {
+      	int i, j;
+	for (i=0; i < N; i++)
+	  for (j=0; j < N; j++)
+	    m[i][j] -= op.get_m(i,j);
+	return (*this);
+      }
+
+  template<typename Lhs, typename Rhs, int tipo>
+    inline pmatrixq<ntype, N>& operator += (AnOpM<ntype,N, tipo, Lhs, Rhs> const& op)
+    {
+      int i, j;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m[i][j] += op.get_m(i,j);
+      return (*this);
+    }
   template<typename Lhs, typename Rhs, int tipo>
     pmatrixq<ntype,N>& operator=(AnOpM<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
@@ -867,6 +891,21 @@ public:
 	  m[i][j] *= param;
       return (*this);
     }
+
+#ifdef MAT_LAZY_EVAL
+  pmatrixq<ntype,N> matscal(const ntype& param)
+    {
+      int i,j;
+      pmatrixq<ntype,N> m1;
+      for (i=0; i < N; i++)
+	for (j=0; j < N; j++)
+	  m1[i][j] = m[i][j]*param;
+      if constexpr (N > NMAX)
+	return std::move(m1);
+      else 
+	return m1;
+    }
+#endif
   inline pmatrixq<ntype, N> operator *(const double& param) 
     {
       int i,j;
@@ -1322,7 +1361,7 @@ public:
 };
 #ifdef MAT_LAZY_EVAL
 // ADDITION
-// add expression template with point at the right
+// AnOpM plus matrix
   template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator+(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
 {
@@ -1335,7 +1374,7 @@ inline auto operator+(pmatrixq<ntype,N> const& p, AnOpM<ntype, N, tipo, Lhs, Rhs
   return AnOpM< ntype, N, MOpTypes::MatPlusMat, pmatrixq<ntype,N>, AnOpM<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
-// add two points, yield a expression template    
+// matrix plus matrix
 // se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int N> 
@@ -1354,26 +1393,27 @@ inline operator+(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
     }
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
+// AnOpM plus AnOpM
 template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator+(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
   return  AnOpM<ntype, N, MOpTypes::MatPlusMat, AnOpM<ntype, N, tipo, LLhs, LRhs>, AnOpM<ntype, N, tipo, RLhs, RRhs>>(leftOperandconst, rightOperand);
 }
 // SUBTRACTION
-// add expression template with point at the right
+// AnOpM minus matrix
   template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator-(AnOpM<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& p)
 {
   return AnOpM<ntype, N, MOpTypes::MatMinusMat, AnOpM<ntype, N, tipo, Lhs, Rhs>, pmatrixq<ntype,N>>(lhs, p);
 } 
-// add expression template with point at the left
+// matrix minus AnOpM
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator-(pmatrixq<ntype,N> const& p, AnOpM<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
   return AnOpM< ntype, N, MOpTypes::MatMinusMat, pmatrixq<ntype,N>, AnOpM<ntype, N, tipo, Lhs, Rhs> >(p, rhs);
 }
 
-// add two points, yield a expression template    
+// matrix plus matrix 
 // se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int N> 
@@ -1392,6 +1432,7 @@ inline operator-(pmatrixq<ntype,N> const& lhs, pmatrixq<ntype,N> const& rhs)
     }
 }
 // caso aggiunto secondo un post in https://stackoverflow.com/questions/414243/lazy-evaluation-in-c
+// AnOpM plus AnOpM
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator-(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
@@ -1399,8 +1440,9 @@ inline auto operator-(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperandconst
 }
    
 ///
-// MULTIPLICATION OF TWO AnOpM
+// MULTIPLICATION 
 //
+// AnOpM times AnOpM
   template <typename ntype, int N, int tipo, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator*(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperand, const AnOpM<ntype, N, tipo, RLhs, RRhs> & rightOperand)
 {
@@ -1413,9 +1455,7 @@ inline auto operator*(const AnOpM<ntype, N, tipo, LLhs, LRhs> & leftOperand, con
       }
   return mR*mL;
 }
-// AnOpM times pmatrixq
-//
-// left AnOpM
+//AnOpM times matrix
    template<typename ntype, int N, int tipo, typename Lhs, typename Rhs> 
 inline auto operator*(AnOpM<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,N> const& mR)
 {
@@ -1427,7 +1467,7 @@ inline auto operator*(AnOpM<ntype,N, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,
       }
   return mL*mR;
 } 
-// right AnOpM
+// matrix times AnOpM
 template<typename ntype, int N, int tipo, typename Lhs, typename Rhs>  
 inline auto operator*(pmatrixq<ntype,N> const& mL, AnOpM<ntype, N, tipo, Lhs, Rhs> const& rhs) 
 {
@@ -1463,18 +1503,55 @@ inline auto operator *(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const pvector
       }
   return mL*vR;
 }
-// AnOpM times scalar
+// scalar times matrix
+  template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator *(const ntype& lhs, pmatrixq<ntype,N> const& rhs) 
+{
+  if constexpr (N <= matpars::NLAZY)
+    return rhs.matscal(lhs);
+  else
+    return AnOpM<ntype, N, MOpTypes::ScalTimesMat, ntype, pmatrixq<ntype,N>>(lhs,rhs);
+}
+
+// scalar times AnOpM 
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
- inline auto operator *(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
+ inline auto operator *(const ntype& lhs, AnOpM<ntype, N, tipo, Lhs, Rhs> const& rhs) 
     {
-      int i,j;
-      pmatrixq<ntype,N> mL;
-      for (i=0; i < N; i++)
-	for (j=0; j < N; j++)
-	  mL[i][j] = lhs.get_m(i,j)*param;
-      return mL;
+      return AnOpM<ntype,N,MOpTypes::ScalTimesMat,ntype,AnOpM<ntype,N,tipo,Lhs,Rhs>>(lhs,rhs);
     }
+// matrix times scalar
+  template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator *(pmatrixq<ntype,N> const& lhs, const ntype& rhs) 
+{
+  if constexpr (N <= matpars::NLAZY)
+    return lhs.matscal(rhs);
+  else
+    return AnOpM<ntype, N, MOpTypes::MatTimesScal, pmatrixq<ntype,N>, ntype>(lhs,rhs);
+}
+// AnOpM times scalar
+  template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator *(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& rhs) 
+{
+  return AnOpM<ntype,N,MOpTypes::MatTimesScal,AnOpM<ntype,N,tipo,Lhs,Rhs>, ntype>(lhs,rhs);
+}
+
+// matrix divided by scalar
+  template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator /(pmatrixq<ntype,N> const& lhs, const ntype& rhs) 
+{
+  if constexpr (N <= matpars::NLAZY)
+    return lhs.matscal(1.0/rhs);
+  else
+    return AnOpM<ntype, N, MOpTypes::MatDivScal, pmatrixq<ntype,N>, ntype>(lhs,rhs);
+}
+// AnOpM divided by scalar
+  template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
+inline auto operator /(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& rhs) 
+{
+  return AnOpM<ntype,N,MOpTypes::MatDivScal,AnOpM<ntype,N,tipo,Lhs,Rhs>, ntype>(lhs,rhs);
+}
   
+#if 0
 // AnOpM divided by scalar
 template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
  inline auto operator /(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const double& param) 
@@ -1486,6 +1563,7 @@ template <typename ntype, int N, int tipo, typename Lhs, typename Rhs>
 	  mL[i][j] = lhs.get_m(i,j)/param;
       return mL;
     }
+#endif
 #endif
 typedef pmatrixq<double,3> pmatrix3d;
 typedef pmatrixq<int,3>    pmatrix3i;

@@ -135,6 +135,23 @@ public:
   static const int maxdigits=numeric_limits<ntype>::digits10;
 #ifdef VEC_LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
+  inline pvector<ntype,N> operator += (AnOpV<ntype,N, tipo, Lhs, Rhs> const& op)
+    {
+      int i;
+      for (i=0; i < N; i++)
+	v[i] += op.get_v[i];
+      return *this;
+    }
+
+  template<typename Lhs, typename Rhs, int tipo>
+  inline pvector<ntype,N> operator -= (AnOpV<ntype,N, tipo, Lhs, Rhs> const& op)
+    {
+      int i;
+      for (i=0; i < N; i++)
+	v[i] -= op.get_v[i];
+      return *this;
+    }
+  template<typename Lhs, typename Rhs, int tipo>
     pvector<ntype,N>& operator=(AnOpV<ntype,N, tipo, Lhs, Rhs> const& op) {
       for (int i=0; i < N; i++)
 	v[i] = op.get_v(i);
@@ -161,6 +178,7 @@ public:
     {
       return subtraction(param);
     }
+
 #endif
   // addition
   inline pvector<ntype,N> addition(const pvector<ntype,N>& v1) const
@@ -215,6 +233,15 @@ public:
 	v[i] += param.v[i];
       return *this;
     }
+
+  inline pvector<ntype,N> operator -= (const pvector<ntype,N>& param)
+    {
+      int i;
+      for (i=0; i < N; i++)
+	v[i] -= param.v[i];
+      return *this;
+    }
+
 
   // vec times scalar
 #ifndef VEC_LAZY_EVAL
