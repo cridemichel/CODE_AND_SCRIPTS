@@ -830,8 +830,8 @@ public:
 	      m1[3][2] *= invd;
 	      m1[3][3] *= invd;
 #endif
-	      return m1;
 	    }
+	  return m1;
 	}
       else
 	{
@@ -1199,7 +1199,7 @@ public:
 	      m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
 	      m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
 	    }
-	  return m1;
+	  return m2;
 	}
       else
 	{
