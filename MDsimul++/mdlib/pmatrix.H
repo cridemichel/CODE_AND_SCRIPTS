@@ -252,7 +252,7 @@ struct matpars
   static const int NMAXINV = 10;  // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 10;  // if N>NMAXMUL use BLAS multiplication routines
   static const int NSTA = 8;      // value below which static objects are declared in operator funcs (only if m is not dynamically allocated)
-  static const int NLAZY = 5;     // value below which does not use lazy evaluation for addition
+  static const int NLAZY = 4;     // value below which does not use lazy evaluation for addition
 };
 // for large matrices use dynamic allocation to avoid stack overflow!
 // conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
