@@ -7,6 +7,11 @@
 using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
+#define USE_LAPACK
+#ifdef USE_LAPACK
+void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
+void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
+#endif
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy
 struct VOpTypes
@@ -68,6 +73,7 @@ struct vecpars
   static const int NMAX = 1000; // if N>NMAX use dynamic allocation of matrices
   static const int NSTA = 50;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
   static const int NLAZY = 25;// value below which does not use lazy evaluation for addition
+  static const int NMAXMUL = 5; 
 };
 
 // template for a static vector
@@ -323,6 +329,48 @@ public:
     {
       return (*this).dot(vv);
     }
+
+  // uso un template poiché qua non posso usare pmatrixq al posto di T in quanto ancora non ho dichiarato la classo
+  template <typename T>
+    void muladd(T& m1, const pvector<ntype,N>& v1, ntype alpha=1.0, ntype beta=1.0)
+    //quando si userà muladd se m1 è pmatrix istanzierà automaticamente questo templated method
+    //
+      {
+	// v=alpha*m1*v1 + beta*v
+	//using pvector<ntype,N>::v;
+#ifdef USE_LAPACK
+	if constexpr (N > vecpars::NMAXMUL)
+	  {
+	    if constexpr (is_same<ntype, double>::value)
+	      {
+		wrap_dgemv('t',&(v[0]), &(m1.m[0][0]), &(v1.v[0]), N, alpha, beta);
+	      }
+	    else if constexpr (is_same<ntype, float>::value)
+	      {
+		wrap_sgemv('t',&(v[0]), &(m1.m[0][0]), &(v1.v[0]), N, alpha, beta);
+	      }
+	    else
+	      {
+		if (alpha==1.0 && beta==0)
+		  (*this) = m1*v1; 
+		else if (alpha==1.0 && beta==1.0)
+		  (*this) = m1*v1 + (*this);
+		else
+		  (*this) = alpha*m1*v1 + beta*(*this);
+	      }
+	  }
+	else
+	  {
+	    if (alpha==1.0 && beta==0)
+		  (*this) = m1*v1; 
+		else if (alpha==1.0 && beta==1.0)
+		  (*this) = m1*v1 + (*this);
+		else
+		  (*this) = alpha*m1*v1 + beta*(*this);
+	  }
+#endif
+      }
+
   void show(void)
     {
       show(NULL);

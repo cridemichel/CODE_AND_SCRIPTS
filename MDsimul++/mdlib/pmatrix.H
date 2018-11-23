@@ -262,7 +262,6 @@ template <class ntype, int N> using pmatrixb = typename std::conditional<(N>matp
 
 template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public matpars
 {
-  using pmatrixb<ntype,N>::m;
   // il const vuol dire che il puntatore this, passato ai membri di una classe implicitamente, viene passato come const
   inline pmatrixq<ntype,N> ludcmp(pvector<int,N>& indx, double& d) const
     {
@@ -383,6 +382,7 @@ template <class ntype, int N> class pmatrixq: public pmatrixb<ntype,N>, public m
       return b;
     }
 public:
+  using pmatrixb<ntype,N>::m;
   // Build identity matrix, simple as that
   inline pmatrixq<ntype,N> I() const
     {
@@ -1112,43 +1112,8 @@ public:
 	      }
 	  }
     }
-  void mulvadd(pvector<ntype,N>& v1, const pvector<ntype,N>& v2, ntype alpha=1.0, ntype beta=0.0) const 
-    {
-      // v1=alpha*m*v2 + beta*v1
-#ifdef USE_LAPACK
-      if constexpr (N > NMAXMUL)
-	{
-	  if constexpr (is_same<ntype, double>::value)
-	    {
-	      wrap_dgemv(&(v1.v[0]), &(m[0][0]), &(v2.v[0]), N, alpha, beta);
-	    }
-	  else if constexpr (is_same<ntype, float>::value)
-	    {
-	      wrap_sgemv(&(v1.v[0]), &(m[0][0]), &(v2.v[0]), N, alpha, beta);
-	    }
-	  else
-	    {
-	      if (alpha==1.0 && beta==0)
-		v1 = (*this)*v2+v1; 
-	      else if (alpha==1.0 && beta==1.0)
-		v1 = (*this)*v2 + v1;
-	      else
-		v1 = alpha*(*this)*v2 + beta*v1;
-	    }
-	}
-      else
-	{
-	  if (alpha==1.0 && beta==0)
-    	    v1 = (*this)*v2+v1; 
-	  else if (alpha==1.0 && beta==1.0)
-		v1 = (*this)*v2 + v1;
-	  else
-	    v1 = alpha*(*this)*v2 + beta*v1;
-	}
-#endif
-    }
-
-  void muladd(const pmatrixq<ntype,N>& m1, const pmatrixq<ntype,N>& m2, ntype alpha=1.0, ntype beta=0.0) 
+  
+  void muladd(const pmatrixq<ntype,N>& m1, const pmatrixq<ntype,N>& m2, ntype alpha=1.0, ntype beta=1.0) 
     {
       // m=alpha*m*m1 + beta*m2
 #ifdef USE_LAPACK
@@ -1597,6 +1562,7 @@ inline auto operator /(AnOpM<ntype, N, tipo, Lhs, Rhs> const& lhs, const ntype& 
   return AnOpM<ntype,N,MOpTypes::MatDivScal,AnOpM<ntype,N,tipo,Lhs,Rhs>, ntype>(lhs,rhs);
 }
 #endif
+
 typedef pmatrixq<double,3> pmatrix3d;
 typedef pmatrixq<int,3>    pmatrix3i;
 #endif
