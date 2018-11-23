@@ -38,6 +38,12 @@ extern void dgemv_(char* TRANSA, int* M, int *N, double* ALPHA,
 	  const double *A, int *LDA, const double *X, int *incx, double *BETA, double *Y, int *incy);  
 extern void sgemv_(char* TRANSA, int* M, int *N, float* ALPHA,
 	  const float *A, int *LDA, const float *X, int *incx, float *BETA, float *Y, int *incy);      
+#ifdef EXTRA
+extern void dsyev_(char *JOBZ, char *UPLO, int *N, double *AT, int *LDA, double *WORK, int *LWORK, int *INFO);      
+extern void dgesv_(int *N, int *NRHS, double* AT, int *LDA, int *pivot, double *B, int *LDB, int *INFO);      
+extern void ssyev_(char *JOBZ, char *UPLO, int *N, double *AT, int *LDA, double *WORK, int *LWORK, int *INFO);      
+extern void sgesv_(int *N, int *NRHS, double* AT, int *LDA, int *pivot, double *B, int *LDB, int *INFO);      
+#endif
 }
 #endif
 //Matrix times vector
@@ -137,6 +143,56 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
   sgemm_(&ta, &tb, &M, &N, &K, &ALPHA, B, &LDA, A, &LDB, &BETA, C, &LDC);      
 #endif
 }
+// eigenvalues eigenvectors
+#ifdef EXTRA
+/* solve a linear system of equations */
+void wrap_dgesv(double a[3][3], double x[3], int *ok)
+{
+  double AT[9];
+  int i, j, c1, c2, pivot[3];
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
+    }						
+  c1 = 3;
+  c2 = 1;
+  // this routine uses LU decomposition hence if USE_LAPACK is not definedù
+  // the LU decomposition of Numerical Recipe can be used
+  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, ok);      
+}
+int SolveLineq (double a[3][3], double x[3]) 
+{
+  int indx[3], ok;
+  double dd;
+  wrap_dgesv(a, x, &ok);
+  return 0;
+}
+
+/* find eigenvectors and eigenvalues */
+void wrap_dsyev(double a[3][3], double b[3][3], double x[3], int *ok)
+{
+  char JOBZ, UPLO;
+  double AT[9], work[10];
+  int i, j, c1, c2, c3;
+  JOBZ='V';
+  UPLO='U';
+  extern void dsyev_(char* , char*, int*, double* , int*, double*, double*, int*, int*);
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
+    }						
+  c1 = 3;
+  c2 = 1;
+  c3 = 8;
+  dsyev_(&JOBZ, &UPLO, &c1, AT, &c1, x, work, &c3, ok);      
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) b[i][j]=AT[j+3*i];		
+    }	
+  if (*ok != 0)
+    printf("not ok (%d)\n", *ok);
+}
+#endif
 #endif
 #ifdef MAT_LAZY_EVAL
 //REMARK on Lazyness Logic:
