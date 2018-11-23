@@ -72,7 +72,7 @@ struct vecpars
   // params for my class
   static const int NMAX = 1000; // if N>NMAX use dynamic allocation of matrices
   static const int NSTA = 50;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
-  static const int NLAZY = 25;// value below which does not use lazy evaluation for addition
+  static const int NLAZY = 20;// value below which does not use lazy evaluation for addition
   static const int NMAXMUL = 100; // value above which it uses LAPACK routines for muladd method
 };
 
