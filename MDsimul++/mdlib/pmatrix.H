@@ -597,32 +597,38 @@ public:
   inline ntype det() const
     {
       // for small matrices determinant is evaluated explicitly 
-      if constexpr (N==1)
+      // N.B. this first condition apparently is not needed
+      // but in practice compiler optimizations can get fooled
+      // if removed!
+      if constexpr (N <= 4)
 	{
-	  return m[0][0];
-	}
-      else if constexpr (N==2)
-	{
-	  return m[0][0]*m[1][1]-m[0][1]*m[1][0];
-	}
-      else if constexpr (N==3)
-	{
-	  return -m[0][2]*m[1][1]*m[2][0] + m[0][1]*m[1][2]*m[2][0] + 
-	    m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - 
-	    m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
-	} 
-      else if constexpr (N == 4)
-	{	  
-	  return m[0][1]*m[1][3]*m[2][2]*m[3][0] - m[0][1]*m[1][2]*m[2][3]*m[3][0] - 
-	    m[0][0]*m[1][3]*m[2][2]*m[3][1] + m[0][0]*m[1][2]*m[2][3]*m[3][1] - 
-	    m[0][1]*m[1][3]*m[2][0]*m[3][2] + m[0][0]*m[1][3]*m[2][1]*m[3][2] + 
-	    m[0][1]*m[1][0]*m[2][3]*m[3][2] - m[0][0]*m[1][1]*m[2][3]*m[3][2] + 
-	    m[0][3]*(m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + 
-		     m[1][0]*m[2][2]*m[3][1] + m[1][1]*m[2][0]*m[3][2] - m[1][0]*m[2][1]*m[3][2]) + 
-	    (m[0][1]*m[1][2]*m[2][0] - m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] + 
-	     m[0][0]*m[1][1]*m[2][2])*m[3][3] + 
-	    m[0][2]*(-(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
-		     m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3]);
+	  if constexpr (N==1)
+	    {
+	      return m[0][0];
+	    }
+	  else if constexpr (N==2)
+	    {
+	      return m[0][0]*m[1][1]-m[0][1]*m[1][0];
+	    }
+	  else if constexpr (N==3)
+	    {
+	      return -m[0][2]*m[1][1]*m[2][0] + m[0][1]*m[1][2]*m[2][0] + 
+		m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - 
+		m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
+	    } 
+	  else if constexpr (N == 4)
+	    {	  
+	      return m[0][1]*m[1][3]*m[2][2]*m[3][0] - m[0][1]*m[1][2]*m[2][3]*m[3][0] - 
+		m[0][0]*m[1][3]*m[2][2]*m[3][1] + m[0][0]*m[1][2]*m[2][3]*m[3][1] - 
+		m[0][1]*m[1][3]*m[2][0]*m[3][2] + m[0][0]*m[1][3]*m[2][1]*m[3][2] + 
+		m[0][1]*m[1][0]*m[2][3]*m[3][2] - m[0][0]*m[1][1]*m[2][3]*m[3][2] + 
+		m[0][3]*(m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + 
+			 m[1][0]*m[2][2]*m[3][1] + m[1][1]*m[2][0]*m[3][2] - m[1][0]*m[2][1]*m[3][2]) + 
+		(m[0][1]*m[1][2]*m[2][0] - m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] + 
+		 m[0][0]*m[1][1]*m[2][2])*m[3][3] + 
+		m[0][2]*(-(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
+			 m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3]);
+	    }
 	}
       else 
 	// use numerical recipe or LAPACK LU decomposition (see detgen)
@@ -668,165 +674,174 @@ public:
 #endif
       return om;
     }
-  pmatrixq<ntype,N> inv() const
+  pmatrixq<ntype,N> inv(void) const
     {
-      double invd;
-      pmatrixq <ntype,N> m1;
-      if constexpr (N==1)
+       // N.B. this first condition apparently is not needed
+      // but in practice compiler optimizations get fooled nuts
+      // if removed!
+      if constexpr (N <= 4)
 	{
-	  m1[0][0]=1.0/m[0][0];
-	}
-      else if constexpr (N==2)
-	{
-	  invd = 1.0/det();
-	  m1[0][0] = m[1][1]*invd;
-	  m1[0][1] = m[1][0]*invd;
-	  m1[1][0] = m[0][1]*invd;
-	  m1[1][1] = m[0][0]*invd;
-	}
-      else if constexpr (N==3)
-	{
+	  double invd;
+	  pmatrixq <ntype,N> m1;
+	  if constexpr (N==1)
+	    {
+	      m1[0][0]=1.0/m[0][0];
+	    }
+	  else if constexpr (N==2)
+	    {
+	      invd = 1.0/det();
+	      m1[0][0] = m[1][1]*invd;
+	      m1[0][1] = m[1][0]*invd;
+	      m1[1][0] = m[0][1]*invd;
+	      m1[1][1] = m[0][0]*invd;
+	    }
+	  else if constexpr (N==3)
+	    {
 #ifdef OPT_INV
-	  ntype m11m20= m[1][1]*m[2][0];
-	  ntype m12m20= m[1][2]*m[2][0];
-	  ntype m10m21= m[1][0]*m[2][1];
-	  ntype m12m21= m[1][2]*m[2][1];
-	  ntype m10m22= m[1][0]*m[2][2];
-	  ntype m11m22= m[1][1]*m[2][2];
-	  invd = 1.0/(-m[0][2]*m11m20 + m[0][1]*m12m20 + m[0][2]*m10m21
-		      - m[0][0]*m12m21 - m[0][1]*m10m22 + m[0][0]*m11m22);
+	      ntype m11m20= m[1][1]*m[2][0];
+	      ntype m12m20= m[1][2]*m[2][0];
+	      ntype m10m21= m[1][0]*m[2][1];
+	      ntype m12m21= m[1][2]*m[2][1];
+	      ntype m10m22= m[1][0]*m[2][2];
+	      ntype m11m22= m[1][1]*m[2][2];
+	      invd = 1.0/(-m[0][2]*m11m20 + m[0][1]*m12m20 + m[0][2]*m10m21
+			  - m[0][0]*m12m21 - m[0][1]*m10m22 + m[0][0]*m11m22);
 
-	  m1[0][0] = (-m12m21 + m11m22)*invd;
-	  m1[0][1] = (m[0][2]*m[2][1] - m[0][1]*m[2][2])*invd;
-	  m1[0][2] = (-m[0][2]*m[1][1] + m[0][1]*m[1][2])*invd;
-	  m1[1][0] = (m12m20 - m10m22)*invd;
-	  m1[1][1] = (-m[0][2]*m[2][0] + m[0][0]*m[2][2])*invd; 
-	  m1[1][2] = (m[0][2]*m[1][0] - m[0][0]*m[1][2])*invd; 
-	  m1[2][0] = (-m11m20 + m10m21)*invd; 
-	  m1[2][1] = (m[0][1]*m[2][0] - m[0][0]*m[2][1])*invd;
-	  m1[2][2] = (-m[0][1]*m[1][0] + m[0][0]*m[1][1])*invd;
+	      m1[0][0] = (-m12m21 + m11m22)*invd;
+	      m1[0][1] = (m[0][2]*m[2][1] - m[0][1]*m[2][2])*invd;
+	      m1[0][2] = (-m[0][2]*m[1][1] + m[0][1]*m[1][2])*invd;
+	      m1[1][0] = (m12m20 - m10m22)*invd;
+	      m1[1][1] = (-m[0][2]*m[2][0] + m[0][0]*m[2][2])*invd; 
+	      m1[1][2] = (m[0][2]*m[1][0] - m[0][0]*m[1][2])*invd; 
+	      m1[2][0] = (-m11m20 + m10m21)*invd; 
+	      m1[2][1] = (m[0][1]*m[2][0] - m[0][0]*m[2][1])*invd;
+	      m1[2][2] = (-m[0][1]*m[1][0] + m[0][0]*m[1][1])*invd;
 #else
-	  invd = 1.0/det();
-	  m1[0][0] = -m[1][2]*m[2][1] + m[1][1]*m[2][2];
-	  m1[0][1] =  m[0][2]*m[2][1] - m[0][1]*m[2][2];
-	  m1[0][2] = -m[0][2]*m[1][1] + m[0][1]*m[1][2];
-	  m1[1][0] =  m[1][2]*m[2][0] - m[1][0]*m[2][2];
-	  m1[1][1] = -m[0][2]*m[2][0] + m[0][0]*m[2][2]; 
-	  m1[1][2] =  m[0][2]*m[1][0] - m[0][0]*m[1][2]; 
-	  m1[2][0] = -m[1][1]*m[2][0] + m[1][0]*m[2][1]; 
-	  m1[2][1] =  m[0][1]*m[2][0] - m[0][0]*m[2][1];
-	  m1[2][2] = -m[0][1]*m[1][0] + m[0][0]*m[1][1];
-	  m1[0][0] *= invd;
-	  m1[0][1] *= invd;
-	  m1[0][2] *= invd;
-	  m1[1][0] *= invd; 
-	  m1[1][1] *= invd;
-	  m1[1][2] *= invd;
-	  m1[2][0] *= invd;
-	  m1[2][1] *= invd; 
-	  m1[2][2] *= invd; 	    
+	      invd = 1.0/det();
+	      m1[0][0] = -m[1][2]*m[2][1] + m[1][1]*m[2][2];
+	      m1[0][1] =  m[0][2]*m[2][1] - m[0][1]*m[2][2];
+	      m1[0][2] = -m[0][2]*m[1][1] + m[0][1]*m[1][2];
+	      m1[1][0] =  m[1][2]*m[2][0] - m[1][0]*m[2][2];
+	      m1[1][1] = -m[0][2]*m[2][0] + m[0][0]*m[2][2]; 
+	      m1[1][2] =  m[0][2]*m[1][0] - m[0][0]*m[1][2]; 
+	      m1[2][0] = -m[1][1]*m[2][0] + m[1][0]*m[2][1]; 
+	      m1[2][1] =  m[0][1]*m[2][0] - m[0][0]*m[2][1];
+	      m1[2][2] = -m[0][1]*m[1][0] + m[0][0]*m[1][1];
+	      m1[0][0] *= invd;
+	      m1[0][1] *= invd;
+	      m1[0][2] *= invd;
+	      m1[1][0] *= invd; 
+	      m1[1][1] *= invd;
+	      m1[1][2] *= invd;
+	      m1[2][0] *= invd;
+	      m1[2][1] *= invd; 
+	      m1[2][2] *= invd; 	    
 #endif
-	}
-      else if constexpr (N==4)
-	{
+	    }
+	  else if constexpr (N==4)
+	    {
 #ifdef OPT_INV
-	  ntype s0 = m[0][0] * m[1][1] - m[1][0] * m[0][1];
-	  ntype s1 = m[0][0] * m[1][2] - m[1][0] * m[0][2];
-	  ntype s2 = m[0][0] * m[1][3] - m[1][0] * m[0][3];
-	  ntype s3 = m[0][1] * m[1][2] - m[1][1] * m[0][2];
-	  ntype s4 = m[0][1] * m[1][3] - m[1][1] * m[0][3];
-	  ntype s5 = m[0][2] * m[1][3] - m[1][2] * m[0][3];
+	      ntype s0 = m[0][0] * m[1][1] - m[1][0] * m[0][1];
+	      ntype s1 = m[0][0] * m[1][2] - m[1][0] * m[0][2];
+	      ntype s2 = m[0][0] * m[1][3] - m[1][0] * m[0][3];
+	      ntype s3 = m[0][1] * m[1][2] - m[1][1] * m[0][2];
+	      ntype s4 = m[0][1] * m[1][3] - m[1][1] * m[0][3];
+	      ntype s5 = m[0][2] * m[1][3] - m[1][2] * m[0][3];
 
-	  ntype c5 = m[2][2] * m[3][3] - m[3][2] * m[2][3];
-	  ntype c4 = m[2][1] * m[3][3] - m[3][1] * m[2][3];
-	  ntype c3 = m[2][1] * m[3][2] - m[3][1] * m[2][2];
-	  ntype c2 = m[2][0] * m[3][3] - m[3][0] * m[2][3];
-	  ntype c1 = m[2][0] * m[3][2] - m[3][0] * m[2][2];
-	  ntype c0 = m[2][0] * m[3][1] - m[3][0] * m[2][1];
+	      ntype c5 = m[2][2] * m[3][3] - m[3][2] * m[2][3];
+	      ntype c4 = m[2][1] * m[3][3] - m[3][1] * m[2][3];
+	      ntype c3 = m[2][1] * m[3][2] - m[3][1] * m[2][2];
+	      ntype c2 = m[2][0] * m[3][3] - m[3][0] * m[2][3];
+	      ntype c1 = m[2][0] * m[3][2] - m[3][0] * m[2][2];
+	      ntype c0 = m[2][0] * m[3][1] - m[3][0] * m[2][1];
 
-	  // Should check for 0 determinant
-	  invd = 1.0 / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
+	      // Should check for 0 determinant
+	      invd = 1.0 / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
 
 
-	  m1[0][0] = ( m[1][1] * c5 - m[1][2] * c4 + m[1][3] * c3) * invd;
-	  m1[0][1] = (-m[0][1] * c5 + m[0][2] * c4 - m[0][3] * c3) * invd;
-	  m1[0][2] = ( m[3][1] * s5 - m[3][2] * s4 + m[3][3] * s3) * invd;
-	  m1[0][3] = (-m[2][1] * s5 + m[2][2] * s4 - m[2][3] * s3) * invd;
+	      m1[0][0] = ( m[1][1] * c5 - m[1][2] * c4 + m[1][3] * c3) * invd;
+	      m1[0][1] = (-m[0][1] * c5 + m[0][2] * c4 - m[0][3] * c3) * invd;
+	      m1[0][2] = ( m[3][1] * s5 - m[3][2] * s4 + m[3][3] * s3) * invd;
+	      m1[0][3] = (-m[2][1] * s5 + m[2][2] * s4 - m[2][3] * s3) * invd;
 
-	  m1[1][0] = (-m[1][0] * c5 + m[1][2] * c2 - m[1][3] * c1) * invd;
-	  m1[1][1] = ( m[0][0] * c5 - m[0][2] * c2 + m[0][3] * c1) * invd;
-	  m1[1][2] = (-m[3][0] * s5 + m[3][2] * s2 - m[3][3] * s1) * invd;
-	  m1[1][3] = ( m[2][0] * s5 - m[2][2] * s2 + m[2][3] * s1) * invd;
+	      m1[1][0] = (-m[1][0] * c5 + m[1][2] * c2 - m[1][3] * c1) * invd;
+	      m1[1][1] = ( m[0][0] * c5 - m[0][2] * c2 + m[0][3] * c1) * invd;
+	      m1[1][2] = (-m[3][0] * s5 + m[3][2] * s2 - m[3][3] * s1) * invd;
+	      m1[1][3] = ( m[2][0] * s5 - m[2][2] * s2 + m[2][3] * s1) * invd;
 
-	  m1[2][0] = ( m[1][0] * c4 - m[1][1] * c2 + m[1][3] * c0) * invd;
-	  m1[2][1] = (-m[0][0] * c4 + m[0][1] * c2 - m[0][3] * c0) * invd;
-	  m1[2][2] = ( m[3][0] * s4 - m[3][1] * s2 + m[3][3] * s0) * invd;
-	  m1[2][3] = (-m[2][0] * s4 + m[2][1] * s2 - m[2][3] * s0) * invd;
+	      m1[2][0] = ( m[1][0] * c4 - m[1][1] * c2 + m[1][3] * c0) * invd;
+	      m1[2][1] = (-m[0][0] * c4 + m[0][1] * c2 - m[0][3] * c0) * invd;
+	      m1[2][2] = ( m[3][0] * s4 - m[3][1] * s2 + m[3][3] * s0) * invd;
+	      m1[2][3] = (-m[2][0] * s4 + m[2][1] * s2 - m[2][3] * s0) * invd;
 
-	  m1[3][0] = (-m[1][0] * c3 + m[1][1] * c1 - m[1][2] * c0) * invd;
-	  m1[3][1] = ( m[0][0] * c3 - m[0][1] * c1 + m[0][2] * c0) * invd;
-	  m1[3][2] = (-m[3][0] * s3 + m[3][1] * s1 - m[3][2] * s0) * invd;
-	  m1[3][3] = ( m[2][0] * s3 - m[2][1] * s1 + m[2][2] * s0) * invd;
+	      m1[3][0] = (-m[1][0] * c3 + m[1][1] * c1 - m[1][2] * c0) * invd;
+	      m1[3][1] = ( m[0][0] * c3 - m[0][1] * c1 + m[0][2] * c0) * invd;
+	      m1[3][2] = (-m[3][0] * s3 + m[3][1] * s1 - m[3][2] * s0) * invd;
+	      m1[3][3] = ( m[2][0] * s3 - m[2][1] * s1 + m[2][2] * s0) * invd;
 
 #else
-	  invd = 1.0/det();
-	  m1[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
-	    m[1][1]*m[2][3]*m[3][2] - m[1][2]*m[2][1]*m[3][3] + m[1][1]*m[2][2]*m[3][3];
-	  m1[0][1] =m[0][3]*m[2][2]*m[3][1] - m[0][2]*m[2][3]*m[3][1] - m[0][3]*m[2][1]*m[3][2] + 
-	    m[0][1]*m[2][3]*m[3][2] + m[0][2]*m[2][1]*m[3][3] - m[0][1]*m[2][2]*m[3][3];
-	  m1[0][2] =-(m[0][3]*m[1][2]*m[3][1]) + m[0][2]*m[1][3]*m[3][1] + m[0][3]*m[1][1]*m[3][2] - 
-	    m[0][1]*m[1][3]*m[3][2] - m[0][2]*m[1][1]*m[3][3] + m[0][1]*m[1][2]*m[3][3];
-	  m1[0][3] = m[0][3]*m[1][2]*m[2][1] - m[0][2]*m[1][3]*m[2][1] - m[0][3]*m[1][1]*m[2][2] +
-	    m[0][1]*m[1][3]*m[2][2] + m[0][2]*m[1][1]*m[2][3] - m[0][1]*m[1][2]*m[2][3];
-	  m1[1][0] = m[1][3]*m[2][2]*m[3][0] - m[1][2]*m[2][3]*m[3][0] - m[1][3]*m[2][0]*m[3][2] + 
-	    m[1][0]*m[2][3]*m[3][2] + m[1][2]*m[2][0]*m[3][3] - m[1][0]*m[2][2]*m[3][3];
-	  m1[1][1] = -(m[0][3]*m[2][2]*m[3][0]) + m[0][2]*m[2][3]*m[3][0] + m[0][3]*m[2][0]*m[3][2] - 
-	    m[0][0]*m[2][3]*m[3][2] - m[0][2]*m[2][0]*m[3][3] + m[0][0]*m[2][2]*m[3][3];
-	  m1[1][2] = m[0][3]*m[1][2]*m[3][0] - m[0][2]*m[1][3]*m[3][0] - m[0][3]*m[1][0]*m[3][2] + 
-	    m[0][0]*m[1][3]*m[3][2] + m[0][2]*m[1][0]*m[3][3] - m[0][0]*m[1][2]*m[3][3] ;
-	  m1[1][3] = -(m[0][3]*m[1][2]*m[2][0]) + m[0][2]*m[1][3]*m[2][0] + m[0][3]*m[1][0]*m[2][2] - 
-	    m[0][0]*m[1][3]*m[2][2] - m[0][2]*m[1][0]*m[2][3] + m[0][0]*m[1][2]*m[2][3];
-	  m1[2][0] = -(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
-	    m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3];
-	  m1[2][1] = m[0][3]*m[2][1]*m[3][0] - m[0][1]*m[2][3]*m[3][0] - m[0][3]*m[2][0]*m[3][1] + 
-	    m[0][0]*m[2][3]*m[3][1] + m[0][1]*m[2][0]*m[3][3] - m[0][0]*m[2][1]*m[3][3];
-	  m1[2][2] = -(m[0][3]*m[1][1]*m[3][0]) + m[0][1]*m[1][3]*m[3][0] + m[0][3]*m[1][0]*m[3][1] - 
-	    m[0][0]*m[1][3]*m[3][1] - m[0][1]*m[1][0]*m[3][3] + m[0][0]*m[1][1]*m[3][3];
-	  m1[2][3] =m[0][3]*m[1][1]*m[2][0] - m[0][1]*m[1][3]*m[2][0] - m[0][3]*m[1][0]*m[2][1] + 
-	    m[0][0]*m[1][3]*m[2][1] + m[0][1]*m[1][0]*m[2][3] - m[0][0]*m[1][1]*m[2][3];
-	  m1[3][0] = m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + 
-	    m[1][0]*m[2][2]*m[3][1] + m[1][1]*m[2][0]*m[3][2] - m[1][0]*m[2][1]*m[3][2];
-	  m1[3][1] =-(m[0][2]*m[2][1]*m[3][0]) + m[0][1]*m[2][2]*m[3][0] + m[0][2]*m[2][0]*m[3][1] - 
-	    m[0][0]*m[2][2]*m[3][1] - m[0][1]*m[2][0]*m[3][2] + m[0][0]*m[2][1]*m[3][2];
-	  m1[3][2] = m[0][2]*m[1][1]*m[3][0] - m[0][1]*m[1][2]*m[3][0] - m[0][2]*m[1][0]*m[3][1] + 
-	    m[0][0]*m[1][2]*m[3][1] + m[0][1]*m[1][0]*m[3][2] - m[0][0]*m[1][1]*m[3][2];
-	  m1[3][3] = -(m[0][2]*m[1][1]*m[2][0]) + m[0][1]*m[1][2]*m[2][0] + m[0][2]*m[1][0]*m[2][1] - 
-	    m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
-	  m1[0][0] *= invd;
-	  m1[0][1] *= invd;
-	  m1[0][2] *= invd;
-	  m1[0][3] *= invd;
-	  m1[1][0] *= invd; 
-	  m1[1][1] *= invd;
-	  m1[1][2] *= invd;
-	  m1[1][3] *= invd;
-	  m1[2][0] *= invd;
-	  m1[2][1] *= invd; 
-	  m1[2][2] *= invd;
-	  m1[2][3] *= invd;
-	  m1[3][0] *= invd;
-	  m1[3][1] *= invd; 
-	  m1[3][2] *= invd;
-	  m1[3][3] *= invd;
+	      invd = 1.0/det();
+	      m1[0][0] = -(m[1][3]*m[2][2]*m[3][1]) + m[1][2]*m[2][3]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - 
+		m[1][1]*m[2][3]*m[3][2] - m[1][2]*m[2][1]*m[3][3] + m[1][1]*m[2][2]*m[3][3];
+	      m1[0][1] =m[0][3]*m[2][2]*m[3][1] - m[0][2]*m[2][3]*m[3][1] - m[0][3]*m[2][1]*m[3][2] + 
+		m[0][1]*m[2][3]*m[3][2] + m[0][2]*m[2][1]*m[3][3] - m[0][1]*m[2][2]*m[3][3];
+	      m1[0][2] =-(m[0][3]*m[1][2]*m[3][1]) + m[0][2]*m[1][3]*m[3][1] + m[0][3]*m[1][1]*m[3][2] - 
+		m[0][1]*m[1][3]*m[3][2] - m[0][2]*m[1][1]*m[3][3] + m[0][1]*m[1][2]*m[3][3];
+	      m1[0][3] = m[0][3]*m[1][2]*m[2][1] - m[0][2]*m[1][3]*m[2][1] - m[0][3]*m[1][1]*m[2][2] +
+		m[0][1]*m[1][3]*m[2][2] + m[0][2]*m[1][1]*m[2][3] - m[0][1]*m[1][2]*m[2][3];
+	      m1[1][0] = m[1][3]*m[2][2]*m[3][0] - m[1][2]*m[2][3]*m[3][0] - m[1][3]*m[2][0]*m[3][2] + 
+		m[1][0]*m[2][3]*m[3][2] + m[1][2]*m[2][0]*m[3][3] - m[1][0]*m[2][2]*m[3][3];
+	      m1[1][1] = -(m[0][3]*m[2][2]*m[3][0]) + m[0][2]*m[2][3]*m[3][0] + m[0][3]*m[2][0]*m[3][2] - 
+		m[0][0]*m[2][3]*m[3][2] - m[0][2]*m[2][0]*m[3][3] + m[0][0]*m[2][2]*m[3][3];
+	      m1[1][2] = m[0][3]*m[1][2]*m[3][0] - m[0][2]*m[1][3]*m[3][0] - m[0][3]*m[1][0]*m[3][2] + 
+		m[0][0]*m[1][3]*m[3][2] + m[0][2]*m[1][0]*m[3][3] - m[0][0]*m[1][2]*m[3][3] ;
+	      m1[1][3] = -(m[0][3]*m[1][2]*m[2][0]) + m[0][2]*m[1][3]*m[2][0] + m[0][3]*m[1][0]*m[2][2] - 
+		m[0][0]*m[1][3]*m[2][2] - m[0][2]*m[1][0]*m[2][3] + m[0][0]*m[1][2]*m[2][3];
+	      m1[2][0] = -(m[1][3]*m[2][1]*m[3][0]) + m[1][1]*m[2][3]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - 
+		m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3];
+	      m1[2][1] = m[0][3]*m[2][1]*m[3][0] - m[0][1]*m[2][3]*m[3][0] - m[0][3]*m[2][0]*m[3][1] + 
+		m[0][0]*m[2][3]*m[3][1] + m[0][1]*m[2][0]*m[3][3] - m[0][0]*m[2][1]*m[3][3];
+	      m1[2][2] = -(m[0][3]*m[1][1]*m[3][0]) + m[0][1]*m[1][3]*m[3][0] + m[0][3]*m[1][0]*m[3][1] - 
+		m[0][0]*m[1][3]*m[3][1] - m[0][1]*m[1][0]*m[3][3] + m[0][0]*m[1][1]*m[3][3];
+	      m1[2][3] =m[0][3]*m[1][1]*m[2][0] - m[0][1]*m[1][3]*m[2][0] - m[0][3]*m[1][0]*m[2][1] + 
+		m[0][0]*m[1][3]*m[2][1] + m[0][1]*m[1][0]*m[2][3] - m[0][0]*m[1][1]*m[2][3];
+	      m1[3][0] = m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + 
+		m[1][0]*m[2][2]*m[3][1] + m[1][1]*m[2][0]*m[3][2] - m[1][0]*m[2][1]*m[3][2];
+	      m1[3][1] =-(m[0][2]*m[2][1]*m[3][0]) + m[0][1]*m[2][2]*m[3][0] + m[0][2]*m[2][0]*m[3][1] - 
+		m[0][0]*m[2][2]*m[3][1] - m[0][1]*m[2][0]*m[3][2] + m[0][0]*m[2][1]*m[3][2];
+	      m1[3][2] = m[0][2]*m[1][1]*m[3][0] - m[0][1]*m[1][2]*m[3][0] - m[0][2]*m[1][0]*m[3][1] + 
+		m[0][0]*m[1][2]*m[3][1] + m[0][1]*m[1][0]*m[3][2] - m[0][0]*m[1][1]*m[3][2];
+	      m1[3][3] = -(m[0][2]*m[1][1]*m[2][0]) + m[0][1]*m[1][2]*m[2][0] + m[0][2]*m[1][0]*m[2][1] - 
+		m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
+	      m1[0][0] *= invd;
+	      m1[0][1] *= invd;
+	      m1[0][2] *= invd;
+	      m1[0][3] *= invd;
+	      m1[1][0] *= invd; 
+	      m1[1][1] *= invd;
+	      m1[1][2] *= invd;
+	      m1[1][3] *= invd;
+	      m1[2][0] *= invd;
+	      m1[2][1] *= invd; 
+	      m1[2][2] *= invd;
+	      m1[2][3] *= invd;
+	      m1[3][0] *= invd;
+	      m1[3][1] *= invd; 
+	      m1[3][2] *= invd;
+	      m1[3][3] *= invd;
 #endif
+	      return m1;
+	    }
 	}
       else
-	m1=invgen(); 
+	{
+	  auto m1=invgen(); 
 
-      if constexpr (N > NMAX)
-	return std::move(m1);
-      else
-	return m1;
+	  if constexpr (N <= NMAX)
+	    return m1;
+	  else
+	    return move(m1);
+	}
     }
   inline pmatrixq<ntype, N>& operator += (const pmatrixq<ntype, N>& m1)
     {
@@ -1134,108 +1149,119 @@ public:
   inline pmatrixq<ntype, N> mul(const pmatrixq<ntype,N>& m1)
     {
       int i, j, k;
-      pmatrixq<ntype,N> m2;
-      // for small matrices we use explicit expressions for multiplication
-      if constexpr (N==1)
+      //this first condition apparently is not needed
+      // but in practice compiler optimizations can get fooled 
+      // if removed!
+      if constexpr (N <= 4)
 	{
-	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0];
-	}
-      else if constexpr (N==2)
-	{
-	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0];
-	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1];
-	  m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0];
-	  m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1]; 
-	}
-      else if constexpr (N==3)
-	{
-	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0];
-	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1];
-	  m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2];
-	  m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0] + pmatrixq::m[1][2]*m1.m[2][0];
-	  m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1] + pmatrixq::m[1][2]*m1.m[2][1];
-	  m2.m[1][2] = pmatrixq::m[1][0]*m1.m[0][2] + pmatrixq::m[1][1]*m1.m[1][2] + pmatrixq::m[1][2]*m1.m[2][2];
-	  m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0];
-	  m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1];
-	  m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2];  
-	} 
-      else if constexpr (N==4)
-	{
-	  //cout << pmatrix<ntype,N,N>::dynamic;
-	  m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0] + pmatrixq::m[0][3]*m1.m[3][0];
-	  m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1] + pmatrixq::m[0][3]*m1.m[3][1];
-	  m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2] + pmatrixq::m[0][3]*m1.m[3][2];
-	  m2.m[0][3] = pmatrixq::m[0][0]*m1.m[0][3] + pmatrixq::m[0][1]*m1.m[1][3] + pmatrixq::m[0][2]*m1.m[2][3] + pmatrixq::m[0][3]*m1.m[3][3];
-	  m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0] + pmatrixq::m[1][2]*m1.m[2][0] + pmatrixq::m[1][3]*m1.m[3][0];
-	  m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1] + pmatrixq::m[1][2]*m1.m[2][1] + pmatrixq::m[1][3]*m1.m[3][1];
-	  m2.m[1][2] = pmatrixq::m[1][0]*m1.m[0][2] + pmatrixq::m[1][1]*m1.m[1][2] + pmatrixq::m[1][2]*m1.m[2][2] + pmatrixq::m[1][3]*m1.m[3][2];
-	  m2.m[1][3] = pmatrixq::m[1][0]*m1.m[0][3] + pmatrixq::m[1][1]*m1.m[1][3] + pmatrixq::m[1][2]*m1.m[2][3] + pmatrixq::m[1][3]*m1.m[3][3];
-	  m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0] + pmatrixq::m[2][3]*m1.m[3][0];
-	  m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1] + pmatrixq::m[2][3]*m1.m[3][1];
-	  m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2] + pmatrixq::m[2][3]*m1.m[3][2];
-	  m2.m[2][3] = pmatrixq::m[2][0]*m1.m[0][3] + pmatrixq::m[2][1]*m1.m[1][3] + pmatrixq::m[2][2]*m1.m[2][3] + pmatrixq::m[2][3]*m1.m[3][3];
-	  m2.m[3][0] = pmatrixq::m[3][0]*m1.m[0][0] + pmatrixq::m[3][1]*m1.m[1][0] + pmatrixq::m[3][2]*m1.m[2][0] + pmatrixq::m[3][3]*m1.m[3][0];
-	  m2.m[3][1] = pmatrixq::m[3][0]*m1.m[0][1] + pmatrixq::m[3][1]*m1.m[1][1] + pmatrixq::m[3][2]*m1.m[2][1] + pmatrixq::m[3][3]*m1.m[3][1];
-	  m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
-	  m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
-	}
-#ifdef USE_LAPACK
-      else if constexpr (N > NMAXMUL) 
-	{
-	  if constexpr (is_same<ntype, double>::value)
-	    wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
-	  else if constexpr (is_same<ntype, float>::value)
-	    wrap_sgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
-	  else
+	  pmatrixq<ntype,N> m2;
+	  // for small matrices we use explicit expressions for multiplication
+	  if constexpr (N==1)
 	    {
-	      if constexpr (N > NMAXSTRA)
-		{
-#ifdef USE_STRASSEN
-		  mulstra(m2, m1);
-#else
-		  mulblock(m2, m1);
-#endif
-		}
+	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0];
+	    }
+	  else if constexpr (N==2)
+	    {
+	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0];
+	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1];
+	      m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0];
+	      m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1]; 
+	    }
+	  else if constexpr (N==3)
+	    {
+	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0];
+	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1];
+	      m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2];
+	      m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0] + pmatrixq::m[1][2]*m1.m[2][0];
+	      m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1] + pmatrixq::m[1][2]*m1.m[2][1];
+	      m2.m[1][2] = pmatrixq::m[1][0]*m1.m[0][2] + pmatrixq::m[1][1]*m1.m[1][2] + pmatrixq::m[1][2]*m1.m[2][2];
+	      m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0];
+	      m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1];
+	      m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2];  
+	    } 
+	  else if constexpr (N==4)
+	    {
+	      //cout << pmatrix<ntype,N,N>::dynamic;
+	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0] + pmatrixq::m[0][3]*m1.m[3][0];
+	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1] + pmatrixq::m[0][3]*m1.m[3][1];
+	      m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2] + pmatrixq::m[0][3]*m1.m[3][2];
+	      m2.m[0][3] = pmatrixq::m[0][0]*m1.m[0][3] + pmatrixq::m[0][1]*m1.m[1][3] + pmatrixq::m[0][2]*m1.m[2][3] + pmatrixq::m[0][3]*m1.m[3][3];
+	      m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0] + pmatrixq::m[1][2]*m1.m[2][0] + pmatrixq::m[1][3]*m1.m[3][0];
+	      m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1] + pmatrixq::m[1][2]*m1.m[2][1] + pmatrixq::m[1][3]*m1.m[3][1];
+	      m2.m[1][2] = pmatrixq::m[1][0]*m1.m[0][2] + pmatrixq::m[1][1]*m1.m[1][2] + pmatrixq::m[1][2]*m1.m[2][2] + pmatrixq::m[1][3]*m1.m[3][2];
+	      m2.m[1][3] = pmatrixq::m[1][0]*m1.m[0][3] + pmatrixq::m[1][1]*m1.m[1][3] + pmatrixq::m[1][2]*m1.m[2][3] + pmatrixq::m[1][3]*m1.m[3][3];
+	      m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0] + pmatrixq::m[2][3]*m1.m[3][0];
+	      m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1] + pmatrixq::m[2][3]*m1.m[3][1];
+	      m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2] + pmatrixq::m[2][3]*m1.m[3][2];
+	      m2.m[2][3] = pmatrixq::m[2][0]*m1.m[0][3] + pmatrixq::m[2][1]*m1.m[1][3] + pmatrixq::m[2][2]*m1.m[2][3] + pmatrixq::m[2][3]*m1.m[3][3];
+	      m2.m[3][0] = pmatrixq::m[3][0]*m1.m[0][0] + pmatrixq::m[3][1]*m1.m[1][0] + pmatrixq::m[3][2]*m1.m[2][0] + pmatrixq::m[3][3]*m1.m[3][0];
+	      m2.m[3][1] = pmatrixq::m[3][0]*m1.m[0][1] + pmatrixq::m[3][1]*m1.m[1][1] + pmatrixq::m[3][2]*m1.m[2][1] + pmatrixq::m[3][3]*m1.m[3][1];
+	      m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
+	      m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
+	    }
+	  return m1;
+	}
+      else
+	{
+	  pmatrixq<ntype, N> m2;
+#ifdef USE_LAPACK
+	  if constexpr (N > NMAXMUL)  
+	    {
+	      if constexpr (is_same<ntype, double>::value)
+		wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
+	      else if constexpr (is_same<ntype, float>::value)
+		wrap_sgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
 	      else
 		{
-		  for (i=0; i < N; i++)
+		  if constexpr (N > NMAXSTRA)
 		    {
-		      for (j=0; j < N; j++)
+#ifdef USE_STRASSEN
+		      mulstra(m2, m1);
+#else
+		      mulblock(m2, m1);
+#endif
+		    }
+		  else
+		    {
+		      for (i=0; i < N; i++)
 			{
-			  m2.m[i][j]=0.0;
-			  for (k=0; k < N; k++)
-			    m2.m[i][j] += pmatrixq::m[i][k]*m1.m[k][j];
+			  for (j=0; j < N; j++)
+			    {
+			      m2.m[i][j]=0.0;
+			      for (k=0; k < N; k++)
+				m2.m[i][j] += pmatrixq::m[i][k]*m1.m[k][j];
+			    }
 			}
 		    }
 		}
 	    }
-	}
 #else
-      else if constexpr (N > NMAXSTRA) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
-	{	
+	  if constexpr (N > NMAXSTRA) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+	    {	
 #ifdef USE_STRASSEN
-	  mulstra(m2, m1);
+	      mulstra(m2, m1);
 #else
-	  mulblock(m2, m1);
+	      mulblock(m2, m1);
 #endif
-	}
+	    }
 #endif
-      else
-	{
-	  for (i=0; i < N; i++)
+	  else
 	    {
-	      for (j=0; j < N; j++)
+	      for (i=0; i < N; i++)
 		{
-		  m2.m[i][j]=0.0;
-		  for (k=0; k < N; k++)
-		    m2.m[i][j] += pmatrixq::m[i][k]*m1.m[k][j];
+		  for (j=0; j < N; j++)
+		    {
+		      m2.m[i][j]=0.0;
+		      for (k=0; k < N; k++)
+			m2.m[i][j] += pmatrixq::m[i][k]*m1.m[k][j];
+		    }
 		}
 	    }
+	  if constexpr (N > NMAX)
+	    return std::move(m2);
+	  else
+	    return m2;
 	}
-      if constexpr (N > NMAX)
-	return std::move(m2);
-      else
-	return m2;
     }
   // transpose
   pmatrixq<ntype,N> transp()
