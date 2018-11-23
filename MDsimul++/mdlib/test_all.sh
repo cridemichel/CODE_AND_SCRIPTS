@@ -4,10 +4,11 @@ echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
-NC="2000000"
+NCINI="2000000"
+NC=$NCINI
 for N in `echo $MATDIMS`
 do
-NC=`echo "e(1.05*l(3.0/${N}))*${NC}" | bc -l | LANG=C awk '{printf("%d", $0)}'`  
+NC=`echo "e(2.2*l(3.0/${N}))*${NCINI}" | bc -l | LANG=C awk '{printf("%d", $0)}'`  
 echo "Doing " $NC "loops for N=" $N
 #my class
 g++ -DSEL="1" -DNMAT="$N" -std=c++17 -ffast-math -O3 -llapack -lblas -larmadillo $SF -o $EXE
