@@ -43,6 +43,7 @@ extern void sgemv_(char* TRANSA, int* M, int *N, float* ALPHA,
 //Matrix times vector
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha=1.0, double beta=0.0)
 {
+  // Y = A*X + Y
   double ALPHA, BETA;
   int LDA, M, N, incx=1, incy=1;
   M=N=n;
@@ -1111,6 +1112,42 @@ public:
 	      }
 	  }
     }
+  void mulvadd(pvector<ntype,N>& v1, const pvector<ntype,N>& v2, ntype alpha=1.0, ntype beta=0.0) const 
+    {
+      // v1=alpha*m*v2 + beta*v1
+#ifdef USE_LAPACK
+      if constexpr (N > NMAXMUL)
+	{
+	  if constexpr (is_same<ntype, double>::value)
+	    {
+	      wrap_dgemv(&(v1.v[0]), &(m[0][0]), &(v2.v[0]), N, alpha, beta);
+	    }
+	  else if constexpr (is_same<ntype, float>::value)
+	    {
+	      wrap_sgemv(&(v1.v[0]), &(m[0][0]), &(v2.v[0]), N, alpha, beta);
+	    }
+	  else
+	    {
+	      if (alpha==1.0 && beta==0)
+		v1 = (*this)*v2+v1; 
+	      else if (alpha==1.0 && beta==1.0)
+		v1 = (*this)*v2 + v1;
+	      else
+		v1 = alpha*(*this)*v2 + beta*v1;
+	    }
+	}
+      else
+	{
+	  if (alpha==1.0 && beta==0)
+    	    v1 = (*this)*v2+v1; 
+	  else if (alpha==1.0 && beta==1.0)
+		v1 = (*this)*v2 + v1;
+	  else
+	    v1 = alpha*(*this)*v2 + beta*v1;
+	}
+#endif
+    }
+
   void muladd(const pmatrixq<ntype,N>& m1, const pmatrixq<ntype,N>& m2, ntype alpha=1.0, ntype beta=0.0) 
     {
       // m=alpha*m*m1 + beta*m2
