@@ -399,6 +399,7 @@ public:
   ~pmatrixdp()
     {
       free(m);
+      free(m[0]);
     }
 };	
 template <class ntype, int NT, int MT> using pmatbasedyn = 
