@@ -1621,10 +1621,10 @@ inline auto operator/(AnOpM<ntype,NT, tipoL, LLhs, LRhs> const& lhs, AnOpM<ntype
  template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator/(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,NT> const& mR)
 {
-  pmatrixq<ntype,NT> mL;
+  pmatrixq<ntype,NT> mL(mR.N);
   int i, j;
-  for (i=0; i < mL.N; i++)
-    for (j=0; j < mL.N; j++)
+  for (i=0; i < mR.N; i++)
+    for (j=0; j < mR.N; j++)
       {
 	mL[i][j] = lhs.get_m(i,j);
       }
@@ -1634,10 +1634,10 @@ inline auto operator/(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype
  template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator/(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, Rhs> const& rhs)
 {
-  pmatrixq<ntype,NT> mR;
+  pmatrixq<ntype,NT> mR(mL.N);
   int i, j;
-  for (i=0; i < mR.N; i++)
-    for (j=0; j < mR.N; j++)
+  for (i=0; i < mL.N; i++)
+    for (j=0; j < mL.N; j++)
       {
 	mL[i][j] = rhs.get_m(i,j);
       }
@@ -1648,14 +1648,15 @@ inline auto operator/(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, R
 //
 // AnOpM times AnOpM
   template <typename ntype,int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
-inline auto operator*(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> & leftOperand, const AnOpM<ntype,NT, tipoR, RLhs, RRhs> & rightOperand)
+inline auto operator*(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> &lhs, const AnOpM<ntype,NT, tipoR, RLhs, RRhs> &rhs)
 {
-  pmatrixq<ntype,NT> mL, mR;
-  for (int i=0; i < mL.N; i++)
-    for (int j=0; j < mL.N; j++)
+  int N=lhs.get_N();
+  pmatrixq<ntype,NT> mL(N), mR(N);
+  for (int i=0; i < N; i++)
+    for (int j=0; j < N; j++)
       {
-    	mR[i][j] = leftOperand.get_m(i,j);
-	mL[i][j] = rightOperand.get_m(i,j);
+    	mR[i][j] = lhs.get_m(i,j);
+	mL[i][j] = rhs.get_m(i,j);
       }
   return mR*mL;
 }

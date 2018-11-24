@@ -580,8 +580,9 @@ inline auto operator-(const AnOpV<ntype, NT, tipoL, LLhs, LRhs> & leftOperandcon
   template <typename ntype, int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline ntype operator*(const AnOpV<ntype, NT, tipoL, LLhs, LRhs> & lhs, const AnOpV<ntype, NT, tipoR, RLhs, RRhs> & rhs)
 {
-  pvector<ntype, NT> vR(lhs.get_N()), vL(lhs.get_N());
-  for (int i=0; i < vR.N; i++)
+  int N=lhs.get_N();
+  pvector<ntype, NT> vR(N), vL(N);
+  for (int i=0; i < N; i++)
     {
       vL[i] = lhs.get_v(i);
       vR[i] = rhs.get_v(i);
