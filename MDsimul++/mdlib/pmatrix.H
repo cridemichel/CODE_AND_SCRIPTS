@@ -323,7 +323,7 @@ public:
   ntype **m; // N riga M colonna
   int N, M;
   // copy assignment
- pmatrixdp<ntype,NT,MT>& operator=(const pmatrixdp<ntype,NT,MT>& m1)
+  pmatrixdp<ntype,NT,MT>& operator=(const pmatrixdp<ntype,NT,MT>& m1)
     {
       int i,j;
       for (i=0; i < N; i++)
@@ -348,6 +348,14 @@ public:
   // copy constructor 
   pmatrixdp(const pmatrixdp<ntype,NT,MT>& m1)
     {
+      ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
+      m = (ntype**)malloc(sizeof(ntype*)*N);
+      for (auto i=0; i < N; i++)
+	{
+	  m[i] = pt + i*M;
+	  //cout << "m[" << i << "]=" << m[i] << "\n";
+	}
+
       for (auto i=0; i < N; i++)
 	for (auto j=0; j < M; j++)
 	  m[i][j] = m1.m[i][j];
