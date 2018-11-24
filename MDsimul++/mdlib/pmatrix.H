@@ -250,7 +250,7 @@ template <class ntype,int NT, int MT> class pmatrix {
   //int nr, nc;
 public:
   ntype m[NT][MT];
-  static const int N=MT, M=MT;
+  static const int N=NT, M=MT;
   constexpr static int dynamic = false;
   pmatrix() = default;
   pmatrix(int NN, int MM): pmatrix()
