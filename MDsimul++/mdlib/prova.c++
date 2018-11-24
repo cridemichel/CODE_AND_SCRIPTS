@@ -239,7 +239,7 @@ int main(int argc, char**argv)
   double A[2][2], B[2][2];
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
-#if 0
+#if 1
   pmatrixq<double,10> mmd;
   for (auto i=0; i < 10; i++)
     for (auto j=0; j < 10; j++)
