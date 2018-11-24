@@ -335,19 +335,12 @@ public:
   // move assignment
   pmatrixdp<ntype,NT,MT>& operator=(pmatrixdp<ntype,NT,MT>&& m1)
     {
-      ntype **ppt, **pt;
-      ppt = (ntype **)malloc(sizeof(ntype*)*N);
-      for (auto i=0; i < N; i++)
-	{
-	  ppt[i] = m[i];
-	  m[i] = m1.m[i];
-	}
-      pt = m;
+      ntype **ppt, *pt;
+      ppt = m;
+      pt = m[0];
+      m[0] = m1.m[0];
       m=m1.m;
-      for (auto i=0; i < N; i++)
-	{
-	  m1.m[i] = pt[i];
-	}
+      m1.m[0] = pt;
       m1.m = ppt;
       return (*this);
     }
@@ -364,12 +357,8 @@ public:
   pmatrixdp(pmatrixdp<ntype,NT,MT>&& m1)
     {
       (*this).m = m1.m;
-      for (auto i=0; i < N; i++)
-	{
-	  (*this).m[i] = m1.m[i];
-	  m1.m[i] = nullptr;
-	}
-      (*this).m = m;
+      (*this).m[0] = m1.m[0];
+      m1.m[0] = nullptr;
       m1.m=nullptr;
     }
 #endif
