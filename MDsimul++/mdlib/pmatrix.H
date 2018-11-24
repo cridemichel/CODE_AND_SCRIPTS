@@ -390,13 +390,14 @@ public:
       ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
       m = (ntype**)malloc(sizeof(ntype*)*N);
       for (auto i=0; i < N; i++)
-	m[i] = pt + i*sizeof(ntype)*M;
+	{
+	  m[i] = pt + i*M;
+	  cout << "m[" << i << "]=" << m[i] << "\n";
+	}
     }
   // destructor
   ~pmatrixdp()
     {
-      for (auto i=0; i < N; i++)
-	free(m[i]);
       free(m);
     }
 };	
