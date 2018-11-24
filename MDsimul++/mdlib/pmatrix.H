@@ -348,6 +348,8 @@ public:
   // copy constructor 
   pmatrixdp(const pmatrixdp<ntype,NT,MT>& m1)
     {
+      N=m1.N;
+      M=m1.M;
       ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
       m = (ntype**)malloc(sizeof(ntype*)*N);
       for (auto i=0; i < N; i++)
