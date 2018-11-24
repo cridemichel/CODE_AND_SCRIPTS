@@ -387,8 +387,8 @@ public:
   // destructor
   ~pmatrixdp()
     {
-      free(m);
       free(m[0]);
+      free(m);
     }
 };	
 template <class ntype, int NT, int MT> using pmatbasedyn = 
