@@ -200,7 +200,7 @@ double ranf3()
 return drand48();
 }
 #ifndef NMAT
-#define NMAT 200
+#define NMAT 80
 #endif
 #ifdef GLM
   glm::dmat4 mmg, mmg2, mmg3, mmg4;
@@ -239,6 +239,14 @@ int main(int argc, char**argv)
   double A[2][2], B[2][2];
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
+#if 0
+  pmatrixq<double,10> mmd;
+  for (auto i=0; i < 10; i++)
+    for (auto j=0; j < 10; j++)
+      mmd[i][j] = 1.0;
+  mmd.show();
+  exit(0);
+#endif
 #if 0
   for (i=0; i < NMAT; i++)
     {
