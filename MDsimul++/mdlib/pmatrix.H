@@ -1550,10 +1550,10 @@ inline auto operator+(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
-  typename std::conditional<(NT<=matpars::NLAZY&&NT >=0),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
+  typename std::conditional<((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
 inline operator+(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
-  if constexpr (NT >= 0  && NT <= pmatrixq<ntype,NT>::NLAZY)
+  if constexpr ((NT >= 0 && NT <= pmatrixq<ntype,NT>::NLAZY)|| NT==matpars::DynNoLazy)
     {
       return lhs.addition(rhs); //normal evaluation
     }
@@ -1588,11 +1588,11 @@ inline auto operator-(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
   typename std::conditional
-  <(NT<=matpars::NLAZY&&NT >=0),
+  <((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy),
   pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatMinusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
 inline operator-(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
-  if constexpr (NT <= matpars::NLAZY && NT >=0)
+  if constexpr ((NT <= matpars::NLAZY && NT >=0)|| NT==matpars::DynNoLazy)
     {
       return lhs.subtraction(rhs); //normal evaluation
     }
@@ -1735,7 +1735,7 @@ template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
   template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator *(pmatrixq<ntype,NT> const& lhs, const ntype& rhs) 
 {
-  if constexpr (NT <= matpars::NLAZY&&NT>=0)
+  if constexpr ((NT <= matpars::NLAZY&&NT>=0)||NT==matpars::DynNoLazy)
     return lhs.matscal(rhs);
   else
     return AnOpM<ntype,NT, MOpTypes::MatTimesScal, pmatrixq<ntype,NT>, ntype>(lhs,rhs);
@@ -1751,7 +1751,7 @@ inline auto operator *(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, const ntype& 
   template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator /(pmatrixq<ntype,NT> const& lhs, const ntype& rhs) 
 {
-  if constexpr (NT <= matpars::NLAZY && NT >=0)
+  if constexpr ((NT <= matpars::NLAZY && NT >=0)||NT==matpars::DynNoLazy)
     return lhs.matscal(1.0/rhs);
   else
     return AnOpM<ntype,NT, MOpTypes::MatDivScal, pmatrixq<ntype,NT>, ntype>(lhs,rhs);
