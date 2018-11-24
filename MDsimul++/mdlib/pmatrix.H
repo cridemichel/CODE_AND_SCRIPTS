@@ -251,6 +251,14 @@ public:
   ntype m[NT][MT];
   static const int N=MT, M=MT;
   constexpr static int dynamic = false;
+  pmatrix()
+    {}
+  pmatrix(int NN, int MM)
+    {
+      NN=NT;// just to avoid warnings
+      MM=MT;
+      //empty body
+    }
 };
 // dynamic base class using ptr to ptr(with move assignment and move constructor properly defined)
 template <class ntype,int NT, int MT> class pmatrixdn {
@@ -365,6 +373,15 @@ public:
       for (auto i=0; i < N; i++)
 	m[i] = pt + i*sizeof(ntype)*M;
     }
+  pmatrixdp(int NN, int MM)
+    {
+      N=NN;
+      M=MM;
+      ntype *pt = malloc(sizeof(ntype)*N*M);
+      m = malloc(sizeof(ntype*)*N);
+      for (auto i=0; i < N; i++)
+	m[i] = pt + i*sizeof(ntype)*M;
+    }
   // destructor
   ~pmatrixdp()
     {
@@ -373,15 +390,23 @@ public:
       free(m);
     }
 };	
-template <class ntype, int NT> using pmatbasedyn = 
-typename std::conditional<(NT>0), pmatrixdn <ntype, NT, NT>,
-	 pmatrixdp <ntype, NT, NT>>::type;
+template <class ntype, int NT, int MT> using pmatbasedyn = 
+typename std::conditional<(NT>0), pmatrixdn <ntype, NT, MT>,
+	 pmatrixdp <ntype, NT, MT>>::type;
 
 // dynamic base class
-template <class ntype,int NT, int MT> class pmatrixd: public pmatbasedyn<ntype,NT> {
+template <class ntype,int NT, int MT> class pmatrixd: public pmatbasedyn<ntype,NT,MT> {
   //int nr, nc;
 public:
   constexpr static int dynamic = true;
+  pmatrixd<ntype,NT,MT>(int NN, int MM): pmatbasedyn<ntype,NT,MT>(NN,MM)
+  {
+    // empty body
+  }
+  pmatrixd<ntype,NT,MT>(): pmatbasedyn<ntype,NT,MT>()
+  {
+    // empty body
+  }
 };
 // matrici quadrate NxN
 using namespace std;
@@ -400,7 +425,7 @@ struct matpars
 // for large matrices use dynamic allocation to avoid stack overflow!
 // conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
 // case)
-template <class ntype, int NT> using pmatrixb = 
+template <class ntype, int NT=-1> using pmatrixb = 
 typename std::conditional<(NT>matpars::NMAX||NT <=0), pmatrixd <ntype, NT, NT>,
 	 pmatrix <ntype, NT, NT>>::type;
 
@@ -527,7 +552,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
     }
 public:
   using pmatrixb<ntype,NT>::m;
-  static const int N=NT;
+  using pmatrixb<ntype,NT>::N;
   // Build identity matrix, simple as that
   inline pmatrixq<ntype,NT> I() const
     {
@@ -536,6 +561,11 @@ public:
 	for (auto j=0; j < N; j++)
 	  MI[i][j] = (i==j)?1.0:0.0;
       return MI;
+    }
+
+  pmatrixq<ntype,NT>(int NN): pmatrixb<ntype,NT>(NN,NN)
+    {
+      // empty body
     }
 #ifdef MAT_LAZY_EVAL
   // -= and += are overloaded in such a way that if rvalue is an AnOpM (lazy class)
@@ -573,7 +603,10 @@ public:
 	for (int j=0; j < N; j++)
 	  m[i][j] = op.get_m(i,j);
     }
-  pmatrixq<ntype,NT>() = default;
+  pmatrixq<ntype,NT>(): pmatrixb<ntype,NT>()
+  {
+  } 
+  //pmatrixq<ntype,NT>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
   inline void* get_mptr() const {return m;}
 #endif
@@ -591,7 +624,7 @@ public:
   // addition
   inline pmatrixq<ntype,NT> addition(const pmatrixq<ntype,NT>& m1) const
     {
-      if constexpr (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
+      if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
 	  static pmatrixq<ntype,NT> m2;
 	  int i, j;
@@ -617,7 +650,7 @@ public:
 	      {
 		m2.m[i][j] = m[i][j] + m1.m[i][j];
 	      }
-	  if constexpr (N > NMAX)
+	  if (N > NMAX)
 	    return std::move(m2);
 	  else
 	    return m2;
@@ -626,7 +659,7 @@ public:
   inline pmatrixq<ntype,NT> subtraction(const pmatrixq<ntype,NT>& m1) const
     {
       int i, j;
-      if constexpr (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
+      if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
 	  static pmatrixq<ntype,NT> m2;
 	  for (i=0; i < N; i++)
@@ -656,7 +689,7 @@ public:
 		(const_cast<pmatrixq<ntype,NT>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,NT>&>(m1))[i][j];
 #endif
 	      }
-	  if constexpr (N > NMAX)
+	  if (N > NMAX)
 	    return std::move(m2);
 	  else 
 	    return m2;
@@ -746,23 +779,23 @@ public:
       // N.B. this first condition apparently is not needed
       // but in practice compiler optimizations can get fooled
       // if removed!
-      if constexpr (N <= 4)
+      if (N <= 4)
 	{
-	  if constexpr (N==1)
+	  if (N==1)
 	    {
 	      return m[0][0];
 	    }
-	  else if constexpr (N==2)
+	  else if (N==2)
 	    {
 	      return m[0][0]*m[1][1]-m[0][1]*m[1][0];
 	    }
-	  else if constexpr (N==3)
+	  else if (N==3)
 	    {
 	      return -m[0][2]*m[1][1]*m[2][0] + m[0][1]*m[1][2]*m[2][0] + 
 		m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - 
 		m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
 	    } 
-	  else if constexpr (N == 4)
+	  else if (N == 4)
 	    {	  
 	      return m[0][1]*m[1][3]*m[2][2]*m[3][0] - m[0][1]*m[1][2]*m[2][3]*m[3][0] - 
 		m[0][0]*m[1][3]*m[2][2]*m[3][1] + m[0][0]*m[1][2]*m[2][3]*m[3][1] - 
@@ -789,7 +822,7 @@ public:
       // for more details c2.3)
 #ifdef USE_LAPACK
       om = (*this);
-      if constexpr (N > NMAXINV)
+      if (N > NMAXINV)
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    {    
@@ -825,15 +858,15 @@ public:
        // N.B. this first condition apparently is not needed
       // but in practice compiler optimizations get fooled nuts
       // if removed!
-      if constexpr (N <= 4)
+      if (N <= 4)
 	{
 	  double invd;
 	  pmatrixq <ntype,NT> m1;
-	  if constexpr (N==1)
+	  if (N==1)
 	    {
 	      m1[0][0]=1.0/m[0][0];
 	    }
-	  else if constexpr (N==2)
+	  else if (N==2)
 	    {
 	      invd = 1.0/det();
 	      m1[0][0] = m[1][1]*invd;
@@ -841,7 +874,7 @@ public:
 	      m1[1][0] = m[0][1]*invd;
 	      m1[1][1] = m[0][0]*invd;
 	    }
-	  else if constexpr (N==3)
+	  else if (N==3)
 	    {
 #ifdef OPT_INV
 	      ntype m11m20= m[1][1]*m[2][0];
@@ -884,7 +917,7 @@ public:
 	      m1[2][2] *= invd; 	    
 #endif
 	    }
-	  else if constexpr (N==4)
+	  else if (N==4)
 	    {
 #ifdef OPT_INV
 	      ntype s0 = m[0][0] * m[1][1] - m[1][0] * m[0][1];
@@ -983,7 +1016,7 @@ public:
 	{
 	  auto m1=invgen(); 
 
-	  if constexpr (N <= NMAX)
+	  if (N <= NMAX)
 	    return m1;
 	  else
 	    return move(m1);
@@ -1025,7 +1058,7 @@ public:
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
-      if constexpr (N > NMAX)
+      if (N > NMAX)
 	return std::move(m1);
       else 
 	return m1;
@@ -1074,7 +1107,7 @@ public:
     }
   inline pmatrixq<ntype,NT> operator *(const pmatrixq<ntype,NT>& m1) 
     {
-      if constexpr (N > NMAX)
+      if (N > NMAX)
 	return std::move((*this).mul(m1));// std:move is needed otherwise move constructor will not be used!!
       else
 	return (*this).mul(m1);
@@ -1087,7 +1120,7 @@ public:
 
   inline pmatrixq<ntype,NT> operator /(const pmatrixq<ntype,NT>& m1) 
     {
-      if constexpr (N > NMAX)
+      if (N > NMAX)
 	return std::move((*this).mul(m1.inv()));// std:move is needed otherwise move constructor will not be used!!	
       else 
 	return (*this).mul(m1.inv());
@@ -1099,7 +1132,7 @@ public:
       int i, j;
       pvector <ntype,NT> v2;
 #ifdef USE_LAPACK
-      if constexpr (N > NMAXMUL) 
+      if (N > NMAXMUL) 
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    wrap_dgemv('t', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
@@ -1143,7 +1176,7 @@ public:
       int i, j;
       pvector <ntype,NT> v2;
 #ifdef USE_LAPACK
-      if constexpr (N > NMAXMUL) 
+      if (N > NMAXMUL) 
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    wrap_dgemv('n', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
@@ -1262,7 +1295,7 @@ public:
     {
       // m=alpha*m*m1 + beta*m2
 #ifdef USE_LAPACK
-      if constexpr (N > NMAXMUL)
+      if (N > NMAXMUL)
 	{
 	  if constexpr (is_same<ntype, double>::value)
 	    {
@@ -1299,22 +1332,22 @@ public:
       //this first condition apparently is not needed
       // but in practice compiler optimizations can get fooled 
       // if removed!
-      if constexpr (N <= 4)
+      if (N <= 4)
 	{
 	  pmatrixq<ntype,NT> m2;
 	  // for small matrices we use explicit expressions for multiplication
-	  if constexpr (N==1)
+	  if (N==1)
 	    {
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0];
 	    }
-	  else if constexpr (N==2)
+	  else if (N==2)
 	    {
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0];
 	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1];
 	      m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0];
 	      m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1]; 
 	    }
-	  else if constexpr (N==3)
+	  else if (N==3)
 	    {
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0];
 	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1];
@@ -1326,7 +1359,7 @@ public:
 	      m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1];
 	      m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2];  
 	    } 
-	  else if constexpr (N==4)
+	  else if (N==4)
 	    {
 	      //cout << pmatrix<ntype,NT,NT>::dynamic;
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0] + pmatrixq::m[0][3]*m1.m[3][0];
@@ -1352,7 +1385,7 @@ public:
 	{
 	  pmatrixq<ntype,NT> m2;
 #ifdef USE_LAPACK
-	  if constexpr (N > NMAXMUL)  
+	  if (N > NMAXMUL)  
 	    {
 	      if constexpr (is_same<ntype, double>::value)
 		wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
@@ -1360,7 +1393,7 @@ public:
 		wrap_sgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
 	      else
 		{
-		  if constexpr (N > NMAXSTRA)
+		  if (N > NMAXSTRA)
 		    {
 #ifdef USE_STRASSEN
 		      mulstra(m2, m1);
@@ -1383,7 +1416,7 @@ public:
 		}
 	    }
 #else
-	  if constexpr (N > NMAXSTRA) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
+	  if (N > NMAXSTRA) // 40 has been chose optimizing performance on my macbook pro 13" but can be architecture dependent
 	    {	
 #ifdef USE_STRASSEN
 	      mulstra(m2, m1);
@@ -1404,7 +1437,7 @@ public:
 		    }
 		}
 	    }
-	  if constexpr (N > NMAX)
+	  if (N > NMAX)
 	    return std::move(m2);
 	  else
 	    return m2;
@@ -1498,10 +1531,10 @@ inline auto operator+(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
-  typename std::conditional<(NT<=matpars::NLAZY||NT==matpars::DynNoLazy||NT==matpars::Dynamic),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
+  typename std::conditional<(NT<=matpars::NLAZY&&NT >=0),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
 inline operator+(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
-  if constexpr ((NT > 0  && NT <= pmatrixq<ntype,NT>::NLAZY) || NT < 0)
+  if constexpr (NT >= 0  && NT <= pmatrixq<ntype,NT>::NLAZY)
     {
       return lhs.addition(rhs); //normal evaluation
     }
@@ -1536,11 +1569,11 @@ inline auto operator-(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
   typename std::conditional
-  <(NT<=matpars::NLAZY||NT <=0),
+  <(NT<=matpars::NLAZY&&NT >=0),
   pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatMinusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
 inline operator-(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
-  if constexpr (NT <= matpars::NLAZY || NT <= 0)
+  if constexpr (NT <= matpars::NLAZY && NT >=0)
     {
       return lhs.subtraction(rhs); //normal evaluation
     }
@@ -1665,7 +1698,7 @@ inline auto operator *(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, const pvector
   template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator *(const ntype& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
-  if constexpr (rhs.N <= matpars::NLAZY)
+  if constexpr (NT <= matpars::NLAZY&&NT>=0)
     return rhs.matscal(lhs);
   else
     return AnOpM<ntype,NT, MOpTypes::ScalTimesMat, ntype, pmatrixq<ntype,NT>>(lhs,rhs);
@@ -1681,7 +1714,7 @@ template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
   template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator *(pmatrixq<ntype,NT> const& lhs, const ntype& rhs) 
 {
-  if constexpr (lhs.N <= matpars::NLAZY)
+  if constexpr (NT <= matpars::NLAZY&&NT>=0)
     return lhs.matscal(rhs);
   else
     return AnOpM<ntype,NT, MOpTypes::MatTimesScal, pmatrixq<ntype,NT>, ntype>(lhs,rhs);
@@ -1697,7 +1730,7 @@ inline auto operator *(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, const ntype& 
   template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator /(pmatrixq<ntype,NT> const& lhs, const ntype& rhs) 
 {
-  if constexpr (lhs.N <= matpars::NLAZY)
+  if constexpr (NT <= matpars::NLAZY && NT >=0)
     return lhs.matscal(1.0/rhs);
   else
     return AnOpM<ntype,NT, MOpTypes::MatDivScal, pmatrixq<ntype,NT>, ntype>(lhs,rhs);
