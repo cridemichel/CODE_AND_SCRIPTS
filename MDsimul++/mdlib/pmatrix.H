@@ -119,7 +119,7 @@ void wrap_dgemm(double *C, const double *A, const double *B, const int n, double
   BETA=beta; 
   LDA=LDB=LDC=n;
 #ifdef __APPLE__
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M,NT, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M,N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
 #else
   // LAPACK and BLAS use column major (matrix is a sequence of columns, i.e.
   // ABC|DEF|GHI is a matrix with columns ABC, DEF and GHI) convention hence we have to swap A and B
@@ -137,7 +137,7 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
   BETA=beta; 
   LDA=LDB=LDC=n;
 #ifdef __APPLE__
-  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M,NT, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M,N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC);      
 #else
   // LAPACK and BLAS use column major convention hence we have to swap A and B
   sgemm_(&ta, &tb, &M, &N, &K, &ALPHA, B, &LDA, A, &LDB, &BETA, C, &LDC);      
@@ -240,6 +240,7 @@ struct AnOpM
       }
     return 0;
   }
+  int get_N() const { return lhs.get_N(); }
   Lhs const& get_lhs() const { return lhs; }//unused
   Rhs const& get_rhs() const { return rhs; }
 };
@@ -260,7 +261,7 @@ public:
       //empty body
     }
 };
-// dynamic base class using ptr to ptr(with move assignment and move constructor properly defined)
+// dynamic base class (with move assignment and move constructor properly defined)
 template <class ntype,int NT, int MT> class pmatrixdn {
   //int nr, nc;
 public:
@@ -298,6 +299,14 @@ public:
     }
 #endif
   // default constructor
+  pmatrixdn(int NN, int MM)
+    {
+      NN=NT;
+      MM=MT;
+      m = new ntype[NT][MT];
+    }
+
+  // default constructor
   pmatrixdn()
     {
       m = new ntype[NT][MT];
@@ -308,7 +317,7 @@ public:
       delete[] m;
     }
 };	
-// dynamic base class (with move assignment and move constructor properly defined)
+// dynamic base class using ptr to ptr(with move assignment and move constructor properly defined)
 template <class ntype,int NT, int MT> class pmatrixdp {
   //int nr, nc;
 public:
@@ -366,13 +375,15 @@ public:
     }
 #endif
   // default constructor
-  pmatrixdp()
+  pmatrixdp() = delete;
+#if 0
     {
       ntype *pt = malloc(sizeof(ntype)*N*M);
       m = malloc(sizeof(ntype*)*N);
       for (auto i=0; i < N; i++)
 	m[i] = pt + i*sizeof(ntype)*M;
     }
+#endif
   pmatrixdp(int NN, int MM)
     {
       N=NN;
@@ -436,7 +447,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
     {
       /* LU decomposition routine  borrowed from Numerical Recipe */
       /* return the LU decomposition of calling matrix (i.e. *this) */
-      pmatrixq <ntype,NT> m1;
+      pmatrixq <ntype,NT> m1(N);
       const double TINY=1E-40;
       int i,imax=-1,j,k,n;
       ntype big,dum,sum,temp; 
@@ -556,7 +567,7 @@ public:
   // Build identity matrix, simple as that
   inline pmatrixq<ntype,NT> I() const
     {
-      pmatrixq<ntype,NT> MI;
+      pmatrixq<ntype,NT> MI(N);
       for (auto i=0; i < N; i++)
 	for (auto j=0; j < N; j++)
 	  MI[i][j] = (i==j)?1.0:0.0;
@@ -609,6 +620,7 @@ public:
   //pmatrixq<ntype,NT>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
   inline void* get_mptr() const {return m;}
+  inline int get_N() const {return N;}
 #endif
 #ifndef MAT_LAZY_EVAL
   // if lazyness is disabled (e.g. matrices are small) these functions get called
@@ -626,7 +638,7 @@ public:
     {
       if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
-	  static pmatrixq<ntype,NT> m2;
+	  static pmatrixq<ntype,NT> m2(N);
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -643,7 +655,7 @@ public:
 	}
       else
 	{
-	  pmatrixq<ntype,NT> m2;
+	  pmatrixq<ntype,NT> m2(N);
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -661,7 +673,7 @@ public:
       int i, j;
       if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
-	  static pmatrixq<ntype,NT> m2;
+	  static pmatrixq<ntype,NT> m2(N);
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
 	      {
@@ -677,7 +689,7 @@ public:
 	}
       else
 	{
-	  pmatrixq<ntype,NT> m2;
+	  pmatrixq<ntype,NT> m2(N);
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
 	      {
@@ -699,9 +711,9 @@ public:
   inline double detgenNR() const
     {
       double d;
-      static pmatrixq<ntype,NT> m1;
+      static pmatrixq<ntype,NT> m1(N);
       int j;
-      static pvector<int,NT> indx;
+      static pvector<int,NT> indx(N);
       // ludcmp return the LU decomposition of actual matrix (*this)
       m1=ludcmp(indx,d);
       for(j=0;j<N;j++) 
@@ -716,7 +728,7 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  static pmatrixq<ntype,NT> om;
+	  static pmatrixq<ntype,NT> om(N);
 	  int *IPIV = new int[N];
 	  om = *this;
 	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
@@ -733,7 +745,7 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  static pmatrixq<ntype,NT> om;
+	  static pmatrixq<ntype,NT> om(N);
 	  int *IPIV = new int[N];
 	  om = *this;
 	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
@@ -756,11 +768,11 @@ public:
     }
   inline void invLUNR(pmatrixq<ntype,NT>& om) const
     {
-      static pvector <ntype,NT> col;
-      static pmatrixq<ntype,NT> LU;
+      static pvector <ntype,NT> col(N);
+      static pmatrixq<ntype,NT> LU(N);
       int m2, m1;
       double d;
-      static pvector<int,NT> indx;
+      static pvector<int,NT> indx(N);
       LU=ludcmp(indx, d); 
       // inversion of a matrix through numerical recipes routines
       for(m2=0;m2<N;m2++) 
@@ -816,7 +828,7 @@ public:
 
   inline pmatrixq<ntype,NT> invgen() const
     {
-      pmatrixq<ntype,NT> om;
+      pmatrixq<ntype,NT> om(N);
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
@@ -861,7 +873,7 @@ public:
       if (N <= 4)
 	{
 	  double invd;
-	  pmatrixq <ntype,NT> m1;
+	  pmatrixq <ntype,NT> m1(N);
 	  if (N==1)
 	    {
 	      m1[0][0]=1.0/m[0][0];
@@ -1054,7 +1066,7 @@ public:
   pmatrixq<ntype,NT> matscal(const ntype& param)
     {
       int i,j;
-      pmatrixq<ntype,NT> m1;
+      pmatrixq<ntype,NT> m1(N);
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
@@ -1067,7 +1079,7 @@ public:
   inline pmatrixq<ntype,NT> operator *(const double& param) 
     {
       int i,j;
-      pmatrixq<ntype,NT> m1;
+      pmatrixq<ntype,NT> m1(N);
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
@@ -1084,7 +1096,7 @@ public:
   inline pmatrixq<ntype,NT> operator /(const double& param) 
     {
       int i,j;
-      pmatrixq<ntype,NT> m1;
+      pmatrixq<ntype,NT> m1(N);
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]/param;
@@ -1093,7 +1105,7 @@ public:
   friend pmatrixq<ntype,NT> operator *(const double& param, const pmatrixq<ntype,NT>& m1) 
     {
       int i, j;
-      pmatrixq<ntype,NT> m2;
+      pmatrixq<ntype,NT> m2(N);
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m2.m[i][j] = m1.m[i][j]*param;
@@ -1130,7 +1142,7 @@ public:
   inline pvector<ntype,NT> operator *(const pvector<ntype,NT>& v1) 
     {
       int i, j;
-      pvector <ntype,NT> v2;
+      pvector <ntype,NT> v2(N);
 #ifdef USE_LAPACK
       if (N > NMAXMUL) 
 	{
@@ -1174,7 +1186,7 @@ public:
   friend pvector<ntype,NT> operator *(const pvector<ntype,NT> v1, const pmatrixq<ntype,NT>& m1) 
     {
       int i, j;
-      pvector <ntype,NT> v2;
+      pvector <ntype,NT> v2(N);
 #ifdef USE_LAPACK
       if (N > NMAXMUL) 
 	{
@@ -1250,8 +1262,8 @@ public:
       using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
       static constexpr int dN = N % 2;
       static constexpr int Np = N+dN;
-      selftype A11, A12, A21, A22, B11, B12, B22, B21,
-	       P1, P2, P3, P4, P5, P6, P7;
+      selftype A11(Np), A12(Np), A21(Np), A22(Np), B11(Np), B12(Np), B22(Np), B21(Np),
+	       P1(Np), P2(Np), P3(Np), P4(Np), P5(Np), P6(Np), P7(Np);
       int ip, jp;
       for (i=0; i < Np/2; i++) 
 	for (j=0; j <  Np/2; j++) 
@@ -1334,7 +1346,7 @@ public:
       // if removed!
       if (N <= 4)
 	{
-	  pmatrixq<ntype,NT> m2;
+	  pmatrixq<ntype,NT> m2(N);
 	  // for small matrices we use explicit expressions for multiplication
 	  if (N==1)
 	    {
@@ -1383,7 +1395,7 @@ public:
 	}
       else
 	{
-	  pmatrixq<ntype,NT> m2;
+	  pmatrixq<ntype,NT> m2(N);
 #ifdef USE_LAPACK
 	  if (N > NMAXMUL)  
 	    {
@@ -1447,7 +1459,7 @@ public:
   pmatrixq<ntype,NT> transp()
     {
       int i, j;
-      pmatrixq<ntype,NT> m1;
+      pmatrixq<ntype,NT> m1(N);
       for (i=0; i < N; i++)
 	{
 	  for (j=0; j < N; j++)
@@ -1460,7 +1472,7 @@ public:
   // get i-th column vector 
   pvector<ntype,NT> col(int i)
     {
-      pvector<ntype,NT> v;
+      pvector<ntype,NT> v(N);
       int j;
       for (j=0; j < N; j++)
 	{
@@ -1471,7 +1483,7 @@ public:
   // get i-th row vector 
   pvector<ntype,NT> row(int i)
     {
-      pvector<ntype,NT> v;
+      pvector<ntype,NT> v(N);
       int j;
       for (j=0; j < N; j++)
 	{
@@ -1594,10 +1606,11 @@ inline auto operator-(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> & leftOperandcons
  template <typename ntype,int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator/(AnOpM<ntype,NT, tipoL, LLhs, LRhs> const& lhs, AnOpM<ntype,NT, tipoR, RLhs, RRhs> const& rhs)
 {
-  pmatrixq<ntype,NT> mL, mR;
+  int N=rhs.get_N();
+  pmatrixq<ntype,NT> mL(N), mR(N);
   int i, j;
-  for (i=0; i < mL.N; i++)
-    for (j=0; j < mL.N; j++)
+  for (i=0; i < N; i++)
+    for (j=0; j < N; j++)
       {
 	mL[i][j] = lhs.get_m(i,j);
 	mR[i][j] = rhs.get_m(i,j);
