@@ -392,7 +392,7 @@ public:
       for (auto i=0; i < N; i++)
 	{
 	  m[i] = pt + i*M;
-	  cout << "m[" << i << "]=" << m[i] << "\n";
+	  //cout << "m[" << i << "]=" << m[i] << "\n";
 	}
     }
   // destructor
