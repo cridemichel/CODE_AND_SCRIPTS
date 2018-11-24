@@ -252,16 +252,15 @@ public:
   ntype m[NT][MT];
   static const int N=MT, M=MT;
   constexpr static int dynamic = false;
-  pmatrix()
-    {}
-  pmatrix(int NN, int MM)
+  pmatrix() = default;
+  pmatrix(int NN, int MM): pmatrix()
     {
       NN=NT;// just to avoid warnings
       MM=MT;
       //empty body
     }
 };
-// dynamic base class (with move assignment and move constructor properly defined)
+// dynamic base class with static dimension (with move assignment and move constructor properly defined)
 template <class ntype,int NT, int MT> class pmatrixdn {
   //int nr, nc;
 public:
@@ -374,7 +373,7 @@ public:
       m1=nullptr;
     }
 #endif
-  // default constructor
+  // default constructor deleted: one has to supply size!
   pmatrixdp() = delete;
 #if 0
     {
@@ -565,6 +564,14 @@ public:
   using pmatrixb<ntype,NT>::m;
   using pmatrixb<ntype,NT>::N;
   // Build identity matrix, simple as that
+  pmatrixq<ntype,NT>(int NN): pmatrixb<ntype,NT>(NN,NN)
+  {
+    // empty body
+  }
+  pmatrixq<ntype,NT>(): pmatrixb<ntype,NT>()
+  {
+    // default constructor calls default constructor of base class
+  }
   inline pmatrixq<ntype,NT> I() const
     {
       pmatrixq<ntype,NT> MI(N);
@@ -574,10 +581,6 @@ public:
       return MI;
     }
 
-  pmatrixq<ntype,NT>(int NN): pmatrixb<ntype,NT>(NN,NN)
-    {
-      // empty body
-    }
 #ifdef MAT_LAZY_EVAL
   // -= and += are overloaded in such a way that if rvalue is an AnOpM (lazy class)
   // they trigger lazy expression evalution 
@@ -614,14 +617,13 @@ public:
 	for (int j=0; j < N; j++)
 	  m[i][j] = op.get_m(i,j);
     }
-  pmatrixq<ntype,NT>(): pmatrixb<ntype,NT>()
-  {
-  } 
+  
   //pmatrixq<ntype,NT>() = default;
   inline ntype get_m(int i, int j) const {return m[i][j];}
   inline void* get_mptr() const {return m;}
   inline int get_N() const {return N;}
 #endif
+   
 #ifndef MAT_LAZY_EVAL
   // if lazyness is disabled (e.g. matrices are small) these functions get called
   inline pmatrixq<ntype,NT> operator+(const pmatrixq<ntype,NT>& m1) const

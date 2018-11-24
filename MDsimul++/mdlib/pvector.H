@@ -83,9 +83,8 @@ public:
   ntype v[NT];
   static const int N=NT;
   constexpr static int dynamic = false;
-  pvecsta()
-    {}
-  pvecsta(int NN)
+  pvecsta() = default;
+  pvecsta(int NN): pvecsta()
     {
       NN=NT;// just to avoid warnings
       //empty body
@@ -182,6 +181,13 @@ public:
       v1.v=nullptr;
     }
 #endif
+  // constructor
+  pvecdyns(int NN)
+    {
+      NN=NT;
+      v = new ntype[NT];
+    }
+
   // default constructor
   pvecdyns()
     {
@@ -224,6 +230,7 @@ public:
     {
       // empty body
     }
+  pvector<ntype,NT>() = default;
 
 #ifdef VEC_LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
@@ -258,7 +265,6 @@ public:
       for (int i=0; i < N; i++)
 	v[i] = op.get_v(i);
     }
-  pvector<ntype,NT>() = default;
   inline ntype get_v(int i) const {return v[i];}
   inline ntype get_vptr() const {return v;}
   inline int get_N() const {return N;}
