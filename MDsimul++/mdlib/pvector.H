@@ -96,7 +96,7 @@ template <class ntype, int NT> class pvecdynp {
 public:
   constexpr static int dynamic = true;
   ntype (*v); 
-  static int N;
+  int N;
   // copy assignment
   pvecdynp<ntype,NT>& operator=(const pvecdynp<ntype,NT>& v1)
     {
@@ -218,7 +218,7 @@ public:
   }
 };
 //choose dynamnic or static base class depending on N
-template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vecpars::NMAX),pvecbasedyn <ntype, NT>,pvecsta <ntype, NT>>::type;
+template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vecpars::NMAX||NT<0),pvecbasedyn <ntype, NT>,pvecsta <ntype, NT>>::type;
 template <class ntype,int NT> class pvector : public pvecbase<ntype,NT>, vecpars {
   //int vsize;
 public:

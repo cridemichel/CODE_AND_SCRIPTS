@@ -321,7 +321,7 @@ template <class ntype,int NT, int MT> class pmatrixdp {
   //int nr, nc;
 public:
   ntype **m; // N riga M colonna
-  static int N, M;
+  int N, M;
   // copy assignment
  pmatrixdp<ntype,NT,MT>& operator=(const pmatrixdp<ntype,NT,MT>& m1)
     {
@@ -335,15 +335,15 @@ public:
   // move assignment
   pmatrixdp<ntype,NT,MT>& operator=(pmatrixdp<ntype,NT,MT>&& m1)
     {
-      ntype **ppt, *pt;
-      pt = malloc(sizeof(ntype*)*N);
+      ntype **ppt, **pt;
+      ppt = (ntype **)malloc(sizeof(ntype*)*N);
       for (auto i=0; i < N; i++)
 	{
-	  pt[i] = m[i];
+	  ppt[i] = m[i];
 	  m[i] = m1.m[i];
 	}
-      ppt = m1.m;
-      m1.m = m;
+      pt = m;
+      m=m1.m;
       for (auto i=0; i < N; i++)
 	{
 	  m1.m[i] = pt[i];
@@ -367,10 +367,10 @@ public:
       for (auto i=0; i < N; i++)
 	{
 	  (*this).m[i] = m1.m[i];
-	  m1.m[m] = nullptr;
+	  m1.m[i] = nullptr;
 	}
       (*this).m = m;
-      m1=nullptr;
+      m1.m=nullptr;
     }
 #endif
   // default constructor deleted: one has to supply size!
@@ -387,8 +387,8 @@ public:
     {
       N=NN;
       M=MM;
-      ntype *pt = malloc(sizeof(ntype)*N*M);
-      m = malloc(sizeof(ntype*)*N);
+      ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
+      m = (ntype**)malloc(sizeof(ntype*)*N);
       for (auto i=0; i < N; i++)
 	m[i] = pt + i*sizeof(ntype)*M;
     }
@@ -793,6 +793,7 @@ public:
       // N.B. this first condition apparently is not needed
       // but in practice compiler optimizations can get fooled
       // if removed!
+      ntype det;
       if (N <= 4)
 	{
 	  if (N==1)
@@ -825,7 +826,8 @@ public:
 	}
       else 
 	// use numerical recipe or LAPACK LU decomposition (see detgen)
-	return detgen();
+	det=detgen();
+      return det;
     }
 
   inline pmatrixq<ntype,NT> invgen() const
