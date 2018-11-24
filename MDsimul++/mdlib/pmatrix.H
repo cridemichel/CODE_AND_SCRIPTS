@@ -321,6 +321,7 @@ template <class ntype,int NT, int MT> class pmatrixdp {
   //int nr, nc;
 public:
   ntype **m; // N riga M colonna
+  ntype *pm;
   int N, M;
   // copy assignment
   pmatrixdp<ntype,NT,MT>& operator=(const pmatrixdp<ntype,NT,MT>& m1)
@@ -335,13 +336,9 @@ public:
   // move assignment
   pmatrixdp<ntype,NT,MT>& operator=(pmatrixdp<ntype,NT,MT>&& m1)
     {
-      ntype **ppt, *pt;
-      ppt = m;
-      pt = m[0];
-      m[0] = m1.m[0];
-      m=m1.m;
-      m1.m[0] = pt;
-      m1.m = ppt;
+      cout << "move assignment\n";
+      swap(m, m1.m);
+      swap(pm, m1.pm);
       return (*this);
     }
 #endif
@@ -350,11 +347,14 @@ public:
     {
       N=m1.N;
       M=m1.M;
-      ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
-      m = (ntype**)malloc(sizeof(ntype*)*N);
+      //ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
+      //m = (ntype**)malloc(sizeof(ntype*)*N);
+      pm = new ntype[N*M];//(ntype *)malloc(sizeof(ntype)*N*M);
+      m = new ntype*[N];//(ntype**)malloc(sizeof(ntype*)*N);
+ 
       for (auto i=0; i < N; i++)
 	{
-	  m[i] = pt + i*M;
+	  m[i] = pm + i*M;
 	  //cout << "m[" << i << "]=" << m[i] << "\n";
 	}
 
@@ -366,9 +366,11 @@ public:
   // move constructor
   pmatrixdp(pmatrixdp<ntype,NT,MT>&& m1)
     {
+      N=m1.N;
+      M=m1.M;
       (*this).m = m1.m;
-      (*this).m[0] = m1.m[0];
-      m1.m[0] = nullptr;
+      (*this).pm = m1.pm;
+      m1.pm = nullptr;
       m1.m=nullptr;
     }
 #endif
@@ -386,19 +388,19 @@ public:
     {
       N=NN;
       M=MM;
-      ntype *pt = (ntype *)malloc(sizeof(ntype)*N*M);
-      m = (ntype**)malloc(sizeof(ntype*)*N);
+      pm = new ntype[N*M];//(ntype *)malloc(sizeof(ntype)*N*M);
+      m = new ntype*[N];//(ntype**)malloc(sizeof(ntype*)*N);
       for (auto i=0; i < N; i++)
 	{
-	  m[i] = pt + i*M;
+	  m[i] = pm + i*M;
 	  //cout << "m[" << i << "]=" << m[i] << "\n";
 	}
     }
   // destructor
   ~pmatrixdp()
     {
-      free(m[0]);
-      free(m);
+      delete [] pm;
+      delete [] m;
     }
 };	
 template <class ntype, int NT, int MT> using pmatbasedyn = 
