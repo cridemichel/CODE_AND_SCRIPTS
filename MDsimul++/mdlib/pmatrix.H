@@ -1550,8 +1550,8 @@ inline auto operator+(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
-  typename std::conditional<((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
-inline operator+(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
+ // typename std::conditional<((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
+inline auto operator+(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
   if constexpr ((NT >= 0 && NT <= pmatrixq<ntype,NT>::NLAZY)|| NT==matpars::DynNoLazy)
     {
@@ -1587,10 +1587,8 @@ inline auto operator-(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
-  typename std::conditional
-  <((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy),
-  pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatMinusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
-inline operator-(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
+  //typename std::conditional <((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy), pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatMinusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
+inline auto operator-(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
   if constexpr ((NT <= matpars::NLAZY && NT >=0)|| NT==matpars::DynNoLazy)
     {
