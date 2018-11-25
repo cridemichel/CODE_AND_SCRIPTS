@@ -210,7 +210,7 @@ return drand48();
   mat mma(NMAT,NMAT), mma2(NMAT,NMAT), mma3(NMAT,NMAT), mma4(NMAT,NMAT);
   vec va1(NMAT), va2(NMAT), va3(NMAT), va4(NMAT); 
 #endif
-  pmatrixq<double,-1> mm(NMAT), mm2(NMAT), mm3(NMAT), mm4(NMAT);
+  pmatrixq<double,NMAT> mm, mm2, mm3, mm4;
   //pmatrixq<double,NMAT> mm, mm2, mm3, mm4;
   pmatrixq<long double, NMAT> mml, mml2;
   pvector<double, NMAT> v1, v2, v3, v4;
