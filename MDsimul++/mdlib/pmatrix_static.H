@@ -8,7 +8,7 @@
 #include<cstdlib>
 #include<cmath>
 #include<cstring>
-#include "pvector.H"
+#include "pvector_static.H"
 #define OPT_INV
 #define USE_LAPACK
 #ifdef USE_LAPACK

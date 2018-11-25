@@ -567,14 +567,13 @@ public:
   using pmatrixb<ntype,NT>::m;
   using pmatrixb<ntype,NT>::N;
   // Build identity matrix, simple as that
+#if 1
   pmatrixq<ntype,NT>(int NN): pmatrixb<ntype,NT>(NN,NN)
   {
     // empty body
   }
-  pmatrixq<ntype,NT>(): pmatrixb<ntype,NT>()
-  {
-    // default constructor calls default constructor of base class
-  }
+#endif
+  pmatrixq<ntype,NT>()= default; //pmatrixb<ntype,NT>()
   inline pmatrixq<ntype,NT> I() const
     {
       pmatrixq<ntype,NT> MI(N);
@@ -643,7 +642,7 @@ public:
     {
       if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
-	  static pmatrixq<ntype,NT> m2(N);
+	  static pmatrixq<ntype,NT> m2;
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -678,7 +677,7 @@ public:
       int i, j;
       if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
-	  static pmatrixq<ntype,NT> m2(N);
+	  static pmatrixq<ntype,NT> m2;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
 	      {
@@ -879,29 +878,25 @@ public:
       // if removed!
       if (N <= 4)
 	{
-	 if (N==1)
+    	  double invd;
+	  pmatrixq <ntype,NT> m1;
+	  //initialize dynamic class
+	  if constexpr (NT < 0)
+	    m1 = pmatrixq<ntype,NT>(N); 
+	  if (N==1)
 	    {
-	      double invd;
-	      pmatrixq <ntype,NT> m1(N);
-	       m1[0][0]=1.0/m[0][0];
-	      return m1;
+	      m1[0][0]=1.0/m[0][0];
 	    }
 	  else if (N==2)
 	    {
-	      double invd;
-	      pmatrixq <ntype,NT> m1(N);
 	      invd = 1.0/det();
 	      m1[0][0] = m[1][1]*invd;
 	      m1[0][1] = m[1][0]*invd;
 	      m1[1][0] = m[0][1]*invd;
 	      m1[1][1] = m[0][0]*invd;
-	      return m1;
 	    }
 	  else if (N==3)
 	    {
-	      double invd;
-	      pmatrixq <ntype,NT> m1(N);
-	 
 #ifdef OPT_INV
 	      ntype m11m20= m[1][1]*m[2][0];
 	      ntype m12m20= m[1][2]*m[2][0];
@@ -942,12 +937,9 @@ public:
 	      m1[2][1] *= invd; 
 	      m1[2][2] *= invd; 	    
 #endif
-	      return m1;
 	    }
 	  else if (N==4)
 	    {
-	      double invd;
-	      pmatrixq <ntype,NT> m1(N);
 #ifdef OPT_INV
 	      ntype s0 = m[0][0] * m[1][1] - m[1][0] * m[0][1];
 	      ntype s1 = m[0][0] * m[1][2] - m[1][0] * m[0][2];
@@ -1038,8 +1030,8 @@ public:
 	      m1[3][2] *= invd;
 	      m1[3][3] *= invd;
 #endif
-	      return m1;
 	    }
+	  return m1;
 	}
       else
 	{
@@ -1083,7 +1075,11 @@ public:
   pmatrixq<ntype,NT> matscal(const ntype& param)
     {
       int i,j;
-      pmatrixq<ntype,NT> m1(N);
+      pmatrixq<ntype,NT> m1;
+      //initialize dynamic class
+      if constexpr (NT < 0)
+	m1 = pmatrixq<ntype,NT>(N); 
+	
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
@@ -1096,7 +1092,11 @@ public:
   inline pmatrixq<ntype,NT> operator *(const double& param) 
     {
       int i,j;
-      pmatrixq<ntype,NT> m1(N);
+      pmatrixq<ntype,NT> m1;
+      //initialize dynamic class
+      if constexpr (NT < 0)
+	m1 = pmatrixq<ntype,NT>(N); 
+	
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]*param;
@@ -1113,7 +1113,11 @@ public:
   inline pmatrixq<ntype,NT> operator /(const double& param) 
     {
       int i,j;
-      pmatrixq<ntype,NT> m1(N);
+      pmatrixq<ntype,NT> m1;
+      //initialize dynamic class
+      if constexpr (NT < 0)
+	m1 = pmatrixq<ntype,NT>(N); 
+
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m1[i][j] = m[i][j]/param;
@@ -1159,7 +1163,11 @@ public:
   inline pvector<ntype,NT> operator *(const pvector<ntype,NT>& v1) 
     {
       int i, j;
-      pvector <ntype,NT> v2(N);
+      pvector <ntype,NT> v2;
+      //initialize dynamic class
+      if constexpr (NT < 0)
+	v2 = pvector<ntype,NT>(N); 
+      
 #ifdef USE_LAPACK
       if (N > NMAXMUL) 
 	{
@@ -1203,7 +1211,10 @@ public:
   friend pvector<ntype,NT> operator *(const pvector<ntype,NT> v1, const pmatrixq<ntype,NT>& m1) 
     {
       int i, j;
-      pvector <ntype,NT> v2(N);
+      pvector <ntype,NT> v2;
+      if constexpr (NT < 0)
+	v2 = pvector<ntype,NT>(N); 
+    
 #ifdef USE_LAPACK
       if (N > NMAXMUL) 
 	{
@@ -1363,25 +1374,25 @@ public:
       // if removed!
       if (N <= 4)
 	{
+	  pmatrixq<ntype,NT> m2;
+	  //initialize dynamic class
+	  if constexpr (NT < 0)
+	    m1 = pmatrixq<ntype,NT>(N); 
+	
 	  // for small matrices we use explicit expressions for multiplication
 	  if (N==1)
 	    {
-	      pmatrixq<ntype,NT> m2(N);
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0];
-	      return m2;
 	    }
 	  else if (N==2)
 	    {
-	      pmatrixq<ntype,NT> m2(N);
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0];
 	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1];
 	      m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0];
 	      m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1]; 
-	      return m2;
 	    }
 	  else if (N==3)
 	    {
-	      pmatrixq<ntype,NT> m2(N);
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0];
 	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1];
 	      m2.m[0][2] = pmatrixq::m[0][0]*m1.m[0][2] + pmatrixq::m[0][1]*m1.m[1][2] + pmatrixq::m[0][2]*m1.m[2][2];
@@ -1391,11 +1402,9 @@ public:
 	      m2.m[2][0] = pmatrixq::m[2][0]*m1.m[0][0] + pmatrixq::m[2][1]*m1.m[1][0] + pmatrixq::m[2][2]*m1.m[2][0];
 	      m2.m[2][1] = pmatrixq::m[2][0]*m1.m[0][1] + pmatrixq::m[2][1]*m1.m[1][1] + pmatrixq::m[2][2]*m1.m[2][1];
 	      m2.m[2][2] = pmatrixq::m[2][0]*m1.m[0][2] + pmatrixq::m[2][1]*m1.m[1][2] + pmatrixq::m[2][2]*m1.m[2][2];  
-	      return m2;
 	    } 
 	  else if (N==4)
 	    {
-	      pmatrixq<ntype,NT> m2(N);
 	      //cout << pmatrix<ntype,NT,NT>::dynamic;
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0] + pmatrixq::m[0][2]*m1.m[2][0] + pmatrixq::m[0][3]*m1.m[3][0];
 	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1] + pmatrixq::m[0][2]*m1.m[2][1] + pmatrixq::m[0][3]*m1.m[3][1];
@@ -1413,12 +1422,15 @@ public:
 	      m2.m[3][1] = pmatrixq::m[3][0]*m1.m[0][1] + pmatrixq::m[3][1]*m1.m[1][1] + pmatrixq::m[3][2]*m1.m[2][1] + pmatrixq::m[3][3]*m1.m[3][1];
 	      m2.m[3][2] = pmatrixq::m[3][0]*m1.m[0][2] + pmatrixq::m[3][1]*m1.m[1][2] + pmatrixq::m[3][2]*m1.m[2][2] + pmatrixq::m[3][3]*m1.m[3][2];
 	      m2.m[3][3] = pmatrixq::m[3][0]*m1.m[0][3] + pmatrixq::m[3][1]*m1.m[1][3] + pmatrixq::m[3][2]*m1.m[2][3] + pmatrixq::m[3][3]*m1.m[3][3];
-	      return m2;
 	    }
+	  return m2;
 	}
       else
 	{
 	  pmatrixq<ntype,NT> m2(N);
+	  //initialize dynamic class
+	  if constexpr (NT < 0)
+	    m2 = pmatrixq<ntype,NT>(N); 
 #ifdef USE_LAPACK
 	  if (N > NMAXMUL)  
 	    {
@@ -1483,6 +1495,10 @@ public:
     {
       int i, j;
       pmatrixq<ntype,NT> m1(N);
+      //initialize dynamic class
+      if constexpr (NT < 0)
+	m1 = pmatrixq<ntype,NT>(N); 
+	
       for (i=0; i < N; i++)
 	{
 	  for (j=0; j < N; j++)
@@ -1496,6 +1512,9 @@ public:
   pvector<ntype,NT> col(int i)
     {
       pvector<ntype,NT> v(N);
+      if constexpr (NT < 0)
+	v = pvector<ntype,NT>(N); 
+    
       int j;
       for (j=0; j < N; j++)
 	{
@@ -1506,8 +1525,10 @@ public:
   // get i-th row vector 
   pvector<ntype,NT> row(int i)
     {
-      pvector<ntype,NT> v(N);
+      pvector<ntype,NT> v;
       int j;
+      if constexpr (NT < 0)
+	v = pvector<ntype,NT>(N); 
       for (j=0; j < N; j++)
 	{
 	  v[j] = m[i][j];
