@@ -311,8 +311,11 @@ public:
 	}
       else
 	{
-	  pvector<ntype, N> v2(N);
+	  pvector<ntype, N> v2;
 	  int i;
+	  if constexpr (NT < 0)
+	    v2.allocate(N);
+
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] + v1.v[i];
 
@@ -611,9 +614,14 @@ inline auto operator-(const AnOpV<ntype, NT, tipoL, LLhs, LRhs> & leftOperandcon
   template <typename ntype, int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline ntype operator*(const AnOpV<ntype, NT, tipoL, LLhs, LRhs> & lhs, const AnOpV<ntype, NT, tipoR, RLhs, RRhs> & rhs)
 {
-  int N=lhs.get_N();
-  pvector<ntype, NT> vR(N), vL(N);
-  for (int i=0; i < N; i++)
+  pvector<ntype, NT> vR, vL;
+  if constexpr (NT < 0)
+    {
+      int N=lhs.get_N();
+      vR.allocate(N);
+      vL.allocate(N);
+    }
+  for (int i=0; i < vR.N; i++)
     {
       vL[i] = lhs.get_v(i);
       vR[i] = rhs.get_v(i);

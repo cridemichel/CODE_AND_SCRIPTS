@@ -1584,7 +1584,7 @@ public:
     {
       pvector<ntype,NT> v;
       if constexpr (NT < 0)
-	v = pvector<ntype,NT>(N); 
+	v.allocate(N); 
     
       int j;
       for (j=0; j < N; j++)
@@ -1599,7 +1599,7 @@ public:
       pvector<ntype,NT> v;
       int j;
       if constexpr (NT < 0)
-	v = pvector<ntype,NT>(N); 
+	v.allocate(N); 
       for (j=0; j < N; j++)
 	{
 	  v[j] = m[i][j];
