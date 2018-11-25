@@ -671,8 +671,15 @@ int main(int argc, char**argv)
       for (k=0; k < 100; k++)
 	{
 	  //v3=(v1+v2)+(v3+v4);
-	  //mm += mm+mm2+mm3;
+#ifdef TEST_SUM
+	  mm += mm*mm2*mm3*mm4;
+#elif defined(TEST_MUL)
+	  mm += mm*mm2*mm3*mm4;
+#elif defined(TEST_INV)
+	  mm += mm.inv()+mm2.inv()+mm3.inv()+mm4.inv();
+#else
 	  mm += mm2*mm3*mm4.inv()+(mm+mm4+mm3+mm4);
+#endif
 #if 1
 	  //mm += mm+mm2+mm3;
 	  //mm = (mm+mm2+mm3)*(mm2+mm3+mm)*(mm*mm);
@@ -692,7 +699,15 @@ int main(int argc, char**argv)
 #elif SEL==2
       for (k=0; k < 100; k++)
 	{
-	  mmg += mmg+mmg2+mmg3;
+#ifdef TEST_SUM
+	  mmg += mmg+mmg2+mmg3+mmg4;
+#elif defined(TEST_MUL)
+	  mmg += mmg*mmg2*mmg3*mmg4;
+#elif defined(TEST_INV)
+	  mmg += inverse(mmg)+inverse(mmg2)+inverse(mmg3)+inverse(mmg4);
+#else
+	  mmg += mmg2*mmg3*mmg4.inv()+(mmg+mmg4+mmg3+mmg4);
+#endif
 	  //mmg += mmg2*mmg3+inverse(mmg4);
 	 //mmg =mmg2*mmg3*mmg4;
 	  //mmg += inverse(mmg3)+mmg*mmg3;
@@ -718,7 +733,15 @@ int main(int argc, char**argv)
 	  //mma += mma*mma2*mma3.i()+mma4.i();
 	  //mma = (mma3+mma2)+(mma+mma4);
 	  //va3=(va1+va2)*3.0+(va3+va4)*5.0;
+#ifdef TEST_SUM
+	  mma += mma*mma2*mma3*mma4;
+#elif defined(TEST_MUL)
+	  mma += mma*mma2*mma3*mma4;
+#elif defined(TEST_INV)
+	  mma += mma.i()+mma2.i()+mma3.i()+mma4.i();
+#else
 	  mma += mma2*mma3*mma4.i()+(mma+mma4+mma3+mma4);
+#endif
 	  //mma += mma2*mma3+mma4.i();  
 	}
       //mma2 = ((mma*mma.i())*(mma*mma.i()));
@@ -730,7 +753,15 @@ int main(int argc, char**argv)
 	  //mma += mma*mma2*mma3.i()+mma4.i();
 	  //mma = (mma3+mma2)+(mma+mma4);
 	  //va3=(va1+va2)*3.0+(va3+va4)*5.0;
+#ifdef TEST_SUM
+	  mme += mme*mme2*mme3*mme4;
+#elif defined(TEST_MUL)
+	  mme += mme*mme2*mme3*mme4;
+#elif defined(TEST_INV)
+	  mme += mme.inv()+mme2.inv()+mme3.inv()+mme4.inv();
+#else
 	  mme += mme2*mme3*mme4.inverse()+(mme+mme4+mme3+mme4);
+#endif
 	  //mme += mme2*mme3+mme4.inverse();  
 	}
 
