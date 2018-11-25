@@ -4,7 +4,7 @@ echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
-NCINI="2000000"
+NCINI="4000000"
 NC=$NCINI
 for N in `echo $MATDIMS`
 do
