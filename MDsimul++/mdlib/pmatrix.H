@@ -659,7 +659,9 @@ public:
 	}
       else
 	{
-	  pmatrixq<ntype,NT> m2(N);
+	  pmatrixq<ntype,NT> m2;
+	  if constexpr (NT < 0)
+	    m2 = pmatrixq<ntype,NT>(N);
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -694,6 +696,9 @@ public:
       else
 	{
 	  pmatrixq<ntype,NT> m2(N);
+	  if constexpr (NT < 0)
+	    m2 = pmatrixq<ntype,NT>(N);
+	 
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
 	      {
@@ -715,9 +720,14 @@ public:
   inline double detgenNR() const
     {
       double d;
-      static pmatrixq<ntype,NT> m1(N);
+      static pmatrixq<ntype,NT> m1;
       int j;
-      static pvector<int,NT> indx(N);
+      static pvector<int,NT> indx;
+      if constexpr (NT < 0)
+	{
+	  m1 = pmatrixq<ntype,NT>(N);
+	  indx = pvector<ntype,NT>(N);
+	}
       // ludcmp return the LU decomposition of actual matrix (*this)
       m1=ludcmp(indx,d);
       for(j=0;j<N;j++) 
@@ -732,8 +742,12 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  static pmatrixq<ntype,NT> om(N);
+	  static pmatrixq<ntype,NT> om;
 	  int *IPIV = new int[N];
+	  if constexpr (NT < 0)
+	    {
+	      om = pmatrixq<ntype,NT>(N);
+	    }
 	  om = *this;
 	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
 	  for(j=0;j<N;j++)
@@ -749,8 +763,12 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  static pmatrixq<ntype,NT> om(N);
+	  static pmatrixq<ntype,NT> om;
 	  int *IPIV = new int[N];
+	  if constexpr (NT < 0)
+	    {
+	      om = pmatrixq<ntype,NT>(N);
+	    }
 	  om = *this;
 	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
 	  for(j=0;j<N;j++)
@@ -772,11 +790,17 @@ public:
     }
   inline void invLUNR(pmatrixq<ntype,NT>& om) const
     {
-      static pvector <ntype,NT> col(N);
-      static pmatrixq<ntype,NT> LU(N);
+      static pvector <ntype,NT> col;
+      static pmatrixq<ntype,NT> LU;
       int m2, m1;
       double d;
-      static pvector<int,NT> indx(N);
+      static pvector<int,NT> indx;
+      if constexpr (NT < 0)
+	{
+	  LU = pmatrixq<ntype,NT>(N);
+	  col = pvector<ntype,NT>(N);
+	  indx= pvector<ntype,NT>(N);
+	}	
       LU=ludcmp(indx, d); 
       // inversion of a matrix through numerical recipes routines
       for(m2=0;m2<N;m2++) 
@@ -834,7 +858,11 @@ public:
 
   inline pmatrixq<ntype,NT> invgen() const
     {
-      pmatrixq<ntype,NT> om(N);
+      pmatrixq<ntype,NT> om;
+      if constexpr (NT < 0)
+	{
+	  om = pmatrixq<ntype,NT>(N);
+	}	  
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
@@ -1126,7 +1154,11 @@ public:
   friend pmatrixq<ntype,NT> operator *(const double& param, const pmatrixq<ntype,NT>& m1) 
     {
       int i, j;
-      pmatrixq<ntype,NT> m2(N);
+      pmatrixq<ntype,NT> m2;
+      if constexpr (NT < 0)
+	{
+	  m2 = pmatrixq<ntype,NT>(N);
+	}
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
 	  m2.m[i][j] = m1.m[i][j]*param;
@@ -1427,7 +1459,7 @@ public:
 	}
       else
 	{
-	  pmatrixq<ntype,NT> m2(N);
+	  pmatrixq<ntype,NT> m2;
 	  //initialize dynamic class
 	  if constexpr (NT < 0)
 	    m2 = pmatrixq<ntype,NT>(N); 
@@ -1494,7 +1526,7 @@ public:
   pmatrixq<ntype,NT> transp()
     {
       int i, j;
-      pmatrixq<ntype,NT> m1(N);
+      pmatrixq<ntype,NT> m1;
       //initialize dynamic class
       if constexpr (NT < 0)
 	m1 = pmatrixq<ntype,NT>(N); 
@@ -1511,7 +1543,7 @@ public:
   // get i-th column vector 
   pvector<ntype,NT> col(int i)
     {
-      pvector<ntype,NT> v(N);
+      pvector<ntype,NT> v;
       if constexpr (NT < 0)
 	v = pvector<ntype,NT>(N); 
     
