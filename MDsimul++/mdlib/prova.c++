@@ -242,9 +242,11 @@ int main(int argc, char**argv)
   //m22.show();
 #if 1
   pmatrixq<double,-1> mmd(80);
-  for (auto i=0; i < 10; i++)
-    for (auto j=0; j < 10; j++)
+  for (auto i=0; i < 80; i++)
+    for (auto j=0; j < 80; j++)
       mmd[i][j] = 1.0;
+  mmd.resize(81);
+  mmd[80][80]=1.0;
   mmd.show();
   exit(0);
 #endif

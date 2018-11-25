@@ -202,11 +202,11 @@ public:
     }
   void resize(int NN)
     {
-      deallocate();
       pvecdynp<ntype,NT> vt = new ntype[NN];
       // initialize with all elements and 0 if larger
       for (auto i=0; i < NN; i++)
 	vt[i] = (i < N)?v[i]:0.0;
+      delete [] v;
       N=NN;
       v = vt;
     }

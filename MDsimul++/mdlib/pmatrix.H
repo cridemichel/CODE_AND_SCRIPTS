@@ -417,7 +417,7 @@ public:
     {
       ntype* pmt = new ntype[NN*MM];
       ntype** mt = new ntype*[NN];
-      for (auto i=0; i < N; i++)
+      for (auto i=0; i < NN; i++)
 	{
 	  mt[i] = pmt + i*MM;
 	  //cout << "m[" << i << "]=" << m[i] << "\n";
@@ -428,6 +428,8 @@ public:
 	  {
 	    mt[i][j] = (i < N && j < M)?m[i][j]:0.0;
 	  }
+      delete [] m;
+      delete [] pm;
       N=NN;
       M=MM;
       m = mt;
