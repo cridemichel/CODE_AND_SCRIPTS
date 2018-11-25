@@ -449,7 +449,9 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
     {
       /* LU decomposition routine  borrowed from Numerical Recipe */
       /* return the LU decomposition of calling matrix (i.e. *this) */
-      pmatrixq <ntype,NT> m1(N);
+      pmatrixq <ntype,NT> m1;
+      if constexpr (NT < 0)
+	m1 = pmatrixq<ntype,NT>(N);
       const double TINY=1E-40;
       int i,imax=-1,j,k,n;
       ntype big,dum,sum,temp; 
@@ -576,7 +578,9 @@ public:
   pmatrixq<ntype,NT>()= default; //pmatrixb<ntype,NT>()
   inline pmatrixq<ntype,NT> I() const
     {
-      pmatrixq<ntype,NT> MI(N);
+      pmatrixq<ntype,NT> MI;
+      if constexpr (NT < 0)
+	MI = pmatrixq<ntype,NT>(N);
       for (auto i=0; i < N; i++)
 	for (auto j=0; j < N; j++)
 	  MI[i][j] = (i==j)?1.0:0.0;
@@ -1322,8 +1326,26 @@ public:
       using selftype  = typename std::conditional<N%2==1,pmatrixq<ntype,(N+1)/2>,pmatrixq<ntype,N/2>>::type; 
       static constexpr int dN = N % 2;
       static constexpr int Np = N+dN;
-      selftype A11(Np), A12(Np), A21(Np), A22(Np), B11(Np), B12(Np), B22(Np), B21(Np),
-	       P1(Np), P2(Np), P3(Np), P4(Np), P5(Np), P6(Np), P7(Np);
+      selftype A11, A12, A21, A22, B11, B12, B22, B21,
+	       P1, P2, P3, P4, P5, P6, P7;
+      if constexpr (NT < 0)
+	{
+	  A11 = pmatrixq<ntype,N>(Np);
+	  A12 = pmatrixq<ntype,N>(Np);
+	  A21 = pmatrixq<ntype,N>(Np);
+	  A22 = pmatrixq<ntype,N>(Np);
+	  B11 = pmatrixq<ntype,N>(Np);
+	  B12 = pmatrixq<ntype,N>(Np);
+	  B22 = pmatrixq<ntype,N>(Np);
+	  B21 = pmatrixq<ntype,N>(Np);
+	  P1  = pmatrixq<ntype,N>(Np);
+	  P2  = pmatrixq<ntype,N>(Np);
+	  P3  = pmatrixq<ntype,N>(Np);
+	  P4  = pmatrixq<ntype,N>(Np);
+	  P5  = pmatrixq<ntype,N>(Np);
+	  P6  = pmatrixq<ntype,N>(Np);
+	  P7  = pmatrixq<ntype,N>(Np);
+	}
       int ip, jp;
       for (i=0; i < Np/2; i++) 
 	for (j=0; j <  Np/2; j++) 
