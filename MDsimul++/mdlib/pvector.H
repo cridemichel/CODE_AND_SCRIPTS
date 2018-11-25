@@ -196,6 +196,20 @@ public:
       N=NN;
       v = new ntype[N];
     }
+  void deallocate()
+    {
+      delete [] v;
+    }
+  void resize(int NN)
+    {
+      deallocate();
+      pvecdynp<ntype,NT> vt = new ntype[NN];
+      // initialize with all elements and 0 if larger
+      for (auto i=0; i < NN; i++)
+	vt[i] = (i < N)?v[i]:0.0;
+      N=NN;
+      v = vt;
+    }
   pvecdynp(int NN)
     {
       N=NN;
@@ -230,6 +244,16 @@ public:
      if constexpr (NT < 0)
        pvecdyn<ntype,NT>::allocate(NN);
    } 
+ void deallocate()
+   {
+     if constexpr (NT < 0)
+       pvecdyn<ntype,NT>::deallocate();
+   }
+ void resize(int NN)
+   {
+      if constexpr (NT < 0)
+       pvecdyn<ntype,NT>::resize(NN);
+   }
 };
 //choose dynamnic or static base class depending on N
 template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vecpars::NMAX||NT<0),pvecbasedyn <ntype, NT>,pvecsta <ntype, NT>>::type;

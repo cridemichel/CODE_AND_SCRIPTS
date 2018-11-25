@@ -396,6 +396,11 @@ public:
 	  //cout << "m[" << i << "]=" << m[i] << "\n";
 	}
     }
+  void deallocate(void)
+    {
+      delete [] pm;
+      delete [] m;
+    }
   void allocate(int NN, int MM)
     {
       N=NN;
@@ -407,6 +412,26 @@ public:
 	  m[i] = pm + i*M;
 	  //cout << "m[" << i << "]=" << m[i] << "\n";
 	}
+    }
+  void resize(int NN, int MM)
+    {
+      ntype* pmt = new ntype[NN*MM];
+      ntype** mt = new ntype*[NN];
+      for (auto i=0; i < N; i++)
+	{
+	  mt[i] = pmt + i*MM;
+	  //cout << "m[" << i << "]=" << m[i] << "\n";
+	}
+      // initialize with old values
+      for (auto i=0; i < NN; i++)
+	for (auto j=0; j < MM; j++)
+	  {
+	    mt[i][j] = (i < N && j < M)?m[i][j]:0.0;
+	  }
+      N=NN;
+      M=MM;
+      m = mt;
+      pm = pmt;
     }
   // destructor
   ~pmatrixdp()
@@ -437,6 +462,18 @@ public:
       if constexpr (NT < 0)
 	pmatbasedyn<ntype,NT>::allocate(NN,NN);
     }
+  void deallocate(int NN)
+    {
+      if constexpr (NT < 0)
+	pmatbasedyn<ntype,NT>::deallocate(NN,NN);
+    }
+  void resize(int NN)
+    {
+      if constexpr (NT < 0)
+	pmatbasedyn<ntype,NT>::resize(NN,NN);
+    }
+
+
 };
 // matrici quadrate NxN
 using namespace std;
