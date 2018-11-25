@@ -90,60 +90,6 @@ public:
       //empty body
     }
 };
-// template for a dynamic vector using dynamic allocation (i.e. allocated with new)
-template <class ntype, int NT> class pvecdynp {
-  //int nr, nc;
-public:
-  constexpr static int dynamic = true;
-  ntype (*v); 
-  int N;
-  // copy assignment
-  pvecdynp<ntype,NT>& operator=(const pvecdynp<ntype,NT>& v1)
-    {
-      int i;
-      for (i=0; i < N; i++)
-	  v[i] = v1.v[i];
-      return (*this);
-    }
-#ifdef VEC_MOVE_SEMANTIC
-  // move assignment
-  pvecdynp<ntype,NT>& operator=(pvecdynp<ntype,NT>&& v1)
-    {
-      swap(v, v1.v);
-      return (*this);
-    }
-#endif
-  // copy constructor 
-  pvecdynp(const pvecdynp<ntype,NT>& v1)
-    {
-      v = new ntype[N];
-      (*this) = v1;
-    }
-#ifdef VEC_MOVE_SEMANTIC
-  // move constructor
-  pvecdynp(pvecdynp<ntype,NT>&& v1)
-    {
-      (*this).v = v1.v;
-      v1.v=nullptr;
-    }
-#endif
-  // default constructor
-  pvecdynp() = delete;
-#if 0
-    {
-      v = new ntype[N];
-    }
-#endif
-  pvecdynp(int N)
-    {
-      v = new ntype[N];
-    }
-  // destructor
-  ~pvecdynp()
-    {
-      delete[] v;
-    }
-};
 // template for a dynamic vector (i.e. allocated with new)
 template <class ntype, int NT> class pvecdyns {
   //int nr, nc;
@@ -199,6 +145,69 @@ public:
       delete[] v;
     }
 };	
+// template for a dynamic vector using dynamic allocation ptr (i.e. allocated with new)
+template <class ntype, int NT> class pvecdynp {
+  //int nr, nc;
+public:
+  constexpr static int dynamic = true;
+  ntype (*v); 
+  int N;
+  // copy assignment
+  pvecdynp<ntype,NT>& operator=(const pvecdynp<ntype,NT>& v1)
+    {
+      int i;
+      for (i=0; i < N; i++)
+	  v[i] = v1.v[i];
+      return (*this);
+    }
+#ifdef VEC_MOVE_SEMANTIC
+  // move assignment
+  pvecdynp<ntype,NT>& operator=(pvecdynp<ntype,NT>&& v1)
+    {
+      swap(v, v1.v);
+      return (*this);
+    }
+#endif
+  // copy constructor 
+  pvecdynp(const pvecdynp<ntype,NT>& v1)
+    {
+      N=v1.N;
+      v = new ntype[N];
+      (*this) = v1;
+    }
+#ifdef VEC_MOVE_SEMANTIC
+  // move constructor
+  pvecdynp(pvecdynp<ntype,NT>&& v1)
+    {
+      N=v1.N;
+      (*this).v = v1.v;
+      v1.v=nullptr;
+    }
+#endif
+  // default constructor
+  pvecdynp() = default;
+#if 0
+    {
+      v = new ntype[N];
+    }
+#endif
+  void allocate(int NN)
+    {
+      N=NN;
+      v = new ntype[N];
+    }
+  pvecdynp(int NN)
+    {
+      N=NN;
+      v = new ntype[N];
+    }
+  // destructor
+  ~pvecdynp()
+    {
+      delete[] v;
+    }
+};
+
 template <class ntype, int NT> using pvecdyn = 
 typename std::conditional<(NT>0), pvecdyns <ntype, NT>,
 	 pvecdynp <ntype, NT>>::type;
@@ -216,6 +225,11 @@ public:
   {
     // empty body
   }
+ void allocate(int NN)
+   {
+     if constexpr (NT < 0)
+       pvecdyn<ntype,NT>::allocate(NN);
+   } 
 };
 //choose dynamnic or static base class depending on N
 template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vecpars::NMAX||NT<0),pvecbasedyn <ntype, NT>,pvecsta <ntype, NT>>::type;
@@ -287,8 +301,10 @@ public:
     {
       if (N <= NSTA && pvector<ntype,NT>::dynamic==false)
 	{
-	  static pvector<ntype, N> v2(N);
+	  static pvector<ntype, N> v2;
 	  int i;
+	  if constexpr (NT < 0)
+	    v2.allocate(N);
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] + v1.v[i];
 	  return v2;
@@ -311,14 +327,16 @@ public:
       int i;
       if (N <= NSTA && pvector<ntype,NT>::dynamic==false)
 	{
-	  static pvector<ntype, N> v2(N);
+	  static pvector<ntype, N> v2;
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] - v1.v[i];
 	  return v2;
 	}
       else
 	{
-	  pvector<ntype, N> v2(N);
+	  pvector<ntype, N> v2;
+	  if (NT < 0)
+	    v2.allocate(N);
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] - v1.v[i];
 	  if (N > NMAX)
@@ -351,7 +369,9 @@ public:
   inline pvector<ntype,NT> operator *(const double& param) 
     {
       int i;
-      pvector<ntype,NT> lv(N);
+      pvector<ntype,NT> lv;
+      if constexpr (NT < 0)
+	lv.allocate(N);
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
 
@@ -364,7 +384,9 @@ public:
   inline pvector<ntype,NT> vecscal(const double& param) const
     {
       int i;
-      pvector<ntype,NT> lv(N);
+      pvector<ntype,NT> lv;
+      if constexpr (NT < 0)
+	lv.allocate(N);
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
       if (N > NMAX)
@@ -376,7 +398,10 @@ public:
   friend pvector<ntype,NT> operator *(const ntype& param, const pvector<ntype,NT>& v) 
     {
       int i;
-      pvector<ntype,NT> lv(N);
+      pvector<ntype,NT> lv;
+      if constexpr (NT < 0)
+	lv.allocate(N);
+   
       for (i=0; i < N; i++)
 	lv.v[i] = v.v[i]*param;
 
@@ -409,7 +434,7 @@ public:
   // cross product
   inline pvector<ntype,NT> cross(const pvector<ntype,NT>& v1)
     {
-      static pvector<ntype,NT> v2(N);
+      static pvector<ntype,NT> v2;
       v2.v[0] = v[1]*v1.v[2] - v[2]*v1.v[1];
       v2.v[1] = v[2]*v1.v[0] - v[0]*v1.v[2];
       v2.v[2] = v[0]*v1.v[1] - v[1]*v1.v[0];
@@ -600,7 +625,10 @@ inline ntype operator*(const AnOpV<ntype, NT, tipoL, LLhs, LRhs> & lhs, const An
    template<typename ntype, int NT, int tipo, typename Lhs, typename Rhs> ntype 
 inline operator*(AnOpV<ntype,NT, tipo, Lhs, Rhs> const& lhs, pvector<ntype,NT> const& vR)
 {
-  pvector<ntype, NT> vL(vR.N);
+  pvector<ntype, NT> vL;
+  if constexpr (NT < 0)
+    vL.allocate(vR.N);
+   
   for (int i=0; i < vR.N; i++)
     vL[i] = lhs.get_v(i);
   return vL*vR;
@@ -609,7 +637,9 @@ inline operator*(AnOpV<ntype,NT, tipo, Lhs, Rhs> const& lhs, pvector<ntype,NT> c
 template<typename ntype, int NT, int tipo, typename Lhs, typename Rhs>  
 inline ntype operator*(pvector<ntype,NT> const& vL, AnOpV<ntype, NT, tipo, Lhs, Rhs> const& rhs) 
 {
-  pvector<ntype, NT> vR(vL.N);
+  pvector<ntype, NT> vR;
+  if constexpr (NT < 0)
+    vR.allocate(vL.N);
   for (int i=0; i < vL.N; i++)
     {
       vR[i] = rhs.get_v(i);

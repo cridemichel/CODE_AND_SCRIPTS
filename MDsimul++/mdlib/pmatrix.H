@@ -375,7 +375,7 @@ public:
     }
 #endif
   // default constructor deleted: one has to supply size!
-  pmatrixdp() = delete;
+  pmatrixdp() = default;
 #if 0
     {
       ntype *pt = malloc(sizeof(ntype)*N*M);
@@ -396,6 +396,18 @@ public:
 	  //cout << "m[" << i << "]=" << m[i] << "\n";
 	}
     }
+  void allocate(int NN, int MM)
+    {
+      N=NN;
+      M=MM;
+      pm = new ntype[N*M];
+      m = new ntype*[N];
+      for (auto i=0; i < N; i++)
+	{
+	  m[i] = pm + i*M;
+	  //cout << "m[" << i << "]=" << m[i] << "\n";
+	}
+    }
   // destructor
   ~pmatrixdp()
     {
@@ -403,23 +415,28 @@ public:
       delete [] m;
     }
 };	
-template <class ntype, int NT, int MT> using pmatbasedyn = 
-typename std::conditional<(NT>0), pmatrixdn <ntype, NT, MT>,
-	 pmatrixdp <ntype, NT, MT>>::type;
+template <class ntype, int NT> using pmatbasedyn = 
+typename std::conditional<(NT>0), pmatrixdn <ntype, NT, NT>,
+	 pmatrixdp <ntype, NT, NT>>::type;
 
 // dynamic base class
-template <class ntype,int NT, int MT> class pmatrixd: public pmatbasedyn<ntype,NT,MT> {
+template <class ntype,int NT> class pmatrixd: public pmatbasedyn<ntype,NT> {
   //int nr, nc;
 public:
   constexpr static int dynamic = true;
-  pmatrixd<ntype,NT,MT>(int NN, int MM): pmatbasedyn<ntype,NT,MT>(NN,MM)
+  pmatrixd<ntype,NT>(int NN): pmatbasedyn<ntype,NT>(NN,NN)
   {
     // empty body
   }
-  pmatrixd<ntype,NT,MT>(): pmatbasedyn<ntype,NT,MT>()
+  pmatrixd<ntype,NT>(): pmatbasedyn<ntype,NT>()
   {
     // empty body
   }
+  void allocate(int NN)
+    {
+      if constexpr (NT < 0)
+	pmatbasedyn<ntype,NT>::allocate(NN,NN);
+    }
 };
 // matrici quadrate NxN
 using namespace std;
@@ -439,7 +456,7 @@ struct matpars
 // conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
 // case)
 template <class ntype, int NT=-1> using pmatrixb = 
-typename std::conditional<(NT>matpars::NMAX||NT <=0), pmatrixd <ntype, NT, NT>,
+typename std::conditional<(NT>matpars::NMAX||NT <=0), pmatrixd <ntype, NT>,
 	 pmatrix <ntype, NT, NT>>::type;
 
 template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public matpars
@@ -451,7 +468,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
       /* return the LU decomposition of calling matrix (i.e. *this) */
       pmatrixq <ntype,NT> m1;
       if constexpr (NT < 0)
-	m1 = pmatrixq<ntype,NT>(N);
+	m1.allocate(N);
       const double TINY=1E-40;
       int i,imax=-1,j,k,n;
       ntype big,dum,sum,temp; 
@@ -570,7 +587,7 @@ public:
   using pmatrixb<ntype,NT>::N;
   // Build identity matrix, simple as that
 #if 1
-  pmatrixq<ntype,NT>(int NN): pmatrixb<ntype,NT>(NN,NN)
+  pmatrixq<ntype,NT>(int NN): pmatrixb<ntype,NT>(NN)
   {
     // empty body
   }
@@ -580,7 +597,7 @@ public:
     {
       pmatrixq<ntype,NT> MI;
       if constexpr (NT < 0)
-	MI = pmatrixq<ntype,NT>(N);
+	MI.allocate(N);
       for (auto i=0; i < N; i++)
 	for (auto j=0; j < N; j++)
 	  MI[i][j] = (i==j)?1.0:0.0;
@@ -665,7 +682,7 @@ public:
 	{
 	  pmatrixq<ntype,NT> m2;
 	  if constexpr (NT < 0)
-	    m2 = pmatrixq<ntype,NT>(N);
+	    m2.allocate(N);
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -699,9 +716,9 @@ public:
 	}
       else
 	{
-	  pmatrixq<ntype,NT> m2(N);
+	  pmatrixq<ntype,NT> m2;
 	  if constexpr (NT < 0)
-	    m2 = pmatrixq<ntype,NT>(N);
+	    m2.allocate(N);
 	 
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -729,8 +746,8 @@ public:
       static pvector<int,NT> indx;
       if constexpr (NT < 0)
 	{
-	  m1 = pmatrixq<ntype,NT>(N);
-	  indx = pvector<ntype,NT>(N);
+	  m1.allocate(N);
+	  indx.allocate(N);
 	}
       // ludcmp return the LU decomposition of actual matrix (*this)
       m1=ludcmp(indx,d);
@@ -750,7 +767,7 @@ public:
 	  int *IPIV = new int[N];
 	  if constexpr (NT < 0)
 	    {
-	      om = pmatrixq<ntype,NT>(N);
+	      om.allocate(N);
 	    }
 	  om = *this;
 	  wrap_dgetrf(&(om.m[0][0]), IPIV, N);
@@ -771,7 +788,7 @@ public:
 	  int *IPIV = new int[N];
 	  if constexpr (NT < 0)
 	    {
-	      om = pmatrixq<ntype,NT>(N);
+	      om.allocate(N);
 	    }
 	  om = *this;
 	  wrap_fgetrf(&(om.m[0][0]), IPIV, N);
@@ -801,9 +818,9 @@ public:
       static pvector<int,NT> indx;
       if constexpr (NT < 0)
 	{
-	  LU = pmatrixq<ntype,NT>(N);
-	  col = pvector<ntype,NT>(N);
-	  indx= pvector<ntype,NT>(N);
+	  LU.allocate(N);
+	  col.allocate(N);
+	  indx.allocate(N);
 	}	
       LU=ludcmp(indx, d); 
       // inversion of a matrix through numerical recipes routines
@@ -865,7 +882,7 @@ public:
       pmatrixq<ntype,NT> om;
       if constexpr (NT < 0)
 	{
-	  om = pmatrixq<ntype,NT>(N);
+	  om.allocate(N);
 	}	  
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
@@ -914,7 +931,7 @@ public:
 	  pmatrixq <ntype,NT> m1;
 	  //initialize dynamic class
 	  if constexpr (NT < 0)
-	    m1 = pmatrixq<ntype,NT>(N); 
+	    m1.allocate(N); 
 	  if (N==1)
 	    {
 	      m1[0][0]=1.0/m[0][0];
@@ -1110,7 +1127,7 @@ public:
       pmatrixq<ntype,NT> m1;
       //initialize dynamic class
       if constexpr (NT < 0)
-	m1 = pmatrixq<ntype,NT>(N); 
+	m1.allocate(N); 
 	
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
@@ -1127,7 +1144,7 @@ public:
       pmatrixq<ntype,NT> m1;
       //initialize dynamic class
       if constexpr (NT < 0)
-	m1 = pmatrixq<ntype,NT>(N); 
+	m1.allocate(N); 
 	
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
@@ -1148,7 +1165,7 @@ public:
       pmatrixq<ntype,NT> m1;
       //initialize dynamic class
       if constexpr (NT < 0)
-	m1 = pmatrixq<ntype,NT>(N); 
+	m1.allocate(N); 
 
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
@@ -1161,7 +1178,7 @@ public:
       pmatrixq<ntype,NT> m2;
       if constexpr (NT < 0)
 	{
-	  m2 = pmatrixq<ntype,NT>(N);
+	  m2.allocate(N);
 	}
       for (i=0; i < N; i++)
 	for (j=0; j < N; j++)
@@ -1202,7 +1219,7 @@ public:
       pvector <ntype,NT> v2;
       //initialize dynamic class
       if constexpr (NT < 0)
-	v2 = pvector<ntype,NT>(N); 
+	v2.allocate(N); 
       
 #ifdef USE_LAPACK
       if (N > NMAXMUL) 
@@ -1249,7 +1266,7 @@ public:
       int i, j;
       pvector <ntype,NT> v2;
       if constexpr (NT < 0)
-	v2 = pvector<ntype,NT>(N); 
+	v2.allocate(N); 
     
 #ifdef USE_LAPACK
       if (N > NMAXMUL) 
@@ -1330,21 +1347,21 @@ public:
 	       P1, P2, P3, P4, P5, P6, P7;
       if constexpr (NT < 0)
 	{
-	  A11 = pmatrixq<ntype,N>(Np);
-	  A12 = pmatrixq<ntype,N>(Np);
-	  A21 = pmatrixq<ntype,N>(Np);
-	  A22 = pmatrixq<ntype,N>(Np);
-	  B11 = pmatrixq<ntype,N>(Np);
-	  B12 = pmatrixq<ntype,N>(Np);
-	  B22 = pmatrixq<ntype,N>(Np);
-	  B21 = pmatrixq<ntype,N>(Np);
-	  P1  = pmatrixq<ntype,N>(Np);
-	  P2  = pmatrixq<ntype,N>(Np);
-	  P3  = pmatrixq<ntype,N>(Np);
-	  P4  = pmatrixq<ntype,N>(Np);
-	  P5  = pmatrixq<ntype,N>(Np);
-	  P6  = pmatrixq<ntype,N>(Np);
-	  P7  = pmatrixq<ntype,N>(Np);
+	  A11.allocate(Np);
+	  A12.allocate(Np);
+	  A21.allocate(Np);
+	  A22.allocate(Np);
+	  B11.allocate(Np);
+	  B12.allocate(Np);
+	  B22.allocate(Np);
+	  B21.allocate(Np);
+	  P1.allocate(Np);
+	  P2.allocate(Np);
+	  P3.allocate(Np);
+	  P4.allocate(Np);
+	  P5.allocate(Np);
+	  P6.allocate(Np);
+	  P7.allocate(Np);
 	}
       int ip, jp;
       for (i=0; i < Np/2; i++) 
@@ -1431,7 +1448,7 @@ public:
 	  pmatrixq<ntype,NT> m2;
 	  //initialize dynamic class
 	  if constexpr (NT < 0)
-	    m1 = pmatrixq<ntype,NT>(N); 
+	    m2.allocate(N); 
 	
 	  // for small matrices we use explicit expressions for multiplication
 	  if (N==1)
@@ -1484,7 +1501,7 @@ public:
 	  pmatrixq<ntype,NT> m2;
 	  //initialize dynamic class
 	  if constexpr (NT < 0)
-	    m2 = pmatrixq<ntype,NT>(N); 
+	    m2.allocate(N); 
 #ifdef USE_LAPACK
 	  if (N > NMAXMUL)  
 	    {
@@ -1551,7 +1568,7 @@ public:
       pmatrixq<ntype,NT> m1;
       //initialize dynamic class
       if constexpr (NT < 0)
-	m1 = pmatrixq<ntype,NT>(N); 
+	m1.allocate(N); 
 	
       for (i=0; i < N; i++)
 	{
@@ -1702,11 +1719,17 @@ inline auto operator-(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> & leftOperandcons
  template <typename ntype,int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator/(AnOpM<ntype,NT, tipoL, LLhs, LRhs> const& lhs, AnOpM<ntype,NT, tipoR, RLhs, RRhs> const& rhs)
 {
-  int N=rhs.get_N();
-  pmatrixq<ntype,NT> mL(N), mR(N);
+  pmatrixq<ntype,NT> mL, mR;
   int i, j;
-  for (i=0; i < N; i++)
-    for (j=0; j < N; j++)
+  if constexpr (NT < 0)
+    {
+      int N=rhs.get_N();
+      mL.allocate(N);
+      mR.allocate(N);
+    }
+ 
+  for (i=0; i < mL.N; i++)
+    for (j=0; j < mL.N; j++)
       {
 	mL[i][j] = lhs.get_m(i,j);
 	mR[i][j] = rhs.get_m(i,j);
@@ -1717,8 +1740,13 @@ inline auto operator/(AnOpM<ntype,NT, tipoL, LLhs, LRhs> const& lhs, AnOpM<ntype
  template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator/(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,NT> const& mR)
 {
-  pmatrixq<ntype,NT> mL(mR.N);
+  pmatrixq<ntype,NT> mL;
   int i, j;
+  if constexpr (NT < 0)
+    {
+      mL.allocate(mR.N);
+    }
+
   for (i=0; i < mR.N; i++)
     for (j=0; j < mR.N; j++)
       {
@@ -1730,8 +1758,12 @@ inline auto operator/(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype
  template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator/(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, Rhs> const& rhs)
 {
-  pmatrixq<ntype,NT> mR(mL.N);
+  pmatrixq<ntype,NT> mR;
   int i, j;
+  if constexpr (NT < 0)
+    {
+      mR.allocate(mL.N);
+    }
   for (i=0; i < mL.N; i++)
     for (j=0; j < mL.N; j++)
       {
@@ -1746,10 +1778,16 @@ inline auto operator/(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, R
   template <typename ntype,int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator*(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> &lhs, const AnOpM<ntype,NT, tipoR, RLhs, RRhs> &rhs)
 {
-  int N=lhs.get_N();
-  pmatrixq<ntype,NT> mL(N), mR(N);
-  for (int i=0; i < N; i++)
-    for (int j=0; j < N; j++)
+  pmatrixq<ntype,NT> mL, mR;
+  if constexpr (NT < 0)
+    {
+      int N=lhs.get_N();
+      mL.allocate(N);
+      mR.allocate(N);
+    }
+ 
+  for (int i=0; i < mL.N; i++)
+    for (int j=0; j < mL.N; j++)
       {
     	mR[i][j] = lhs.get_m(i,j);
 	mL[i][j] = rhs.get_m(i,j);
@@ -1760,7 +1798,12 @@ inline auto operator*(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> &lhs, const AnOpM
    template<typename ntype,int NT, int tipo, typename Lhs, typename Rhs> 
 inline auto operator*(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,NT> const& mR)
 {
-  pmatrixq<ntype,NT> mL(mR.N);
+  pmatrixq<ntype,NT> mL;
+  if constexpr (NT < 0)
+    {
+      mL.allocate(mR.N);
+    }
+ 
   for (int i=0; i < mR.N; i++)
     for (int j=0; j < mR.N; j++)
       {
@@ -1772,7 +1815,12 @@ inline auto operator*(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype
 template<typename ntype,int NT, int tipo, typename Lhs, typename Rhs>  
 inline auto operator*(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, Rhs> const& rhs) 
 {
-  pmatrixq<ntype,NT> mR(mL.N);
+  pmatrixq<ntype,NT> mR;
+  if constexpr (NT < 0)
+    {
+      mR.allocate(mL.N);
+    }
+  
   for (int i=0; i < mL.N; i++)
     for (int j=0; j < mL.N; j++)
       {
@@ -1784,7 +1832,12 @@ inline auto operator*(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, R
 template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator *(const pvector<ntype,NT> vL, AnOpM<ntype,NT, tipo, Lhs, Rhs> const& rhs) 
 {
-  pmatrixq<ntype,NT> mR(rhs.get_N());
+  pmatrixq<ntype,NT> mR;
+  if constexpr (NT < 0)
+    {
+      mR.allocate(rhs.get_N());
+    }
+  
   for (int i=0; i < mR.N; i++)
     for (int j=0; j < mR.N; j++)
       {
@@ -1796,7 +1849,11 @@ inline auto operator *(const pvector<ntype,NT> vL, AnOpM<ntype,NT, tipo, Lhs, Rh
 template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator *(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, const pvector<ntype,NT> vR) 
 {
-  pmatrixq<ntype,NT> mL(lhs.get_N());
+  pmatrixq<ntype,NT> mL;
+  if constexpr (NT < 0)
+    {
+      mL.allocate(lhs.get_N());
+    }
   for (int i=0; i < mL.N; i++)
     for (int j=0; j < mL.N; j++)
       {
