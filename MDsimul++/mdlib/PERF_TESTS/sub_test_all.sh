@@ -6,7 +6,7 @@ EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
 NCINI="2000000"
 NC=$NCINI
-DEFINES="-DTEST_MISC "
+DEFINES="-DTEST_MUL "
 ENABLE_GLM="1"
 if [ "$1" == "" ]
 then
@@ -62,7 +62,7 @@ SUAR=`echo "${TAR}/${TMY}" | bc -l`
 SUEI=`echo "${TEI}/${TMY}" | bc -l` 
 if [ "$ENABLE_GLM" == "1" ]
 then
-SUEI=`echo "${TGL}/${TMY}" | bc -l` 
+SUGL=`echo "${TGL}/${TMY}" | bc -l` 
 echo $N " " $SUGL " " $SUAR " " $SUEI " " >> speedup.out  
 else
 echo $N " " $SUAR " " $SUEI " " >> speedup.out  
