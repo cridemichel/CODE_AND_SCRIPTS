@@ -536,7 +536,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_INV)
 	  mmg += inverse(mmg)+inverse(mmg2)+inverse(mmg3)+inverse(mmg4);
 #else
-	  mmg += mmg2*mmg3*mmg4.inv()+(mmg+mmg4+mmg3+mmg4);
+	  mmg += mmg2*mmg3*inverse(mmg4)+(mmg+mmg4+mmg3+mmg4);
 #endif
 	  //mmg += mmg2*mmg3+inverse(mmg4);
 	 //mmg =mmg2*mmg3*mmg4;

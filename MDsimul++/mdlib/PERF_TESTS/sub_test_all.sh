@@ -30,7 +30,7 @@ $TC ./$EXE $NC
 TMY=`cat _tempo_`
 fi
 #glm
-if [ \( \( "$TESTS" == "all" \) -o \( "$TESTS" == "GLM" \) \) -e \( "$ENABLE_GLM" == "1" \) ]
+if [ \( \( "$TESTS" == "all" \) -o \( "$TESTS" == "GLM" \) \) -a \( "$ENABLE_GLM" == "1" \) ]
 then
 $CC -DNMAT="$N" -DSEL="2" $DEFINES $FLAGS $LIBS $SF -o $EXE 
 $TC ./$EXE $NC 
@@ -68,7 +68,7 @@ else
 echo $N " " $SUAR " " $SUEI " " >> speedup.out  
 fi
 fi
-if [ \( "$TESTS" == "GLM" \) -e \( "$ENABLE_GLM" == "1" \) ]
+if [ \( "$TESTS" == "GLM" \) -a \( "$ENABLE_GLM" == "1" \) ]
 then
 echo $N " " $TGL >> results.out
 fi
