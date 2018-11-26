@@ -28,7 +28,13 @@ return drand48();
 #define NMAT 200
 #endif
 #ifdef GLM
+#if NMAT==2
+  glm::dmat2 mmg, mmg2, mmg3, mmg4;
+#elif NMAT==3
+  glm::dmat3 mmg, mmg2, mmg3, mmg4;
+#else
   glm::dmat4 mmg, mmg2, mmg3, mmg4;
+#endif
   glm::vec4 vg1, vg2, vg3, vg4;
 #endif
 #ifdef ARMA
