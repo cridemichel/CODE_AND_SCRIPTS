@@ -7,7 +7,7 @@
 using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
-//#define USE_LAPACK
+#define USE_LAPACK
 #ifdef USE_LAPACK
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);

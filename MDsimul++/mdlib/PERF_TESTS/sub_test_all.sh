@@ -1,13 +1,13 @@
-MATDIMS="2 3 4" 
+MATDIMS="200" 
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
-NCINI="4000000"
+NCINI="800000"
 NC=$NCINI
 DEFINES="-DTEST_MUL "
-ENABLE_GLM="1"
+ENABLE_GLM="0"
 if [ "$1" == "" ]
 then
 TESTS="all"
