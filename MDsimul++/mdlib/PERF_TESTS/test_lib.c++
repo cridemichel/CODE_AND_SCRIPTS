@@ -210,13 +210,13 @@ return drand48();
   mat mma(NMAT,NMAT), mma2(NMAT,NMAT), mma3(NMAT,NMAT), mma4(NMAT,NMAT);
   vec va1(NMAT), va2(NMAT), va3(NMAT), va4(NMAT); 
 #endif
-  pmatrixq<double,NMAT> mm, mm2, mm3, mm4;
+  pmatrixq<double,-1> mm(NMAT), mm2(NMAT), mm3(NMAT), mm4(NMAT);
   //pmatrixq<double,NMAT> mm, mm2, mm3, mm4;
   pmatrixq<long double, NMAT> mml, mml2;
   pvector<double, NMAT> v1, v2, v3, v4;
   pvector<long double, NMAT> vl1, vl2, vl3, vl4;
 #ifdef EIGEN
-#if NMAT > 40
+#if NMAT > 120
   Eigen::MatrixXd mme(NMAT,NMAT), mme2(NMAT,NMAT), mme3(NMAT,NMAT), mme4(NMAT,NMAT);
 #else
   Eigen::Matrix<double, NMAT, NMAT> mme, mme2, mme3, mme4;
@@ -580,10 +580,12 @@ int main(int argc, char**argv)
       v2[i] = drand48()*10.0-5;
       v3[i] = drand48()*10.0-5;
       v4[i] = drand48()*10.0-5;
-      va1(i) = va1[i];
-      va2(i) = va2[i];
-      va3(i) = va3[i];
-      va4(i) = va4[i];
+#ifdef ARMA
+      va1(i) = v1[i];
+      va2(i) = v2[i];
+      va3(i) = v3[i];
+      va4(i) = v4[i];
+#endif
 #ifdef GLM
       vg1[i] = v1[i];
       vg2[i] =v2[i];
@@ -597,7 +599,9 @@ int main(int argc, char**argv)
 #ifdef GLM
 	  mmg[i][j] = mm[i][j];
 #endif
+#ifdef ARMA
 	  mma(i,j)=mm[i][j];
+#endif
 	}	  
     }
   //mm.show("mm=");
@@ -646,10 +650,12 @@ int main(int argc, char**argv)
 	  mmg3[i][j] = mm3[i][j];
 	  mmg4[i][j] = mm4[i][j];
 #endif
+#ifdef ARMA
 	  mma(i,j)=mm[i][j];
 	  mma2(i,j)=mm2[i][j];
 	  mma3(i,j)=mm3[i][j];
 	  mma4(i,j)=mm4[i][j];
+#endif
 #ifdef EIGEN
 	  mme(i,j)=mm[i][j];
 	  mme2(i,j)=mm2[i][j];
