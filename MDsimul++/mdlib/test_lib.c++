@@ -672,7 +672,7 @@ int main(int argc, char**argv)
 	{
 	  //v3=(v1+v2)+(v3+v4);
 #ifdef TEST_SUM
-	  mm += mm*mm2*mm3*mm4;
+	  mm += mm+mm2+mm3+mm4;
 #elif defined(TEST_MUL)
 	  mm += mm*mm2*mm3*mm4;
 #elif defined(TEST_INV)
@@ -734,7 +734,7 @@ int main(int argc, char**argv)
 	  //mma = (mma3+mma2)+(mma+mma4);
 	  //va3=(va1+va2)*3.0+(va3+va4)*5.0;
 #ifdef TEST_SUM
-	  mma += mma*mma2*mma3*mma4;
+	  mma += mma+mma2+mma3+mma4;
 #elif defined(TEST_MUL)
 	  mma += mma*mma2*mma3*mma4;
 #elif defined(TEST_INV)
@@ -758,7 +758,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_MUL)
 	  mme += mme*mme2*mme3*mme4;
 #elif defined(TEST_INV)
-	  mme += mme.inv()+mme2.inv()+mme3.inv()+mme4.inv();
+	  mme += mme.inverse()+mme2.inverse()+mme3.inverse()+mme4.inverse();
 #else
 	  mme += mme2*mme3*mme4.inverse()+(mme+mme4+mme3+mme4);
 #endif
