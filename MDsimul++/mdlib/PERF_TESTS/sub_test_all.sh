@@ -1,12 +1,13 @@
-MATDIMS="120" 
+MATDIMS="2 3 4" 
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
-NCINI="200000"
+NCINI="2000000"
 NC=$NCINI
 DEFINES="-DTEST_MISC "
+ENABLE_GLM="1"
 if [ "$1" == "" ]
 then
 TESTS="all"
@@ -28,6 +29,13 @@ $CC -DNMAT="$N" -DSEL="1" $DEFINES $FLAGS $LIBS $SF -o $EXE
 $TC ./$EXE $NC
 TMY=`cat _tempo_`
 fi
+#glm
+if [ \( \( "$TESTS" == "all" \) -o \( "$TESTS" == "GLM" \) \) -e \( "$ENABLE_GLM" == "1" \) ]
+then
+$CC -DNMAT="$N" -DSEL="2" $DEFINES $FLAGS $LIBS $SF -o $EXE 
+$TC ./$EXE $NC 
+TGL=`cat _tempo_`
+fi
 #armadillo 
 if [ \( "$TESTS" == "all" \) -o \( "$TESTS" == "ARM" \) ]
 then
@@ -44,10 +52,25 @@ TEI=`cat _tempo_`
 fi
 if [ "$TESTS" == "all" ]
 then
+if [ "$ENABLE_GLM" == "1" ]
+then
+echo $N " " $TMY " " $TGL " " $TAR " " $TEI >> results.out
+else
 echo $N " " $TMY " " $TAR " " $TEI >> results.out
+fi
 SUAR=`echo "${TAR}/${TMY}" | bc -l` 
 SUEI=`echo "${TEI}/${TMY}" | bc -l` 
+if [ "$ENABLE_GLM" == "1" ]
+then
+SUEI=`echo "${TGL}/${TMY}" | bc -l` 
+echo $N " " $SUGL " " $SUAR " " $SUEI " " >> speedup.out  
+else
 echo $N " " $SUAR " " $SUEI " " >> speedup.out  
+fi
+fi
+if [ \( "$TESTS" == "GLM" \) -e \( "$ENABLE_GLM" == "1" \) ]
+then
+echo $N " " $TGL >> results.out
 fi
 if [ "$TESTS" == "MY" ]
 then
