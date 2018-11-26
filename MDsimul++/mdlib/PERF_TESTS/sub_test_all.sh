@@ -4,7 +4,7 @@ echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
-NCINI="2000000"
+NCINI="4000000"
 NC=$NCINI
 DEFINES="-DTEST_MUL "
 ENABLE_GLM="1"
@@ -17,7 +17,7 @@ fi
 CC="g++"
 LIBS="-llapack -lblas -larmadillo"
 #FLAGS="-mfpmath=sse -std=c++17 -mavx512vbmi -ffast-math -O3"
-FLAGS="-std=c++17 -ffast-math -O3"
+FLAGS=" -std=c++17 -ffast-math -O3 "
 for N in `echo $MATDIMS`
 do
 NC=`echo "e(2.2*l(3.0/${N}))*${NCINI}" | bc -l | LANG=C awk '{printf("%d", $0)}'`  
@@ -25,7 +25,7 @@ echo "Doing " $NC "loops for N=" $N
 #my class
 if [ \( "$TESTS" == "all" \) -o \( "$TESTS" == "MY" \) ]
 then
-$CC -DNMAT="$N" -DSEL="1" $DEFINES $FLAGS $LIBS $SF -o $EXE
+$CC -DNMAT="$N" -DSEL="1" $DEFINES $FLAGS $LIBS -o $EXE $SF 
 $TC ./$EXE $NC
 TMY=`cat _tempo_`
 fi

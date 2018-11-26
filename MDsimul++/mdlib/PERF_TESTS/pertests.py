@@ -18,6 +18,7 @@ majorLocatorx = MultipleLocator(50)
 minorLocatory = MultipleLocator(0.2)
 majorLocatory = MultipleLocator(1)
 su=np.loadtxt("speedup_ALL_3.out","double")
+gl=np.loadtxt("speedup_glm.out", "double")
 fig, ax = plt.subplots()  # get axes of plots
 plt.title(r'$Test\;\; M_1 = M_1 + M_1 M_2 M_4^{-1} + (M_1 + M_2 + M_3 + M_4)$',fontsize=12) # set title enabling latex parsing
 plt.xlabel("matrix order",fontsize=15) # xaxis label with font size
