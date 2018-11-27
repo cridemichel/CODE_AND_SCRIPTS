@@ -6,7 +6,7 @@ EXE="test_lib"
 TC="gtime -f %e -o _tempo_ "
 NCINI="200000"
 NC=$NCINI
-DEFINES="-DTEST_INV "
+DEFINES="-DTEST_MISC "
 if [ "$1" == "" ]
 then
 TESTS="all"

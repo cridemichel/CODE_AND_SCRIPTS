@@ -1,12 +1,13 @@
-MATDIMS="2" 
+MATDIMS="3 4" 
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
-TC="gtime -f %e -o _tempo_ "
-NCINI="5000000"
+#TC="gtime -f %e -o _tempo_ "
+TC="time -p "
+NCINI="1000000"
 NC=$NCINI
-DEFINES="-DTEST_INV "
+DEFINES="-DTEST_MISC "
 ENABLE_GLM="1"
 if [ "$1" == "" ]
 then
@@ -26,28 +27,28 @@ echo "Doing " $NC "loops for N=" $N
 if [ \( "$TESTS" == "all" \) -o \( "$TESTS" == "MY" \) ]
 then
 $CC -DNMAT="$N" -DSEL="1" $DEFINES $FLAGS $LIBS -o $EXE $SF 
-$TC ./$EXE $NC
+$TC ./$EXE $NC 2>&1 | LANG=C awk '/real/{print $2}' > _tempo_
 TMY=`cat _tempo_`
 fi
 #glm
 if [ \( \( "$TESTS" == "all" \) -o \( "$TESTS" == "GLM" \) \) -a \( "$ENABLE_GLM" == "1" \) ]
 then
 $CC -DNMAT="$N" -DSEL="2" $DEFINES $FLAGS $LIBS $SF -o $EXE 
-$TC ./$EXE $NC 
+$TC ./$EXE $NC 2>&1 | LANG=C awk '/real/{print $2}' > _tempo_
 TGL=`cat _tempo_`
 fi
 #armadillo 
 if [ \( "$TESTS" == "all" \) -o \( "$TESTS" == "ARM" \) ]
 then
 $CC -DNMAT="$N" -DSEL="3" $DEFINES $FLAGS $LIBS $SF -o $EXE 
-$TC ./$EXE $NC 
+$TC ./$EXE $NC 2>&1 | LANG=C awk '/real/{print $2}' > _tempo_
 TAR=`cat _tempo_`
 fi
 #eigen
 if [ \( "$TESTS" == "all" \) -o \( "$TESTS" == "EIG" \) ]
 then
 $CC -DNMAT="$N" -DSEL="4" $DEFINES $FLAGS $LIBS $SF -o $EXE
-$TC ./$EXE $NC 
+$TC ./$EXE $NC 2>&1 | LANG=C awk '/real/{print $2}' > _tempo_
 TEI=`cat _tempo_`
 fi
 if [ "$TESTS" == "all" ]
