@@ -4,7 +4,7 @@
 #define TINY 1E-20
 #define MD_NBMAX 4
 #define ARMA
-#define GLM
+//#define GLM
 #define EIGEN
 #ifdef ARMA
 #include<armadillo>

@@ -1,4 +1,4 @@
-MATDIMS="2 3 4" 
+MATDIMS="5" 
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"
@@ -8,7 +8,7 @@ TC="time -p "
 NCINI="1000000"
 NC=$NCINI
 DEFINES="-DTEST_MISC "
-ENABLE_GLM="1"
+ENABLE_GLM="0"
 if [ "$1" == "" ]
 then
 TESTS="all"

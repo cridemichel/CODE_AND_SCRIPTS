@@ -539,7 +539,6 @@ struct matpars
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
   static const int NMAXINV = 8;  // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 8;  // if N>NMAXMUL use BLAS multiplication routines
-  static const int NSTA = 8;      
   static const int NLAZY = 4;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
@@ -753,7 +752,7 @@ public:
   // addition
   inline pmatrixq<ntype,NT> addition(const pmatrixq<ntype,NT>& m1) const
     {
-      if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
+      if (pmatrixq<ntype,NT>::dynamic==false)
 	{
 	  pmatrixq<ntype,NT> m2;
 	  int i, j;
@@ -790,7 +789,7 @@ public:
   inline pmatrixq<ntype,NT> subtraction(const pmatrixq<ntype,NT>& m1) const
     {
       int i, j;
-      if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
+      if (pmatrixq<ntype,NT>::dynamic==false)
 	{
 	  pmatrixq<ntype,NT> m2;
 	  for (i=0; i < N; i++)
@@ -833,9 +832,9 @@ public:
   inline double detgenNR() const
     {
       double d;
-      static pmatrixq<ntype,NT> m1;
+      pmatrixq<ntype,NT> m1;
       int j;
-      static pvector<int,NT> indx;
+      pvector<int,NT> indx;
       if constexpr (NT < 0)
 	{
 	  m1.allocate(N);
@@ -855,7 +854,7 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  static pmatrixq<ntype,NT> om;
+	  pmatrixq<ntype,NT> om;
 	  int *IPIV = new int[N];
 	  if constexpr (NT < 0)
 	    {
@@ -876,7 +875,7 @@ public:
 	{
 	  double d=1.0;
 	  int j;	
-	  static pmatrixq<ntype,NT> om;
+	  pmatrixq<ntype,NT> om;
 	  int *IPIV = new int[N];
 	  if constexpr (NT < 0)
 	    {
@@ -903,11 +902,11 @@ public:
     }
   inline void invLUNR(pmatrixq<ntype,NT>& om) const
     {
-      static pvector <ntype,NT> col;
-      static pmatrixq<ntype,NT> LU;
+      pvector <ntype,NT> col;
+      pmatrixq<ntype,NT> LU;
       int m2, m1;
       double d;
-      static pvector<int,NT> indx;
+      pvector<int,NT> indx;
       if constexpr (NT < 0)
 	{
 	  LU.allocate(N);
@@ -2001,7 +2000,7 @@ inline auto operator+(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 }
 
 // matrix plus matrix
-// se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
+// se N < NLAZY restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
@@ -2038,7 +2037,7 @@ inline auto operator-(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 }
 
 // matrix plus matrix 
-// se N < NSTA restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
+// se N < NLAZY restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
   // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
@@ -2051,7 +2050,6 @@ inline auto operator-(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& r
     }
   else
     {
-      //cout << "qui N=" << N << " NSTA=" << NSTA << "\n";
       return AnOpM<ntype,NT, MOpTypes::MatMinusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>(lhs, rhs); // lazy evaluation
     }
 }
