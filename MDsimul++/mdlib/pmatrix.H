@@ -12,6 +12,7 @@
 #define OPT_INV
 #define MAT_USE_LAPACK
 //#define LAZY_MUL
+//N.B. Lazy evaluation of matrix multiplication has not been fully implemented yet
 #ifdef MAT_USE_LAPACK
 #undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
