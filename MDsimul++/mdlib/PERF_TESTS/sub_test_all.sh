@@ -1,4 +1,4 @@
-MATDIMS="3 4" 
+MATDIMS="2 3 4" 
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"

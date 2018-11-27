@@ -240,7 +240,7 @@ int main(int argc, char**argv)
   double A[2][2], B[2][2];
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
-#if 1
+#if 0
   pmatrixq<double,4> mmd;
   pvector<double,4> vd;
   mmd[0][0]=1.21323;
