@@ -10,8 +10,8 @@
 #include<cstring>
 #include "pvector.H"
 #define OPT_INV
-#define USE_LAPACK
-#ifdef USE_LAPACK
+#define MAT_USE_LAPACK
+#ifdef MAT_USE_LAPACK
 #undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
 //  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
@@ -38,12 +38,10 @@ extern void dgemv_(char* TRANSA, int* M, int *N, double* ALPHA,
 	  const double *A, int *LDA, const double *X, int *incx, double *BETA, double *Y, int *incy);  
 extern void sgemv_(char* TRANSA, int* M, int *N, float* ALPHA,
 	  const float *A, int *LDA, const float *X, int *incx, float *BETA, float *Y, int *incy);      
-#ifdef EXTRA
-extern void dsyev_(char *JOBZ, char *UPLO, int *N, double *AT, int *LDA, double *WORK, int *LWORK, int *INFO);      
+extern void dsyev_(char *JOBZ, char *UPLO, int *N, double *AT, int *LDA, double *B, double *WORK, int *LWORK, int *INFO);      
 extern void dgesv_(int *N, int *NRHS, double* AT, int *LDA, int *pivot, double *B, int *LDB, int *INFO);      
-extern void ssyev_(char *JOBZ, char *UPLO, int *N, double *AT, int *LDA, double *WORK, int *LWORK, int *INFO);      
-extern void sgesv_(int *N, int *NRHS, double* AT, int *LDA, int *pivot, double *B, int *LDB, int *INFO);      
-#endif
+extern void ssyev_(char *JOBZ, char *UPLO, int *N, float *AT, int *LDA, float *B, float *WORK, int *LWORK, int *INFO);      
+extern void sgesv_(int *N, int *NRHS, float* AT, int *LDA, int *pivot, float *B, int *LDB, int *INFO);      
 }
 #endif
 //Matrix times vector
@@ -144,55 +142,110 @@ void wrap_sgemm(float *C, const float *A, const float *B, int n, float alpha=1.0
 #endif
 }
 // eigenvalues eigenvectors
-#ifdef EXTRA
 /* solve a linear system of equations */
-void wrap_dgesv(double a[3][3], double x[3], int *ok)
+void wrap_dgesv(double *a, double* x, int N, int *ok)
 {
-  double AT[9];
-  int i, j, c1, c2, pivot[3];
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
+  int i, j, c1;
+  auto pivot = new int[N];
+  auto AT = new double[N*N];
+  for (i=0; i<N; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix from column major to row major*/
+      for(j=0; j<N; j++) AT[j+N*i]=a[j*N+i];		
     }						
-  c1 = 3;
-  c2 = 1;
-  // this routine uses LU decomposition hence if USE_LAPACK is not definedù
+  c1 = N;
+  // this routine uses LU decomposition hence if MAT_USE_LAPACK is not defined
   // the LU decomposition of Numerical Recipe can be used
-  dgesv_(&c1, &c2, AT, &c1, pivot, x, &c1, ok);      
+  dgesv_(&c1, &c1, AT, &c1, pivot, x, &c1, ok);      
+  delete [] pivot;
+  delete [] AT;
 }
-int SolveLineq (double a[3][3], double x[3]) 
+/* solve a linear system of equations */
+void wrap_sgesv(float *a, float* x, int N, int *ok)
 {
-  int indx[3], ok;
-  double dd;
-  wrap_dgesv(a, x, &ok);
-  return 0;
+  int i, j, c1;
+  auto pivot = new int[N];
+  auto AT = new float[N*N];
+  for (i=0; i<N; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix from column major to row major*/
+      for(j=0; j<N; j++) AT[j+N*i]=a[j*N+i];		
+    }						
+  c1 = N;
+  // this routine uses LU decomposition hence if MAT_USE_LAPACK is not defined
+  // the LU decomposition of Numerical Recipe can be used
+  sgesv_(&c1, &c1, AT, &c1, pivot, x, &c1, ok);      
+  delete [] pivot;
+  delete [] AT;
 }
-
-/* find eigenvectors and eigenvalues */
-void wrap_dsyev(double a[3][3], double b[3][3], double x[3], int *ok)
+/* find eigenvectors (in b) and eigenvalues (in 1d array x) */
+void wrap_dsyev(double *a, double *b, double *x, int N, int *ok, bool ev=false)// if ev=1 find also eigenvectors
 {
   char JOBZ, UPLO;
-  double AT[9], work[10];
+  double *AT, *work;
   int i, j, c1, c2, c3;
-  JOBZ='V';
+
+  if (ev==true)
+    JOBZ='V';
+  else
+    JOBZ='N';
   UPLO='U';
-  extern void dsyev_(char* , char*, int*, double* , int*, double*, double*, int*, int*);
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+  AT = new double[N*N];
+  c3 = 3*N-1;
+  work = new double[c3];
+  for (i=0; i<N; i++)		/* to call a Fortran routine from C we */
     {				/* have to transform the matrix */
-      for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
+      for(j=0; j<N; j++)
+       	AT[j+N*i]=a[j*N+i];		
     }						
-  c1 = 3;
-  c2 = 1;
-  c3 = 8;
+  c1 = N;
   dsyev_(&JOBZ, &UPLO, &c1, AT, &c1, x, work, &c3, ok);      
-  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
-    {				/* have to transform the matrix */
-      for(j=0; j<3; j++) b[i][j]=AT[j+3*i];		
-    }	
-  if (*ok != 0)
-    printf("not ok (%d)\n", *ok);
+  if (ev==true)
+    {
+      for (i=0; i<N; i++)		/* to call a Fortran routine from C we */
+	{				/* have to transform the matrix */
+	  for(j=0; j<N; j++) 
+	    b[i*N+j]=AT[j+N*i];		
+	}	
+    }
+  //if (*ok != 0)
+    //printf("not ok (%d)\n", *ok);
+  delete [] AT;
+  delete [] work;
 }
-#endif
+/* find eigenvectors (in b) and eigenvalues (in 1d array x) */
+void wrap_ssyev(float *a, float *b, float *x, int N, int *ok, bool ev=false)// if ev=1 find also eigenvectors
+{
+  char JOBZ, UPLO;
+  float *AT, *work;
+  int i, j, c1, c2, c3;
+
+  if (ev==true)
+    JOBZ='V';
+  else
+    JOBZ='N';
+  UPLO='U';
+  AT = new float[N*N];
+  c3 = 3*N-1;
+  work = new float[c3];
+  for (i=0; i<N; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<N; j++)
+       	AT[j+N*i]=a[j*N+i];		
+    }						
+  c1 = N;
+  ssyev_(&JOBZ, &UPLO, &c1, AT, &c1, x, work, &c3, ok);      
+  if (ev==true)
+    {
+      for (i=0; i<N; i++)		/* to call a Fortran routine from C we */
+	{				/* have to transform the matrix */
+	  for(j=0; j<N; j++) 
+	    b[i*N+j]=AT[j+N*i];		
+	}	
+    }
+  //if (*ok != 0)
+    //printf("not ok (%d)\n", *ok);
+  delete [] AT;
+  delete [] work;
+}
 #endif
 #ifdef MAT_LAZY_EVAL
 //REMARK on Lazyness Logic:
@@ -796,7 +849,7 @@ public:
     }
   inline ntype detgen() const
     {
-#ifdef USE_LAPACK
+#ifdef MAT_USE_LAPACK
       // LAPACK and BLAS are available only for float and double
       if constexpr (is_same<ntype, double>::value)
 	{
@@ -926,7 +979,7 @@ public:
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
-#ifdef USE_LAPACK
+#ifdef MAT_USE_LAPACK
       om = (*this);
       if (N > NMAXINV)
 	{
@@ -1277,7 +1330,79 @@ public:
 	  m[i][j] *= param;
       return (*this);
     }
-
+#ifdef MAT_USE_LAPACK
+  pvector<ntype,NT> EigVal (void) 
+    {
+      pvector<ntype, NT> eval;
+      int ok;
+      if constexpr (is_same<ntype, double>::value)
+	wrap_dsyev(&(m[0][0]), NULL, &(eval[0]), N, &ok);
+      else if constexpr (is_same<ntype, double>::value)
+	wrap_ssyev(&(m[0][0]), NULL, &(eval[0]), N, &ok);
+      return eval;
+    }
+  pvector<ntype,NT> EigValVec(pmatrixq<ntype, NT>& m1) 
+    {
+      pvector<ntype, NT> eval;
+      int ok;
+      if constexpr (is_same<ntype, double>::value)
+	wrap_dsyev(&(m[0][0]), &(m1[0][0]), &(eval[0]), N, &ok, true);
+      else if constexpr (is_same<ntype, double>::value)
+	wrap_ssyev(&(m[0][0]), &(m1[0][0]), &(eval[0]), N, &ok,true);
+      return eval;
+    }
+#endif
+  // il vettore restituito è quello con le soluzioni
+  pvector<ntype,NT> SolveLineq (pvector<ntype,NT> x) 
+    {
+#ifdef MAT_USE_LAPACK
+      int ok;
+      if constexpr (is_same<ntype, double>::value)
+	{
+	  pvector<ntype,NT> sol;
+	  if constexpr (NT < 0)
+	    sol.allocate(N); 
+	  sol = x;
+	  wrap_dgesv(&(m[0][0]), &(sol[0]), N, &ok);
+	  return sol;
+	}
+      else if constexpr (is_same<ntype, float>::value)
+	{
+	  pvector<ntype,NT> sol;
+	  if constexpr (NT < 0)
+	    sol.allocate(N); 
+	  sol = x;
+	  wrap_sgesv(&(m[0][0]), &(sol[0]), N, &ok);
+	  return sol;
+	}
+      else
+	{
+	  pmatrixq<ntype, NT> mt;
+	  ntype dd;
+	  pvector<int,NT> indx;
+	  if constexpr (NT < 0)
+	    {
+	      mt.allocate(N);
+	      indx.allocate(N);
+	    }
+	  mt = (*this).ludcmp(indx, &dd);
+	  return mt.lubksb(indx, x);
+	}
+#else
+      pmatrixq<ntype, NT> mt;
+      ntype dd;
+      pvector<int, NT> indx;
+      if constexpr (NT < 0)
+	{
+  	  mt.allocate(N);
+	  indx.allocate(N);
+	}
+      mt = (*this).ludcmp(indx, dd);
+      //if (ok==1) // for now do not handle errors
+	//return 1;
+      return mt.lubksb(indx, x);
+#endif
+    }
 #ifdef MAT_LAZY_EVAL
   // used if lazyness is disable (e.g. for small matrices)
   pmatrixq<ntype,NT> matscal(const ntype& param)
@@ -1380,7 +1505,7 @@ public:
       if constexpr (NT < 0)
 	v2.allocate(N); 
       
-#ifdef USE_LAPACK
+#ifdef MAT_USE_LAPACK
       if (N > NMAXMUL) 
 	{
 	  if constexpr (is_same<ntype, double>::value)
@@ -1427,7 +1552,7 @@ public:
       if constexpr (NT < 0)
 	v2.allocate(N); 
     
-#ifdef USE_LAPACK
+#ifdef MAT_USE_LAPACK
       if (N > NMAXMUL) 
 	{
 	  if constexpr (is_same<ntype, double>::value)
@@ -1564,7 +1689,7 @@ public:
   void muladd(const pmatrixq<ntype,NT>& m1, const pmatrixq<ntype,NT>& m2, ntype alpha=1.0, ntype beta=1.0) 
     {
       // m=alpha*m*m1 + beta*m2
-#ifdef USE_LAPACK
+#ifdef MAT_USE_LAPACK
       if (N > NMAXMUL)
 	{
 	  if constexpr (is_same<ntype, double>::value)
@@ -1661,7 +1786,7 @@ public:
 	  //initialize dynamic class
 	  if constexpr (NT < 0)
 	    m2.allocate(N); 
-#ifdef USE_LAPACK
+#ifdef MAT_USE_LAPACK
 	  if (N > NMAXMUL)  
 	    {
 	      if constexpr (is_same<ntype, double>::value)

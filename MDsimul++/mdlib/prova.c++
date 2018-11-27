@@ -240,27 +240,36 @@ int main(int argc, char**argv)
   double A[2][2], B[2][2];
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
-#if 0
+#if 1
   pmatrixq<double,4> mmd;
+  pvector<double,4> vd;
   mmd[0][0]=1.21323;
   mmd[0][1]=3.2132;
   mmd[0][2]=1.2;
   mmd[0][3]=-1.1;
-  mmd[1][0]=-2.03;
+  mmd[1][0]=mmd[0][1];
   mmd[1][1]=-0.215;
   mmd[1][2]=-2.13;
   mmd[1][3]=3.5;
-  mmd[2][0]=-2.3;
-  mmd[2][1]=-0.25;
+  mmd[2][0]=mmd[0][2];
+  mmd[2][1]=mmd[1][2];
   mmd[2][2]=-1.13;
-  mmd[2][3]=0.5;
-  mmd[3][0]=-0.22323;
-  mmd[3][1]=-0.5;
-  mmd[3][2]=2.033;
+  mmd[2][3]=3.4;
+  mmd[3][0]=mmd[0][3];
+  mmd[3][1]=mmd[1][3];
+  mmd[3][2]=mmd[2][3];
   mmd[3][3]=0.5222;
- 
-   mmd.show("mmd=");
-   mmd.inv().show("mmd=");
+  vd[0] = 1.0;
+  vd[1] = -1.23;
+  vd[2] = 0.2;
+  vd[3] = 0.991; 
+  mmd.show("mmd=");
+  //mmd.inv().show("mmd=");
+  vd.show("vd=");
+  //mmd.SolveLineq(vd).show("x=");
+  pmatrixq<double,4> evec;
+  mmd.EigValVec(evec).show("eigval=");
+  evec.show("eigenvectors=");
   exit(0);
 #endif
 #if 0
@@ -380,7 +389,7 @@ int main(int argc, char**argv)
 #if 1 //////////////////////
   //printf("%Lf\n",mml[i][j]);
   srand48(time(0));
-  ccmax=1000000;
+  ccmax=5000000;
   ccmy=ccarm=ccglm=cceigen=0;
   for (cct=0; cct < ccmax; cct++)
     {
@@ -446,7 +455,7 @@ int main(int argc, char**argv)
 #endif
       //mml.show("mml*mml*mml*mml");
      //printf("\nMYRES: ");
-      long double res, resmax=1E-13;
+      long double res, resmax=1E-12;
 #if 0
       //long double mmldet = mml.det();
       //printf("det of mml=%.15LG\n", mml.det());
