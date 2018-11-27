@@ -297,8 +297,11 @@ struct AnOpM
     // if the assigned matrix appears also on right hand side of assignment
     else if constexpr (tipo == MOpTypes::MatTimesMat && NT==2) 
       {
-	// i,j elemnt of resulting matrix
-    	return lhs.get_m(i,0)*rhs.get_m(0,j) + lhs.get_m(i,1)*rhs.get_m(1,j);
+	// i,j element of resulting matrix
+	ntype sum=0;
+    	for (auto k=0; k < lhs.get_N(); k++) 
+	  sum +=lhs.get_m(i,k)*rhs.get_m(k,j);
+	return sum;
       }
 #endif
     return 0;
