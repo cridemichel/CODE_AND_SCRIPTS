@@ -200,7 +200,7 @@ double ranf3()
 return drand48();
 }
 #ifndef NMAT
-#define NMAT 2
+#define NMAT 5
 #endif
 #ifdef GLM
   glm::dmat4 mmg, mmg2, mmg3, mmg4;
@@ -240,14 +240,27 @@ int main(int argc, char**argv)
   double A[2][2], B[2][2];
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
-#if 1
-  pmatrixq<double,2> mmd;
+#if 0
+  pmatrixq<double,4> mmd;
   mmd[0][0]=1.21323;
   mmd[0][1]=3.2132;
+  mmd[0][2]=1.2;
+  mmd[0][3]=-1.1;
   mmd[1][0]=-2.03;
-  mmd[1][1]=0.345;
-  mmd.show("mmd=");
-  mmd.inv().show("mmd=");
+  mmd[1][1]=-0.215;
+  mmd[1][2]=-2.13;
+  mmd[1][3]=3.5;
+  mmd[2][0]=-2.3;
+  mmd[2][1]=-0.25;
+  mmd[2][2]=-1.13;
+  mmd[2][3]=0.5;
+  mmd[3][0]=-0.22323;
+  mmd[3][1]=-0.5;
+  mmd[3][2]=2.033;
+  mmd[3][3]=0.5222;
+ 
+   mmd.show("mmd=");
+   mmd.inv().show("mmd=");
   exit(0);
 #endif
 #if 0
@@ -364,10 +377,10 @@ int main(int argc, char**argv)
 
   exit(-1);
 #endif
-#if 0 //////////////////////
+#if 1 //////////////////////
   //printf("%Lf\n",mml[i][j]);
   srand48(time(0));
-  ccmax=100;
+  ccmax=1000000;
   ccmy=ccarm=ccglm=cceigen=0;
   for (cct=0; cct < ccmax; cct++)
     {

@@ -4,7 +4,7 @@
 #define TINY 1E-20
 #define MD_NBMAX 4
 #define ARMA
-//#define GLM
+#define GLM
 #define EIGEN
 #ifdef ARMA
 #include<armadillo>
@@ -25,7 +25,7 @@ double ranf3()
 return drand48();
 }
 #ifndef NMAT
-#define NMAT 200
+#define NMAT 4
 #endif
 #ifdef GLM
 #if NMAT==2
