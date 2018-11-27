@@ -4,7 +4,7 @@
 #define TINY 1E-20
 #define MD_NBMAX 4
 #define ARMA
-//#define GLM
+#define GLM
 #define EIGEN
 #ifdef ARMA
 #include<armadillo>
@@ -200,10 +200,10 @@ double ranf3()
 return drand48();
 }
 #ifndef NMAT
-#define NMAT 5
+#define NMAT 3
 #endif
 #ifdef GLM
-  glm::dmat4 mmg, mmg2, mmg3, mmg4;
+  glm::dmat3 mmg, mmg2, mmg3, mmg4;
   glm::vec4 vg1, vg2, vg3, vg4;
 #endif
 #ifdef ARMA
@@ -241,6 +241,31 @@ int main(int argc, char**argv)
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
 #if 0
+  for (i=0; i < 3; i++)
+    for (j=0; j < 3; j++)
+    {
+      mm[i][j]= drand48()*10.0-5;
+      mm2[i][j] =drand48()*10.0-5; 
+      mmg[i][j] = mm[i][j];
+      mmg2[i][j] = mm2[i][j];
+      mma(i,j) = mm[i][j];
+      mma2(i,j) = mm2[i][j];
+    }	  
+  //mmg = (mmg-mmg2)*inverse(mmg2)+(mmg2+mmg)*inverse(mmg); 
+
+  mma3=mma*mma2;
+  mma3.raw_print();
+  (mm*mm2).show();
+  mmg3 = mmg2*mmg;
+  for (int i=0; i < 3; i++)
+    {
+      for (int j=0; j < 3; j++) 
+	printf("%.15G ", mmg3[i][j]);
+      printf("\n");
+    }
+
+
+  exit(-1);
   pmatrixq<double,4> mmd;
   pvector<double,4> vd;
   mmd[0][0]=1.21323;
@@ -389,7 +414,7 @@ int main(int argc, char**argv)
 #if 1 //////////////////////
   //printf("%Lf\n",mml[i][j]);
   srand48(time(0));
-  ccmax=5000000;
+  ccmax=1000000;
   ccmy=ccarm=ccglm=cceigen=0;
   for (cct=0; cct < ccmax; cct++)
     {
@@ -414,8 +439,8 @@ int main(int argc, char**argv)
 	{
 	  for (j=0; j < NMAT; j++)
 	    {
-	      mmg[i][j] = mml[i][j];
-	      mmg2[i][j] = mml2[i][j];
+	      mmg[i][j] = mml[j][i];
+	      mmg2[i][j] = mml2[j][i];
 	    }
 	}
 #endif
@@ -515,7 +540,7 @@ int main(int argc, char**argv)
 	{
 	  for (j=0; j < NMAT; j++)
 	    {
-	      res = (((long double)mmg[i][j])-mml[i][j])/mml[i][j]; 
+	      res = (((long double)mmg[j][i])-mml[i][j])/mml[i][j]; 
 	      if (fabs(res) > resmax)
 		{
 		  ccglm++;
@@ -724,7 +749,8 @@ int main(int argc, char**argv)
 #elif SEL==2
       for (k=0; k < 100; k++)
 	{
-	  mmg += mmg+mmg2+mmg3;
+	  mmg += mmg2*mmg3*mmg4.inv()+(mmg+mm4g+mmg3+mmg4);
+	  //mmg += mmg+mmg2+mmg3;
 	  //mmg += mmg2*mmg3+inverse(mmg4);
 	 //mmg =mmg2*mmg3*mmg4;
 	  //mmg += inverse(mmg3)+mmg*mmg3;

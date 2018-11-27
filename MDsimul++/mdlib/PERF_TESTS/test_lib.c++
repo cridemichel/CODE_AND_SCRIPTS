@@ -475,10 +475,10 @@ int main(int argc, char**argv)
 	  mm4[i][j] =drand48()*1.0-0.5;
 
 #ifdef GLM
-	  mmg[i][j] = mm[i][j];
-	  mmg2[i][j] = mm2[i][j];
-	  mmg3[i][j] = mm3[i][j];
-	  mmg4[i][j] = mm4[i][j];
+	  mmg[i][j] = mm[j][i];
+	  mmg2[i][j] = mm2[j][i];
+	  mmg3[i][j] = mm3[j][i];
+	  mmg4[i][j] = mm4[j][i];
 #endif
 #ifdef ARMA
 	  mma(i,j)=mm[i][j];

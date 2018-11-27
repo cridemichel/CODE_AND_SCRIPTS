@@ -539,7 +539,7 @@ struct matpars
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
   static const int NMAXINV = 8;  // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 8;  // if N>NMAXMUL use BLAS multiplication routines
-  static const int NSTA = 8;      // value below which static objects are declared in operator funcs (only if m is not dynamically allocated)
+  static const int NSTA = 8;      
   static const int NLAZY = 4;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
@@ -755,7 +755,7 @@ public:
     {
       if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
-	  static pmatrixq<ntype,NT> m2;
+	  pmatrixq<ntype,NT> m2;
 	  int i, j;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
@@ -792,7 +792,7 @@ public:
       int i, j;
       if (N <= NSTA && pmatrixq<ntype,NT>::dynamic==false)
 	{
-	  static pmatrixq<ntype,NT> m2;
+	  pmatrixq<ntype,NT> m2;
 	  for (i=0; i < N; i++)
 	    for (j=0; j < N; j++)
 	      {
