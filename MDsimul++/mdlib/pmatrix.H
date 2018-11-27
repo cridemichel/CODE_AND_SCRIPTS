@@ -11,6 +11,7 @@
 #include "pvector.H"
 #define OPT_INV
 #define MAT_USE_LAPACK
+//#define LAZY_MUL
 #ifdef MAT_USE_LAPACK
 #undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
@@ -259,7 +260,7 @@ void wrap_ssyev(float *a, float *b, float *x, int N, int *ok, bool ev=false)// i
 struct MOpTypes
 {  
   static const int MatPlusMat=0, MatMinusMat=1, MatTimesScal=2, ScalTimesMat=3,
-	       MatDivScal=4;
+	       MatDivScal=4, MatTimesMat=5;
 };
 template<typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 struct AnOpM 
@@ -291,6 +292,15 @@ struct AnOpM
       {
 	return lhs.get_m(i,j)/rhs;
       }
+#ifdef LAZY_MUL
+    // N.B. lazy multiplication does not improve performance and it can provide wrong results
+    // if the assigned matrix appears also on right hand side of assignment
+    else if constexpr (tipo == MOpTypes::MatTimesMat && NT==2) 
+      {
+	// i,j elemnt of resulting matrix
+    	return lhs.get_m(i,0)*rhs.get_m(0,j) + lhs.get_m(i,1)*rhs.get_m(1,j);
+      }
+#endif
     return 0;
   }
   int get_N() const { return lhs.get_N(); }
@@ -1537,6 +1547,7 @@ public:
       *this = (*this).mul(m1);
       return *this;
     }
+#ifndef LAZY_MUL
   inline pmatrixq<ntype,NT> operator *(const pmatrixq<ntype,NT>& m1) 
     {
       if (N > NMAX)
@@ -1544,6 +1555,7 @@ public:
       else
 	return (*this).mul(m1);
     }
+#endif
   inline pmatrixq<ntype,NT>& operator /=(const pmatrixq<ntype,NT>& m1) 
     {
       *this = (*this).mul(m1.inv());	
@@ -1985,6 +1997,46 @@ public:
     } 
 };
 #ifdef MAT_LAZY_EVAL
+#ifdef LAZY_MUL
+// MATRIX TIMES MATRIX
+//
+//
+// AnOpM times matrix
+  template<typename ntype,int NT, int tipo, typename Lhs, typename Rhs> 
+inline auto operator*(AnOpM<ntype,NT, tipo, Lhs, Rhs> const& lhs, pmatrixq<ntype,NT> const& p)
+{
+    return AnOpM<ntype,NT, MOpTypes::MatTimesMat, AnOpM<ntype,NT, tipo, Lhs, Rhs>, pmatrixq<ntype,NT>>(lhs, p);
+} 
+// matrix times AnOpM 
+template<typename ntype,int NT, int tipo, typename Lhs, typename Rhs> 
+inline auto operator*(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rhs> const& rhs) 
+{
+  return AnOpM< ntype,NT, MOpTypes::MatTimesMat, pmatrixq<ntype,NT>, AnOpM<ntype,NT, tipo, Lhs, Rhs> >(p, rhs);
+}
+
+// matrix times matrix
+// se N < NLAZY restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
+// altrimenti resituisce AnOpM e usa la lazy evaluation
+  template <typename ntype, int NT> 
+inline auto operator*(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
+{
+  if constexpr (NT != 2)
+    {
+      return lhs.mul(rhs); //normal evaluation
+    }
+  else
+    {
+      return AnOpM<ntype,NT, MOpTypes::MatTimesMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>(lhs, rhs); // lazy evaluation
+    }
+}
+// AnOpM times AnOpM
+template <typename ntype,int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
+inline auto operator*(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> & leftOperandconst, const AnOpM<ntype,NT, tipoR, RLhs, RRhs> & rightOperand)
+{
+  return  AnOpM<ntype,NT, MOpTypes::MatTimesMat, AnOpM<ntype,NT, tipoL, LLhs, LRhs>, AnOpM<ntype,NT, tipoR, RLhs, RRhs>>(leftOperandconst, rightOperand);
+}
+
+#endif
 // ADDITION
 // AnOpM plus matrix
   template<typename ntype,int NT, int tipo, typename Lhs, typename Rhs> 
@@ -2120,6 +2172,7 @@ inline auto operator/(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, R
 // MULTIPLICATION 
 //
 // AnOpM times AnOpM
+#ifndef LAZY_MUL
   template <typename ntype,int NT, int tipoL, int tipoR, typename LLhs, typename LRhs, typename RLhs, typename RRhs>
 inline auto operator*(const AnOpM<ntype,NT, tipoL, LLhs, LRhs> &lhs, const AnOpM<ntype,NT, tipoR, RLhs, RRhs> &rhs)
 {
@@ -2173,6 +2226,7 @@ inline auto operator*(pmatrixq<ntype,NT> const& mL, AnOpM<ntype,NT, tipo, Lhs, R
       }
   return mL*mR;
 }
+#endif
 // vector times AnOpM
 template <typename ntype,int NT, int tipo, typename Lhs, typename Rhs>
 inline auto operator *(const pvector<ntype,NT> vL, AnOpM<ntype,NT, tipo, Lhs, Rhs> const& rhs) 

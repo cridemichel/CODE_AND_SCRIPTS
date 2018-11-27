@@ -4,7 +4,7 @@
 #define TINY 1E-20
 #define MD_NBMAX 4
 #define ARMA
-//#define GLM
+#define GLM
 #define EIGEN
 #ifdef ARMA
 #include<armadillo>
@@ -514,7 +514,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_INV)
 	  mm += mm.inv()+mm2.inv()+mm3.inv()+mm4.inv();
 #else
-	  mm += mm2*mm3*mm4.inv()+(mm+mm4+mm3+mm2);
+	  mm += (mm2*mm3)*mm4.inv()+(mm+mm4+mm3+mm2);
 #endif
 #if 1
 	  //mm += mm+mm2+mm3;
