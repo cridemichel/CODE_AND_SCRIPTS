@@ -1,4 +1,5 @@
 MATDIMS="2" 
+#MATDIMS=" 3 4 5 6 8 10 15 20 30 50 80 120 150 200"
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"
