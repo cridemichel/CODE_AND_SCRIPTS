@@ -1033,7 +1033,7 @@ public:
       // if removed!
       if (N <= 4)
 	{
-    	  double invd;
+    	  ntype invd;
 	  pmatrixq <ntype,NT> m1;
 	  //initialize dynamic class
 	  if constexpr (NT < 0)
@@ -1044,35 +1044,35 @@ public:
 	    }
 	  else if (N==2)
 	    {
-#if defined(OPT_INV) 
-	      /* Compute adjoint: */
-
-	      auto dst = &(m1[0][0]);
+#ifdef OPT_INV
 	      auto src = &(m[0][0]);
-	      ntype det;
-	      dst[0] = + src[3];
-	      dst[1] = - src[1];
-	      dst[2] = - src[2];
-	      dst[3] = + src[0];
-
-	      /* Compute determinant: */
-
-	      det = src[0] * dst[0] + src[1] * dst[2];
-
-	      /* Multiply adjoint with reciprocal of determinant: */
-
-	      det = 1.0 / det;
-
-	      dst[0] *= det;
-	      dst[1] *= det;
-	      dst[2] *= det;
-	      dst[3] *= det;
+	      auto dst = &(m1[0][0]);
+	      // 0 0 -> 0;  0 1 -> 1 
+	      // 1 0 -> 2;  1 1 -> 3 
+	      dst[0] = src[3];
+	      dst[1] = -src[1];
+	      dst[2] = -src[2];
+	      dst[3] = src[0];
+	      invd = src[0]*src[3] - src[1]*src[2];
+	      invd = 1.0/invd;
+	      dst[0] *= invd;
+	      dst[1] *= invd;
+	      dst[2] *= invd;
+	      dst[3] *= invd;
 #else
-	      invd = 1.0/(m[0][0]*m[1][1]-m[0][1]*m[1][0]);
-	      m1[0][0] = m[1][1]*invd;
-	      m1[0][1] = -m[1][0]*invd;
-	      m1[1][0] = -m[0][1]*invd;
-	      m1[1][1] = m[0][0]*invd;
+	      m1[0][0] = m[1][1];
+	      m1[0][1] = -m[0][1];
+	      m1[1][0] = -m[1][0];
+	      m1[1][1] = m[0][0];
+
+	      invd = m[0][0]*m[1][1];
+	      invd -= m[0][1]*m[1][0];
+	      invd = 1.0/invd;
+
+	      m1[0][0] *= invd;
+	      m1[0][1] *= invd;
+	      m1[1][0] *= invd;
+	      m1[1][1] *= invd;
 #endif
 	    }
 	  else if (N==3)
@@ -1819,10 +1819,22 @@ public:
 	    }
 	  else if (N==2)
 	    {
+#if 0
+	      auto src0 = &(pmatrixq::m[0][0]);
+	      auto src1 = &(m1.m[0][0]);
+	      auto dst = &(m2.m[0][0]);
+	      // 0 0 -> 0;  0 1 -> 1 
+	      // 1 0 -> 2;  1 1 -> 3 
+	      dst[0] = src0[0]*src1[0] + src0[1]*src1[2];
+	      dst[1] = src0[0]*src1[1] + src0[1]*src1[3];
+	      dst[2] = src0[2]*src1[0] + src0[3]*src1[2];
+	      dst[3] = src0[2]*src1[1] + src0[3]*src1[3]; 
+#else
 	      m2.m[0][0] = pmatrixq::m[0][0]*m1.m[0][0] + pmatrixq::m[0][1]*m1.m[1][0];
 	      m2.m[0][1] = pmatrixq::m[0][0]*m1.m[0][1] + pmatrixq::m[0][1]*m1.m[1][1];
 	      m2.m[1][0] = pmatrixq::m[1][0]*m1.m[0][0] + pmatrixq::m[1][1]*m1.m[1][0];
 	      m2.m[1][1] = pmatrixq::m[1][0]*m1.m[0][1] + pmatrixq::m[1][1]*m1.m[1][1]; 
+#endif
 	    }
 	  else if (N==3)
 	    {
@@ -2065,7 +2077,19 @@ inline auto operator+(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& r
 {
   if constexpr ((NT >= 0 && NT <= pmatrixq<ntype,NT>::NLAZY)|| NT==matpars::DynNoLazy)
     {
-      return lhs.addition(rhs); //normal evaluation
+      // mettere qui direttamente l'addizione e provare se aumentano le performance
+#if 0
+      pmatrixq<ntype,NT> m2;
+	  int i, j;
+	  for (i=0; i < lhs.N; i++)
+	    for (j=0; j < lhs.N; j++)
+	      {
+		m2.m[i][j] = lhs.m[i][j] + rhs.m[i][j];
+	      }
+	  return m2;
+#else
+	  return lhs.addition(rhs); //normal evaluation
+#endif
     }
   else
     {

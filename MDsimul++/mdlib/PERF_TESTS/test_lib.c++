@@ -514,7 +514,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_INV)
 	  mm += mm.inv()+mm2.inv()+mm3.inv()+mm4.inv();
 #else
-	  mm += mm2*mm3*mm4.inv()+(mm4+mm3+mm2);
+	  mm += mm2*mm3*mm4.inv()+(mm+mm4+mm3+mm2);
 #endif
 #if 1
 	  //mm += mm+mm2+mm3;
@@ -542,7 +542,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_INV)
 	  mmg += inverse(mmg)+inverse(mmg2)+inverse(mmg3)+inverse(mmg4);
 #else
-	  mmg += mmg2*mmg3*inverse(mmg4)+(mmg4+mmg3+mmg2);
+	  mmg += mmg2*mmg3*inverse(mmg4)+(mmg+mmg4+mmg3+mmg2);
 #endif
 	  //mmg += mmg2*mmg3+inverse(mmg4);
 	 //mmg =mmg2*mmg3*mmg4;
@@ -576,7 +576,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_INV)
 	  mma += mma.i()+mma2.i()+mma3.i()+mma4.i();
 #else
-	  mma += mma2*mma3*mma4.i()+(mma4+mma3+mma2);
+	  mma += mma2*mma3*mma4.i()+(mma+mma4+mma3+mma2);
 #endif
 	  //mma += mma2*mma3+mma4.i();  
 	}
@@ -596,7 +596,7 @@ int main(int argc, char**argv)
 #elif defined(TEST_INV)
 	  mme += mme.inverse()+mme2.inverse()+mme3.inverse()+mme4.inverse();
 #else
-	  mme += mme2*mme3*mme4.inverse()+(mme4+mme3+mme2);
+	  mme += mme2*mme3*mme4.inverse()+(mme+mme4+mme3+mme2);
 #endif
 	  //mme += mme2*mme3+mme4.inverse();  
 	}

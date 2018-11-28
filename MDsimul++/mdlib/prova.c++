@@ -4,7 +4,7 @@
 #define TINY 1E-20
 #define MD_NBMAX 4
 #define ARMA
-#define GLM
+//#define GLM
 #define EIGEN
 #ifdef ARMA
 #include<armadillo>
@@ -202,9 +202,18 @@ return drand48();
 #ifndef NMAT
 #define NMAT 3
 #endif
+
 #ifdef GLM
+#if NMAT==2
+  glm::dmat2 mmg, mmg2, mmg3, mmg4;
+  glm::vec2 vg1, vg2, vg3, vg4;
+#elif NMAT==3
   glm::dmat3 mmg, mmg2, mmg3, mmg4;
+  glm::vec3 vg1, vg2, vg3, vg4;
+#else
+  glm::dmat4 mmg, mmg2, mmg3, mmg4;
   glm::vec4 vg1, vg2, vg3, vg4;
+#endif
 #endif
 #ifdef ARMA
   mat mma(NMAT,NMAT), mma2(NMAT,NMAT), mma3(NMAT,NMAT), mma4(NMAT,NMAT);
@@ -480,7 +489,7 @@ int main(int argc, char**argv)
 #endif
       //mml.show("mml*mml*mml*mml");
      //printf("\nMYRES: ");
-      long double res, resmax=1E-12;
+      long double res, resmax=1E-14;
 #if 0
       //long double mmldet = mml.det();
       //printf("det of mml=%.15LG\n", mml.det());
