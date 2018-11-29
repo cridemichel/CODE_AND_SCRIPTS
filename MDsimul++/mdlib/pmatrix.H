@@ -183,7 +183,7 @@ void wrap_dsyev(double *a, double *b, double *x, int N, int *ok, bool ev=false)/
 {
   char JOBZ, UPLO;
   double *AT, *work;
-  int i, j, c1, c2, c3;
+  int i, j, c1, c3;
 
   if (ev==true)
     JOBZ='V';
@@ -546,6 +546,20 @@ public:
 };
 // matrici quadrate NxN
 using namespace std;
+#ifdef CLUSTER_X86
+// this parameters are architecture dependent
+struct matpars
+{
+  // params for my class
+  static const int NMAX = 45;     // if N>NMAX use dynamic allocation of matrices
+  static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
+  static const int NMAXINV = 7;  // if N>NAMXINV use LAPACK LU DECOMP
+  static const int NMAXMUL = 7;  // if N>NMAXMUL use BLAS multiplication routines
+  static const int NLAZY = 7;     // value below which does not use lazy evaluation for addition
+  static const int Dynamic = -1;
+  static const int DynNoLazy = -2;
+};
+#else
 struct matpars
 {
   // params for my class
@@ -557,6 +571,7 @@ struct matpars
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
 };
+#endif
 // for large matrices use dynamic allocation to avoid stack overflow!
 // conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
 // case)

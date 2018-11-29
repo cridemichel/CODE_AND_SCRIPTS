@@ -2,7 +2,8 @@
 OBJS= prova.o
 CXX=g++
 LDFLAGS=-g
-CFLAGS=-g --std=c++17
+OPTS=-ffast-math -O3 -march=native -mtune=native -mavx2 #-march=native sul laptop migliora di un 30% le prestazioni! 
+CFLAGS=-g --std=c++17 # $OPTS
 common: $(OBJS)
 
 prova: prova.o
