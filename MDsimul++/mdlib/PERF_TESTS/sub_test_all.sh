@@ -1,4 +1,4 @@
-MATDIMS="2" 
+MATDIMS="2 3 4" 
 #MATDIMS=" 3 4 5 6 8 10 15 20 30 50 80 120 150 200"
 echo -n "" > results.out
 echo -n "" > speedup.out
@@ -6,7 +6,7 @@ SF="test_lib.c++"
 EXE="test_lib"
 #TC="gtime -f %e -o _tempo_ "
 TC="time -p "
-NCINI="3000000"
+NCINI="1000000"
 NC=$NCINI
 DEFINES="-DTEST_MISC "
 ENABLE_GLM="1"
@@ -17,9 +17,10 @@ else
 TESTS="$1"
 fi
 CC="g++"
+#CC="g++-8 -L/usr/local/lib/ -I/usr/local/include"
 LIBS="-llapack -lblas -larmadillo"
-#FLAGS="-mfpmath=sse -std=c++17 -mavx512vbmi -ffast-math -O3"
-FLAGS=" -std=c++17 -ffast-math -O3 "
+FLAGS="-std=c++17 -march=native -ffast-math -O3"
+#FLAGS="-std=c++17 -ffast-math -O3 "
 for N in `echo $MATDIMS`
 do
 NC=`echo "e(2.2*l(3.0/${N}))*${NCINI}" | bc -l | LANG=C awk '{printf("%d", $0)}'`  

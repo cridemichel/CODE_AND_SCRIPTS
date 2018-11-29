@@ -7,9 +7,10 @@ TC="gtime -f %e -o _tempo_ "
 NCINI="2000000"
 NC=$NCINI
 DEFINES="-DTEST_INV "
-CC="g++"
+CC="g++-8 -L/usr/local/lib/ -I/usr/local/include"
+#CC="g++"
 LIBS="-llapack -lblas -larmadillo"
-FLAGS="-std=c++17 -ffast-math -O3"
+FLAGS="-march=native -std=c++17 -ffast-math -O3"
 for N in `echo $MATDIMS`
 do
 NC=`echo "e(2.2*l(3.0/${N}))*${NCINI}" | bc -l | LANG=C awk '{printf("%d", $0)}'`  
