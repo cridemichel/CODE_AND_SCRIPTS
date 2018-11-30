@@ -547,34 +547,17 @@ public:
 };
 // matrici quadrate NxN
 using namespace std;
-#ifdef CLUSTER_X86
-// this parameters are architecture dependent
-// especially one has to tune the NLAZY parameter, since
-// performance are rather sensitive to it
 struct matpars
 {
   // params for my class
   static const int NMAX = 45;     // if N>NMAX use dynamic allocation of matrices
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
-  static const int NMAXINV = 12;  // if N>NAMXINV use LAPACK LU DECOMP
-  static const int NMAXMUL = 18;  // if N>NMAXMUL use BLAS multiplication routines
-  static const int NLAZY = 7;     // value below which does not use lazy evaluation for addition
+  static const int NMAXINV = 25;  // if N>NAMXINV use LAPACK LU DECOMP
+  static const int NMAXMUL = 25;  // if N>NMAXMUL use BLAS multiplication routines
+  static const int NLAZY = 20;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
 };
-#else
-struct matpars
-{
-  // params for my class
-  static const int NMAX = 45;     // if N>NMAX use dynamic allocation of matrices
-  static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
-  static const int NMAXINV = 16;  // if N>NAMXINV use LAPACK LU DECOMP
-  static const int NMAXMUL = 24;  // if N>NMAXMUL use BLAS multiplication routines
-  static const int NLAZY = 7;     // value below which does not use lazy evaluation for addition
-  static const int Dynamic = -1;
-  static const int DynNoLazy = -2;
-};
-#endif
 // for large matrices use dynamic allocation to avoid stack overflow!
 // conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
 // case)
