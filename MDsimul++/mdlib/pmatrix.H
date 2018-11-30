@@ -1,7 +1,7 @@
 #ifndef _PMATRIX_
 /* N.B. current status: better than armadillo and glm */
 #define _PMATRIX_
-//#define USE_STRASSEN
+#define USE_STRASSEN
 // matrici NxM
 #include<stdio.h>
 #include<stdlib.h>
@@ -14,7 +14,7 @@
 //#define LAZY_MUL
 //N.B. Lazy evaluation of matrix multiplication has not been fully implemented yet
 #ifdef MAT_USE_LAPACK
-//#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
+#undef __APPLE__ // undefining __APPLE__ one can prevent the usage of macosx accelerated framework switching to standard lapack blas
 #ifdef __APPLE__
 //  /System/Library/Frameworks/vecLib.framework/Headers/cblas.h
 //  g++ -framework accelerate to compile
@@ -569,7 +569,7 @@ struct matpars
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
   static const int NMAXINV = 8;  // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 8;  // if N>NMAXMUL use BLAS multiplication routines
-  static const int NLAZY = 4;     // value below which does not use lazy evaluation for addition
+  static const int NLAZY = 7;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
 };
@@ -591,18 +591,17 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
       pmatrixq <ntype,NT> m1;
       if constexpr (NT < 0)
 	m1.allocate(N);
-      const double TINY=1E-40;
-      int i,imax=-1,j,k,n;
+      static const double TINY=1E-40;
+      int i,imax=-1,j,k;
       ntype big,dum,sum,temp; 
       ntype vv[N]; /* vv stores the implicit scaling of each row.*/
       d=1.0; /* No row interchanges yet. */
-      n=N;
       m1 = (*this);
-      for (i=0;i<n;i++) 
+      for (i=0;i<N;i++) 
 	{ 
 	  /* Loop over rows to get the implicit scaling information.*/ 
 	  big=0.0; 
-	  for (j=0;j<n;j++)
+	  for (j=0;j<N;j++)
 	    {
 	      if ((temp=abs(m1[i][j])) > big) big=temp; 
 	    }
@@ -613,7 +612,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	  /* No nonzero largest element. */
 	  vv[i]=1.0/big; /* Save the scaling.*/
 	} 
-      for (j=0;j<n;j++) 
+      for (j=0;j<N;j++) 
 	{ /* This is the loop over columns of Crout s method.*/
 	  for (i=0;i<j;i++) 
 	    { 
@@ -624,7 +623,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	      m1[i][j]=sum; 
 	    } 
 	  big=0.0; /* Initialize for the search for largest pivot element. */ 
-	  for (i=j;i<n;i++) 
+	  for (i=j;i<N;i++) 
 	    { 
 	      /* This is i = j of equation (2.3.12) and i = j+1. . .N of equation (2.3.13).*/
 	      sum=m1[i][j]; 
@@ -641,7 +640,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	  if (j != imax) 
 	    { 
 	      /* Do we need to interchange rows? */
-	      for (k=0;k<n;k++) 
+	      for (k=0;k<N;k++) 
 		{ 
 		  /* Yes, do so...*/ 
 		  dum=m1[imax][k]; 
@@ -660,11 +659,12 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	   * (at least to the precision of the algorithm). 
 	   * For some applications on singular matrices, 
 	   * it is desirable to substitute TINY for zero. */ 
-	  if (j != n) 
+	  if (j != N) 
 	    { 
 	      /* Now,  nally, divide by the pivot element.*/
 	      dum=1.0/(m1[j][j]); 
-	      for (i=j+1;i<n;i++) m1[i][j] *= dum; 
+	      for (i=j+1;i<N;i++) 
+		m1[i][j] *= dum; 
 	    } 
 	} 
       return m1;
@@ -676,7 +676,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
        * with indx the raw permutations done to obtain LU from M, 
        * the return vector is the solution of A*x + b = 0 */
       int i,ii=0,ip,j; 
-      double sum; 
+      ntype sum; 
       for (i=0;i<N;i++) 
 	{ 
 	  /* When ii is set to a positive value, it will become the index of the  
@@ -699,7 +699,8 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	  /* Now we do the backsubstitution, equation (2.3.7).*/
 	  sum=b[i]; 
 	  for (j=i+1;j<N;j++) 
-	    sum -= m[i][j]*b[j]; b[i]=sum/m[i][i]; 
+	    sum -= m[i][j]*b[j]; 
+	  b[i]=sum/m[i][i]; 
 	  /* Store a component of the solution vector X. */ 
 	} /* All done! */
       return b;
