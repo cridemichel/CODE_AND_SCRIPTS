@@ -47,7 +47,7 @@ return drand48();
   pvector<double, NMAT> v1, v2, v3, v4;
   pvector<long double, NMAT> vl1, vl2, vl3, vl4;
 #ifdef EIGEN
-#if NMAT > 120
+#if NMAT > 45
   Eigen::MatrixXd mme(NMAT,NMAT), mme2(NMAT,NMAT), mme3(NMAT,NMAT), mme4(NMAT,NMAT);
 #else
   Eigen::Matrix<double, NMAT, NMAT> mme, mme2, mme3, mme4;
@@ -445,6 +445,8 @@ int main(int argc, char**argv)
     numtent=atoi(argv[1]);
   else
     numtent = 200;
+
+  int KMAX=100;
   for (t=0; t < numtent; t++)
     {
 #if 0
@@ -506,7 +508,7 @@ int main(int argc, char**argv)
       // mm2 *= mm;
       // mm2 *= mm.inv();
       //mm2 = (mm*mm2)*(mm*mm2);
-      for (k=0; k < 100; k++)
+      for (k=0; k < KMAX; k++)
 	{
 	  //v3=(v1+v2)+(v3+v4);
 #ifdef TEST_SUM
@@ -535,7 +537,7 @@ int main(int argc, char**argv)
 #endif
 	}
 #elif SEL==2
-      for (k=0; k < 100; k++)
+      for (k=0; k < KMAX; k++)
 	{
 #ifdef TEST_SUM
 	  mmg += mmg+mmg2+mmg3+mmg4;
@@ -564,7 +566,7 @@ int main(int argc, char**argv)
 #elif SEL==3
       //mma(0,0) += sin(t)/(10000.0);
       //mma2 = ((mma*mma2)*(mma*mma2));
-      for (k=0; k < 100; k++)
+      for (k=0; k < KMAX; k++)
 	{
 	  //va3 = cross(cross(va1,va2),cross(va3,va4));
 	  //va1 += mma2*va2+mma3*va3+mma4*va4;
@@ -584,7 +586,7 @@ int main(int argc, char**argv)
 	}
       //mma2 = ((mma*mma.i())*(mma*mma.i()));
 #elif SEL==4
-      for (k=0; k < 100; k++)
+      for (k=0; k < KMAX; k++)
 	{
 	  //va3 = cross(cross(va1,va2),cross(va3,va4));
 	  //va1 += mma2*va2+mma3*va3+mma4*va4;
@@ -603,6 +605,8 @@ int main(int argc, char**argv)
 	  //mme += mme2*mme3+mme4.inverse();  
 	}
 
+#else
+      // DRY RUN
 #endif
     }
 #ifdef GLM
