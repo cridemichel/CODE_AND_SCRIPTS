@@ -554,7 +554,7 @@ struct matpars
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
   static const int NMAXINV = 25;  // if N>NAMXINV use LAPACK LU DECOMP
   static const int NMAXMUL = 25;  // if N>NMAXMUL use BLAS multiplication routines
-  static const int NLAZY = 20;     // value below which does not use lazy evaluation for addition
+  static const int NLAZY = 18;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
 };

@@ -512,7 +512,13 @@ int main(int argc, char**argv)
 	{
 	  //v3=(v1+v2)+(v3+v4);
 #ifdef TEST_SUM
+#if 1
 	  mm += mm+mm2+mm3+mm4;
+#else
+	  for (i=0; i < NMAT; i++)
+	    for (j=0; j < NMAT; j++)
+	      mm[i][j] += (mm[i][j] + mm2[i][j]+mm3[i][j] + mm4[i][j]);//(mm[i][j]+mm4[i][j]);
+#endif
 #elif defined(TEST_MUL)
 	  mm += mm*mm2*mm3*mm4;
 #elif defined(TEST_INV)
