@@ -53,6 +53,10 @@ return drand48();
   Eigen::Matrix<double, NMAT, NMAT> mme, mme2, mme3, mme4;
 #endif
 #endif
+#ifndef SEL
+#define SEL 1
+#endif
+
 int main(int argc, char**argv)
 {
   long double x1, y1;
@@ -403,6 +407,7 @@ int main(int argc, char**argv)
   exit(-1); 
 #endif
 #endif
+  printf("SEL=%d NMAT=%d\n", SEL, NMAT);
   srand48(0);
   for (i=0; i < NMAT; i++)
     {
@@ -494,9 +499,6 @@ int main(int argc, char**argv)
 #endif
 	}	  
     }
-#ifndef SEL
-#define SEL 1
-#endif
 #if SEL==1
       //mm[0][0] += sin(t)/10000.0;
       // mm2 = mm;

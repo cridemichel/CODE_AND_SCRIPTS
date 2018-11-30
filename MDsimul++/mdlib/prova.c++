@@ -426,7 +426,7 @@ int main(int argc, char**argv)
 #if 1 //////////////////////
   //printf("%Lf\n",mml[i][j]);
   srand48(time(0));
-  ccmax=1000000;
+  ccmax=10000;
   ccmy=ccarm=ccglm=cceigen=0;
   for (cct=0; cct < ccmax; cct++)
     {
