@@ -556,8 +556,8 @@ struct matpars
   // params for my class
   static const int NMAX = 45;     // if N>NMAX use dynamic allocation of matrices
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
-  static const int NMAXINV = 7;  // if N>NAMXINV use LAPACK LU DECOMP
-  static const int NMAXMUL = 7;  // if N>NMAXMUL use BLAS multiplication routines
+  static const int NMAXINV = 12;  // if N>NAMXINV use LAPACK LU DECOMP
+  static const int NMAXMUL = 18;  // if N>NMAXMUL use BLAS multiplication routines
   static const int NLAZY = 7;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
@@ -568,8 +568,8 @@ struct matpars
   // params for my class
   static const int NMAX = 45;     // if N>NMAX use dynamic allocation of matrices
   static const int NMAXSTRA = 40; // if N > NMAXSTRA use Strassen multiplication algorithm
-  static const int NMAXINV = 8;  // if N>NAMXINV use LAPACK LU DECOMP
-  static const int NMAXMUL = 8;  // if N>NMAXMUL use BLAS multiplication routines
+  static const int NMAXINV = 16;  // if N>NAMXINV use LAPACK LU DECOMP
+  static const int NMAXMUL = 24;  // if N>NMAXMUL use BLAS multiplication routines
   static const int NLAZY = 7;     // value below which does not use lazy evaluation for addition
   static const int Dynamic = -1;
   static const int DynNoLazy = -2;
@@ -603,7 +603,6 @@ public:
       //static const int m=N;
       pvector<int,NT> indxc,indxr,ipiv;
       pmatrixq<ntype,NT> a;
-
       if constexpr (NT < 0)
 	{
 	  a.allocate(N);
