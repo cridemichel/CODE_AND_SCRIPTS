@@ -588,12 +588,19 @@ inline void SWAP(T &a, T &b)
 
 template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public matpars
 {
-  pmatrixq<ntype,NT> gaussj(pmatrixq<ntype,NT> *b) const
+public:
+  // solve the linear system (*this)*x = b (b is replaced by x)
+  // if b==NULL then returns just the inverse of (*this)
+
+  using pvec = pvector<ntype,NT>;
+  template <class T=pvec>
+  pmatrixq<ntype,NT> gaussj(typename conditional<is_same<T,pvec>::value, T&, int>::type b) const
     {
+      // a matrix with m columns (instead of a vector) could be supplied to solve many linear systems at once  
       int i,icol,irow,j,k,l,ll;
       ntype big,dum,pivinv;
       static const int n=N;
-      static const int m=N;
+      //static const int m=N;
       pvector<int,NT> indxc,indxr,ipiv;
       pmatrixq<ntype,NT> a;
 
@@ -622,8 +629,10 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	++(ipiv[icol]);
 	if (irow != icol) {
 	  for (l=0;l<n;l++) SWAP(a[irow][l],a[icol][l]);
-	  if (b!=NULL)
-	    for (l=0;l<m;l++) SWAP((*b)[irow][l],(*b)[icol][l]);
+	  if constexpr (is_same<pvec,T>::value)
+	    SWAP(b[irow],b[icol]);
+	  // a matrix with m columns could be supplied to solve many linear systems at once  
+	  //for (l=0;l<m;l++) SWAP(b[irow][l],b[icol][l]);
 	}
 	indxr[i]=irow;
 	indxc[i]=icol;
@@ -637,15 +646,19 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	pivinv=1.0/a[icol][icol];
 	a[icol][icol]=1.0;
 	for (l=0;l<n;l++) a[icol][l] *= pivinv;
-	if (b!=NULL)
-	  for (l=0;l<m;l++) (*b)[icol][l] *= pivinv;
+      	if constexpr (is_same<pvec,T>::value)
+	  b[icol] *= pivinv;
+	  // a matrix with m columns could be supplied to solve many linear systems at once  
+	  //for (l=0;l<m;l++) b[icol][l] *= pivinv;
 	for (ll=0;ll<n;ll++)
 	  if (ll != icol) {
 	    dum=a[ll][icol];
 	    a[ll][icol]=0.0;
 	    for (l=0;l<n;l++) a[ll][l] -= a[icol][l]*dum;
-	    if (b!=NULL)
-	      for (l=0;l<m;l++) (*b)[ll][l] -= (*b)[icol][l]*dum;
+	    if constexpr (is_same<pvec,T>::value)
+	      b[ll][l] -= b[icol]*dum;
+	      // a matrix with m columns could be supplied to solve many linear systems at once  
+	      //   for (l=0;l<m;l++) b[ll][l] -= b[icol][l]*dum;
 	  }
       }
       for (l=n-1;l>=0;l--) {
@@ -659,8 +672,7 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
     {
       //Overloaded version with no right-hand sides. Replaces a by its inverse. 
       //MatDoub b(a.nrows(),0); //Dummy vector with zero columns.
-      pmatrixq<ntype,NT> *b=NULL;
-      return gaussj(b);
+      return gaussj<int>(0);
     }
   inline pmatrixq<ntype,NT> ludcmp(pvector<int,NT>& indx, double& d) const
     {
@@ -783,7 +795,6 @@ template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public
 	} /* All done! */
       return b;
     }
-public:
   using pmatrixb<ntype,NT>::m;
   using pmatrixb<ntype,NT>::N;
   // Build identity matrix, simple as that
