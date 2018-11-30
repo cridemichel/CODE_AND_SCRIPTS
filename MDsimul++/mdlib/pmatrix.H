@@ -24,6 +24,7 @@
 #endif
 #define MAT_MOVE_SEMANTIC
 #define MAT_LAZY_EVAL
+#define USE_GAUSS_INV
 #ifndef __APPLE__
 extern "C" {
 extern void dgemm_(char* TRANSA, char* TRANSB, int* M, int *N, int*K, double* ALPHA,
@@ -581,9 +582,86 @@ template <class ntype, int NT=-1> using pmatrixb =
 typename std::conditional<(NT>matpars::NMAX||NT <=0), pmatrixd <ntype, NT>,
 	 pmatrix <ntype, NT, NT>>::type;
 
+template<class T>
+inline void SWAP(T &a, T &b)
+	{T dum=a; a=b; b=dum;}
+
 template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public matpars
 {
-  // il const vuol dire che il puntatore this, passato ai membri di una classe implicitamente, viene passato come const
+  pmatrixq<ntype,NT> gaussj(pmatrixq<ntype,NT> *b) const
+    {
+      int i,icol,irow,j,k,l,ll;
+      ntype big,dum,pivinv;
+      static const int n=N;
+      static const int m=N;
+      pvector<int,NT> indxc,indxr,ipiv;
+      pmatrixq<ntype,NT> a;
+
+      if constexpr (NT < 0)
+	{
+	  a.allocate(N);
+	  indxc.allocate(N);
+	  indxr.allocate(N);
+	  ipiv.allocate(N);
+	}
+      a = *this;
+      for (j=0;j<n;j++) ipiv[j]=0;
+      for (i=0;i<n;i++) {
+	big=0.0;
+	for (j=0;j<n;j++)
+	  if (ipiv[j] != 1)
+	    for (k=0;k<n;k++) {
+	      if (ipiv[k] == 0) {
+		if (fabs(a[j][k]) >= big) {
+		  big=fabs(a[j][k]);
+		  irow=j;
+		  icol=k;
+		}
+	      }
+	    }
+	++(ipiv[icol]);
+	if (irow != icol) {
+	  for (l=0;l<n;l++) SWAP(a[irow][l],a[icol][l]);
+	  if (b!=NULL)
+	    for (l=0;l<m;l++) SWAP((*b)[irow][l],(*b)[icol][l]);
+	}
+	indxr[i]=irow;
+	indxc[i]=icol;
+	if (a[icol][icol] == 0.0)
+	  {
+	    //nrerror("gaussj: Singular Matrix");
+	    // throw an exception here instead  
+	    cout << "gaussj: Singular Matrix\n";
+	    return a;
+	  }
+	pivinv=1.0/a[icol][icol];
+	a[icol][icol]=1.0;
+	for (l=0;l<n;l++) a[icol][l] *= pivinv;
+	if (b!=NULL)
+	  for (l=0;l<m;l++) (*b)[icol][l] *= pivinv;
+	for (ll=0;ll<n;ll++)
+	  if (ll != icol) {
+	    dum=a[ll][icol];
+	    a[ll][icol]=0.0;
+	    for (l=0;l<n;l++) a[ll][l] -= a[icol][l]*dum;
+	    if (b!=NULL)
+	      for (l=0;l<m;l++) (*b)[ll][l] -= (*b)[icol][l]*dum;
+	  }
+      }
+      for (l=n-1;l>=0;l--) {
+	if (indxr[l] != indxc[l])
+	  for (k=0;k<n;k++)
+	    SWAP(a[k][indxr[l]],a[k][indxc[l]]);
+      }
+      return a;
+    }
+  pmatrixq<ntype,NT> gaussj() const
+    {
+      //Overloaded version with no right-hand sides. Replaces a by its inverse. 
+      //MatDoub b(a.nrows(),0); //Dummy vector with zero columns.
+      pmatrixq<ntype,NT> *b=NULL;
+      return gaussj(b);
+    }
   inline pmatrixq<ntype,NT> ludcmp(pvector<int,NT>& indx, double& d) const
     {
       /* LU decomposition routine  borrowed from Numerical Recipe */
@@ -932,10 +1010,11 @@ public:
       return detgenNR();
 #endif 
     }
-  inline void invLUNR(pmatrixq<ntype,NT>& om) const
+  inline pmatrixq<ntype,NT> invLUNR(void) const
     {
       pvector <ntype,NT> col;
       pmatrixq<ntype,NT> LU;
+      pmatrixq<ntype,NT> om;
       int m2, m1;
       double d;
       pvector<int,NT> indx;
@@ -944,6 +1023,7 @@ public:
 	  LU.allocate(N);
 	  col.allocate(N);
 	  indx.allocate(N);
+	  om.allocate(N);
 	}	
       LU=ludcmp(indx, d); 
       // inversion of a matrix through numerical recipes routines
@@ -956,6 +1036,7 @@ public:
 	  for(m1=0;m1<N;m1++) 
 	    om[m1][m2]=col[m1]; 
 	}
+      return om;
     }
   inline ntype det() const
     {
@@ -1002,16 +1083,10 @@ public:
 
   inline pmatrixq<ntype,NT> invgen() const
     {
-      pmatrixq<ntype,NT> om;
-      if constexpr (NT < 0)
-	{
-	  om.allocate(N);
-	}	  
       // ludcmp returns the LU decomposition of actual matrix (*this)
       // where indx will store the raw permutiation effected by partial pivoting (see Numerical Recipe
       // for more details c2.3)
 #ifdef MAT_USE_LAPACK
-      om = (*this);
       if (N > NMAXINV)
 	{
 	  if constexpr (is_same<ntype, double>::value)
@@ -1019,29 +1094,57 @@ public:
 	      // Transpose(Inverse(M))=Inverse(Transpose(M))
 	      // hence we do not have to do anything to account
 	      // for column major order of lapack/blas routines
+	      pmatrixq<ntype,NT> om;
+	      if constexpr (NT < 0)
+		{
+		  om.allocate(N);
+		}	  
+	      om = (*this);
 	      int *IPIV = new int[N];
 	      wrap_dgetrf(&(om.m[0][0]), IPIV, N);
 	      wrap_dgetri(&(om.m[0][0]), IPIV, N);
 	      delete[] IPIV;
+	      return om;
 	    }
 	  else if constexpr (is_same<ntype, float>::value)
 	    {
+	      pmatrixq<ntype,NT> om;
+	      if constexpr (NT < 0)
+		{
+		  om.allocate(N);
+		}	  
+	      om = (*this);
 	      int *IPIV = new int[N];
 	      wrap_fgetrf(&(om.m[0][0]), IPIV, N);
 	      wrap_fgetri(&(om.m[0][0]), IPIV, N);
 	      delete[] IPIV;
+	      return om;
 	    }
 	  else 
 	    {
-	      invLUNR(om);
+	      // gauss eliminatio is much faster!
+#ifdef USE_GAUSS_INV
+	      return gaussj();
+#else
+	      return invLUNR();
+#endif
 	    }
 	}
       else
-	invLUNR(om);
+	{
+#ifdef USE_GAUSS_INV
+	  return gaussj();
 #else
-      invLUNR(om);
+	  return invLUNR();
 #endif
-      return om;
+	}
+#else
+#ifdef USE_GAUSS_INV
+      return gaussj();
+#else
+      return invLUNR();
+#endif
+#endif
     }
   
   pmatrixq<ntype,NT> inv(void) const

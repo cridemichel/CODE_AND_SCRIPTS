@@ -250,29 +250,32 @@ int main(int argc, char**argv)
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
 #if 0
-  for (i=0; i < 3; i++)
-    for (j=0; j < 3; j++)
+  for (i=0; i < NMAT; i++)
+    for (j=0; j < NMAT; j++)
     {
       mm[i][j]= drand48()*10.0-5;
       mm2[i][j] =drand48()*10.0-5; 
-      mmg[i][j] = mm[i][j];
-      mmg2[i][j] = mm2[i][j];
+      //mmg[i][j] = mm[i][j];
+      //mmg2[i][j] = mm2[i][j];
       mma(i,j) = mm[i][j];
       mma2(i,j) = mm2[i][j];
     }	  
   //mmg = (mmg-mmg2)*inverse(mmg2)+(mmg2+mmg)*inverse(mmg); 
 
-  mma3=mma*mma2;
+  mma3=mma.i();
+  cout.precision(16);
+  cout.setf(ios::fixed);
   mma3.raw_print();
-  (mm*mm2).show();
-  mmg3 = mmg2*mmg;
-  for (int i=0; i < 3; i++)
+  mm.inv().show();
+  //mmg3 = mmg2*mmg;
+#if 0
+  for (int i=0; i < NMAT; i++)
     {
-      for (int j=0; j < 3; j++) 
+      for (int j=0; j < NMAT; j++) 
 	printf("%.15G ", mmg3[i][j]);
       printf("\n");
     }
-
+#endif
 
   exit(-1);
   pmatrixq<double,4> mmd;
