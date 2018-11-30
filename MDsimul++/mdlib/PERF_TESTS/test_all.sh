@@ -1,11 +1,11 @@
-MATDIMS=" 3 4 5 6 8 10 15 20 30 50 80 120 150 200"
+MATDIMS="16 18 20 "
 echo -n "" > results.out
 echo -n "" > speedup.out
 SF="test_lib.c++"
 EXE="test_lib"
 #TC="gtime -f %e -o _tempo_ "
 TC="time -p "
-NCINI="5000000"
+NCINI="1000000"
 NC=$NCINI
 DEFINES="-DTEST_MISC "
 ENABLE_GLM="0"
