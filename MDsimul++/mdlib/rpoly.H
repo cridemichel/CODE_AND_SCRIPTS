@@ -446,12 +446,15 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
   /* Newton-Raphson described in sec. 2.3 of the manuscript for complex
    * coefficients a,b,c,d */
   int iter, k1, k2;
-  ntype x02, errf, errfold, xold[4], x[4], dx[4], det, Jinv[4][4], fvec[4];
+  ntype x02, errf, errfold, xold[4], x[4], dx[4], det, Jinv[4][4], fvec[4], vr[4];
   x[0] = AQ;
   x[1] = BQ;
   x[2] = CQ;
   x[3] = DQ;
-
+  vr[0] = d;
+  vr[1] = c;
+  vr[2] = b;
+  vr[3] = a;
   fvec[0] = x[1]*x[3] - d;
   fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
   fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
@@ -459,7 +462,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
   errf=0;
   for (k1=0; k1 < 4; k1++)
     {
-      errf += abs(fvec[k1]);
+      errf += (vr[k1]==0)?abs(fvec[k1]):abs(fvec[k1]/vr[k1]);
     }
   for (iter = 0; iter < 8; iter++)
     {
@@ -504,7 +507,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
       errf=0;
       for (k1=0; k1 < 4; k1++)
 	{
-	  errf += abs(fvec[k1]);
+	  errf += (vr[k1]==0)?abs(fvec[k1]):abs(fvec[k1]/vr[k1]);
 	}
       if (errf==0)
 	break;
