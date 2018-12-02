@@ -18,7 +18,7 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
   int n, force_hqr;
   int imaxarg1,imaxarg2;
-  ntype meps, maxf, maxf2, maxf3;
+  ntype meps, maxf, maxf2, maxf3, scalfact;
   int maxdigits;
   ntype oqs_max2(ntype a, ntype b)
     {
@@ -166,9 +166,10 @@ public:
       force_hqr=0;
       maxf2 = pow(maxf,0.5)/10.0;
       maxf3 = pow(maxf,1.0/3.0)/10.0;
-      //cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
+      scalfact = pow(maxf,1.0/4.0)/1.618034;
+      //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
       //printf("%.15G\n", maxf);
-      //cout << "macheps= " << setprecision(35) << eps << "\n";
+      //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
     }
 
   rpoly(pvector<ntype,N> v)
@@ -569,6 +570,8 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<co
   ntype l2m[12], d2m[12], res[12], resmin, bl311, dml3l3, err0=0, err1=0, aq1, bq1, cq1, dq1; 
   ntype a,b,c,d,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3],gamma,del2;
   int realcase[2], whichcase, k1, k, kmin, nsol;
+  ntype rfactsq, rfact=1.0;
+
   if (coeff[4]==0.0)
     {
       cout << "That's not a quartic!\n";
@@ -579,6 +582,19 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<co
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
   oqs_calc_phi0(a,b,c,d,phi0);
+
+  // simple polynomial rescaling
+  if (isnan(phi0)||isinf(phi0))
+    {
+      rfact = scalfact;
+      a /= rfact;
+      rfactsq = rfact*rfact;
+      b /= rfactsq;
+      c /= rfactsq*rfact;
+      d /= rfactsq*rfactsq;
+      oqs_calc_phi0(a,b,c,d,phi0);
+    }
+
   l1=a/2;          /* eq. (4) */                                        
   l3=b/6+phi0/2;   /* eq. (6) */                                
   del2=c-a*l3;     /* defined just after eq. (20) */                             
@@ -819,6 +835,11 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<co
 	  roots[2]= zxmax;
 	  roots[3]= zxmin;
 	}
+    }
+  if (rfact!=1.0)
+    {
+      for (k=0; k < 4; k++)
+	roots[k] *= rfact;
     }
 }
 // NR method based on HQR decomposition
