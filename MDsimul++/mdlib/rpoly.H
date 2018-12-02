@@ -354,13 +354,9 @@ template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
   g=hh-4*dq-3*gg;                       /* eq. (60) */  
   h=(8*dq+hh-2*gg)*bq/3-cq*cq-dq*aq*aq; /* eq. (61) */          
   oqs_solve_cubic_analytic_depressed(g, h, rmax);
-  for (k=0; k < 3; k++)
+  if (isnan(rmax) || isinf(rmax))
     {
-      if (isnan(rmax) || isinf(rmax))
-	{
-	  oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
-	  break;
-	}
+      oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
     }
   /* Newton-Raphson used to refine phi0 (see end of sec. 2.2 in the manuscript) */
   x = rmax;
