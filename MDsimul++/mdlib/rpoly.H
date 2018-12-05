@@ -18,7 +18,7 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
   int n, force_hqr;
   int imaxarg1,imaxarg2;
-  ntype meps, maxf, maxf2, maxf3, scalfact;
+  ntype meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
   ntype oqs_max2(ntype a, ntype b)
     {
@@ -39,7 +39,7 @@ template <class ntype, int N> class rpoly: public numeric_limits<ntype> {
   void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
   void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
   void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol);
-  void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0);
+  void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled);
   ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3);
   ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
 	    			       complex<ntype> aq, complex<ntype> bq, complex<ntype> cq, complex<ntype> dq);
@@ -167,6 +167,7 @@ public:
       maxf2 = pow(maxf,0.5)/10.0;
       maxf3 = pow(maxf,1.0/3.0)/10.0;
       scalfact = pow(maxf,1.0/4.0)/1.618034;
+      cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
       //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
       //printf("%.15G\n", maxf);
       //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
@@ -322,13 +323,15 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depr
       sol = A+B; /* this is always largest root even if A=B */
     }
 }
-template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0)
+template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled)
 {
   /* find phi0 as the dominant root of the depressed and shifted cubic 
    * in eq. (64) (see also the discussion in sec. 2.2 of the manuscript) */
   ntype rmax, g,h,gg,hh,aq,bq,cq,dq,s,diskr;
   ntype maxtt, xxx, gx, x, xold, f, fold, df, xsq;
-  int k, iter;
+  double ggss, hhss, dqss, aqs, bqs, cqs, rfact, rfactsq; 
+  int iter;
+
   diskr=9*a*a-24*b;                    
   /* eq. (67) */
   if(diskr > 0.0)
@@ -357,6 +360,28 @@ template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
   if (isnan(rmax) || isinf(rmax))
     {
       oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
+      if ((isnan(rmax) || isinf(rmax)) && scaled)
+	{
+	  // try harder: rescale also the depressed cubic if quartic has been already rescaled
+	  rfact = cubic_rescal_fact; 
+	  rfactsq = rfact*rfact;
+	  ggss = gg/rfactsq;
+	  hhss = hh/rfactsq;
+	  dqss = dq/rfactsq;
+	  aqs = aq/rfact;
+	  bqs = bq/rfact;
+	  cqs = cq/rfact;
+	  ggss=bqs*bqs/9.0;
+	  hhss=aqs*cqs;   
+	  g=hhss-4.0*dqss-3.0*ggss;                       
+	  h=(8.0*dqss+hhss-2.0*ggss)*bqs/3-cqs*(cqs/rfact)-(dq/rfact)*aqs*aqs; 
+	  oqs_solve_cubic_analytic_depressed(g, h, &rmax);
+	  if (isnan(rmax) || isinf(rmax))
+	    {
+	      oqs_solve_cubic_analytic_depressed_handle_inf(g, h, &rmax);
+	    }
+	  rmax *= rfact;
+	}
     }
   /* Newton-Raphson used to refine phi0 (see end of sec. 2.2 in the manuscript) */
   x = rmax;
@@ -577,7 +602,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<co
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
-  oqs_calc_phi0(a,b,c,d,phi0);
+  oqs_calc_phi0(a,b,c,d,phi0,0);
 
   // simple polynomial rescaling
   if (isnan(phi0)||isinf(phi0))
@@ -588,7 +613,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<co
       b /= rfactsq;
       c /= rfactsq*rfact;
       d /= rfactsq*rfactsq;
-      oqs_calc_phi0(a,b,c,d,phi0);
+      oqs_calc_phi0(a,b,c,d,phi0,1);
     }
 
   l1=a/2;          /* eq. (4) */                                        
