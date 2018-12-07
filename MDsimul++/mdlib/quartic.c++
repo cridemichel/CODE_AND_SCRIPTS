@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-#include "rpoly.H"
+#include "./rpoly.H"
 #include<complex>
 int main()
 {
-  using numty=long double;
+  using numty=double;
   rpoly<numty,4> rp;
   pvector<numty, 5> c;
   pvector<complex<numty>, 4> roots;
