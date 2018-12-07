@@ -375,10 +375,10 @@ template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
 	  hhss=aqs*cqs;   
 	  g=hhss-4.0*dqss-3.0*ggss;                       
 	  h=(8.0*dqss+hhss-2.0*ggss)*bqs/3-cqs*(cqs/rfact)-(dq/rfact)*aqs*aqs; 
-	  oqs_solve_cubic_analytic_depressed(g, h, &rmax);
+	  oqs_solve_cubic_analytic_depressed(g, h, rmax);
 	  if (isnan(rmax) || isinf(rmax))
 	    {
-	      oqs_solve_cubic_analytic_depressed_handle_inf(g, h, &rmax);
+	      oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
 	    }
 	  rmax *= rfact;
 	}

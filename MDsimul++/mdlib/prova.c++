@@ -200,7 +200,7 @@ double ranf3()
 return drand48();
 }
 #ifndef NMAT
-#define NMAT 3
+#define NMAT 4
 #endif
 
 #ifdef GLM

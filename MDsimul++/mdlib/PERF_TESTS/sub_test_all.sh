@@ -1,4 +1,4 @@
-MATDIMS="2 3 4" 
+MATDIMS="4 5 6 7" 
 #MATDIMS=" 3 4 5 6 8 10 15 20 30 50 80 120 150 200"
 echo -n "" > results.out
 echo -n "" > speedup.out
@@ -8,16 +8,16 @@ EXE="test_lib"
 TC="time -p "
 NCINI="1000000"
 NC=$NCINI
-DEFINES="-DTEST_MISC "
-ENABLE_GLM="1"
+DEFINES="-DTEST_MUL "
+ENABLE_GLM="0"
 if [ "$1" == "" ]
 then
 TESTS="all"
 else
 TESTS="$1"
 fi
-CC="g++"
-#CC="g++-8 -L/usr/local/lib/ -I/usr/local/include"
+CC="g++ -framework accelerate"
+#CC="g++-8  -I/usr/local/include -L/usr/local/lib -L/usr/local/opt/openblas/lib/ -L/usr/local/opt/lapack/lib/"
 LIBS="-llapack -lblas -larmadillo"
 FLAGS="-std=c++17 -march=native -ffast-math -O3"
 #FLAGS="-std=c++17 -ffast-math -O3 "
