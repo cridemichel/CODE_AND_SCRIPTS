@@ -258,7 +258,7 @@ public:
 };
 //choose dynamnic or static base class depending on N
 template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vecpars::NMAX||NT<0),pvecbasedyn <ntype, NT>,pvecsta <ntype, NT>>::type;
-template <class ntype,int NT> class pvector : public pvecbase<ntype,NT>, vecpars {
+template <class ntype,int NT=-1> class pvector : public pvecbase<ntype,NT>, vecpars {
   //int vsize;
 #ifdef VEC_COMMA_INIT
   unsigned int curidx;
