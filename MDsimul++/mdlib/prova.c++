@@ -254,7 +254,7 @@ int main(int argc, char**argv)
   mm10 << 1, 2, 3, 4, 5, 6, 7, 8, 9;
   mm10.show();
   vv3 << 1,2,3;
-  pvector<double> vv33(3);
+  pvector<double> vv33(3.0);
   vv3.show();
   vv33.show();
 #if 0
