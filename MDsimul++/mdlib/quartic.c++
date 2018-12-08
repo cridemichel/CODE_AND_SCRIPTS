@@ -20,7 +20,6 @@ int main()
   c[2] = (x1c*x2c + (x1c+x2c)*(x3c+x4c) + x3c*x4c).real(); 
   c[1] = (-x1c*x2c*(x3c+x4c) - x3c*x4c*(x1c+x2c)).real();
   c[0] = (x1c*x2c*x3c*x4c).real();
-
   for (int i=0; i < 100000000; i++)
     {
       c[4]=1.0;
@@ -28,7 +27,6 @@ int main()
       c[2]=drand48()-0.5;
       c[1]=drand48()-0.5;
       c[0]=drand48()-0.5;
-
       rp.set_coeff(c);
       rp.find_roots(roots);
     }

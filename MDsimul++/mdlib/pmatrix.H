@@ -11,6 +11,7 @@
 #include "pvector.H"
 #define OPT_INV
 #define MAT_USE_LAPACK
+#define COMMA_INIT
 //#define LAZY_MUL
 //N.B. Lazy evaluation of matrix multiplication has not been fully implemented yet
 #ifdef MAT_USE_LAPACK
@@ -571,12 +572,15 @@ inline void SWAP(T &a, T &b)
 
 template <class ntype, int NT> class pmatrixq: public pmatrixb<ntype,NT>, public matpars
 {
-public:
+#ifdef COMMA_INIT
+  unsigned int curidx;
+#endif
+ public:
   // solve the linear system (*this)*x = b (b is replaced by x)
   // if b==NULL then returns just the inverse of (*this)
 
   using pvec = pvector<ntype,NT>;
-  template <class T=pvec>
+ template <class T=pvec>
   pmatrixq<ntype,NT> gaussj(typename conditional<is_same<T,pvec>::value, T&, int>::type b) const
     {
       // a matrix with m columns (instead of a vector) could be supplied to solve many linear systems at once  
@@ -1646,6 +1650,31 @@ public:
 	  m1[i][j] = m[i][j]/param;
       return m1;
     }
+#ifdef COMMA_INIT
+  /* NOTE: comma operator has the lowest priority among operators 
+   * hence it has less operators than <<.
+   * In this case << operator initialize first element of matrix
+   * and return matrix itself, therefore we need to overload comma operator
+   * for pmatrixq object returned by << operator et voilà we have the comma initializer!  
+   * */
+  inline pmatrixq<ntype,NT>& operator,(const ntype& mr)
+   {
+     curidx++;
+     if (curidx >= N*N)
+       {
+         cout << "Too many elements in comma initialization!\n";
+         exit(-1);
+       }
+     m[curidx/N][curidx%N]=mr;
+     return (*this);
+   }
+ inline pmatrixq<ntype,NT>& operator<<(const ntype& mr)
+   {
+     m[0][0] = mr;
+     curidx=0;
+     return (*this);
+   } 
+#endif
   friend pmatrixq<ntype,NT> operator *(const double& param, const pmatrixq<ntype,NT>& m1) 
     {
       int i, j;

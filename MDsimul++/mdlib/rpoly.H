@@ -101,8 +101,6 @@ public:
     }
   inline void find_roots(pvector<complex<ntype>,N>& roots)
     {
-      int ok;
-      ok=1;
       if constexpr (N==1)
 	{
 	  cout << "What?!? You are not able to solve a linear equation come-on!";
@@ -112,6 +110,7 @@ public:
         {
 	  if constexpr (force_hqr)
 	    {
+              int ok=1;
 	      solve_numrec(roots, ok);
 	    }
 	  else
@@ -123,6 +122,7 @@ public:
         {
 	  if constexpr (force_hqr)
 	    {
+              int ok=1;
 	      solve_numrec(roots, ok);
 	    }
 	  else
@@ -134,6 +134,7 @@ public:
         {
 	  if constexpr (force_hqr)
 	    {
+              int ok=1;
 	      solve_numrec(roots, ok);
 	    }
 	  else
@@ -144,7 +145,8 @@ public:
         }
       else 
         {
-	  // use HQR from NUMERICAL RECIPE
+          // use HQR from NUMERICAL RECIPE
+          int ok=1;
 	  solve_numrec(roots, ok);
         }
     }
