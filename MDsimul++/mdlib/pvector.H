@@ -273,7 +273,17 @@ public:
       // empty body
     }
   pvector<ntype,NT>() = default;
-
+  pvector<ntype,NT>(ntype a, ntype b=0, ntype c=0, ntype d=0)
+    {
+      if (N >= 1)
+        v[0]=a;
+      if (N>=2)
+        v[1]=b;
+      if (N>=3)
+        v[2]=c;
+      if (N>=4)
+        v[3]=d;
+    }
 #ifdef VEC_LAZY_EVAL
   template<typename Lhs, typename Rhs, int tipo>
   // += operator triggers evaluation of lazy expression
