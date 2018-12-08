@@ -8,6 +8,7 @@ using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
 #define USE_LAPACK
+#define VEC_COMMA_INIT
 #ifdef USE_LAPACK
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
@@ -259,6 +260,9 @@ public:
 template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vecpars::NMAX||NT<0),pvecbasedyn <ntype, NT>,pvecsta <ntype, NT>>::type;
 template <class ntype,int NT> class pvector : public pvecbase<ntype,NT>, vecpars {
   //int vsize;
+#ifdef VEC_COMMA_INIT
+  unsigned int curidx;
+#endif
 public:
   using pvecbase<ntype,NT>::v;
   using pvecbase<ntype,NT>::N;
@@ -421,6 +425,32 @@ public:
       else
 	return lv;
     }
+#ifdef VEC_COMMA_INIT
+  /* NOTE: comma operator has the lowest priority among operators 
+   * hence it has less operators than <<.
+   * In this case << operator initialize first element of matrix
+   * and return vector itself, therefore we need to overload comma operator
+   * for pvector object returned by << operator et voilà we have the comma initializer!  
+   * */
+  inline pvector<ntype,NT>& operator,(const ntype& mr)
+    {
+      curidx++;
+      if (curidx >= N)
+        {
+          cout << "Too many elements in comma initialization!\n";
+          exit(-1);
+        }
+      v[curidx]=mr;
+      return (*this);
+    }
+  inline pvector<ntype,NT>& operator<<(const ntype& mr)
+    {
+      v[0] = mr;
+      curidx=0;
+      return (*this);
+    } 
+#endif
+
 #ifndef VEC_LAZY_EVAL
   friend pvector<ntype,NT> operator *(const ntype& param, const pvector<ntype,NT>& v) 
     {

@@ -249,9 +249,12 @@ int main(int argc, char**argv)
   double A[2][2], B[2][2];
   //pmatrixq<double,NMAT> m22= mm.I();
   //m22.show();
-  pmatrixq<double,2> mm10;
-  mm10 << 1,2,3,4;
+  pmatrixq<double,3> mm10;
+  pvector<double,3> vv3;
+  mm10 << 1, 2, 3, 4, 5, 6, 7, 8, 9;
   mm10.show();
+  vv3 << 1,2,3;
+  vv3.show();
 #if 0
   for (i=0; i < NMAT; i++)
     for (j=0; j < NMAT; j++)
