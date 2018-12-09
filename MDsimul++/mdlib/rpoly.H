@@ -265,7 +265,7 @@ public:
              c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
              complex<ntype> quadr[2];
              oqs_solve_quadratic(1.0, c, quadr);
-            if (quadr[0] < quadr[1])
+             if (quadr[0].real() < quadr[1].real())
                {
                  xleft = quadr[0];
                }
@@ -291,7 +291,7 @@ public:
               c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
               complex<ntype> quadr[2];
               oqs_solve_quadratic(1.0, c, quadr);
-              if (quadr[0] > quadr[1])
+              if (quadr[0].real() > quadr[1].real())
                 {
                   xright = quadr[0];
                 }
