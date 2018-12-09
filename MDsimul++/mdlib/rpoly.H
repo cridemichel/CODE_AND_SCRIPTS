@@ -14,7 +14,95 @@
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
 using namespace std;
 
-template <class ntype, int N, bool force_hqr=false> class rpoly: public numeric_limits<ntype> {
+template <class ntype>
+class roots1d 
+{
+public:
+void set_func(ntype (*f)(ntype x))
+  {
+    func = f;
+  }
+ntype (*func) (ntype x);
+ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
+  {
+    const int ITMAX=100;
+    const ntype EPS=numeric_limits<ntype>::epsilon();
+    int iter;
+    ntype a=x1,b=x2,c=x2,d,e,min1,min2;
+    ntype fa=func(a),fb=func(b),fc,p,q,r,s,tol1,xm;
+
+    if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0))
+      {	
+        cout << "Root must be bracketed in zbrent";
+      }
+    fc=fb;
+    for (iter=0;iter<ITMAX;iter++)
+      {
+        if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
+          c=a;
+          fc=fa;
+          e=d=b-a;
+        }
+        if (fabs(fc) < fabs(fb)) 
+          {
+            a=b;
+            b=c;
+            c=a;
+            fa=fb;
+            fb=fc;
+            fc=fa;
+          }
+        tol1=2.0*EPS*fabs(b)+0.5*tol;
+        xm=0.5*(c-b);
+        if (fabs(xm) <= tol1 || fb == 0.0) return b;
+        if (fabs(e) >= tol1 && fabs(fa) > fabs(fb)) {
+          s=fb/fa;
+          if (a == c) 
+            {
+              p=2.0*xm*s;
+              q=1.0-s;
+            } 
+          else 
+            {
+              q=fa/fc;
+              r=fb/fc;
+              p=s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
+              q=(q-1.0)*(r-1.0)*(s-1.0);
+            }
+          if (p > 0.0) q = -q;
+          p=fabs(p);
+          min1=3.0*xm*q-fabs(tol1*q);
+          min2=fabs(e*q);
+          if (2.0*p < (min1 < min2 ? min1 : min2)) 
+            {
+              e=d;
+              d=p/q;
+            } 
+          else 
+            {
+              d=xm;
+              e=d;
+            }
+        } 
+        else
+          {
+            d=xm;
+            e=d;
+          }
+        a=b;
+        fa=fb;
+        if (fabs(d) > tol1)
+          b += d;
+        else
+          b += SIGN(tol1,xm);
+        fb=func(b);
+      }
+    cout << "Maximum number of iterations exceeded in zbrent";
+    return 0.0;
+  }
+};
+
+template <class ntype, int N, bool force_hqr=false> class rpoly: public numeric_limits<ntype>, public roots1d<ntype> {
   pvector<ntype, N+1> coeff;
   int n;
   //force_hqr;
@@ -91,6 +179,40 @@ public:
     {
       coeff = v;
     }
+  ntype evalpoly(ntype x)
+    {
+      // evaluate polynomail via Horner's formula 
+      ntype bn=0.0;
+      for (int i=N; i >= 0; i--)
+        {
+          bn = coeff[i] + bn*x;
+        }
+      return bn;
+    }
+  ntype evaldpoly(ntype x)
+    {
+      // evaluate first derivative of polynomail via Horner's formula 
+      ntype bn=0.0;
+
+      for (int i=N-1; i >= 0; i--)
+        {
+          bn = (i+1)*coeff[i+1] + bn*x;
+        }
+      return bn;
+    }
+  ntype evalddpoly(ntype x)
+    {
+      // evaluate second derivative of polynomail via Horner's formula 
+      ntype bn=0.0;
+      if (N == 1)
+        return 0;
+      for (int i=N-2; i >= 0; i--)
+        {
+          bn = (i+2)*(i+1)*coeff[i+2] + bn*x;
+        }
+      return bn;
+    }
+
   pvector<ntype,N+1> get_coeff()
     {
       return coeff;

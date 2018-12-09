@@ -10,16 +10,20 @@ int main()
   pvector<numty, 5> c;
   pvector<complex<numty>, 4> roots;
   complex<numty> x1c, x2c, x3c, x4c;
-  x1c = 1E102;
-  x2c = 100.0;
-  x3c = 10.0;
-  x4c = 1.0;
+  x1c = 1;
+  x2c = 2;
+  x3c = 3;
+  x4c = 4;
   cout << "ntype size=" << sizeof(numty) << "\n";
   c[4] = 1.0;
   c[3] = (-(x1c+x2c+x3c+x4c)).real();
   c[2] = (x1c*x2c + (x1c+x2c)*(x3c+x4c) + x3c*x4c).real(); 
   c[1] = (-x1c*x2c*(x3c+x4c) - x3c*x4c*(x1c+x2c)).real();
   c[0] = (x1c*x2c*x3c*x4c).real();
+  rp.set_coeff(c);
+  rp.show();
+  cout << "p(x)=" << rp.evaldpoly(1.2) << "\n";
+  exit(-1);
   for (int i=0; i < 100000000; i++)
     {
       c[4]=1.0;
