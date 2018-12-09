@@ -324,7 +324,7 @@ public:
             }
           
           // first root
-          roots1d<ntype>::set_func(evaldpoly);
+          roots1d<ntype>::set_func(rpoly<ntype,N>::evaldpoly);
           auto r0 = roots[0]=roots1d<ntype>::zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
           // deflate quintic and use OQS
           deflcoeff[N-1] = cmonder[N-1]+r0;
