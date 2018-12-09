@@ -37,7 +37,7 @@ int main()
   c[0] = (x1c*x2c*x3c*x4c).real();
   rp.set_coeff(c);
   rp.show();
-  cout << "p(x)=" << rp.evaldpoly(1.2) << "\n";
+  //cout << "p(x)=" << rp.evaldpoly(1.2) << "\n";
   exit(-1);
   for (int i=0; i < 100000000; i++)
     {

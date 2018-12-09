@@ -20,11 +20,7 @@ template <class ntype>
 class roots1d 
 {
 public:
-void set_func(ntype (*f)(ntype x))
-  {
-    func = f;
-  }
-ntype (*func) (ntype x);
+static ntype (*func) (ntype x);
 ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
   {
     const int ITMAX=100;
@@ -184,6 +180,8 @@ public:
     {
       coeff = v;
     }
+
+#ifdef QUINTIC_OPT
   ntype evalpoly(ntype x)
     {
       // evaluate polynomail via Horner's formula 
@@ -204,6 +202,10 @@ public:
           bn = (i+1)*coeff[i+1] + bn*x;
         }
       return bn;
+    }
+  static ntype evalpoly_fr(ntype x)
+    {
+      return evaldpoly(x);
     }
   ntype evalddpoly(ntype x)
     {
@@ -324,8 +326,9 @@ public:
             }
           
           // first root
-          roots1d<ntype>::set_func(rpoly<ntype,N>::evaldpoly);
-          auto r0 = roots[0]=roots1d<ntype>::zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+          //roots1d<ntype>::func = evalpoly_fr;
+          auto r0 = roots[0] = 
+            roots1d<ntype>::zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
           // deflate quintic and use OQS
           deflcoeff[N-1] = cmonder[N-1]+r0;
           for (i=N-2; i >=0; i--)
@@ -334,6 +337,7 @@ public:
           quar.find_roots(&(roots[1]));
         }
     }
+#endif
   pvector<ntype,N+1> get_coeff()
     {
       return coeff;
@@ -387,6 +391,7 @@ public:
         }
       else if constexpr (N==5)
         {
+#ifdef QUINTIC_OPT
           if constexpr (force_hqr)
 	    {
               int ok=1;
@@ -394,6 +399,10 @@ public:
 	    }
 	  else
             quintic(roots);        
+#else
+          int ok=1;
+          solve_numrec(roots, ok);
+#endif
         }
       else
         {
