@@ -104,6 +104,9 @@ ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
 
 template <class ntype, int N, bool force_hqr=false> class rpoly: public numeric_limits<ntype>, public roots1d<ntype> {
   pvector<ntype, N+1> coeff;
+  pvector<ntype, N> cmon;
+  pvector<ntype, N> cmonder;
+  pvector<ntype, N-1> cmondder;
   int n;
   //force_hqr;
   int imaxarg1,imaxarg2;
@@ -212,7 +215,77 @@ public:
         }
       return bn;
     }
+  void quintic(complex <ntype> roots)
+    {
+      ntype coeffder[N-1];
+      rpoly<ntype, N-1> quar;
+      complex<ntype> qroots[N-1];
+      pvector<ntype,N-1> deflcoeff;
+      ntype rqroots[N-1];
+      int i, c;
+      if (coeff[N]==0.0)
+        {
+          cout << "That's not a quintic!\n";
+          return;
+        }
+      for (i=N-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[i+1];
 
+      cmonder[N-1] = N;
+      for (i = N-2; i >= 0; i--)
+        {
+          cmonder[i] = i*cmon[i+1]; 
+        }
+      quar.set_coeff(cmonder);
+      quar.find_roots(qroots);
+      c=0;
+      for (i=0; i < N-1; i++)
+       if (qroots.imag()==0.0)
+         rqroots[c++] = qroots[i];
+      int numr = c;
+      qsort(rqroots, numr, sizeof(ntype),
+            [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
+      bool foundleft = false;
+      bool foundright = false;
+      ntype xleft, xright;
+      if (numr == 0)
+        {
+          // we have only 1 real root
+
+        }
+      else
+        {
+          if (rqroots[0] > 0.0)
+            {
+              foundright = true;
+              xright = rqroots[0];
+            }
+          else if (rqroots[numr-1] < 0.0)  
+            {
+              foundleft = true;
+              xleft = rqroots[numr-1];
+            }
+          if (foundleft == false && foundright == false)
+            {
+              for (i=1; i < numr-1; i++)
+                if (rqroots[i]*rqroots[i+1] < 0.0)
+                {
+                  xleft = rqroots[i];
+                  xright = rqroots[i+1];
+                  foundleft = true;
+                  foundright = true;
+                }
+            }
+          // first root
+          auto r0 = roots[0]=zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+          // deflate quintic and use OQS
+          deflcoeff[N-1] = cmonder[N-1]+r0;
+          for (i=N-2; i >=0; i--)
+            deflcoeff[i] = cmonder[i] + r0*deflcoeff[i+1];
+          quar.set_coeff(deflcoeff);
+          quar.find_roots(&(roots[1]));
+        }
+    }
   pvector<ntype,N+1> get_coeff()
     {
       return coeff;
@@ -261,11 +334,20 @@ public:
 	    }
 	  else
             {
-
               oqs_quartic_solver(roots);
             }
         }
-      else 
+      else if constexpr (N==5)
+        {
+          if constexpr (force_hqr)
+	    {
+              int ok=1;
+	      solve_numrec(roots, ok);
+	    }
+	  else
+            quintic(roots);        
+        }
+      else
         {
           // use HQR from NUMERICAL RECIPE
           int ok=1;
