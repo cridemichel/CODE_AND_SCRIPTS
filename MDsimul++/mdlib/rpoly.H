@@ -215,13 +215,15 @@ public:
         }
       return bn;
     }
-  void quintic(complex <ntype> roots)
+  void quintic(pvector<complex <ntype>,N>& roots)
     {
       ntype coeffder[N-1];
       rpoly<ntype, N-1> quar;
       complex<ntype> qroots[N-1];
       pvector<ntype,N-1> deflcoeff;
       ntype rqroots[N-1];
+      ntype goldfact = 1.618034;
+      ntype delx;
       int i, c;
       if (coeff[N]==0.0)
         {
@@ -240,7 +242,7 @@ public:
       quar.find_roots(qroots);
       c=0;
       for (i=0; i < N-1; i++)
-       if (qroots.imag()==0.0)
+       if (qroots[i].imag()==0.0 && evalddpoly(qroots[i])!=0)
          rqroots[c++] = qroots[i];
       int numr = c;
       qsort(rqroots, numr, sizeof(ntype),
@@ -251,7 +253,6 @@ public:
       if (numr == 0)
         {
           // we have only 1 real root
-
         }
       else
         {
@@ -259,11 +260,53 @@ public:
             {
               foundright = true;
               xright = rqroots[0];
+              // find xleft here
+             ntype c;  
+             c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
+             complex<ntype> quadr[2];
+             oqs_solve_quadratic(1.0, c, quadr);
+            if (quadr[0] < quadr[1])
+               {
+                 xleft = quadr[0];
+               }
+             else
+               {
+                 xleft = quadr[1];
+               }
+             do 
+               {
+                 delx = xleft - rqroots[0];
+                 delx *= goldfact;
+                 xleft = rqroots[0]+delx;
+               }
+             while (evalpoly(xleft) >=0);
+             foundleft = true;
             }
           else if (rqroots[numr-1] < 0.0)  
             {
               foundleft = true;
               xleft = rqroots[numr-1];
+              // find xright here
+              ntype c;  
+              c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
+              complex<ntype> quadr[2];
+              oqs_solve_quadratic(1.0, c, quadr);
+              if (quadr[0] > quadr[1])
+                {
+                  xright = quadr[0];
+                }
+              else
+                {
+                  xright = quadr[1];
+                }
+              do 
+               {
+                 delx = xright - rqroots[numr-1];
+                 delx *= goldfact;
+                 xright = rqroots[numr-1]+delx;
+               }
+             while (evalpoly(xright) <=0);
+             foundright = true;
             }
           if (foundleft == false && foundright == false)
             {
@@ -276,8 +319,10 @@ public:
                   foundright = true;
                 }
             }
+          
           // first root
-          auto r0 = roots[0]=zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+          roots1d<ntype>::set_func(&(evaldpoly()));
+          auto r0 = roots[0]=roots1d<ntype>::zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
           // deflate quintic and use OQS
           deflcoeff[N-1] = cmonder[N-1]+r0;
           for (i=N-2; i >=0; i--)

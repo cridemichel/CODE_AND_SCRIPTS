@@ -7,9 +7,24 @@ int main()
 {
   using numty=double;
   rpoly<numty,4> rp;
+  rpoly<numty,5> qp;
+  pvector<numty, 6> cq;
   pvector<numty, 5> c;
-  pvector<complex<numty>, 4> roots;
   complex<numty> x1c, x2c, x3c, x4c;
+  pvector<complex<numty>, 4> roots;
+  pvector<complex<numty>, 5> qroots;
+
+  cq[5] = 1.0;
+  cq[4] = 2.0;
+  cq[3] = 3.0;
+  cq[2] = 4.0;
+  cq[1] = 5.0;
+  cq[0] = 6.0;
+  qp.set_coeff(cq);
+  qp.find_roots(qroots);
+  qp.show();
+  qroots.show();
+  exit();
   x1c = 1;
   x2c = 2;
   x3c = 3;
