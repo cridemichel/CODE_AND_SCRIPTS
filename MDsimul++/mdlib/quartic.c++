@@ -24,7 +24,7 @@ int main()
   qp.find_roots(qroots);
   qp.show();
   qroots.show();
-  exit();
+  exit(-1);
   x1c = 1;
   x2c = 2;
   x3c = 3;

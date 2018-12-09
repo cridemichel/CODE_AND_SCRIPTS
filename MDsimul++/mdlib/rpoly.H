@@ -8,6 +8,8 @@
 #include<complex>
 #include "pvector.H"
 #include <limits>
+#include <cstdlib>
+#include <array>
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
@@ -219,9 +221,9 @@ public:
     {
       ntype coeffder[N-1];
       rpoly<ntype, N-1> quar;
-      complex<ntype> qroots[N-1];
+      pvector<complex<ntype>,N-1> qroots;
       pvector<ntype,N-1> deflcoeff;
-      ntype rqroots[N-1];
+      std::array<ntype,N-1> rqroots;
       ntype goldfact = 1.618034;
       ntype delx;
       int i, c;
@@ -242,11 +244,12 @@ public:
       quar.find_roots(qroots);
       c=0;
       for (i=0; i < N-1; i++)
-       if (qroots[i].imag()==0.0 && evalddpoly(qroots[i])!=0)
-         rqroots[c++] = qroots[i];
+       if (qroots[i].imag()==0.0 && evalddpoly(qroots[i].real())!=0)
+         rqroots[c++] = qroots[i].real();
       int numr = c;
-      qsort(rqroots, numr, sizeof(ntype),
-            [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
+      //qsort(rqroots, numr, sizeof(ntype),
+        //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
+      sort(rqroots.begin(),rqroots.end());
       bool foundleft = false;
       bool foundright = false;
       ntype xleft, xright;
@@ -267,11 +270,11 @@ public:
              oqs_solve_quadratic(1.0, c, quadr);
              if (quadr[0].real() < quadr[1].real())
                {
-                 xleft = quadr[0];
+                 xleft = quadr[0].real();
                }
              else
                {
-                 xleft = quadr[1];
+                 xleft = quadr[1].real();
                }
              do 
                {
@@ -293,11 +296,11 @@ public:
               oqs_solve_quadratic(1.0, c, quadr);
               if (quadr[0].real() > quadr[1].real())
                 {
-                  xright = quadr[0];
+                  xright = quadr[0].real();
                 }
               else
                 {
-                  xright = quadr[1];
+                  xright = quadr[1].real();
                 }
               do 
                {
@@ -321,7 +324,7 @@ public:
             }
           
           // first root
-          roots1d<ntype>::set_func(&(evaldpoly()));
+          roots1d<ntype>::set_func(evaldpoly);
           auto r0 = roots[0]=roots1d<ntype>::zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
           // deflate quintic and use OQS
           deflcoeff[N-1] = cmonder[N-1]+r0;
