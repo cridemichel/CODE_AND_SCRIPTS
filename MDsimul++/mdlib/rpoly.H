@@ -235,8 +235,11 @@ public:
       for (i=N-2; i >= 0; i--)
         {
           c[i]=defc[i];
-          fvec[i] = defc[i]-r0-cmon[i+1];
+          fvec[i] = defc[i]-r0*((i==N-2)?1:defc[i+1])-cmon[i+1];
         } 
+      //cmon.show("monic coeff=");
+      //defc.show("deflcoeff");
+      //fvec.show("errori=");
       errf = 0;
       for (i=0; i < N-1; i++)
         {
@@ -250,14 +253,14 @@ public:
           {
             Jinv[i][j]=r0*Jinv[i-1][j];
           }
-
+      // Jinv.show();
       for (iter = 0; iter < 8; iter++)
         {
           cold = c;
           c = c - Jinv*fvec;
           for (i=N-2; i >= 0; i--)
             {
-              fvec[i] = c[i]-r0-cmon[i+1];
+              fvec[i] = c[i]-r0*((i==N-2)?1:defc[i+1])-cmon[i+1];
             } 
           errfold = errf;
           errf = 0;
@@ -423,8 +426,9 @@ public:
           else
             deflcoeff = deflcoeff0;
           // refine deflated quartic coefficients here
+          //deflcoeff.show("prima");
           use_NR(deflcoeff,r0);
-
+          //deflcoeff.show("dopo");
           // calculate roots of quartic
           quar.set_coeff(deflcoeff);
           quar.find_roots(qroots);
