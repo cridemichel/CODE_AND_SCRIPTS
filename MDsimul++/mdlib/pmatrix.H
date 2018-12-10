@@ -859,7 +859,7 @@ public:
   // addition
   inline pmatrixq<ntype,NT> addition(const pmatrixq<ntype,NT>& m1) const
     {
-      if (pmatrixq<ntype,NT>::dynamic==false)
+      if constexpr (pmatrixq<ntype,NT>::dynamic==false)
         {
           pmatrixq<ntype,NT> m2;
           int i, j;
@@ -896,7 +896,7 @@ public:
   inline pmatrixq<ntype,NT> subtraction(const pmatrixq<ntype,NT>& m1) const
     {
       int i, j;
-      if (pmatrixq<ntype,NT>::dynamic==false)
+      if constexpr (pmatrixq<ntype,NT>::dynamic==false)
         {
           pmatrixq<ntype,NT> m2;
           for (i=0; i < N; i++)

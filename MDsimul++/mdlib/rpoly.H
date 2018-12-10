@@ -6,7 +6,8 @@
 #include<iomanip>
 #include<cmath>
 #include<complex>
-#include "pvector.H"
+//#include "pvector.H"
+#include "pmatrix.H"
 #include <limits>
 #include <cstdlib>
 #include <array>
@@ -14,20 +15,29 @@
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
+#define QUINTIC_OPT
 using namespace std;
 
-template <class ntype>
-class roots1d 
-{
-public:
-static ntype (*func) (ntype x);
-ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
+template <class ntype, int N, bool force_hqr=false> 
+class rpoly: public numeric_limits<ntype> {
+  pvector<ntype, N+1> coeff;
+  pvector<ntype, N> cmon;
+  pvector<ntype, N> cmonder;
+  pvector<ntype, N-1> cmondder;
+  int n;
+  //force_hqr;
+  int imaxarg1,imaxarg2;
+  ntype meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
+  int maxdigits;
+
+  //ntype (rpoly<ntype,N>::*func) (ntype x);
+  ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
   {
     const int ITMAX=100;
     const ntype EPS=numeric_limits<ntype>::epsilon();
     int iter;
     ntype a=x1,b=x2,c=x2,d,e,min1,min2;
-    ntype fa=func(a),fb=func(b),fc,p,q,r,s,tol1,xm;
+    ntype fa=evalpoly(a),fb=evalpoly(b),fc,p,q,r,s,tol1,xm;
 
     if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0))
       {	
@@ -93,23 +103,11 @@ ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
           b += d;
         else
           b += SIGN(tol1,xm);
-        fb=func(b);
+        fb=evalpoly(b);
       }
     cout << "Maximum number of iterations exceeded in zbrent";
     return 0.0;
   }
-};
-
-template <class ntype, int N, bool force_hqr=false> class rpoly: public numeric_limits<ntype>, public roots1d<ntype> {
-  pvector<ntype, N+1> coeff;
-  pvector<ntype, N> cmon;
-  pvector<ntype, N> cmonder;
-  pvector<ntype, N-1> cmondder;
-  int n;
-  //force_hqr;
-  int imaxarg1,imaxarg2;
-  ntype meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
-  int maxdigits;
   ntype oqs_max2(ntype a, ntype b)
     {
       if (a >= b)
@@ -203,10 +201,6 @@ public:
         }
       return bn;
     }
-  static ntype evalpoly_fr(ntype x)
-    {
-      return evaldpoly(x);
-    }
   ntype evalddpoly(ntype x)
     {
       // evaluate second derivative of polynomail via Horner's formula 
@@ -219,12 +213,76 @@ public:
         }
       return bn;
     }
+  ntype calc_err_q(pvector<ntype,N> c, ntype r0)
+    {
+      int i;
+      ntype sum;
+      sum = (cmon[N-1]==0.0)?abs((c[N-2] - r0)-cmon[N-1]):abs(((c[N-2] - r0)-cmon[N-1])/cmon[N-1]);
+      for (i=N-2; i >=0; i--)
+        {
+          sum += (cmon[i]==0)?abs((c[i-1] - r0)-cmon[i]):abs(((c[i-1] - r0)-cmon[i])/cmon[i]);
+        }
+      sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
+      return sum;
+    }
+  void use_NR(pvector<ntype,N>& defc, ntype r0)
+    {
+      ntype errf, errfold, det;
+      pvector<ntype,N-1> c, cold;
+      pvector<ntype,N-1> fvec;
+      pmatrixq<ntype,N-1> Jinv;
+      int i, j, iter;
+      for (i=N-2; i >= 0; i--)
+        {
+          c[i]=defc[i];
+          fvec[i] = defc[i]-r0-cmon[i+1];
+        } 
+      errf = 0;
+      for (i=0; i < N-1; i++)
+        {
+          errf += (cmon[i+1]==0)?fvec[i]:fvec[i]/cmon[i+1];
+        }
+      for (i=0; i < N-1; i++)
+        for (j=0; j < N-1; j++)
+          Jinv[i][j] = (i==j)?1.0:0.0;
+      for (j=0; j < N-2; j++)
+        for (i=j+1; i < N-1; i++)
+          {
+            Jinv[i][j]=r0*Jinv[i-1][j];
+          }
+
+      for (iter = 0; iter < 8; iter++)
+        {
+          cold = c;
+          c = c - Jinv*fvec;
+          for (i=N-2; i >= 0; i--)
+            {
+              fvec[i] = c[i]-r0-cmon[i+1];
+            } 
+          errfold = errf;
+          errf = 0;
+          for (i=0; i < N-1; i++)
+            {
+              errf += (cmon[i+1]==0)?fvec[i]:fvec[i]/cmon[i+1];
+            }
+          if (errf==0)
+            break;
+          if (errf > errfold)
+            {
+              c = cold;
+              break;
+            }
+        } 
+      for (i=0; i < N-1; i++)
+        defc[i] = c[i];
+    }
   void quintic(pvector<complex <ntype>,N>& roots)
     {
       ntype coeffder[N-1];
       rpoly<ntype, N-1> quar;
       pvector<complex<ntype>,N-1> qroots;
-      pvector<ntype,N-1> deflcoeff;
+      pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
+      complex<ntype> quadr[2];
       std::array<ntype,N-1> rqroots;
       ntype goldfact = 1.618034;
       ntype delx;
@@ -234,16 +292,19 @@ public:
           cout << "That's not a quintic!\n";
           return;
         }
+      cmon[N]=1.0;
       for (i=N-1; i >=0; i--)
-        cmon[i]=coeff[i]/coeff[i+1];
+        cmon[i]=coeff[i]/coeff[N];
 
       cmonder[N-1] = N;
       for (i = N-2; i >= 0; i--)
         {
-          cmonder[i] = i*cmon[i+1]; 
+          cmonder[i] = (i+1)*cmon[i+1]; 
         }
       quar.set_coeff(cmonder);
       quar.find_roots(qroots);
+      //quar.show("quartic=");
+      //qroots.show("radici quartica");
       c=0;
       for (i=0; i < N-1; i++)
        if (qroots[i].imag()==0.0 && evalddpoly(qroots[i].real())!=0)
@@ -252,6 +313,7 @@ public:
       //qsort(rqroots, numr, sizeof(ntype),
         //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
       sort(rqroots.begin(),rqroots.end());
+      
       bool foundleft = false;
       bool foundright = false;
       ntype xleft, xright;
@@ -261,40 +323,39 @@ public:
         }
       else
         {
-          if (rqroots[0] > 0.0)
+          if (evalpoly(rqroots[0]) > 0.0)
             {
               foundright = true;
               xright = rqroots[0];
               // find xleft here
-             ntype c;  
-             c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
-             complex<ntype> quadr[2];
-             oqs_solve_quadratic(1.0, c, quadr);
-             if (quadr[0].real() < quadr[1].real())
-               {
-                 xleft = quadr[0].real();
+              ntype c;  
+              c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
+              oqs_solve_quadratic(1.0, c, quadr);
+              if (quadr[0].real() < quadr[1].real())
+                {
+                  xleft = quadr[0].real();
+                }
+              else
+                {
+                  xleft = quadr[1].real();
                }
-             else
-               {
-                 xleft = quadr[1].real();
-               }
-             do 
-               {
-                 delx = xleft - rqroots[0];
-                 delx *= goldfact;
-                 xleft = rqroots[0]+delx;
-               }
-             while (evalpoly(xleft) >=0);
-             foundleft = true;
+              do 
+                {
+                  delx = xleft - rqroots[0];
+                  delx *= goldfact;
+                  xleft = rqroots[0]+delx;
+                }
+              while (evalpoly(xleft) >=0);
+              foundleft = true;
+              //cout << "xleft=" << xleft << " xright=" << xright << "\n";
             }
-          else if (rqroots[numr-1] < 0.0)  
+          else if (evalpoly(rqroots[numr-1]) < 0.0)  
             {
               foundleft = true;
               xleft = rqroots[numr-1];
               // find xright here
               ntype c;  
               c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
-              complex<ntype> quadr[2];
               oqs_solve_quadratic(1.0, c, quadr);
               if (quadr[0].real() > quadr[1].real())
                 {
@@ -317,24 +378,61 @@ public:
             {
               for (i=1; i < numr-1; i++)
                 if (rqroots[i]*rqroots[i+1] < 0.0)
-                {
-                  xleft = rqroots[i];
-                  xright = rqroots[i+1];
-                  foundleft = true;
-                  foundright = true;
-                }
+                  {
+                    xleft = rqroots[i];
+                    xright = rqroots[i+1];
+                    foundleft = true;
+                    foundright = true;
+                  }
             }
           
           // first root
-          //roots1d<ntype>::func = evalpoly_fr;
-          auto r0 = roots[0] = 
-            roots1d<ntype>::zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+          ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+          roots[0] = r0;
+          //cout << "r0=" << r0 << "\n";
           // deflate quintic and use OQS
-          deflcoeff[N-1] = cmonder[N-1]+r0;
-          for (i=N-2; i >=0; i--)
-            deflcoeff[i] = cmonder[i] + r0*deflcoeff[i+1];
+          // first set of coefficients
+          deflcoeff0[N-1]=1.0;
+          //cout << "cmon=" << cmon[N-1] << "\n";
+          deflcoeff0[N-2] = cmon[N-1]+r0;
+          //cout << "deflcoeff[" << N-1 << "]=" << deflcoeff[N-1]<< "\n";
+          for (i=N-3; i >=0; i--)
+            {
+              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
+              deflcoeff0[i] = cmon[i+1] + r0*deflcoeff0[i+1];
+            }
+          if (r0!=0)
+            {
+              deflcoeff1[0]=-cmon[0]/r0;
+              deflcoeff1[N-1] = 1.0;
+              //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+              for (i=1; i < N-1; i++)
+                {
+                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0;
+                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                }
+              ntype err0,err1;
+              // choose the set which yields smaller error 
+              err0=calc_err_q(deflcoeff0,r0);
+              err1=calc_err_q(deflcoeff1,r0);
+              if (err0 < err1)
+                deflcoeff = deflcoeff0;
+              else
+                deflcoeff = deflcoeff1;
+            }
+          else
+            deflcoeff = deflcoeff0;
+          // refine deflated quartic coefficients here
+          use_NR(deflcoeff,r0);
+
+          // calculate roots of quartic
           quar.set_coeff(deflcoeff);
-          quar.find_roots(&(roots[1]));
+          quar.find_roots(qroots);
+          //quar.show("deflq=");
+          for (i=1; i < N; i++)
+            {
+              roots[i] = qroots[i-1];
+            }
         }
     }
 #endif
@@ -832,7 +930,6 @@ template <class ntype, int N, bool force_hqr> void  rpoly<ntype,N, force_hqr>::o
 	zmin=0.0;
       else
 	zmin=b/zmax;
-
       roots[0]=complex<ntype>(zmax,0.0);
       roots[1]=complex<ntype>(zmin,0.0);
     } 
@@ -1130,7 +1227,9 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   if (rfact!=1.0)
     {
       for (k=0; k < 4; k++)
-	roots[k] *= rfact;
+        {
+          roots[k] *= rfact;
+        }
     }
 }
 // NR method based on HQR decomposition

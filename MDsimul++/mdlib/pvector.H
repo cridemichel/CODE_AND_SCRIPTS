@@ -266,7 +266,8 @@ template <class ntype,int NT=-1> class pvector : public pvecbase<ntype,NT>, vecp
 public:
   using pvecbase<ntype,NT>::v;
   using pvecbase<ntype,NT>::N;
-  static const int maxdigits=numeric_limits<ntype>::digits10;
+  // /numeric_limits<complex<double>>::digits10=0 that's why I set explicitly 16;//fix this!
+  static const int maxdigits=16;//numeric_limits<ntype>::digits10;
 
   pvector<ntype,NT>(int NN): pvecbase<ntype,NT>(NN)
     {
@@ -337,9 +338,9 @@ public:
   // addition
   inline pvector<ntype,NT> addition(const pvector<ntype,NT>& v1) const
     {
-      if (N <= NSTA && pvector<ntype,NT>::dynamic==false)
+      if constexpr (NT <= NSTA && pvector<ntype,NT>::dynamic==false)
 	{
-	  static pvector<ntype, N> v2;
+	  pvector<ntype, NT> v2;
 	  int i;
 	  if constexpr (NT < 0)
 	    v2.allocate(N);
@@ -349,7 +350,7 @@ public:
 	}
       else
 	{
-	  pvector<ntype, N> v2;
+	  pvector<ntype, NT> v2;
 	  int i;
 	  if constexpr (NT < 0)
 	    v2.allocate(N);
@@ -366,16 +367,16 @@ public:
   inline pvector<ntype,NT> subtraction(const pvector<ntype,NT>& v1) const
     {
       int i;
-      if (N <= NSTA && pvector<ntype,NT>::dynamic==false)
+      if constexpr (NT <= NSTA && pvector<ntype,NT>::dynamic==false)
 	{
-	  static pvector<ntype, N> v2;
+	  pvector<ntype, NT> v2;
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] - v1.v[i];
 	  return v2;
 	}
       else
 	{
-	  pvector<ntype, N> v2;
+	  pvector<ntype, NT> v2;
 	  if (NT < 0)
 	    v2.allocate(N);
 	  for (i=0; i < N; i++)

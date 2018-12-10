@@ -14,16 +14,27 @@ int main()
   pvector<complex<numty>, 4> roots;
   pvector<complex<numty>, 5> qroots;
 
+#if 1
   cq[5] = 1.0;
-  cq[4] = 2.0;
-  cq[3] = 3.0;
-  cq[2] = 4.0;
-  cq[1] = 5.0;
-  cq[0] = 6.0;
+  cq[4] = -15.0;
+  cq[3] = 85.0;
+  cq[2] = -225.0;
+  cq[1] = 274.0;
+  cq[0] = -120.0;
   qp.set_coeff(cq);
+
+  qp.show("quintic=");
   qp.find_roots(qroots);
-  qp.show();
-  qroots.show();
+  qroots.show("quintic roots=");
+#endif
+  c[0] = 274;
+  c[1] = -450;
+  c[2] = 255;
+  c[3] = -60;
+  c[4] = 5;
+  rp.set_coeff(c);
+  rp.find_roots(roots);
+  roots.show("boh"); 
   exit(-1);
   x1c = 1;
   x2c = 2;
