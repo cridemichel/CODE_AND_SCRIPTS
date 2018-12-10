@@ -7,7 +7,7 @@ int main()
 {
   using numty=double;
   rpoly<numty,4> rp;
-  rpoly<numty,5,true> qp;
+  rpoly<numty,5> qp;
   pvector<numty, 6> cq;
   pvector<numty, 5> c;
   complex<numty> x1c, x2c, x3c, x4c;
@@ -16,11 +16,11 @@ int main()
 
 #if 1
   cq[5] = 1.0;
-  cq[4] = -15.0;
-  cq[3] = 85.0;
-  cq[2] = -225.0;
-  cq[1] = 274.0;
-  cq[0] = -120.0;
+  cq[4] = -2.0;
+  cq[3] = 5.0;
+  cq[2] = -10.0;
+  cq[1] = 4.0;
+  cq[0] = -8.0;
   qp.set_coeff(cq);
   qp.show("quintic=");
   qp.find_roots(qroots);

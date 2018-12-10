@@ -305,24 +305,95 @@ public:
           cmonder[i] = (i+1)*cmon[i+1]; 
         }
       quar.set_coeff(cmonder);
+
       quar.find_roots(qroots);
       //quar.show("quartic=");
       //qroots.show("radici quartica");
       c=0;
       for (i=0; i < N-1; i++)
-       if (qroots[i].imag()==0.0 && evalddpoly(qroots[i].real())!=0)
-         rqroots[c++] = qroots[i].real();
+        if (qroots[i].imag()==0.0 && evalddpoly(qroots[i].real())!=0)
+          rqroots[c++] = qroots[i].real();
       int numr = c;
+      qroots.show();
       //qsort(rqroots, numr, sizeof(ntype),
-        //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
-      sort(rqroots.begin(),rqroots.end());
-      
+      //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
+     // sort(rqroots.begin(),rqroots.end());
+      if (rqroots[1] < rqroots[0])
+        {
+          swap(rqroots[0],rqroots[1]);
+        }
+      cout << "----> "<< rqroots[0] << " "<< rqroots[1] << "\n";
       bool foundleft = false;
       bool foundright = false;
       ntype xleft, xright;
       if (numr == 0)
         {
+          rpoly<ntype,N-2> cub;
+          ntype r0;
+          pvector<complex<ntype>,N-2> cubroots;
+          cmondder[N-2] = N*(N-1);
+          for (i = N-3; i >= 0; i--)
+            {
+              cmondder[i] = (i+1)*(i+2)*cmon[i+1]; 
+            }
+          cub.set_coeff(cmondder);
+          cub.find_roots(cubroots); 
+          for (i=0; i < N-2; i++)
+            {
+              if (cubroots[i].imag()==0)
+                {
+                  r0=cubroots[i].real();
+                  break;
+                }
+            } 
+          if (evalpoly(r0) > 0.0)
+            {
+              xright = r0;
+              ntype c;  
+              c = evalpoly(xright)/evalddpoly(xright);
+              // quadratic extrapolation
+              oqs_solve_quadratic(1.0, c, quadr);
+              if (quadr[0].real() < quadr[1].real())
+                {
+                  xleft = quadr[0].real()+xright;
+                }
+              else
+                {
+                  xleft = quadr[1].real()+xright;
+                }
+              do 
+                {
+                  delx = xleft - xright;
+                  delx *= goldfact;
+                  xleft = xright+delx;
+                }
+              while (evalpoly(xleft) >=0);
+            }
+          else
+            {
+              xleft = r0;
+              ntype c;  
+              c = evalpoly(xleft)/evalddpoly(xleft);
+              oqs_solve_quadratic(1.0, c, quadr);
+              if (quadr[0].real() > quadr[1].real())
+                {
+                  xright = quadr[0].real()+xleft;
+                }
+              else
+                {
+                  xright = quadr[1].real()+xleft;
+                }
+              do 
+                {
+                  delx = xright - r0;
+                  delx *= goldfact;
+                  xright = r0+delx;
+                }
+              while (evalpoly(xright) <=0);
+            }
           // we have only 1 real root
+          // use laguerre's method
+          // first root
         }
       else
         {
@@ -332,21 +403,22 @@ public:
               xright = rqroots[0];
               // find xleft here
               ntype c;  
-              c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
+              c = evalpoly(xright)/evalddpoly(xright);
+              // quadratic extrapolation
               oqs_solve_quadratic(1.0, c, quadr);
               if (quadr[0].real() < quadr[1].real())
                 {
-                  xleft = quadr[0].real();
+                  xleft = quadr[0].real()+xright;
                 }
               else
                 {
-                  xleft = quadr[1].real();
-               }
+                  xleft = quadr[1].real()+xright;
+                }
               do 
                 {
-                  delx = xleft - rqroots[0];
+                  delx = xleft - xright;
                   delx *= goldfact;
-                  xleft = rqroots[0]+delx;
+                  xleft = xright+delx;
                 }
               while (evalpoly(xleft) >=0);
               foundleft = true;
@@ -356,26 +428,31 @@ public:
             {
               foundleft = true;
               xleft = rqroots[numr-1];
+              //cout << "xleft=" << xleft << "\n";
               // find xright here
               ntype c;  
-              c = evalpoly(rqroots[0])/evalddpoly(rqroots[0]);
+              c = evalpoly(xleft)/evalddpoly(xleft);
+              //cout << "c=" << c << "\n";
               oqs_solve_quadratic(1.0, c, quadr);
+              //cout << "0: " << quadr[0] << " 1:" << quadr[1] << "\n"; 
               if (quadr[0].real() > quadr[1].real())
                 {
-                  xright = quadr[0].real();
+                  xright = quadr[0].real()+xleft;
                 }
               else
                 {
-                  xright = quadr[1].real();
+                  xright = quadr[1].real()+xleft;
                 }
+              //cout << "xright temp=" << xright << "\n";
               do 
-               {
-                 delx = xright - rqroots[numr-1];
-                 delx *= goldfact;
-                 xright = rqroots[numr-1]+delx;
-               }
-             while (evalpoly(xright) <=0);
-             foundright = true;
+                {
+                  delx = xright - xleft;
+                  delx *= goldfact;
+                  xright = xleft+delx;
+                }
+              while (evalpoly(xright) <=0);
+              //cout << "xright=" << xright << "\n";
+              foundright = true;
             }
           if (foundleft == false && foundright == false)
             {
@@ -388,55 +465,54 @@ public:
                     foundright = true;
                   }
             }
-          
-          // first root
-          ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
-          roots[0] = r0;
-          //cout << "r0=" << r0 << "\n";
-          // deflate quintic and use OQS
-          // first set of coefficients
-          deflcoeff0[N-1]=1.0;
-          //cout << "cmon=" << cmon[N-1] << "\n";
-          deflcoeff0[N-2] = cmon[N-1]+r0;
-          //cout << "deflcoeff[" << N-1 << "]=" << deflcoeff[N-1]<< "\n";
-          for (i=N-3; i >=0; i--)
+        } 
+      // first root
+      ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+      roots[0] = r0;
+      //cout << "r0=" << r0 << "\n";
+      // deflate quintic and use OQS
+      // first set of coefficients
+      deflcoeff0[N-1]=1.0;
+      //cout << "cmon=" << cmon[N-1] << "\n";
+      deflcoeff0[N-2] = cmon[N-1]+r0;
+      //cout << "deflcoeff[" << N-1 << "]=" << deflcoeff[N-1]<< "\n";
+      for (i=N-3; i >=0; i--)
+        {
+          //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
+          deflcoeff0[i] = cmon[i+1] + r0*deflcoeff0[i+1];
+        }
+      if (r0!=0)
+        {
+          deflcoeff1[0]=-cmon[0]/r0;
+          deflcoeff1[N-1] = 1.0;
+          //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+          for (i=1; i < N-1; i++)
             {
-              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
-              deflcoeff0[i] = cmon[i+1] + r0*deflcoeff0[i+1];
+              deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0;
+              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
             }
-          if (r0!=0)
-            {
-              deflcoeff1[0]=-cmon[0]/r0;
-              deflcoeff1[N-1] = 1.0;
-              //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
-              for (i=1; i < N-1; i++)
-                {
-                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0;
-                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
-                }
-              ntype err0,err1;
-              // choose the set which yields smaller error 
-              err0=calc_err_q(deflcoeff0,r0);
-              err1=calc_err_q(deflcoeff1,r0);
-              if (err0 < err1)
-                deflcoeff = deflcoeff0;
-              else
-                deflcoeff = deflcoeff1;
-            }
-          else
+          ntype err0,err1;
+          // choose the set which yields smaller error 
+          err0=calc_err_q(deflcoeff0,r0);
+          err1=calc_err_q(deflcoeff1,r0);
+          if (err0 < err1)
             deflcoeff = deflcoeff0;
-          // refine deflated quartic coefficients here
-          //deflcoeff.show("prima");
-          use_NR(deflcoeff,r0);
-          //deflcoeff.show("dopo");
-          // calculate roots of quartic
-          quar.set_coeff(deflcoeff);
-          quar.find_roots(qroots);
-          //quar.show("deflq=");
-          for (i=1; i < N; i++)
-            {
-              roots[i] = qroots[i-1];
-            }
+          else
+            deflcoeff = deflcoeff1;
+        }
+      else
+        deflcoeff = deflcoeff0;
+      // refine deflated quartic coefficients here
+      //deflcoeff.show("prima");
+      use_NR(deflcoeff,r0);
+      //deflcoeff.show("dopo");
+      // calculate roots of quartic
+      quar.set_coeff(deflcoeff);
+      quar.find_roots(qroots);
+      //quar.show("deflq=");
+      for (i=1; i < N; i++)
+        {
+          roots[i] = qroots[i-1];
         }
     }
 #endif
