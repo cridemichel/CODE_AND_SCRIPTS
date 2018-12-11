@@ -422,7 +422,6 @@ public:
                   // cout << "actung actung cc="<< cc <<"\n"; 
                 };
     
-          
               //cout << "QUIQUI3 xleft=" << xleft << " xright=" << xright << "\n";
               //cout << "QUIQUI3 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
               //cout << "xright=" << xright << "\n";
@@ -430,7 +429,7 @@ public:
             }
           if (foundleft == false && foundright == false)
             {
-              for (i=1; i < numr-1; i++)
+              for (i=0; i < numr; i++)
                 if (evalpoly(rqroots[i])*evalpoly(rqroots[i+1]) < 0.0)
                   {
                     xleft = rqroots[i];
@@ -438,7 +437,13 @@ public:
                     foundleft = true;
                     foundright = true;
                   }
-              //cout << "QUIQUI4 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
+              if (foundright==false && foundleft==false)
+                {
+                  cout << "num=" << numr << "\n";
+                  cout << "QUIQUI4 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
+                  this->show("Prob quintic=");
+                  exit(-1);
+                }
             }
         } 
       // first root
