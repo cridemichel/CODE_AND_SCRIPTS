@@ -344,7 +344,6 @@ public:
       const ntype goldfact=1.618034;
       ntype sig;
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
-      pvector<ntype,N-1> deflc;
       int iter; 
       int i;
       if (coeff[N]==0.0)
@@ -420,10 +419,32 @@ public:
           // deflate by (x-r0)*(x-conj(r0)) and call quartic solver
           roots[1] = conj(r0);
           rpoly<ntype,N-2> rp;
+          pvector<ntype,3> ad;
+          pvector<ntype,N-1> bd, bd0, bd1;
           pvector<ntype,N-1> ro;
           // find coefficients for deflation
-
-          rp.set_coeff(deflc);
+          ad[2] = 1.0;
+          ad[1] = -2*roots[0].real();
+          ad[0] = abs(roots[0]);
+          static const int Nm2 = N-2;
+          //backward deflation 
+          bd0[Nm2] = cmon[N];
+          bd0[Nm2-1] = cmon[N-1] - ad[1];
+          for (i=Nm2-2; i >= 0; i++)
+            {
+              bd0[i] = cmon[i+2] - ad[1]*bd0[i+1] - ad[0]*bd0[i+2];
+            }
+          if (ad[0]!=0)
+            {
+              //forward deflation
+              bd1[0] = cmon[0]/ad[0];
+              bd1[1] = (cmon[1] - ad[1]*bd1[0])/ad[0];
+              for (i=2; i < Nm2; i++)
+                {
+                  bd1[i] = (cmon[i] - ad[1]*bd[i-1])/ad[0];
+                }
+            }
+          rp.set_coeff(bd);
           rp.find_roots(ro);
           for (i=2; i < N; i++)
             roots[i] = ro[i-2];
