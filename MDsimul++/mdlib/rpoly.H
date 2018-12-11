@@ -189,7 +189,7 @@ public:
       ntype bn=0.0;
       for (int i=N; i >= 0; i--)
         {
-          bn = coeff[i] + bn*x;
+          bn = cmon[i] + bn*x;
         }
       return bn;
     }
@@ -200,7 +200,7 @@ public:
 
       for (int i=N-1; i >= 0; i--)
         {
-          bn = (i+1)*coeff[i+1] + bn*x;
+          bn = (i+1)*cmonder[i+1] + bn*x;
         }
       return bn;
     }
@@ -212,7 +212,7 @@ public:
         return 0;
       for (int i=N-2; i >= 0; i--)
         {
-          bn = (i+2)*(i+1)*coeff[i+2] + bn*x;
+          bn = (i+2)*(i+1)*cmondder[i+2] + bn*x;
         }
       return bn;
     }
@@ -246,8 +246,9 @@ public:
       errf = 0;
       for (i=0; i < N-1; i++)
         {
-          errf += (cmon[i+1]==0)?fvec[i]:fvec[i]/cmon[i+1];
+          errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
         }
+      //cout << "errf inizio=" << errf << "\n";
       for (i=0; i < N-1; i++)
         for (j=0; j < N-1; j++)
           Jinv[i][j] = (i==j)?1.0:0.0;
@@ -269,15 +270,18 @@ public:
           errf = 0;
           for (i=0; i < N-1; i++)
             {
-              errf += (cmon[i+1]==0)?fvec[i]:fvec[i]/cmon[i+1];
+              errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
             }
+          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
           if (errf==0)
             break;
           if (errf > errfold)
             {
+              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
               c = cold;
               break;
             }
+          
         } 
       for (i=0; i < N-1; i++)
         defc[i] = c[i];
@@ -357,13 +361,12 @@ public:
               xright = r0;
               // quadratic extrapolation
               xleft = xright-pow(c,1.0/5.0);
-              do 
+              while (evalpoly(xleft) >=0)
                 {
                   delx = xleft - xright;
                   delx *= goldfact;
                   xleft = xright+delx;
-                }
-              while (evalpoly(xleft) >=0);
+                };
               //cout << "QUIQUI-1xleft=" << xleft << " xright=" << xright << "\n";
             }
           else
@@ -372,13 +375,12 @@ public:
               c = evalpoly(xleft);///evalddpoly(xleft);
               //cout << evalpoly(xleft) << "dd=" << evalddpoly(xleft)<<"\n"; 
               xright = xleft+pow(-c,1.0/5.0);
-              do 
+              while (evalpoly(xright) <=0)
                 {
                   delx = xright - r0;
                   delx *= goldfact;
                   xright = r0+delx;
-                }
-              while (evalpoly(xright) <=0);
+                };
               //cout << "QUIQUI0 xleft=" << xleft << " xright=" << xright << "\n";
             }
         }
@@ -391,13 +393,12 @@ public:
               // find xleft here
               // quadratic extrapolation
               xleft = xright-pow(c,1.0/5.0);
-              do 
+              while (evalpoly(xleft) >=0)
                 {
                   delx = xleft - xright;
                   delx *= goldfact;
                   xleft = xright+delx;
-                }
-              while (evalpoly(xleft) >=0);
+                };
               foundleft = true;
               //cout << "QUIQUI2 xleft=" << xleft << " xright=" << xright << "\n";
             }
@@ -410,13 +411,12 @@ public:
               //cout << "c=" << c << "\n";
               xright = xleft+pow(-c,1.0/5.0);
               //cout << "xright temp=" << xright << "\n";
-              do 
+              while (evalpoly(xright) <=0)
                 {
                   delx = xright - xleft;
                   delx *= goldfact;
                   xright = xleft+delx;
-                }
-              while (evalpoly(xright) <=0);
+                };
               
               //cout << "QUIQUI3 xleft=" << xleft << " xright=" << xright << "\n";
               //cout << "QUIQUI3 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";

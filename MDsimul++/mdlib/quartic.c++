@@ -13,8 +13,8 @@ int main()
   complex<numty> x1c, x2c, x3c, x4c;
   pvector<complex<numty>, 5> roots;
   pvector<complex<numty>, 5> qroots;
-#if 0
 #if 1
+#if 0
   cq[5] = 1.0;
   cq[4] = -2.0;
   cq[3] = 5.0;
@@ -52,7 +52,7 @@ int main()
   exit(-1);
 #endif
   srand48(4242);
-  for (int i=0; i < 2000000; i++)
+  for (int i=0; i < 100000000; i++)
     {
       c[5]=1.0;
       c[4]=drand48()-0.5;
