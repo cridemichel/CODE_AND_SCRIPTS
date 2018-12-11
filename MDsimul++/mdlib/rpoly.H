@@ -411,13 +411,18 @@ public:
               //cout << "c=" << c << "\n";
               xright = xleft+pow(-c,1.0/5.0);
               //cout << "xright temp=" << xright << "\n";
+              cc=0;
               while (evalpoly(xright) <=0)
                 {
                   delx = xright - xleft;
                   delx *= goldfact;
                   xright = xleft+delx;
+                  cc++;
+                  //if (cc > 10)
+                  // cout << "actung actung cc="<< cc <<"\n"; 
                 };
-              
+    
+          
               //cout << "QUIQUI3 xleft=" << xleft << " xright=" << xright << "\n";
               //cout << "QUIQUI3 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
               //cout << "xright=" << xright << "\n";
