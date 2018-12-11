@@ -286,6 +286,22 @@ public:
       for (i=0; i < N-1; i++)
         defc[i] = c[i];
     }
+#ifdef DEG_6
+  void deg6roots(pvector<complex <ntype>,N>& roots)
+    {
+      pvector<ntype,N+1> y;
+      int i;
+      bool end=false;
+      for (i = 0; i < N+1; i++)
+        y[i] = complex<ntype>(1,1);
+
+      do 
+        {}
+
+      while (!end);
+
+    } 
+#endif
   void quintic(pvector<complex <ntype>,N>& roots)
     {
       ntype coeffder[N-1];
@@ -558,6 +574,23 @@ public:
 	    }
 	  else
             quintic(roots);        
+#else
+          int ok=1;
+          solve_numrec(roots, ok);
+#endif
+        }
+      else if constexpr (N==6)
+        {
+#ifdef DEG_6
+          if constexpr (force_hqr)
+            {
+              int ok=1;
+	      solve_numrec(roots, ok);
+            }
+          else
+            {
+              deg6roots(roots);
+            }
 #else
           int ok=1;
           solve_numrec(roots, ok);
