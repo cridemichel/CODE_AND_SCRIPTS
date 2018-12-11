@@ -16,8 +16,13 @@
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
 #define QUINTIC_OPT
+#define DEG_6
 using namespace std;
-
+#ifdef DEG_6
+template<class T>
+inline const T MAX(const T &a, const T &b)
+        {return b > a ? (b) : (a);}
+#endif
 template <class ntype, int N, bool force_hqr=false> 
 class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
@@ -287,24 +292,148 @@ public:
         defc[i] = c[i];
     }
 #ifdef DEG_6
+ bool laguer(complex<ntype> &x)
+    {
+      const int MR=8,MT=10,MAXIT=MT*MR;
+      const ntype EPS=numeric_limits<ntype>::epsilon();
+      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int iter,j;
+      ntype abx,abp,abm,err;
+      complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      int m=N;
+      for (iter=1;iter<=MAXIT;iter++) 
+        {
+          //its=iter;
+          b=cmon[m];
+          err=abs(b);
+          d=f=0.0;
+          abx=abs(x);
+          for (j=m-1;j>=0;j--) {
+            f=x*f+d;
+            d=x*d+b;
+            b=x*b+cmon[j];
+            err=abs(b)+abx*err;
+          }
+          err *= EPS;
+          if (abs(b) <= err) return true;
+          g=d/b;
+          g2=g*g;
+          h=g2-2.0*f/b;
+          sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
+          gp=g+sq;
+          gm=g-sq;
+          abp=abs(gp);
+          abm=abs(gm);
+          if (abp < abm) gp=gm;
+          dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
+          x1=x-dx;
+          if (x == x1) 
+            return true;
+          if (iter % MT != 0) 
+            x=x1;
+          else 
+            x -= frac[iter/MT]*dx;
+        }
+      //cout << "too many iterations in laguer\n";
+      return false;
+    }
   void deg6roots(pvector<complex <ntype>,N>& roots)
     {
-      pvector<ntype,N+1> y;
+      // find initial guess for x here
+      complex<double> r0;
+      const ntype goldfact=1.618034;
+      ntype sig;
+      pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
+      pvector<ntype,N-1> deflc;
+      int iter; 
       int i;
-      bool end=false;
-      for (i = 0; i < N+1; i++)
-        y[i] = complex<ntype>(1,1);
+      if (coeff[N]==0.0)
+        {
+          cout << "That's not a quintic!\n";
+          return;
+        }
+      cmon[N]=1.0;
+      for (i=N-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[N];
 
-      do 
-        {}
+      r0 = 0.0;
+      iter = 0;
+      sig=1.0;
+      while (!laguer(r0))
+        {
+          r0 = sig*complex<ntype>(drand48()-0.5,drand48()-0.5);
+          sig *= goldfact; 
+          iter++;
+          if (iter > 1000)
+            {
+              cout << "Laguerre can not converge, I am sorry...\n";
+              exit(-1); 
+            }
+        };
+      roots[0] = r0;
+      if (r0.imag()==0)
+        {
+          // deflate by (x-r0) and call quintic solver
+          deflcoeff0[N-1]=1.0;
+          //cout << "cmon=" << cmon[N-1] << "\n";
+          deflcoeff0[N-2] = cmon[N-1]+r0.real();
+          //cout << "deflcoeff[" << N-1 << "]=" << deflcoeff[N-1]<< "\n";
+          for (i=N-3; i >=0; i--)
+            {
+              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
+              deflcoeff0[i] = cmon[i+1] + r0.real()*deflcoeff0[i+1];
+            }
+          if (r0.real()!=0.0)
+            {
+              deflcoeff1[0]=-cmon[0]/r0.real();
+              deflcoeff1[N-1] = 1.0;
+              //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+              for (i=1; i < N-1; i++)
+                {
+                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
+                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                }
+              ntype err0,err1;
+              // choose the set which yields smaller error 
+              err0=calc_err_q(deflcoeff0,r0.real());
+              err1=calc_err_q(deflcoeff1,r0.real());
+              if (err0 < err1)
+                deflcoeff = deflcoeff0;
+              else
+                deflcoeff = deflcoeff1;
+            }
+          else
+            deflcoeff = deflcoeff0;
+          // refine deflated quartic coefficients here
+          //deflcoeff.show("prima");
+          //use_NR(deflcoeff,r0);
+          rpoly<ntype,N-1> qp;
+          pvector<complex<ntype>,N-1> qr;
+          qp.set_coeff(deflcoeff);
+          qp.find_roots(qr);
+          for (i=1; i < N; i++)
+            roots[i] = qr[i-1];
+          roots.show();
+        }
+      else
+        {
+          // deflate by (x-r0)*(x-conj(r0)) and call quartic solver
+          roots[1] = conj(r0);
+          rpoly<ntype,N-2> rp;
+          pvector<ntype,N-1> ro;
+          // find coefficients for deflation
 
-      while (!end);
-
+          rp.set_coeff(deflc);
+          rp.find_roots(ro);
+          for (i=2; i < N; i++)
+            roots[i] = ro[i-2];
+        }
+      cout << "x=" << r0 << "\n";
     } 
 #endif
   void quintic(pvector<complex <ntype>,N>& roots)
-    {
-      ntype coeffder[N-1];
+  {
+    ntype coeffder[N-1];
       rpoly<ntype, N-1> quar;
       pvector<complex<ntype>,N-1> qroots;
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
@@ -573,7 +702,9 @@ public:
 	      solve_numrec(roots, ok);
 	    }
 	  else
-            quintic(roots);        
+            {
+              quintic(roots);     
+            }   
 #else
           int ok=1;
           solve_numrec(roots, ok);
