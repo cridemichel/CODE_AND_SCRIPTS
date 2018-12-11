@@ -6,14 +6,14 @@
 int main()
 {
   using numty=double;
-  rpoly<numty,4> rp;
+  rpoly<numty,5> rp;
   rpoly<numty,5> qp;
   pvector<numty, 6> cq;
-  pvector<numty, 5> c;
+  pvector<numty, 6> c;
   complex<numty> x1c, x2c, x3c, x4c;
-  pvector<complex<numty>, 4> roots;
+  pvector<complex<numty>, 5> roots;
   pvector<complex<numty>, 5> qroots;
-
+#if 0
 #if 1
   cq[5] = 1.0;
   cq[4] = -2.0;
@@ -50,9 +50,12 @@ int main()
   rp.show();
   //cout << "p(x)=" << rp.evaldpoly(1.2) << "\n";
   exit(-1);
-  for (int i=0; i < 100000000; i++)
+#endif
+  srand48(4242);
+  for (int i=0; i < 2000000; i++)
     {
-      c[4]=1.0;
+      c[5]=1.0;
+      c[4]=drand48()-0.5;
       c[3]=drand48()-0.5;
       c[2]=drand48()-0.5;
       c[1]=drand48()-0.5;

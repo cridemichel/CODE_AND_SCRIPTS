@@ -42,6 +42,8 @@ class rpoly: public numeric_limits<ntype> {
     if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0))
       {	
         cout << "Root must be bracketed in zbrent";
+        cout << "fa=" << fa << " fb=" << fb << "\n";
+        exit(-1);
       }
     fc=fb;
     for (iter=0;iter<ITMAX;iter++)
@@ -106,6 +108,7 @@ class rpoly: public numeric_limits<ntype> {
         fb=evalpoly(b);
       }
     cout << "Maximum number of iterations exceeded in zbrent";
+    exit(-1);
     return 0.0;
   }
   ntype oqs_max2(ntype a, ntype b)
@@ -288,8 +291,8 @@ public:
       complex<ntype> quadr[2];
       std::array<ntype,N-1> rqroots;
       ntype goldfact = 1.618034;
-      ntype delx;
-      int i, c;
+      ntype delx, c;
+      int i, cc;
       if (coeff[N]==0.0)
         {
           cout << "That's not a quintic!\n";
@@ -309,12 +312,12 @@ public:
       quar.find_roots(qroots);
       //quar.show("quartic=");
       //qroots.show("radici quartica");
-      c=0;
+      cc=0;
       for (i=0; i < N-1; i++)
         if (qroots[i].imag()==0.0 && evalddpoly(qroots[i].real())!=0)
-          rqroots[c++] = qroots[i].real();
-      int numr = c;
-      qroots.show();
+          rqroots[cc++] = qroots[i].real();
+      int numr = cc;
+      //qroots.show();
       //qsort(rqroots, numr, sizeof(ntype),
       //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
      // sort(rqroots.begin(),rqroots.end());
@@ -322,7 +325,7 @@ public:
         {
           swap(rqroots[0],rqroots[1]);
         }
-      cout << "----> "<< rqroots[0] << " "<< rqroots[1] << "\n";
+      //cout << "----> "<< rqroots[0] << " "<< rqroots[1] << "\n";
       bool foundleft = false;
       bool foundright = false;
       ntype xleft, xright;
@@ -332,11 +335,13 @@ public:
           ntype r0;
           pvector<complex<ntype>,N-2> cubroots;
           cmondder[N-2] = N*(N-1);
+          //cout << "qui\n";
           for (i = N-3; i >= 0; i--)
             {
-              cmondder[i] = (i+1)*(i+2)*cmon[i+1]; 
+              cmondder[i] = (i+1)*(i+2)*cmon[i+2]; 
             }
           cub.set_coeff(cmondder);
+          //cmondder.show();
           cub.find_roots(cubroots); 
           for (i=0; i < N-2; i++)
             {
@@ -346,21 +351,12 @@ public:
                   break;
                 }
             } 
-          if (evalpoly(r0) > 0.0)
+          //cout << "real cubic root=" << r0 << "val=" << evalpoly(r0) << "\n";
+          if ((c=evalpoly(r0)) > 0.0)
             {
               xright = r0;
-              ntype c;  
-              c = evalpoly(xright)/evalddpoly(xright);
               // quadratic extrapolation
-              oqs_solve_quadratic(1.0, c, quadr);
-              if (quadr[0].real() < quadr[1].real())
-                {
-                  xleft = quadr[0].real()+xright;
-                }
-              else
-                {
-                  xleft = quadr[1].real()+xright;
-                }
+              xleft = xright-pow(c,1.0/5.0);
               do 
                 {
                   delx = xleft - xright;
@@ -368,21 +364,14 @@ public:
                   xleft = xright+delx;
                 }
               while (evalpoly(xleft) >=0);
+              //cout << "QUIQUI-1xleft=" << xleft << " xright=" << xright << "\n";
             }
           else
             {
               xleft = r0;
-              ntype c;  
-              c = evalpoly(xleft)/evalddpoly(xleft);
-              oqs_solve_quadratic(1.0, c, quadr);
-              if (quadr[0].real() > quadr[1].real())
-                {
-                  xright = quadr[0].real()+xleft;
-                }
-              else
-                {
-                  xright = quadr[1].real()+xleft;
-                }
+              c = evalpoly(xleft);///evalddpoly(xleft);
+              //cout << evalpoly(xleft) << "dd=" << evalddpoly(xleft)<<"\n"; 
+              xright = xleft+pow(-c,1.0/5.0);
               do 
                 {
                   delx = xright - r0;
@@ -390,30 +379,18 @@ public:
                   xright = r0+delx;
                 }
               while (evalpoly(xright) <=0);
+              //cout << "QUIQUI0 xleft=" << xleft << " xright=" << xright << "\n";
             }
-          // we have only 1 real root
-          // use laguerre's method
-          // first root
         }
       else
         {
-          if (evalpoly(rqroots[0]) > 0.0)
+          if ((c=evalpoly(rqroots[0])) > 0.0)
             {
               foundright = true;
               xright = rqroots[0];
               // find xleft here
-              ntype c;  
-              c = evalpoly(xright)/evalddpoly(xright);
               // quadratic extrapolation
-              oqs_solve_quadratic(1.0, c, quadr);
-              if (quadr[0].real() < quadr[1].real())
-                {
-                  xleft = quadr[0].real()+xright;
-                }
-              else
-                {
-                  xleft = quadr[1].real()+xright;
-                }
+              xleft = xright-pow(c,1.0/5.0);
               do 
                 {
                   delx = xleft - xright;
@@ -422,27 +399,16 @@ public:
                 }
               while (evalpoly(xleft) >=0);
               foundleft = true;
-              //cout << "xleft=" << xleft << " xright=" << xright << "\n";
+              //cout << "QUIQUI2 xleft=" << xleft << " xright=" << xright << "\n";
             }
-          else if (evalpoly(rqroots[numr-1]) < 0.0)  
+          else if ((c=evalpoly(rqroots[numr-1])) < 0.0)  
             {
               foundleft = true;
               xleft = rqroots[numr-1];
               //cout << "xleft=" << xleft << "\n";
               // find xright here
-              ntype c;  
-              c = evalpoly(xleft)/evalddpoly(xleft);
               //cout << "c=" << c << "\n";
-              oqs_solve_quadratic(1.0, c, quadr);
-              //cout << "0: " << quadr[0] << " 1:" << quadr[1] << "\n"; 
-              if (quadr[0].real() > quadr[1].real())
-                {
-                  xright = quadr[0].real()+xleft;
-                }
-              else
-                {
-                  xright = quadr[1].real()+xleft;
-                }
+              xright = xleft+pow(-c,1.0/5.0);
               //cout << "xright temp=" << xright << "\n";
               do 
                 {
@@ -451,22 +417,27 @@ public:
                   xright = xleft+delx;
                 }
               while (evalpoly(xright) <=0);
+              
+              //cout << "QUIQUI3 xleft=" << xleft << " xright=" << xright << "\n";
+              //cout << "QUIQUI3 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
               //cout << "xright=" << xright << "\n";
               foundright = true;
             }
           if (foundleft == false && foundright == false)
             {
               for (i=1; i < numr-1; i++)
-                if (rqroots[i]*rqroots[i+1] < 0.0)
+                if (evalpoly(rqroots[i])*evalpoly(rqroots[i+1]) < 0.0)
                   {
                     xleft = rqroots[i];
                     xright = rqroots[i+1];
                     foundleft = true;
                     foundright = true;
                   }
+              //cout << "QUIQUI4 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
             }
         } 
       // first root
+      //cout << "BOH xleft=" << xleft << " xright=" << xright << "\n";
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
       roots[0] = r0;
       //cout << "r0=" << r0 << "\n";
