@@ -512,7 +512,7 @@ int main(int argc, char **argv)
 	{
 	  if (dojust >= 0 && dojust!=ic)
 	    continue;
-	  for (k=0; k < 5; k++)
+	  for (k=0; k < 6; k++)
 	    {	
 	     dE = (exsol[k]!=complex<double>(0,0))?abs((csolall[ic][k] - exsol[k])/exsol[k]):
 	       abs(csolall[ic][k] - exsol[k]); 

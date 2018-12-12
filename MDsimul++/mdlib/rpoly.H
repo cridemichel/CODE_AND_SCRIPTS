@@ -487,7 +487,7 @@ public:
           if (i >= 1 && i <= N-1)
             term -= bd[i-1]*ad[1];
           if (i >= 2)
-            term -= bd[i-2]*ad[1];
+            term -= bd[i-2];
           if (cmon[i]==0)
             sum+=abs(term);
           else
@@ -592,9 +592,10 @@ public:
       else
         {
           // qui ci sono ancora casini e non funziona
+          // la forward deflation ancora non funziona
           // deflate by (x-r0)*(x-conj(r0)) and call quartic solver
           roots[1] = conj(r0);
-          cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
+          //cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
           rpoly<ntype,N-2> rp;
           pvector<ntype,3> ad;
           pvector<ntype,N-1> bd, bd0, bd1;
@@ -636,9 +637,10 @@ public:
             {
               bd = bd1;
             }
-          bd=bd1;
+          bd=bd0;
+          //cout << "err0=" << err0 << " err1=" << err1 << "\n";
           pvector<complex<ntype>,4> ro_quad;
-          use_NR_defl_quad(bd,ad);
+          //use_NR_defl_quad(bd,ad);
           if (bd[4]==0.0)
             {
               bd.show("bd=");
@@ -648,7 +650,7 @@ public:
             }
           rp.set_coeff(bd);
           rp.find_roots(ro_quad);
-          ro_quad.show("quartic roots=");
+          //ro_quad.show("quartic roots=");
           for (i=2; i < N; i++)
             roots[i] = ro_quad[i-2];
         }
