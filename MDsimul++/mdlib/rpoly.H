@@ -230,7 +230,7 @@ public:
     {
       int i;
       ntype sum=0;
-      for (i=0; i < N; i--)
+      for (i=0; i < N; i++)
         {
           if (i >= 1)
             sum += (cmon[i]==0)?abs(r0*c[i]+cmon[i]):abs((r0*c[i]+cmon[i])/cmon[i]);
@@ -532,6 +532,7 @@ public:
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
+
       while (!laguer(r0))
         {
           r0 = sig*complex<ntype>(drand48()-0.5,drand48()-0.5);
@@ -543,6 +544,7 @@ public:
               exit(-1); 
             }
         };
+      //cout << "qui\n";
       roots[0] = r0;
       if (r0.imag()==0)
         {
@@ -591,21 +593,15 @@ public:
             }
           else
             deflcoeff = deflcoeff0;
-          
-          if (err0 > 1E-4 && err1 > 1E-4)
-            { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
-              cout << "r0=" << r0 << "\n";
-              this->show("poly=");
-              deflcoeff.show("deflation coefficients");
-            }
+         
           //refine deflated quartic coefficients thourh Newton-Raphson method
           use_NR_defl_lin(deflcoeff,r0.real());
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           qp.set_coeff(deflcoeff);
           qp.find_roots(qr);
-          qr.show("quintic roots=");
-          exit(-1);
+          // qr.show("quintic roots=");
+          //exit(-1);
           for (i=1; i < N; i++)
             roots[i] = qr[i-1];
           //roots.show();
@@ -652,7 +648,7 @@ public:
             }
           err0=calc_err_defl_quad(bd0, ad);
           err1=calc_err_defl_quad(bd1, ad);
-          if (err0 < err1)
+                  if (err0 < err1)
             {
               bd = bd0;
             }
@@ -660,9 +656,18 @@ public:
             {
               bd = bd1;
             }
+#if 0
+          if (err0 > 1E-4 && err1 > 1E-4)
+            { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
+              cout << "r0=" << r0 << "\n";
+              this->show("poly=");
+              bd.show("deflation coefficients");
+            }
+
           //bd=bd0;
         if (err0 > 1E-4 || err1 > 1E-4)
           cout << "err0=" << err0 << " err1=" << err1 << "\n";
+#endif
           pvector<complex<ntype>,4> ro_quad;
           //use_NR_defl_quad(bd,ad);
           if (bd[4]==0.0)
