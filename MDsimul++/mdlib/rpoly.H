@@ -292,6 +292,132 @@ public:
         defc[i] = c[i];
     }
 #ifdef DEG_6
+  void use_NR_defl_lin(pvector<ntype,N-1>& bd, ntype r0)
+    {
+      ntype term, errf, errfold;
+      pvector<ntype,N-1> bdold;
+      pvector<ntype,N-1> fvec;
+      pmatrixq<ntype,N-1> Jinv, J;
+      int i, j, iter;
+      ntype sum=0;
+      for (i=1; i < N-1; i++)
+        {
+          if (i < N-1)
+            fvec[i-1] = -bd[i]*r0;
+          fvec[i-1] += bd[i-1];
+        }
+      //cmon.show("monic coeff=");
+      //defc.show("deflcoeff");
+      //fvec.show("errori=");
+      errf = 0;
+      for (i=1; i < N-1; i++)
+        {
+          errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+        }
+      for (i=0; i < N-1; i++)
+        for (j=0; j < N-1; j++)
+          Jinv[i][j] = (i==j)?1.0:0.0;
+      for (i=N-3; i >= 0; i--)
+        for (j=i+1; j < N-1; j++)
+          {
+            Jinv[i][j]=r0*Jinv[i+1][j];
+          }
+      //cout << "errf inizio=" << errf << "\n";
+      // Jinv.show();
+      for (iter = 0; iter < 8; iter++)
+        {
+          bdold = bd;
+          bd = bd - Jinv*fvec;
+          for (i=1; i < N-1; i++)
+            {
+              if (i < N-1)
+                fvec[i-1] = -bd[i]*r0;
+              fvec[i-1] += bd[i-1];
+            }
+          errfold = errf;
+          for (i=1; i < N-1; i++)
+            {
+              errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+            }
+          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
+          if (errf==0)
+            break;
+          if (errf > errfold)
+            {
+              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
+              bd = bdold;
+              break;
+            }
+        } 
+    }
+  void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3> ad)
+    {
+      ntype term, errf, errfold, det;
+      pvector<ntype,N-1> bdold;
+      pvector<ntype,N-1> fvec;
+      pmatrixq<ntype,N-1> Jinv, J;
+      int i, j, iter;
+      ntype sum=0;
+      for (i=2; i < N; i++)
+        {
+          if (i < N-2)
+            fvec[i-2] = bd[i]*ad[0];
+          if (i < N-1)
+            fvec[i-2] += bd[i-1]*ad[1];
+          fvec[i-2] += bd[i-2];
+        }
+      //cmon.show("monic coeff=");
+      //defc.show("deflcoeff");
+      //fvec.show("errori=");
+      errf = 0;
+      for (i=2; i < N-2; i++)
+        {
+          errf += abs((cmon[i]==0)?fvec[i-2]:(fvec[i-2]/cmon[i]));
+        }
+      //cout << "errf inizio=" << errf << "\n";
+      for (i=0; i < N-1; i++)
+        for (j=0; j < N-1; j++)
+          {
+            if (i==j)
+              J[i][j] = 1.0;
+            else if (i+1==j)
+              J[i][j] = ad[1];
+            else if (i+2==j)
+              J[i][j] = ad[0];
+            else 
+              J[i][j] = 0.0;
+          }
+      Jinv = J.inv();
+      // Jinv.show();
+      for (iter = 0; iter < 8; iter++)
+        {
+          bdold = bd;
+          bd = bd - Jinv*fvec;
+          for (i=2; i < N; i++)
+            {
+              if (i < N-2)
+                fvec[i-2] = bd[i]*ad[0];
+              if (i < N-1)
+                fvec[i-2] += bd[i-1]*ad[1];
+              fvec[i-2] += bd[i-2];
+            }
+
+          errfold = errf;
+          for (i=0; i < N-2; i++)
+            {
+              errf += abs((cmon[i]==0)?fvec[i-2]:(fvec[i-2]/cmon[i]));
+            }
+          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
+          if (errf==0)
+            break;
+          if (errf > errfold)
+            {
+              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
+              bd = bdold;
+              break;
+            }
+        } 
+    }
  bool laguer(complex<ntype> &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -337,6 +463,26 @@ public:
       //cout << "too many iterations in laguer\n";
       return false;
     }
+  ntype calc_err_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
+    {
+      int i;
+      ntype sum=0, term;
+      for (i=0; i < N; i++)
+        {
+          if (i <= N-2) 
+            term = bd[i]*ad[0];
+          if (i >= 1 && i <= N-1)
+            term += bd[i-1]*ad[1];
+          if (i >= 2)
+            term += bd[i-2]*ad[1];
+          term -= cmon[i];
+          if (cmon[i]==0)
+            sum+=abs(term);
+          else
+            sum+=abs(term/cmon[i]);
+        }
+      return sum;
+    }
   void deg6roots(pvector<complex <ntype>,N>& roots)
     {
       // find initial guess for x here
@@ -344,6 +490,7 @@ public:
       const ntype goldfact=1.618034;
       ntype sig;
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
+      ntype err0,err1;
       int iter; 
       int i;
       if (coeff[N]==0.0)
@@ -392,7 +539,6 @@ public:
                   deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
                   //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
                 }
-              ntype err0,err1;
               // choose the set which yields smaller error 
               err0=calc_err_q(deflcoeff0,r0.real());
               err1=calc_err_q(deflcoeff1,r0.real());
@@ -405,7 +551,12 @@ public:
             deflcoeff = deflcoeff0;
           // refine deflated quartic coefficients here
           //deflcoeff.show("prima");
-          //use_NR(deflcoeff,r0);
+          pvector<ntype,N-1> bd;
+          for (i=0; i < N-1; i++)
+            bd[i] = deflcoeff[i];
+          use_NR_defl_lin(bd,r0.real());
+          for (i=0; i < N-1; i++)
+            deflcoeff[i] = bd[i];
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           qp.set_coeff(deflcoeff);
@@ -444,17 +595,29 @@ public:
                   bd1[i] = (cmon[i] - ad[1]*bd[i-1])/ad[0];
                 }
             }
+          err0=calc_err_defl_quad(bd0, ad);
+          err1=calc_err_defl_quad(bd1, ad);
+          if (err0 < err1)
+            {
+              bd = bd0;
+            }
+          else
+            {
+              bd = bd1;
+            }
+          pvector<complex<ntype>,4> ro_quad;
+          use_NR_defl_quad(bd,ad);
           rp.set_coeff(bd);
-          rp.find_roots(ro);
+          rp.find_roots(ro_quad);
           for (i=2; i < N; i++)
-            roots[i] = ro[i-2];
+            roots[i] = ro_quad[i-2];
         }
       cout << "x=" << r0 << "\n";
     } 
 #endif
   void quintic(pvector<complex <ntype>,N>& roots)
-  {
-    ntype coeffder[N-1];
+    {
+      ntype coeffder[N-1];
       rpoly<ntype, N-1> quar;
       pvector<complex<ntype>,N-1> qroots;
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
@@ -490,7 +653,7 @@ public:
       //qroots.show();
       //qsort(rqroots, numr, sizeof(ntype),
       //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
-     // sort(rqroots.begin(),rqroots.end());
+      // sort(rqroots.begin(),rqroots.end());
       if (rqroots[1] < rqroots[0])
         {
           swap(rqroots[0],rqroots[1]);
@@ -587,7 +750,7 @@ public:
                   //if (cc > 10)
                   // cout << "actung actung cc="<< cc <<"\n"; 
                 };
-    
+
               //cout << "QUIQUI3 xleft=" << xleft << " xright=" << xright << "\n";
               //cout << "QUIQUI3 P(xl)=" << evalpoly(xleft) << "P(xr)=" << evalpoly(xright)<< "\n";
               //cout << "xright=" << xright << "\n";
