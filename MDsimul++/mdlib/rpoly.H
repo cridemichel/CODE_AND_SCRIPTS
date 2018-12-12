@@ -648,7 +648,7 @@ public:
             }
           err0=calc_err_defl_quad(bd0, ad);
           err1=calc_err_defl_quad(bd1, ad);
-                  if (err0 < err1)
+          if (err0 < err1)
             {
               bd = bd0;
             }
@@ -669,7 +669,7 @@ public:
           cout << "err0=" << err0 << " err1=" << err1 << "\n";
 #endif
           pvector<complex<ntype>,4> ro_quad;
-          //use_NR_defl_quad(bd,ad);
+          //use_NR_defl_quad(bd,ad);// il NR ancora non funziona
           if (bd[4]==0.0)
             {
               bd.show("bd=");
