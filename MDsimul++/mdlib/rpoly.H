@@ -230,7 +230,7 @@ public:
     {
       int i;
       ntype sum=0;
-      for (i=0; i < N; i++)
+      for (i=0; i < N; i--)
         {
           if (i >= 1)
             sum += (cmon[i]==0)?abs(r0*c[i]+cmon[i]):abs((r0*c[i]+cmon[i])/cmon[i]);
@@ -491,9 +491,6 @@ public:
     {
       int i;
       ntype sum=0, term;
-      //bd.show("boh");
-      //ad.show("boh2");
-      //cmon.show("boh3"); 
       for (i=0; i < N; i++)
         {
           term=cmon[i];
@@ -507,11 +504,183 @@ public:
             sum+=abs(term);
           else
             sum+=abs(term/cmon[i]);
-          //cout << "term=" << term << " sum=" << sum << " i=" << i << " N=" << N <<"\n";
         }
       return sum;
     }
-   
+  void deg6roots(pvector<complex <ntype>,N>& roots)
+    {
+      // find initial guess for x here
+      complex<double> r0;
+      const ntype goldfact=1.618034;
+      ntype sig;
+      pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
+      ntype err0,err1;
+      int iter; 
+      int i;
+      if (coeff[N]==0.0)
+        {
+          cout << "That's not a quintic!\n";
+          return;
+        }
+      cmon[N]=1.0;
+      for (i=N-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[N];
+
+      r0 = 0.0;
+      iter = 0;
+      sig=1.0;
+      // find first zero using laguerre
+      // if it does not converge generate a random initial guess
+      // and retry (a limited number of times though!)
+      while (!laguer(r0))
+        {
+          r0 = sig*complex<ntype>(drand48()-0.5,drand48()-0.5);
+          sig *= goldfact; 
+          iter++;
+          if (iter > 1000)
+            {
+              cout << "Laguerre can not converge, I am sorry...\n";
+              exit(-1); 
+            }
+        };
+      roots[0] = r0;
+      if (r0.imag()==0)
+        {
+          // deflate by (x-r0) and call N-1 degree polynomial solver
+          // backward deflation (i.e. it starts from N down to 1 and calculate all coefficients of N-1 degree 
+          // deflated polynomial of order  
+          for (i=N; i >=1; i--)
+            {
+              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
+              deflcoeff0[i-1] = cmon[i];
+              if (i <= N-1)
+                deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
+             }
+          if (r0.real()!=0.0)
+            {
+              //forward deflation
+              //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+#if 0
+              deflcoeff1[N-1]=1.0;
+              for (i=0; i < N-1; i++)
+                {
+                  deflcoeff1[i] = cmon[i]; 
+                  if (i >= 1)
+                    deflcoeff1[i] -= deflcoeff1[i-1];
+                  deflcoeff1[i] /= -r0.real();
+                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                }
+#else
+              deflcoeff1[0]=-cmon[0]/r0.real();
+              deflcoeff1[N-1] = 1.0;
+              //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+              for (i=1; i < N-1; i++)
+                {
+                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
+                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                }
+#endif
+              //deflcoeff1.show();
+              // choose the set which yields smaller error 
+              err0=calc_err_q(deflcoeff0,r0.real());
+              err1=calc_err_q(deflcoeff1,r0.real());
+              if (err0 < err1)
+                deflcoeff = deflcoeff0;
+              else
+                deflcoeff = deflcoeff1;
+            }
+          else
+            deflcoeff = deflcoeff0;
+          
+          if (err0 > 1E-4 && err1 > 1E-4)
+            { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
+              cout << "r0=" << r0 << "\n";
+              this->show("poly=");
+              deflcoeff.show("deflation coefficients");
+            }
+          //refine deflated quartic coefficients thourh Newton-Raphson method
+          use_NR_defl_lin(deflcoeff,r0.real());
+          rpoly<ntype,N-1> qp;
+          pvector<complex<ntype>,N-1> qr;
+          qp.set_coeff(deflcoeff);
+          qp.find_roots(qr);
+          qr.show("quintic roots=");
+          exit(-1);
+          for (i=1; i < N; i++)
+            roots[i] = qr[i-1];
+          //roots.show();
+        }
+      else
+        {
+          //
+          // la forward deflation ancora non funziona (se la si esclude tutto sembra funzionare)
+          // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
+          // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
+          roots[1] = conj(r0);
+          //cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
+          rpoly<ntype,N-2> rp;
+          pvector<ntype,3> ad;
+          pvector<ntype,N-1> bd, bd0, bd1;
+          pvector<ntype,N-1> ro;
+          // find coefficients of quadratic polynomial for deflation
+          ad[2] = 1.0;
+          ad[1] = -2*roots[0].real();
+          ad[0] = abs(roots[0])*abs(roots[0]);
+          //do forward and backward deflation and then choose the one which provides smaller error
+          //backward deflation 
+          for (i=N; i >=2;  i--)
+            {
+              bd0[i-2] = cmon[i];
+              if (i <= N-1)
+                bd0[i-2] -= ad[1]*bd0[i-1];
+              if (i <= N-2)
+                bd0[i-2] -= ad[0]*bd0[i];
+            }
+          if (ad[0]!=0)
+            {
+              //forward deflation
+              bd1[N-2]=1.0;
+              for (i=0; i < N-2; i++)
+                {
+                  bd1[i] = cmon[i];
+                  if (i >= 1)
+                    bd1[i] -= bd1[i-1]*ad[1];
+                  if (i >= 2)
+                    bd1[i] -= bd1[i-2];
+                  bd1[i] /= ad[0];
+                }
+            }
+          err0=calc_err_defl_quad(bd0, ad);
+          err1=calc_err_defl_quad(bd1, ad);
+          if (err0 < err1)
+            {
+              bd = bd0;
+            }
+          else
+            {
+              bd = bd1;
+            }
+          //bd=bd0;
+        if (err0 > 1E-4 || err1 > 1E-4)
+          cout << "err0=" << err0 << " err1=" << err1 << "\n";
+          pvector<complex<ntype>,4> ro_quad;
+          //use_NR_defl_quad(bd,ad);
+          if (bd[4]==0.0)
+            {
+              bd.show("bd=");
+              bd0.show("bd0=");
+              bd1.show("bd1=");
+              exit(-1);
+            }
+          // find zeroes of N-2 degree polynomial
+          rp.set_coeff(bd);
+          rp.find_roots(ro_quad);
+          //ro_quad.show("quartic roots=");
+          for (i=2; i < N; i++)
+            roots[i] = ro_quad[i-2];
+        }
+      //cout << "x=" << r0 << "\n";
+    } 
   void quintic(pvector<complex <ntype>,N>& roots)
     {
       ntype coeffder[N-1];
@@ -789,7 +958,19 @@ public:
               quintic(roots);     
             }   
         }
-      else 
+      else if constexpr (N==6)
+        {
+          if constexpr (force_hqr)
+            {
+              int ok=1;
+	      solve_numrec(roots, ok);
+            }
+          else
+            {
+              deg6roots(roots);
+            }
+        }
+      else
         {
           // use HQR from NUMERICAL RECIPE
           int ok=1;
