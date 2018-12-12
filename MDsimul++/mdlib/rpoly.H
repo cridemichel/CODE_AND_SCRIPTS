@@ -407,10 +407,10 @@ public:
           for (i=2; i < N; i++)
             {
               if (i < N-2)
-                fvec[i-2] = c[i]*ad[0];
+                fvec[i-2] = -c[i]*ad[0];
               if (i < N-1)
-                fvec[i-2] += c[i-1]*ad[1];
-              fvec[i-2] += c[i-2];
+                fvec[i-2] -= c[i-1]*ad[1];
+              fvec[i-2] -= c[i-2];
               fvec[i-2] += cmon[i];
             }
 
@@ -534,25 +534,28 @@ public:
       if (r0.imag()==0)
         {
           // deflate by (x-r0) and call quintic solver
-          deflcoeff0[N-1]=1.0;
-          //cout << "cmon=" << cmon[N-1] << "\n";
-          deflcoeff0[N-2] = cmon[N-1]+r0.real();
-          //cout << "deflcoeff[" << N-1 << "]=" << deflcoeff[N-1]<< "\n";
-          for (i=N-3; i >=0; i--)
+          // backward deflation
+          for (i=N; i >=1; i--)
             {
               //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
-              deflcoeff0[i] = cmon[i+1] + r0.real()*deflcoeff0[i+1];
-            }
+              deflcoeff0[i-1] = cmon[i];
+              if (i <= N-1)
+                deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
+             }
           if (r0.real()!=0.0)
             {
-              deflcoeff1[0]=-cmon[0]/r0.real();
-              deflcoeff1[N-1] = 1.0;
+              //forward deflation
               //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
-              for (i=1; i < N-1; i++)
+              deflcoeff1[N-1]=1.0;
+              for (i=0; i < N-1; i++)
                 {
-                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
+                  deflcoeff1[i] = cmon[i]; 
+                  if (i >= 1)
+                    deflcoeff1[i] -= deflcoeff1[i-1];
+                  deflcoeff1[i] /= -r0.real();
                   //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
                 }
+              //deflcoeff1.show();
               // choose the set which yields smaller error 
               err0=calc_err_q(deflcoeff0,r0.real());
               err1=calc_err_q(deflcoeff1,r0.real());
@@ -573,7 +576,7 @@ public:
           qp.find_roots(qr);
           for (i=1; i < N; i++)
             roots[i] = qr[i-1];
-          roots.show();
+          //roots.show();
         }
       else
         {
@@ -599,13 +602,15 @@ public:
           if (ad[0]!=0)
             {
               //forward deflation
+              bd1[N-2]=1.0;
               for (i=0; i < N-2; i++)
                 {
-                  bd1[i] = cmon[i] / ad[0];
+                  bd1[i] = cmon[i];
                   if (i >= 1)
                     bd1[i] -= bd[i-1]*ad[1];
                   if (i >= 2)
                     bd1[i] -= bd[i-2];
+                  bd1[i] /= ad[0];
                 }
             }
           err0=calc_err_defl_quad(bd0, ad);
@@ -620,12 +625,19 @@ public:
             }
           pvector<complex<ntype>,4> ro_quad;
           use_NR_defl_quad(bd,ad);
+          if (bd[4]==0.0)
+            {
+              bd.show("bd=");
+              bd0.show("bd0=");
+              bd1.show("bd1=");
+              exit(-1);
+            }
           rp.set_coeff(bd);
           rp.find_roots(ro_quad);
           for (i=2; i < N; i++)
             roots[i] = ro_quad[i-2];
         }
-      cout << "x=" << r0 << "\n";
+      //cout << "x=" << r0 << "\n";
     } 
 #endif
   void quintic(pvector<complex <ntype>,N>& roots)
