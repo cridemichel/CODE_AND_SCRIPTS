@@ -592,6 +592,7 @@ public:
         }
       else
         {
+          // qui ci sono ancora casini e non funziona
           // deflate by (x-r0)*(x-conj(r0)) and call quartic solver
           roots[1] = conj(r0);
           cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
@@ -638,7 +639,7 @@ public:
             }
           bd=bd0;
           pvector<complex<ntype>,4> ro_quad;
-          //use_NR_defl_quad(bd,ad);
+          use_NR_defl_quad(bd,ad);
           if (bd[4]==0.0)
             {
               bd.show("bd=");
