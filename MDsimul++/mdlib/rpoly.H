@@ -649,7 +649,7 @@ public:
             }
           err0=calc_err_defl_quad(bd0, ad);
           err1=calc_err_defl_quad(bd1, ad);
-                  if (err0 < err1)
+          if (err0 < err1)
             {
               bd = bd0;
             }
