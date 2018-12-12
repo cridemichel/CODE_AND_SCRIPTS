@@ -529,7 +529,6 @@ public:
             }
         };
       roots[0] = r0;
-      // la forward deflation è sbagliata nel secondo caso!! Fix it!!!
       if (r0.imag()==0)
         {
           // deflate by (x-r0) and call quintic solver
@@ -637,7 +636,7 @@ public:
             {
               bd = bd1;
             }
-          bd=bd0;
+          bd=bd1;
           pvector<complex<ntype>,4> ro_quad;
           use_NR_defl_quad(bd,ad);
           if (bd[4]==0.0)
