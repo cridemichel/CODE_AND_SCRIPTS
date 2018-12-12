@@ -529,6 +529,7 @@ public:
             }
         };
       roots[0] = r0;
+      // la forward deflation è sbagliata in entrambi i casi!! Fix it!!!
       if (r0.imag()==0)
         {
           // deflate by (x-r0) and call quintic solver
@@ -567,6 +568,7 @@ public:
           // refine deflated quartic coefficients here
           //deflcoeff.show("prima");
           //pvector<ntype,N-1> bd;
+          deflcoeff=deflcoeff0;
           use_NR_defl_lin(deflcoeff,r0.real());
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
@@ -580,6 +582,7 @@ public:
         {
           // deflate by (x-r0)*(x-conj(r0)) and call quartic solver
           roots[1] = conj(r0);
+          cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
           rpoly<ntype,N-2> rp;
           pvector<ntype,3> ad;
           pvector<ntype,N-1> bd, bd0, bd1;
@@ -587,7 +590,7 @@ public:
           // find coefficients for deflation
           ad[2] = 1.0;
           ad[1] = -2*roots[0].real();
-          ad[0] = abs(roots[0]);
+          ad[0] = abs(roots[0])*abs(roots[0]);
           //backward deflation 
           for (i=N; i >=2;  i--)
             {
@@ -621,8 +624,9 @@ public:
             {
               bd = bd1;
             }
+          bd=bd0;
           pvector<complex<ntype>,4> ro_quad;
-          use_NR_defl_quad(bd,ad);
+          //use_NR_defl_quad(bd,ad);
           if (bd[4]==0.0)
             {
               bd.show("bd=");
@@ -632,6 +636,7 @@ public:
             }
           rp.set_coeff(bd);
           rp.find_roots(ro_quad);
+          ro_quad.show("quartic roots=");
           for (i=2; i < N; i++)
             roots[i] = ro_quad[i-2];
         }

@@ -233,7 +233,7 @@ void sort_sol_opt(pvector<complex<double>,PDEG>& sol, pvector<complex<double>,PD
   for (k1=0; k1 < PERMS; k1++)
     {
       v = 0;
-      for (k2=0; k2 < 5; k2++)
+      for (k2=0; k2 < 6; k2++)
 	{
 	  v += (exsol[k2]==complex<double>(0,0))?abs(sol[perm[k1][k2]]-exsol[k2]):abs((sol[perm[k1][k2]]-exsol[k2])/exsol[k2]);
 	}
@@ -243,10 +243,10 @@ void sort_sol_opt(pvector<complex<double>,PDEG>& sol, pvector<complex<double>,PD
 	  vmin = v;
 	}
     } 
-  for (k2=0; k2 < 5; k2++)
+  for (k2=0; k2 < 6; k2++)
     solt[k2] = sol[k2];
 
-  for (k2=0; k2 < 5; k2++)
+  for (k2=0; k2 < 6; k2++)
     sol[k2] = solt[perm[k1min][k2]];
 }
 #define MAXSOLV 2
