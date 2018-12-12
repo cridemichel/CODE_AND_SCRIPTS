@@ -361,10 +361,11 @@ public:
       for (i=2; i < N; i++)
         {
           if (i < N-2)
-            fvec[i-2] = bd[i]*ad[0];
+            fvec[i-2] = -bd[i]*ad[0];
           if (i < N-1)
-            fvec[i-2] += bd[i-1]*ad[1];
-          fvec[i-2] += bd[i-2];
+            fvec[i-2] -= bd[i-1]*ad[1];
+          fvec[i-2] -= bd[i-2];
+          fvec[i-2] += cmon[i];
         }
       //cmon.show("monic coeff=");
       //defc.show("deflcoeff");
@@ -400,6 +401,7 @@ public:
               if (i < N-1)
                 fvec[i-2] += bd[i-1]*ad[1];
               fvec[i-2] += bd[i-2];
+              fvec[i-2] += cmon[i];
             }
 
           errfold = errf;
@@ -470,12 +472,12 @@ public:
       for (i=0; i < N; i++)
         {
           if (i <= N-2) 
-            term = bd[i]*ad[0];
+            term = -bd[i]*ad[0];
           if (i >= 1 && i <= N-1)
-            term += bd[i-1]*ad[1];
+            term -= bd[i-1]*ad[1];
           if (i >= 2)
-            term += bd[i-2]*ad[1];
-          term -= cmon[i];
+            term -= bd[i-2]*ad[1];
+          term += cmon[i];
           if (cmon[i]==0)
             sum+=abs(term);
           else
