@@ -292,19 +292,22 @@ public:
         defc[i] = c[i];
     }
 #ifdef DEG_6
-  void use_NR_defl_lin(pvector<ntype,N-1>& bd, ntype r0)
+  void use_NR_defl_lin(pvector<ntype,N>& bd, ntype r0)
     {
       ntype term, errf, errfold;
-      pvector<ntype,N-1> bdold;
+      pvector<ntype,N-1> c, cold;
       pvector<ntype,N-1> fvec;
       pmatrixq<ntype,N-1> Jinv, J;
       int i, j, iter;
       ntype sum=0;
+
+      for (i=0; i < N-1; i++)
+        c[i] = bd[i];
       for (i=1; i < N-1; i++)
         {
           if (i < N-1)
-            fvec[i-1] = -bd[i]*r0;
-          fvec[i-1] += bd[i-1];
+            fvec[i-1] = -c[i]*r0;
+          fvec[i-1] += c[i-1];
         }
       //cmon.show("monic coeff=");
       //defc.show("deflcoeff");
@@ -326,13 +329,13 @@ public:
       // Jinv.show();
       for (iter = 0; iter < 8; iter++)
         {
-          bdold = bd;
-          bd = bd - Jinv*fvec;
+          cold = c;
+          c = c - Jinv*fvec;
           for (i=1; i < N-1; i++)
             {
               if (i < N-1)
-                fvec[i-1] = -bd[i]*r0;
-              fvec[i-1] += bd[i-1];
+                fvec[i-1] = -c[i]*r0;
+              fvec[i-1] += c[i-1];
             }
           errfold = errf;
           for (i=1; i < N-1; i++)
@@ -345,39 +348,46 @@ public:
           if (errf > errfold)
             {
               //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
-              bd = bdold;
+              c = cold;
               break;
             }
         } 
+      for (i=0; i < N-1; i++)
+        bd[i] = c[i];
+      
     }
   void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3> ad)
     {
+      // bd[N-2] = 1 since all polynomials are in their minic form
+      // hence we do not need to refine this coefficient here
       ntype term, errf, errfold, det;
-      pvector<ntype,N-1> bdold;
-      pvector<ntype,N-1> fvec;
-      pmatrixq<ntype,N-1> Jinv, J;
+      pvector<ntype,N-2> cold, c;
+      pvector<ntype,N-2> fvec;
+      pmatrixq<ntype,N-2> Jinv, J;
       int i, j, iter;
       ntype sum=0;
+      for (i=0; i < N-2; i++)
+        c[i]=bd[i];
       for (i=2; i < N; i++)
         {
           if (i < N-2)
-            fvec[i-2] = -bd[i]*ad[0];
+            fvec[i-2] = -c[i]*ad[0];
           if (i < N-1)
-            fvec[i-2] -= bd[i-1]*ad[1];
-          fvec[i-2] -= bd[i-2];
+            fvec[i-2] -= c[i-1]*ad[1];
+          fvec[i-2] -= c[i-2];
           fvec[i-2] += cmon[i];
         }
       //cmon.show("monic coeff=");
       //defc.show("deflcoeff");
       //fvec.show("errori=");
       errf = 0;
-      for (i=2; i < N-2; i++)
+      for (i=2; i < N; i++)
         {
           errf += abs((cmon[i]==0)?fvec[i-2]:(fvec[i-2]/cmon[i]));
         }
       //cout << "errf inizio=" << errf << "\n";
-      for (i=0; i < N-1; i++)
-        for (j=0; j < N-1; j++)
+      for (i=0; i < N-2; i++)
+        for (j=0; j < N-2; j++)
           {
             if (i==j)
               J[i][j] = 1.0;
@@ -392,15 +402,15 @@ public:
       // Jinv.show();
       for (iter = 0; iter < 8; iter++)
         {
-          bdold = bd;
-          bd = bd - Jinv*fvec;
+          cold = c;
+          c = c - Jinv*fvec;
           for (i=2; i < N; i++)
             {
               if (i < N-2)
-                fvec[i-2] = bd[i]*ad[0];
+                fvec[i-2] = c[i]*ad[0];
               if (i < N-1)
-                fvec[i-2] += bd[i-1]*ad[1];
-              fvec[i-2] += bd[i-2];
+                fvec[i-2] += c[i-1]*ad[1];
+              fvec[i-2] += c[i-2];
               fvec[i-2] += cmon[i];
             }
 
@@ -415,10 +425,12 @@ public:
           if (errf > errfold)
             {
               //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
-              bd = bdold;
+              c = cold;
               break;
             }
         } 
+      for (i=0; i < N-2; i++)
+        bd[i]=c[i];
     }
  bool laguer(complex<ntype> &x)
     {
@@ -471,13 +483,13 @@ public:
       ntype sum=0, term;
       for (i=0; i < N; i++)
         {
+          term=cmon[i];
           if (i <= N-2) 
-            term = -bd[i]*ad[0];
+            term -= bd[i]*ad[0];
           if (i >= 1 && i <= N-1)
             term -= bd[i-1]*ad[1];
           if (i >= 2)
             term -= bd[i-2]*ad[1];
-          term += cmon[i];
           if (cmon[i]==0)
             sum+=abs(term);
           else
@@ -553,12 +565,8 @@ public:
             deflcoeff = deflcoeff0;
           // refine deflated quartic coefficients here
           //deflcoeff.show("prima");
-          pvector<ntype,N-1> bd;
-          for (i=0; i < N-1; i++)
-            bd[i] = deflcoeff[i];
-          use_NR_defl_lin(bd,r0.real());
-          for (i=0; i < N-1; i++)
-            deflcoeff[i] = bd[i];
+          //pvector<ntype,N-1> bd;
+          use_NR_defl_lin(deflcoeff,r0.real());
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           qp.set_coeff(deflcoeff);
@@ -579,22 +587,25 @@ public:
           ad[2] = 1.0;
           ad[1] = -2*roots[0].real();
           ad[0] = abs(roots[0]);
-          static const int Nm2 = N-2;
           //backward deflation 
-          bd0[Nm2] = cmon[N];
-          bd0[Nm2-1] = cmon[N-1] - ad[1];
-          for (i=Nm2-2; i >= 0; i++)
+          for (i=N; i >=2;  i--)
             {
-              bd0[i] = cmon[i+2] - ad[1]*bd0[i+1] - ad[0]*bd0[i+2];
+              bd0[i-2] = cmon[i];
+              if (i <= N-1)
+                bd0[i-2] -= ad[1]*bd0[i-1];
+              if (i <= N-2)
+                bd0[i-2] -= ad[0]*bd0[i];
             }
           if (ad[0]!=0)
             {
               //forward deflation
-              bd1[0] = cmon[0]/ad[0];
-              bd1[1] = (cmon[1] - ad[1]*bd1[0])/ad[0];
-              for (i=2; i < Nm2; i++)
+              for (i=0; i < N-2; i++)
                 {
-                  bd1[i] = (cmon[i] - ad[1]*bd[i-1])/ad[0];
+                  bd1[i] = cmon[i] / ad[0];
+                  if (i >= 1)
+                    bd1[i] -= bd[i-1]*ad[1];
+                  if (i >= 2)
+                    bd1[i] -= bd[i-2];
                 }
             }
           err0=calc_err_defl_quad(bd0, ad);
