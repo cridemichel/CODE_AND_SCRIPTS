@@ -529,7 +529,7 @@ public:
             }
         };
       roots[0] = r0;
-      // la forward deflation è sbagliata in entrambi i casi!! Fix it!!!
+      // la forward deflation è sbagliata nel secondo caso!! Fix it!!!
       if (r0.imag()==0)
         {
           // deflate by (x-r0) and call quintic solver
@@ -545,6 +545,8 @@ public:
             {
               //forward deflation
               //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+#if 0
+
               deflcoeff1[N-1]=1.0;
               for (i=0; i < N-1; i++)
                 {
@@ -554,6 +556,16 @@ public:
                   deflcoeff1[i] /= -r0.real();
                   //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
                 }
+#else
+              deflcoeff1[0]=-cmon[0]/r0.real();
+              deflcoeff1[N-1] = 1.0;
+              //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
+              for (i=1; i < N-1; i++)
+                {
+                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
+                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                }
+#endif
               //deflcoeff1.show();
               // choose the set which yields smaller error 
               err0=calc_err_q(deflcoeff0,r0.real());
@@ -568,7 +580,7 @@ public:
           // refine deflated quartic coefficients here
           //deflcoeff.show("prima");
           //pvector<ntype,N-1> bd;
-          deflcoeff=deflcoeff0;
+          //deflcoeff=deflcoeff0;
           use_NR_defl_lin(deflcoeff,r0.real());
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
