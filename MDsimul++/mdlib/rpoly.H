@@ -531,8 +531,9 @@ public:
       roots[0] = r0;
       if (r0.imag()==0)
         {
-          // deflate by (x-r0) and call quintic solver
-          // backward deflation
+          // deflate by (x-r0) and call N-1 degree polynomial solver
+          // backward deflation (i.e. it starts from N down to 1 and calculate all coefficients of N-1 degree 
+          // deflated polynomial of order  
           for (i=N; i >=1; i--)
             {
               //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
@@ -545,7 +546,6 @@ public:
               //forward deflation
               //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
 #if 0
-
               deflcoeff1[N-1]=1.0;
               for (i=0; i < N-1; i++)
                 {
@@ -576,10 +576,7 @@ public:
             }
           else
             deflcoeff = deflcoeff0;
-          // refine deflated quartic coefficients here
-          //deflcoeff.show("prima");
-          //pvector<ntype,N-1> bd;
-          //deflcoeff=deflcoeff0;
+          //refine deflated quartic coefficients thourh Newton-Raphson method
           use_NR_defl_lin(deflcoeff,r0.real());
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
@@ -591,19 +588,21 @@ public:
         }
       else
         {
-          // qui ci sono ancora casini e non funziona
-          // la forward deflation ancora non funziona
-          // deflate by (x-r0)*(x-conj(r0)) and call quartic solver
+          //
+          // la forward deflation ancora non funziona (se la si esclude tutto sembra funzionare)
+          // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
+          // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
           roots[1] = conj(r0);
           //cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
           rpoly<ntype,N-2> rp;
           pvector<ntype,3> ad;
           pvector<ntype,N-1> bd, bd0, bd1;
           pvector<ntype,N-1> ro;
-          // find coefficients for deflation
+          // find coefficients of quadratic polynomial for deflation
           ad[2] = 1.0;
           ad[1] = -2*roots[0].real();
           ad[0] = abs(roots[0])*abs(roots[0]);
+          //do forward and backward deflation and then choose the one which provides smaller error
           //backward deflation 
           for (i=N; i >=2;  i--)
             {
@@ -648,6 +647,7 @@ public:
               bd1.show("bd1=");
               exit(-1);
             }
+          // find zeroes of N-2 degree polynomial
           rp.set_coeff(bd);
           rp.find_roots(ro_quad);
           //ro_quad.show("quartic roots=");
