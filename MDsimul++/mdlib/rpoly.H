@@ -182,6 +182,16 @@ public:
     {
       coeff = v;
     }
+  complex<ntype> evalpoly(complex<ntype> x)
+    {
+      // evaluate polynomail via Horner's formula 
+      complex<ntype> bn=0.0;
+      for (int i=N; i >= 0; i--)
+        {
+          bn = cmon[i] + bn*x;
+        }
+      return bn;
+    }
 
   ntype evalpoly(ntype x)
     {
@@ -219,13 +229,14 @@ public:
   ntype calc_err_q(pvector<ntype,N> c, ntype r0)
     {
       int i;
-      ntype sum;
-      sum = (cmon[N-1]==0.0)?abs((c[N-2] - r0)-cmon[N-1]):abs(((c[N-2] - r0)-cmon[N-1])/cmon[N-1]);
-      for (i=N-2; i >=0; i--)
+      ntype sum=0;
+      for (i=0; i < N; i--)
         {
-          sum += (cmon[i]==0)?abs((c[i-1] - r0)-cmon[i]):abs(((c[i-1] - r0)-cmon[i])/cmon[i]);
+          if (i >= 1)
+            sum += (cmon[i]==0)?abs(r0*c[i]+cmon[i]):abs((r0*c[i]+cmon[i])/cmon[i]);
+          sum += (cmon[i]==0)?abs(-c[i-1] + r0*c[i] + cmon[i]):abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
         }
-      sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
+      //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
 #if 0
@@ -471,6 +482,7 @@ public:
             x=x1;
           else 
             x -= frac[iter/MT]*dx;
+          //cout << "x=" << x << " iter=" << iter << "\n";
         }
       //cout << "too many iterations in laguer\n";
       return false;
@@ -579,12 +591,21 @@ public:
             }
           else
             deflcoeff = deflcoeff0;
+          
+          if (err0 > 1E-4 && err1 > 1E-4)
+            { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
+              cout << "r0=" << r0 << "\n";
+              this->show("poly=");
+              deflcoeff.show("deflation coefficients");
+            }
           //refine deflated quartic coefficients thourh Newton-Raphson method
           use_NR_defl_lin(deflcoeff,r0.real());
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           qp.set_coeff(deflcoeff);
           qp.find_roots(qr);
+          qr.show("quintic roots=");
+          exit(-1);
           for (i=1; i < N; i++)
             roots[i] = qr[i-1];
           //roots.show();
@@ -640,7 +661,8 @@ public:
               bd = bd1;
             }
           //bd=bd0;
-          //cout << "err0=" << err0 << " err1=" << err1 << "\n";
+        if (err0 > 1E-4 || err1 > 1E-4)
+          cout << "err0=" << err0 << " err1=" << err1 << "\n";
           pvector<complex<ntype>,4> ro_quad;
           //use_NR_defl_quad(bd,ad);
           if (bd[4]==0.0)
