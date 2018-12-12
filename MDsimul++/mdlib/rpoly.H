@@ -517,6 +517,9 @@ public:
       r0 = 0.0;
       iter = 0;
       sig=1.0;
+      // find first zero using laguerre
+      // if it does not converge generate a random initial guess
+      // and retry (a limited number of times though!)
       while (!laguer(r0))
         {
           r0 = sig*complex<ntype>(drand48()-0.5,drand48()-0.5);
@@ -620,9 +623,9 @@ public:
                 {
                   bd1[i] = cmon[i];
                   if (i >= 1)
-                    bd1[i] -= bd[i-1]*ad[1];
+                    bd1[i] -= bd1[i-1]*ad[1];
                   if (i >= 2)
-                    bd1[i] -= bd[i-2];
+                    bd1[i] -= bd1[i-2];
                   bd1[i] /= ad[0];
                 }
             }
@@ -636,7 +639,7 @@ public:
             {
               bd = bd1;
             }
-          bd=bd0;
+          //bd=bd0;
           //cout << "err0=" << err0 << " err1=" << err1 << "\n";
           pvector<complex<ntype>,4> ro_quad;
           //use_NR_defl_quad(bd,ad);
