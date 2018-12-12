@@ -15,14 +15,10 @@
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
-#define QUINTIC_OPT
-#define DEG_6
 using namespace std;
-#ifdef DEG_6
 template<class T>
 inline const T MAX(const T &a, const T &b)
         {return b > a ? (b) : (a);}
-#endif
 template <class ntype, int N, bool force_hqr=false> 
 class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
@@ -187,7 +183,6 @@ public:
       coeff = v;
     }
 
-#ifdef QUINTIC_OPT
   ntype evalpoly(ntype x)
     {
       // evaluate polynomail via Horner's formula 
@@ -233,6 +228,7 @@ public:
       sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
+#if 0
   void use_NR(pvector<ntype,N>& defc, ntype r0)
     {
       ntype errf, errfold, det;
@@ -291,7 +287,7 @@ public:
       for (i=0; i < N-1; i++)
         defc[i] = c[i];
     }
-#ifdef DEG_6
+#endif
   void use_NR_defl_lin(pvector<ntype,N>& bd, ntype r0)
     {
       ntype term, errf, errfold;
@@ -308,6 +304,7 @@ public:
           if (i < N-1)
             fvec[i-1] = -c[i]*r0;
           fvec[i-1] += c[i-1];
+          fvec[i-1] -= cmon[i];
         }
       //cmon.show("monic coeff=");
       //defc.show("deflcoeff");
@@ -336,6 +333,7 @@ public:
               if (i < N-1)
                 fvec[i-1] = -c[i]*r0;
               fvec[i-1] += c[i-1];
+              fvec[i-1] -= cmon[i];
             }
           errfold = errf;
           for (i=1; i < N-1; i++)
@@ -639,7 +637,6 @@ public:
         }
       //cout << "x=" << r0 << "\n";
     } 
-#endif
   void quintic(pvector<complex <ntype>,N>& roots)
     {
       ntype coeffder[N-1];
@@ -839,8 +836,12 @@ public:
         deflcoeff = deflcoeff0;
       // refine deflated quartic coefficients here
       //deflcoeff.show("prima");
-      use_NR(deflcoeff,r0);
-      //deflcoeff.show("dopo");
+#if 1
+       use_NR_defl_lin(deflcoeff,r0);
+#else
+       use_NR(deflcoeff,r0);
+#endif
+        //deflcoeff.show("dopo");
       // calculate roots of quartic
       quar.set_coeff(deflcoeff);
       quar.find_roots(qroots);
@@ -850,7 +851,6 @@ public:
           roots[i] = qroots[i-1];
         }
     }
-#endif
   pvector<ntype,N+1> get_coeff()
     {
       return coeff;
@@ -904,7 +904,6 @@ public:
         }
       else if constexpr (N==5)
         {
-#ifdef QUINTIC_OPT
           if constexpr (force_hqr)
 	    {
               int ok=1;
@@ -914,14 +913,9 @@ public:
             {
               quintic(roots);     
             }   
-#else
-          int ok=1;
-          solve_numrec(roots, ok);
-#endif
         }
       else if constexpr (N==6)
         {
-#ifdef DEG_6
           if constexpr (force_hqr)
             {
               int ok=1;
@@ -931,10 +925,6 @@ public:
             {
               deg6roots(roots);
             }
-#else
-          int ok=1;
-          solve_numrec(roots, ok);
-#endif
         }
       else
         {
