@@ -66,16 +66,16 @@ int main()
   exit(-1);
 #endif
   srand48(4242);
-  double sig=1E30;
-  for (int i=0; i < 10000000; i++)
+  double sig=1.0;
+  for (int i=0; i < 4000000; i++)
     {
-      c[5]=sig*(drand48()-0.5);
+      c[5]=1.0;
       c[4]=sig*(drand48()-0.5);
       c[3]=sig*(drand48()-0.5);
       c[2]=sig*(drand48()-0.5);
       c[1]=sig*(drand48()-0.5);
       c[0]=sig*(drand48()-0.5);
-#if 0
+#if 1
       rp.set_coeff(c);
       rp.find_roots(roots);
 #else

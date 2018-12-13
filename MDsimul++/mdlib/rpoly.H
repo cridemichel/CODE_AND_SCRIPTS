@@ -29,16 +29,22 @@ class rpoly: public numeric_limits<ntype> {
   //force_hqr;
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
-
   int maxdigits;
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
     {
-      const int MAXIT=1000;
+      const int MAXIT=10000;
       int j;
       ntype df,dx,dxold,f,fh,fl,temp,xh,xl,rts;
 
       fl=evalpoly(x1);
       fh=evalpoly(x2);
+#if 0
+      this->show("p[x_]:=");
+      cout << "p[ "<< x2 << "]=" << evalpoly(x2) << "\n";
+      cout << "dp[" << x2 << "]=" << evaldpoly(x2) << "\n";
+      cmonder.show();
+      exit(-1);
+#endif
       if ((fl > 0.0  && fh > 0.0) || (fl < 0.0 && fh < 0.0))
         {
           cout << "Root must be bracketed in rtsafe\n";
@@ -267,7 +273,7 @@ public:
 
       for (int i=N-1; i >= 0; i--)
         {
-          bn = (i+1)*cmonder[i+1] + bn*x;
+          bn = (i+1)*cmon[i+1] + bn*x;
         }
       return bn;
     }
@@ -279,7 +285,7 @@ public:
         return 0;
       for (int i=N-2; i >= 0; i--)
         {
-          bn = (i+2)*(i+1)*cmondder[i+2] + bn*x;
+          bn = (i+2)*(i+1)*cmon[i+2] + bn*x;
         }
       return bn;
     }
@@ -930,7 +936,7 @@ public:
         } 
       // first root
       //cout << "BOH xleft=" << xleft << " xright=" << xright << "\n";
-//#define USE_BRENT
+#define USE_BRENT
 #ifdef USE_BRENT
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
 #else
