@@ -388,9 +388,9 @@ public:
       //defc.show("deflcoeff");
       //fvec.show("errori=");
       errf = 0;
-      for (i=1; i <N-1; i++)
+      for (i=2; i <N; i++)
         {
-          errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+          errf += abs((cmon[i]==0)?fvec[i-2]:(fvec[i-2]/cmon[i]));
         }
       //cout << "errf inizio=" << errf << "\n";
       for (i=0; i < N-2; i++)
@@ -411,7 +411,7 @@ public:
         {
           cold = c;
           c = c - Jinv*fvec;
-          for (i=1; i < N-1; i++)
+          for (i=2; i < N; i++)
             {
               fvec[i-2] = cmon[i];
               if (i < N-1)
@@ -421,7 +421,7 @@ public:
             }
 
           errfold = errf;
-          for (i=1; i < N-1; i++)
+          for (i=2; i < N; i++)
             {
               errf += abs((cmon[i]==0)?fvec[i-2]:(fvec[i-2]/cmon[i]));
             }
@@ -543,11 +543,13 @@ public:
         };
       //cout << "qui\n";
       roots[0] = r0;
-      if (0&&r0.imag()==0)
+      if (r0.real()!=0 && abs(r0.imag())/abs(r0) < 1E-7)// numeric_limits<ntype>::epsilon())
         {
           // deflate by (x-r0) and call N-1 degree polynomial solver
           // backward deflation (i.e. it starts from N down to 1 and calculate all coefficients of N-1 degree 
           // deflated polynomial of order  
+          //if (r0.imag()!=0)
+            //cout << "r0=" << r0.imag() << "\n";
           for (i=N; i >=1; i--)
             {
               //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
@@ -659,6 +661,8 @@ public:
               cout << "r0=" << r0 << "\n";
               this->show("poly=");
               bd.show("deflation coefficients");
+              ad.show("quadratic coeff");
+              exit(-1);
             }
 
           //bd=bd0;
