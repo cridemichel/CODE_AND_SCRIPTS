@@ -75,7 +75,7 @@ int main()
       c[2]=sig*(drand48()-0.5);
       c[1]=sig*(drand48()-0.5);
       c[0]=sig*(drand48()-0.5);
-#if 1
+#if 0
       rp.set_coeff(c);
       rp.find_roots(roots);
 #else

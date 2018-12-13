@@ -568,7 +568,7 @@ public:
         }
       return sum;
     }
-  void deg6roots(pvector<complex <ntype>,N>& roots)
+  void evendegree(pvector<complex <ntype>,N>& roots)
     {
       // find initial guess for x here
       complex<double> r0;
@@ -583,7 +583,7 @@ public:
       int iter, caso, i;
       if (coeff[N]==0.0)
         {
-          cout << "That's not a quintic!\n";
+          cout << "That's not an " << N << "degree polynomial!\n";
           return;
         }
       cmon[N]=1.0;
@@ -740,7 +740,7 @@ public:
       else
         {
           rpoly<ntype,N-2> rp;
-          pvector<complex<ntype>,4> ro_quad;
+          pvector<complex<ntype>,N-2> ro_quad;
           roots[0] = r0;
           roots[1] = conj(r0);
 
@@ -774,7 +774,7 @@ public:
         }
       //cout << "x=" << r0 << "\n";
     } 
-  void quintic(pvector<complex <ntype>,N>& roots)
+  void odd_degree(pvector<complex <ntype>,N>& roots)
     {
       ntype coeffder[N-1];
       rpoly<ntype, N-1> quar;
@@ -787,7 +787,7 @@ public:
       int i, cc;
       if (coeff[N]==0.0)
         {
-          cout << "That's not a quintic!\n";
+          cout << "That's not an " << N  << " degree polynomial!\n";
           return;
         }
       cmon[N]=1.0;
@@ -1050,7 +1050,7 @@ public:
               oqs_quartic_solver(roots);
             }
         }
-      else if constexpr (N==5)
+      else if constexpr (N <= 10)
         {
           if constexpr (force_hqr)
 	    {
@@ -1059,20 +1059,12 @@ public:
 	    }
 	  else
             {
-              quintic(roots);     
+              if constexpr (N % 2 == 0)
+                evendegree(roots);
+              else 
+                odd_degree(roots);
+              //quintic(roots);     
             }   
-        }
-      else if constexpr (N==6)
-        {
-          if constexpr (force_hqr)
-            {
-              int ok=1;
-	      solve_numrec(roots, ok);
-            }
-          else
-            {
-              deg6roots(roots);
-            }
         }
       else
         {

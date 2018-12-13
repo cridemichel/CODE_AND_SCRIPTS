@@ -80,7 +80,7 @@ int main()
   //exit(-1);
 #endif
   srand48(4242);
-  double sig=1E10;
+  double sig=1.0;
   for (int i=0; i < 2000000; i++)
     {
       c[6]=sig*(drand48()-0.5);
