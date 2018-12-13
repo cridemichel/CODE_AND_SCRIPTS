@@ -402,7 +402,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           c = c - Jinv*fvec;
           for (i=N-2; i >= 0; i--)
             {
-              fvec[i] = c[i]-r0*((i==N-2)?1:defc[i+1])-cmon[i+1];
+              fvec[i] = c[i]-r0*((i==N-2)?1:c[i+1])-cmon[i+1];
             } 
           errfold = errf;
           errf = 0;
@@ -734,8 +734,8 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       ntype errAprima=calc_err_q(deflcoeff,r0.real());
       use_NR_defl_lin(deflcoeff,r0.real());
       errA=calc_err_q(deflcoeff,r0.real());
-      if (errA < errAprima)
-        cout << "ok " << errAprima << " " << errA << "\n";
+      //if (errA < errAprima)
+       // cout << "ok " << errAprima << " " << errA << "\n";
       //roots.show();
       // find coefficients of quadratic polynomial for deflation
       ad[2] = 1.0;
