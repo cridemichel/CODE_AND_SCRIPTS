@@ -267,7 +267,7 @@ public:
   using pvecbase<ntype,NT>::v;
   using pvecbase<ntype,NT>::N;
   // /numeric_limits<complex<double>>::digits10=0 that's why I set explicitly 16;//fix this!
-  static const int maxdigits=16;//numeric_limits<ntype>::digits10;
+  static const int maxdigits=32;//numeric_limits<ntype>::digits10;
 
   pvector<ntype,NT>(int NN): pvecbase<ntype,NT>(NN)
     {

@@ -6,13 +6,13 @@
 int main()
 {
   using numty=double;
-  rpoly<numty,5> rp;
-  rpoly<numty,5> qp;
-  pvector<numty, 6> cq;
-  pvector<numty, 6> c;
+  rpoly<numty,4> rp;
+  rpoly<numty,4> qp;
+  pvector<numty, 5> cq;
+  pvector<numty, 5> c;
   complex<numty> x1c, x2c, x3c, x4c;
-  pvector<complex<numty>, 5> roots;
-  pvector<complex<numty>, 5> qroots;
+  pvector<complex<numty>, 4> roots;
+  pvector<complex<numty>, 4> qroots;
 #if 1
 #if 0
   cq[5] = 1.0;
@@ -28,14 +28,11 @@ int main()
 
   exit(-1);
 #endif
-  c[0] = 274;
-  c[1] = -450;
-  c[2] = 255;
-  c[3] = -60;
-  c[4] = 5;
+  c << 472243124.240346431732177734375,7696622737.7104816436767578125,31022460479.0019378662109375,-352127.84849279653280973434448242,1;  
   rp.set_coeff(c);
   rp.find_roots(roots);
   roots.show("boh"); 
+  exit(-1);
   x1c = 1;
   x2c = 2;
   x3c = 3;
@@ -54,7 +51,6 @@ int main()
   srand48(4242);
   for (int i=0; i < 100000000; i++)
     {
-      c[5]=1.0;
       c[4]=drand48()-0.5;
       c[3]=drand48()-0.5;
       c[2]=drand48()-0.5;

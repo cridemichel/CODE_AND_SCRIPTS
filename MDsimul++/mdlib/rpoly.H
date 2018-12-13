@@ -605,10 +605,11 @@ public:
         }
       else
         {
-          errA=calc_err_q(deflcoeff0,r0.real());
           deflcoeff = deflcoeff0;
         }
-#if 1
+
+      use_NR_defl_lin(deflcoeff,r0.real());
+      errA=calc_err_q(deflcoeff0,r0.real());
       //roots.show();
       // find coefficients of quadratic polynomial for deflation
       ad[2] = 1.0;
@@ -652,24 +653,26 @@ public:
         }
       else
         {
-          errB=calc_err_defl_quad(bd0, ad);
           bd = bd0;
         }
-#endif
-      // la forward deflation ancora non funziona (se la si esclude tutto sembra funzionare)
+
+      use_NR_defl_quad(bd,ad);
+      errB=calc_err_defl_quad(bd0, ad);
+      //cout << "errA = " << errA << " errB=" << errB << "\n";
       // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
       // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
-      //cout << "errA=" << errA << " errB=" << errB << "\n";
       if (errA < errB)
         {
           roots[0] = r0;
           //refine deflated quartic coefficients thourh Newton-Raphson method
-          use_NR_defl_lin(deflcoeff,r0.real());
+          //cout << "dopo errA = " << calc_err_q(deflcoeff,r0.real()) << "\n";
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           qp.set_coeff(deflcoeff);
+          //deflcoeff.show("quartic coefficients=");
+          //qp.show("quintic equation=");
           qp.find_roots(qr);
-          // qr.show("quintic roots=");
+          //qr.show("quintic roots=");
           //exit(-1);
           for (i=1; i < N; i++)
             roots[i] = qr[i-1];
@@ -694,7 +697,6 @@ public:
           if (err0 > 1E-4 || err1 > 1E-4)
             cout << "err0=" << err0 << " err1=" << err1 << "\n";
 #endif
-          use_NR_defl_quad(bd,ad);// il NR ancora non funziona
           if (bd[4]==0.0)
             {
               bd.show("bd=");
@@ -875,7 +877,7 @@ public:
       //cout << "BOH xleft=" << xleft << " xright=" << xright << "\n";
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
       roots[0] = r0;
-      //cout << "r0=" << r0 << "\n";
+      //cout << "quintic r0=" << r0 << "\n";
       // deflate quintic and use OQS
       // first set of coefficients
       deflcoeff0[N-1]=1.0;
@@ -905,9 +907,13 @@ public:
             deflcoeff = deflcoeff0;
           else
             deflcoeff = deflcoeff1;
+          //cout << "err0= " << err0 << " err1=" << err1 << "\n";
         }
       else
-        deflcoeff = deflcoeff0;
+        {
+          //cout << "err0=" << calc_err_q(deflcoeff0, r0) << "\n";
+          deflcoeff = deflcoeff0;
+        }
       // refine deflated quartic coefficients here
       //deflcoeff.show("prima");
 #if 1
@@ -915,15 +921,17 @@ public:
 #else
        use_NR_delf_lin_alt(deflcoeff,r0);
 #endif
-        //deflcoeff.show("dopo");
-      // calculate roots of quartic
-      quar.set_coeff(deflcoeff);
-      quar.find_roots(qroots);
-      //quar.show("deflq=");
-      for (i=1; i < N; i++)
-        {
-          roots[i] = qroots[i-1];
-        }
+
+       //deflcoeff.show("QUARTIC IN QUINTIC dopo");
+       // calculate roots of quartic
+       quar.set_coeff(deflcoeff);
+       quar.find_roots(qroots);
+       //quar.show("deflq=");
+       //qroots.show("quartic roots=");
+       for (i=1; i < N; i++)
+         {
+           roots[i] = qroots[i-1];
+         }
     }
   pvector<ntype,N+1> get_coeff()
     {
@@ -1158,7 +1166,8 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
 {
   /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
    * (see sec. 2.2 in the manuscript) */ 
-  ntype Q, R, theta, Q3, R2, A, B, sqrtQ;
+  ntype Q, R, theta, Q3, R2, A, B, sqrtQ, rq3;
+
   Q = -b/3.0;
   R = 0.5*c;
   // these number could be made larger for long double */
@@ -1172,7 +1181,15 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   R2 = Sqr(R);
   if (R2 < Q3)
     {
-      theta = acos(R/sqrt(Q3));
+      // se si use -Ofast rq3 può essere >1 o < -1 di quantità minori di machine epsilon 
+      // causando dei NaN
+      rq3 = R/sqrt(Q3);
+      if (rq3 > 1.0)
+        theta = 1.0;
+      else if (rq3 < -1.0)
+        theta  = M_PI;
+      else
+        theta = acos(rq3);
       sqrtQ=-2.0*sqrt(Q);
       if (theta < M_PI/2) 
 	sol = sqrtQ*cos(theta/3.0);
@@ -1182,7 +1199,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   else
     {
       A = -copysign(1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
-      if (A==0.0)
+       if (A==0.0)
 	B=0.0;
       else
 	B = Q/A;
@@ -1469,7 +1486,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   c=coeff[1]/coeff[4];
   d=coeff[0]/coeff[4];
   oqs_calc_phi0(a,b,c,d,phi0,0);
-
+  //cout << "phi0=" << phi0 << "\n";
   // simple polynomial rescaling
   if (isnan(phi0)||isinf(phi0))
     {

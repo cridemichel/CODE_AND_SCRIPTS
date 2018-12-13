@@ -516,9 +516,18 @@ int main(int argc, char **argv)
 	    {	
 	     dE = (exsol[k]!=complex<double>(0,0))?abs((csolall[ic][k] - exsol[k])/exsol[k]):
 	       abs(csolall[ic][k] - exsol[k]); 
+            
 	      if (dE > 0.0)
 		{
 		  logdE=log10(dE)-logdEmin;
+                  if (ic==1 && log10(dE) > -1)
+                    {
+                      exsol.show("exact sol=");
+                      csolall[ic].show("calculated roots");
+                      c.show("coefficients=");
+                      oqs.show("f[x_]:=");
+                      exit(-1);
+                    }
 		  ilogdE=(int)(logdE/dlogdE);
 		  if (ilogdE >= 0 && ilogdE < numpts)
 		    {
