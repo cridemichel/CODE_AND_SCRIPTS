@@ -1180,6 +1180,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   R2 = Sqr(R);
   if (R2 < Q3)
     {
+#ifdef FAST_MATH
       // se si use -Ofast rq3 può essere >1 o < -1 di quantità minori di machine epsilon 
       // causando dei NaN
       rq3 = R/sqrt(Q3);
@@ -1189,6 +1190,9 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
         theta  = M_PI;
       else
         theta = acos(rq3);
+#else
+      theta = acos(R/sqrt(Q3));
+#endif
       sqrtQ=-2.0*sqrt(Q);
       if (theta < M_PI/2) 
 	sol = sqrtQ*cos(theta/3.0);
