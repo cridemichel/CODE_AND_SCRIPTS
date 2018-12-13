@@ -545,6 +545,7 @@ public:
       //cout << "qui\n";
       roots[0] = r0;
       // if the imaginary part is small within numerical accuracy we treat r0 as a real number
+      // since in laguer algo sqrt() is involved numerical accuracy means sqrt(numeric_limits<ntype>::epsilon)
       if (abs(r0.imag())/abs(r0) < eps05) 
         {
           // deflate by (x-r0) and call N-1 degree polynomial solver
