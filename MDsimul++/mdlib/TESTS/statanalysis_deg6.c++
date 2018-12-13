@@ -292,7 +292,7 @@ void save_PE(long long int numtrials, int numpts, double dlogdE, double logdEmin
 	{
 	  if (PEall[ic][k]==0) 
 	    continue;
-	  fprintf(f, "%.32G %.32G\n", k*dlogdE+logdEmin, PEall[ic][k]/((double)numtrials)/4.);
+	  fprintf(f, "%.32G %.32G\n", k*dlogdE+logdEmin, PEall[ic][k]/((double)numtrials)/6.);
 	}
       fclose(f);
     }
@@ -305,7 +305,7 @@ void save_PE(long long int numtrials, int numpts, double dlogdE, double logdEmin
 	  cumPEall[ic][k] = 0.0;
 	  for (kk=k; kk < numpts; kk++) 
 	    {
-	      cumPEall[ic][k] += PEall[ic][kk]/((double)numtrials)/4.0;
+	      cumPEall[ic][k] += PEall[ic][kk]/((double)numtrials)/6.0;
 	    }
 	}
     }

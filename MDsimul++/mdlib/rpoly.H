@@ -303,8 +303,70 @@ public:
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
-#if 1
+#if 0
   void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
+    {
+      ntype errf, errfold, det;
+      pvector<ntype,N-1> c, cold;
+      pvector<ntype,N-1> fvec;
+      pmatrixq<ntype,N-1> Jinv;
+      int i, j, iter;
+
+      for (i=0; i < N-2; i++)
+        c[i]=defc[i];
+      for (i=1; i < N; i++)
+        {
+          fvec[i-1] = c[i-1]-r0*((i==N-2)?1:c[i])-cmon[i];
+        } 
+      //cmon.show("monic coeff=");
+      //defc.show("deflcoeff");
+      //fvec.show("errori=");
+      errf = 0;
+      for (i=1; i < N; i++)
+        {
+          errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+        }
+      //cout << "errf inizio=" << errf << "\n";
+      for (i=0; i < N-1; i++)
+        for (j=0; j < N-1; j++)
+          Jinv[i][j] = (i==j)?1.0:0.0;
+      for (j=0; j < N-2; j++)
+        for (i=j+1; i < N-1; i++)
+          {
+            Jinv[i][j]=r0*Jinv[i-1][j];
+          }
+      // Jinv.show();
+      for (iter = 0; iter < 8; iter++)
+        {
+          cold = c;
+          c = c - Jinv*fvec;
+          for (i=1; i < N; i++)
+            {
+              fvec[i-1] = c[i-1]-r0*((i==N-2)?1:c[i])-cmon[i];
+            } 
+          errfold = errf;
+          errf = 0;
+          for (i=1; i < N; i++)
+            {
+              errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+            }
+          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
+          if (errf==0)
+            break;
+          if (errf > errfold)
+            {
+              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
+              c = cold;
+              break;
+            }
+          
+        } 
+      for (i=0; i < N-1; i++)
+        defc[i] = c[i];
+    }
+
+#else
+void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
     {
       ntype errf, errfold, det;
       pvector<ntype,N-1> c, cold;
@@ -362,6 +424,7 @@ public:
       for (i=0; i < N-1; i++)
         defc[i] = c[i];
     }
+
 #endif
   void use_NR_defl_lin_alt(pvector<ntype,N>& bd, ntype r0)
     {
@@ -446,7 +509,7 @@ public:
           if (i < N-1)
             fvec[i-2] -= ((i==N-2)?1.0:c[i])*ad[0];
           fvec[i-2] -= ((i==N-1)?1.0:c[i-1])*ad[1];
-          fvec[i-2] -= ((i==N-1)?1.0:ad[1])*c[i-2];
+          fvec[i-2] -= c[i-2];
         }
       //cmon.show("monic coeff=");
       //defc.show("deflcoeff");
@@ -461,11 +524,11 @@ public:
         for (j=0; j < N-2; j++)
           {
             if (i==j)
-              J[i][j] = 1.0;
-            else if (i+1==j)
-              J[i][j] = ad[1];
-            else if (i+2==j)
-              J[i][j] = ad[0];
+              J[i][j] = -1.0;
+            else if (i==j+1)
+              J[i][j] = -ad[1];
+            else if (i==j+2)
+              J[i][j] = -ad[0];
             else 
               J[i][j] = 0.0;
           }
@@ -481,7 +544,7 @@ public:
               if (i < N-1)
                 fvec[i-2] -= ((i==N-2)?1.0:c[i])*ad[0];
               fvec[i-2] -= ((i==N-1)?1.0:c[i-1])*ad[1];
-              fvec[i-2] -= ((i==N-1)?1.0:ad[1])*c[i-2];
+              fvec[i-2] -= c[i-2];
             }
 
           errfold = errf;
@@ -668,8 +731,11 @@ public:
           deflcoeff = deflcoeff0;
         }
 
+      ntype errAprima=calc_err_q(deflcoeff,r0.real());
       use_NR_defl_lin(deflcoeff,r0.real());
-      errA=calc_err_q(deflcoeff0,r0.real());
+      errA=calc_err_q(deflcoeff,r0.real());
+      if (errA < errAprima)
+        cout << "ok " << errAprima << " " << errA << "\n";
       //roots.show();
       // find coefficients of quadratic polynomial for deflation
       ad[2] = 1.0;
@@ -715,9 +781,14 @@ public:
         {
           bd = bd0;
         }
-
-      use_NR_defl_quad(bd,ad);
-      errB=calc_err_defl_quad(bd0, ad);
+   
+    // ntype errBprima = calc_err_defl_quad(bd, ad);  
+     use_NR_defl_quad(bd,ad);
+     errB=calc_err_defl_quad(bd, ad);
+     //if (errB < errBprima)
+       //cout << "prima =" << errBprima << " dopo=" << errB << "\n";
+     
+      // cout << "prima =" << errBprima << " dopo=" << errB << "\n";
       //cout << "errA = " << errA << " errB=" << errB << "\n";
       // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
       // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
