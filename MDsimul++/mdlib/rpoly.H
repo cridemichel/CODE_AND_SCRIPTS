@@ -1005,7 +1005,7 @@ public:
     {
       n=N;
       meps = epsilon();
-      eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
+      eps05 = pow(numeric_limits<ntype>::epsilon(),0.5)/1.618034;
       maxf= getmax();
       maxdigits = numeric_limits<ntype>::digits10;
       //force_hqr=0;
