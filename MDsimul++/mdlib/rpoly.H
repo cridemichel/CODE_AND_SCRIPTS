@@ -97,7 +97,7 @@ class rpoly: public numeric_limits<ntype> {
   //ntype (rpoly<ntype,N>::*func) (ntype x);
   ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
   {
-    const int ITMAX=100;
+    const int ITMAX=1000;
     const ntype EPS=numeric_limits<ntype>::epsilon();
     int iter;
     ntype a=x1,b=x2,c=x2,d,e,min1,min2;
@@ -568,7 +568,7 @@ public:
         }
       return sum;
     }
-  void evendegree(pvector<complex <ntype>,N>& roots)
+  void even_degree(pvector<complex <ntype>,N>& roots)
     {
       // find initial guess for x here
       complex<double> r0;
@@ -940,7 +940,7 @@ public:
 #ifdef USE_BRENT
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
 #else
-      ntype r0 = rtsafe(xleft, xright, numeric_limits<ntype>::epsilon());
+      ntype r0 = rtsafe(xleft, xright, 100*numeric_limits<ntype>::epsilon());
 #endif
       roots[0] = r0;
       //cout << "quintic r0=" << r0 << "\n";
@@ -1060,7 +1060,7 @@ public:
 	  else
             {
               if constexpr (N % 2 == 0)
-                evendegree(roots);
+                even_degree(roots);
               else 
                 odd_degree(roots);
               //quintic(roots);     
