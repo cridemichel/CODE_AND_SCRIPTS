@@ -233,9 +233,10 @@ public:
       ntype sum=0;
       for (i=0; i < N; i++)
         {
-          if (i >= 1)
+          if (i == 0)
             sum += (cmon[i]==0)?abs(r0*c[i]+cmon[i]):abs((r0*c[i]+cmon[i])/cmon[i]);
-          sum += (cmon[i]==0)?abs(-c[i-1] + r0*c[i] + cmon[i]):abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
+          else 
+            sum += (cmon[i]==0)?abs(-c[i-1] + r0*c[i] + cmon[i]):abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
         }
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
@@ -607,7 +608,7 @@ public:
           errA=calc_err_q(deflcoeff0,r0.real());
           deflcoeff = deflcoeff0;
         }
-#if 0
+#if 1
       //roots.show();
       // find coefficients of quadratic polynomial for deflation
       ad[2] = 1.0;
@@ -658,8 +659,8 @@ public:
       // la forward deflation ancora non funziona (se la si esclude tutto sembra funzionare)
       // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
       // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
-      cout << "errA=" << errA << " errB=" << errB << "\n";
-      if (1 || errA < errB)
+      //cout << "errA=" << errA << " errB=" << errB << "\n";
+      if (errA < errB)
         {
           roots[0] = r0;
           //refine deflated quartic coefficients thourh Newton-Raphson method
