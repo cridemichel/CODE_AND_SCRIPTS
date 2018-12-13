@@ -515,11 +515,9 @@ public:
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
       //pvector<complex <ntype>,N> rootsA, rootsB;
-      rpoly<ntype,N-2> rp;
       pvector<ntype,3> ad;
       pvector<ntype,N-1> bd, bd0, bd1;
       pvector<ntype,N-1> ro;
-      pvector<complex<ntype>,4> ro_quad;
       int iter, caso, i;
       if (coeff[N]==0.0)
         {
@@ -663,11 +661,11 @@ public:
       // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
       if (errA < errB)
         {
+          rpoly<ntype,N-1> qp;
+          pvector<complex<ntype>,N-1> qr;
           roots[0] = r0;
           //refine deflated quartic coefficients thourh Newton-Raphson method
           //cout << "dopo errA = " << calc_err_q(deflcoeff,r0.real()) << "\n";
-          rpoly<ntype,N-1> qp;
-          pvector<complex<ntype>,N-1> qr;
           qp.set_coeff(deflcoeff);
           //deflcoeff.show("quartic coefficients=");
           //qp.show("quintic equation=");
@@ -679,6 +677,8 @@ public:
         }
       else
         {
+          rpoly<ntype,N-2> rp;
+          pvector<complex<ntype>,4> ro_quad;
           roots[0] = r0;
           roots[1] = conj(r0);
 
@@ -692,7 +692,6 @@ public:
               ad.show("quadratic coeff");
               exit(-1);
             }
-
           //bd=bd0;
           if (err0 > 1E-4 || err1 > 1E-4)
             cout << "err0=" << err0 << " err1=" << err1 << "\n";
