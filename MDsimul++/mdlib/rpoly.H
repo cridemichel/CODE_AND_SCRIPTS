@@ -31,7 +31,63 @@ class rpoly: public numeric_limits<ntype> {
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
 
   int maxdigits;
+  ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
+    {
+      const int MAXIT=1000;
+      int j;
+      ntype df,dx,dxold,f,fh,fl,temp,xh,xl,rts;
 
+      fl=evalpoly(x1);
+      fh=evalpoly(x2);
+      if ((fl > 0.0  && fh > 0.0) || (fl < 0.0 && fh < 0.0))
+        {
+          cout << "Root must be bracketed in rtsafe\n";
+          exit(-1);
+        }
+      if (fl == 0.0) 
+        return x1;
+      if (fh == 0.0) 
+        return x2;
+      if (fl < 0.0) {
+        xl=x1;
+        xh=x2;
+      } else {
+        xh=x1;
+        xl=x2;
+      }
+      rts=0.5*(x1+x2);
+      dxold=fabs(x2-x1);
+      dx=dxold;
+      //funcd(rts,f,df);
+      f = evalpoly(rts);
+      df = evaldpoly(rts);
+      for (j=0;j<MAXIT;j++) {
+        if ((((rts-xh)*df-f)*((rts-xl)*df-f) > 0.0)
+            || (fabs(2.0*f) > fabs(dxold*df))) {
+          dxold=dx;
+          dx=0.5*(xh-xl);
+          rts=xl+dx;
+          if (xl == rts) return rts;
+        } else {
+          dxold=dx;
+          dx=f/df;
+          temp=rts;
+          rts -= dx;
+          if (temp == rts) return rts;
+        }
+        if (fabs(dx) < xacc) return rts;
+        //funcd(rts,f,df);
+        f = evalpoly(rts);
+        df = evaldpoly(rts);
+
+        if (f < 0.0)
+          xl=rts;
+        else
+          xh=rts;
+      }
+      cout << "Maximum number of iterations exceeded in rtsafe\n";
+      return 0.0;
+    }
   //ntype (rpoly<ntype,N>::*func) (ntype x);
   ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
   {
@@ -874,7 +930,12 @@ public:
         } 
       // first root
       //cout << "BOH xleft=" << xleft << " xright=" << xright << "\n";
+//#define USE_BRENT
+#ifdef USE_BRENT
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
+#else
+      ntype r0 = rtsafe(xleft, xright, numeric_limits<ntype>::epsilon());
+#endif
       roots[0] = r0;
       //cout << "quintic r0=" << r0 << "\n";
       // deflate quintic and use OQS
