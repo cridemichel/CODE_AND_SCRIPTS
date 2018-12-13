@@ -28,7 +28,8 @@ class rpoly: public numeric_limits<ntype> {
   int n;
   //force_hqr;
   int imaxarg1,imaxarg2;
-  ntype meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
+  ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
+
   int maxdigits;
 
   //ntype (rpoly<ntype,N>::*func) (ntype x);
@@ -543,7 +544,8 @@ public:
         };
       //cout << "qui\n";
       roots[0] = r0;
-      if (r0.real()!=0 && abs(r0.imag())/abs(r0) < 1E-7)// numeric_limits<ntype>::epsilon())
+      // if the imaginary part is small within numerical accuracy we treat r0 as a real number
+      if (abs(r0.imag())/abs(r0) < eps05) 
         {
           // deflate by (x-r0) and call N-1 degree polynomial solver
           // backward deflation (i.e. it starts from N down to 1 and calculate all coefficients of N-1 degree 
@@ -1002,6 +1004,7 @@ public:
     {
       n=N;
       meps = epsilon();
+      eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
       maxf= getmax();
       maxdigits = numeric_limits<ntype>::digits10;
       //force_hqr=0;
