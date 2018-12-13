@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
   //exit(-1);
 #endif
   srand48(4242);
-  double sig=1.0;
+  double sig=1E10;
   if (argc>=2)
     caso = atoi(argv[1]);
   else
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
     maxiter = 1000000;
   for (int i=0; i < maxiter; i++)
     {
-      for (j=0; j < NDEG; j++)
+      for (j=0; j < NDEG+1; j++)
         c[j]=sig*(drand48()-0.5);
       if (caso==0)
         {
