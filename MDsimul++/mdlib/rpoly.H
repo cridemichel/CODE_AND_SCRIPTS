@@ -112,7 +112,7 @@ class rpoly: public numeric_limits<ntype> {
     fc=fb;
     for (iter=0;iter<ITMAX;iter++)
       {
-        if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
+       if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
           c=a;
           fc=fa;
           e=d=b-a;
@@ -940,7 +940,7 @@ public:
 #ifdef USE_BRENT
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
 #else
-      ntype r0 = rtsafe(xleft, xright, 100*numeric_limits<ntype>::epsilon());
+      ntype r0 = rtsafe(xleft, xright, 1E-8);//100*numeric_limits<ntype>::epsilon());
 #endif
       roots[0] = r0;
       //cout << "quintic r0=" << r0 << "\n";
