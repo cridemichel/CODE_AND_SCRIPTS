@@ -228,9 +228,9 @@ public:
 	      cout << "-";
 	    }
 	  if (i==0)
-	    cout << setprecision(maxdigits) << abs(coeff[i]);
+	    cout << setprecision(2*maxdigits) << abs(coeff[i]);
 	  else if (i > 0 && abs(coeff[i]) != 1.0)
-	    cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
+	    cout << setprecision(2*maxdigits) << abs(coeff[i])<< "*";
 	 
 	  if ( i > 1)
 	    {
@@ -533,6 +533,15 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               J[i][j] = 0.0;
           }
       Jinv = J.inv();
+#if 0
+      pvector<ntype, N-2> b;
+      for (i=0; i < N-2; i++)
+        b[i] = -cmon[i+2];
+      c = Jinv*b;
+      for (i=0; i < N-2; i++)
+        bd[i]=c[i];
+      return;
+#endif
       // Jinv.show();
       for (iter = 0; iter < 8; iter++)
         {
@@ -643,7 +652,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       pvector<ntype,3> ad;
       pvector<ntype,N-1> bd, bd0, bd1;
       pvector<ntype,N-1> ro;
-      int iter, caso, i;
+      int iter, i;
       if (coeff[N]==0.0)
         {
           cout << "That's not an " << N << "degree polynomial!\n";
@@ -653,7 +662,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       for (i=N-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[N];
 
-      r0 = 0.0;
+      r0 = complex<ntype>(0.0,0.0);
       iter = 0;
       sig=1.0;
       // find first zero using laguerre
@@ -671,6 +680,74 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               exit(-1); 
             }
         };
+
+      if (r0.imag()!=0)
+        {
+          // root polishing by NR
+          complex<ntype> r0old, p=cmon[n]*r0+cmon[n-1];
+          complex<ntype> p1=cmon[n];
+          ntype err, errold;
+          err=abs(evalpoly(r0));
+          for (iter=0; iter < 8; iter++)
+            {
+              for(i=n-2;i>=0;i--) {
+                p1=p+p1*r0;
+                p=cmon[i]+p*r0;
+              }
+              if (p1==complex<ntype>(0,0))
+                {
+                  break;
+                }
+              r0old=r0;
+              r0 -= p/p1;
+              errold=err;
+              err=abs(evalpoly(r0));
+              //if (err < errold)
+                //cout << "err=" << err << " errold=" << errold << "\n";
+              if (err==0)
+                break;
+              if (err > errold)
+                {
+                  r0=r0old;
+                  break;
+                }
+            }
+        }
+      else
+        {
+          // root polishing by NR
+          ntype p=cmon[n]*r0.real()+cmon[n-1];
+          ntype p1=cmon[n];
+          ntype r0r = r0.real();
+          ntype err, errold, r0old;
+          err=abs(evalpoly(r0));
+          for (iter=0; iter < 8; iter++)
+            {
+              for(i=n-2;i>=0;i--) {
+                p1=p+p1*r0r;
+                p=cmon[i]+p*r0r;
+              }
+              if (p1==complex<ntype>(0,0))
+                break;
+              r0old=r0r;
+              r0r -= p/p1;
+              errold = err;
+              if (p1==complex<ntype>(0,0))
+                {
+                  break;
+                }
+              r0r -= p/p1;
+              err=abs(evalpoly(r0r));
+              if (err==0)
+                break;
+              if (err > errold)
+                {
+                  r0r=r0old;
+                  break;
+                }
+            }
+          r0 = complex<ntype>(r0r,0);
+        }
       //cout << "qui\n";
       // if the imaginary part is small within numerical accuracy we treat r0 as a real number
       // since in laguer algo sqrt() is involved numerical accuracy means sqrt(numeric_limits<ntype>::epsilon)
@@ -782,7 +859,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           bd = bd0;
         }
    
-    // ntype errBprima = calc_err_defl_quad(bd, ad);  
+     //ntype errBprima = calc_err_defl_quad(bd, ad);  
      use_NR_defl_quad(bd,ad);
      errB=calc_err_defl_quad(bd, ad);
      //if (errB < errBprima)
@@ -792,8 +869,20 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       //cout << "errA = " << errA << " errB=" << errB << "\n";
       // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
       // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
-      if (errA < errB)
+      if (errA < errB && abs(evalpoly(r0.real())) < abs(evalpoly(r0)))// && abs(r0.imag()) < meps*abs(r0))
         {
+#if 1
+          cout << "qui?!?\n";
+          this->show();
+          bd.show("quartic deflated coeff=");
+          ad.show("quadratic deflated coeff=");
+          deflcoeff.show("quintic deflated coeff=");
+          cout << "r0=" << r0 << setprecision(20) << "\n";
+          cout << "err0= " << err0 << " err1= " << err1 << "\n";
+          cout << "errA= " << errA << " errB= " << errB << "\n";
+          cout << "p(r0)=" << evalpoly(r0) << " p(r0.real())= " << evalpoly(r0.real()) << setprecision(32) << "\n";
+          exit(-1);
+#endif
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           roots[0] = r0;
