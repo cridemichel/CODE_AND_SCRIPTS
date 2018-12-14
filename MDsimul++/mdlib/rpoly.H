@@ -679,6 +679,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               exit(-1); 
             }
         };
+
 #ifdef LAGUERRE_POLISH
       if (r0.imag()!=0)
         {
@@ -828,6 +829,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           roots[0] = r0;
           roots[1] = conj(r0);
           // find coefficients of quadratic polynomial for deflation
+
           ad[2] = 1.0;
           ad[1] = -2*r0.real();
           ad[0] = abs(r0)*abs(r0);
