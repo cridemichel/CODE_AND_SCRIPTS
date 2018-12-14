@@ -1174,7 +1174,11 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
 	    }
 	  else
             {
+#ifdef USE_LAGUERRE_ONLY
+              laguerre_defl(roots);
+#else
               odd_degree(roots);
+#endif
             }
         }
       else if constexpr (N <= 200)
