@@ -16,7 +16,7 @@
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
 //#define USE_DEFL_NR
-//#define LAGUERRE_POLISH
+#define LAGUERRE_POLISH
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 using namespace std;
@@ -604,7 +604,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           if (abs(b) <= err) return true;
           g=d/b;
           g2=g*g;
-          h=g2-2.0*f/b;
+          h=g2-ntype(2.0)*f/b;
           sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
           gp=g+sq;
           gm=g-sq;
@@ -647,7 +647,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
  void laguerre_defl(pvector<complex <ntype>,N>& roots)
     {
       // find initial guess for x here
-      complex<double> r0;
+      complex<ntype> r0;
       const ntype goldfact=1.618034;
       const int maxiter_polish=2;
       ntype sig;
@@ -1422,7 +1422,7 @@ template <class ntype, int N, bool force_hqr> void  rpoly<ntype,N,force_hqr>::oq
    * in eq. (64) (see also the discussion in sec. 2.2 of the manuscript) */
   ntype rmax, g,h,gg,hh,aq,bq,cq,dq,s,diskr;
   ntype maxtt, xxx, gx, x, xold, f, fold, df, xsq;
-  double ggss, hhss, dqss, aqs, bqs, cqs, rfact, rfactsq; 
+  ntype ggss, hhss, dqss, aqs, bqs, cqs, rfact, rfactsq; 
   int iter;
 
   diskr=9*a*a-24*b;                    

@@ -423,23 +423,23 @@ int main(int argc, char **argv)
 	{
 	  x1 = sig2*(ranf()-0.5);
 	  y1 = sig2*(ranf()-0.5);
-	  x1c = complex<long double>(x1, y1);
-	  x2c = complex<long double>(x1,-y1);
+	  x1c = x1+y1*1il;
+	  x2c = x1-y1*1il;
 	  x1 = sig*(ranf()-0.5);
 	  y1 = sig*(ranf()-0.5);
-	  x3c = complex<long double>(x1,y1);
-	  x4c = complex<long double>(x1,-y1);
+	  x3c = x1+y1*1il;
+	  x4c = x1-y1*1il;
           x1 = sig*(ranf()-0.5);
 	  y1 = sig*(ranf()-0.5);
-          x5c = complex<long double>(x1,y1);
-	  x6c = complex<long double>(x1,-y1);
+          x5c = x1+y1*1il;
+	  x6c = x1-y1*1il;
 	}
       else if (cmplxreal==1) /* two complex four real */
 	{
 	  x1 = sig2*(ranf()-0.5);
 	  y1 = sig2*(ranf()-0.5);
-	  x1c = complex<long double>(x1,y1);
-	  x2c = complex<long double>(x1,-y1);
+	  x1c = x1+y1*1il;
+	  x2c = x1-y1*1il;
 	  x1 = sig*(ranf()-0.5);
 	  y1 = sig*(ranf()-0.5);
 	  x3c = x1;
@@ -469,20 +469,20 @@ int main(int argc, char **argv)
       else
 	{
           c[6] = 1.0;
-          c[5] = (-x1c - x2c - x3c - x4c - x5c - x6c).real();
-          c[4] = (x1c*x2c + x1c*x3c + x2c*x3c + x1c*x4c + x2c*x4c + x3c*x4c + x1c*x5c + x2c*x5c + 
-   x3c*x5c + x4c*x5c + x1c*x6c + x2c*x6c + x3c*x6c + x4c*x6c + x5c*x6c).real(); 
-          c[3] = (-(x1c*x2c*x3c) - x1c*x2c*x4c - x1c*x3c*x4c - x2c*x3c*x4c - x1c*x2c*x5c - 
+          c[5] = real(-x1c - x2c - x3c - x4c - x5c - x6c);
+          c[4] = real(x1c*x2c + x1c*x3c + x2c*x3c + x1c*x4c + x2c*x4c + x3c*x4c + x1c*x5c + x2c*x5c + 
+   x3c*x5c + x4c*x5c + x1c*x6c + x2c*x6c + x3c*x6c + x4c*x6c + x5c*x6c); 
+          c[3] = real(-(x1c*x2c*x3c) - x1c*x2c*x4c - x1c*x3c*x4c - x2c*x3c*x4c - x1c*x2c*x5c - 
    x1c*x3c*x5c - x2c*x3c*x5c - x1c*x4c*x5c - x2c*x4c*x5c - x3c*x4c*x5c - 
    x1c*x2c*x6c - x1c*x3c*x6c - x2c*x3c*x6c - x1c*x4c*x6c - x2c*x4c*x6c - 
-   x3c*x4c*x6c - x1c*x5c*x6c - x2c*x5c*x6c - x3c*x5c*x6c - x4c*x5c*x6c).real();
-          c[2] = (x1c*x2c*x3c*x4c + x1c*x2c*x3c*x5c + x1c*x2c*x4c*x5c + x1c*x3c*x4c*x5c + 
+   x3c*x4c*x6c - x1c*x5c*x6c - x2c*x5c*x6c - x3c*x5c*x6c - x4c*x5c*x6c);
+          c[2] = real(x1c*x2c*x3c*x4c + x1c*x2c*x3c*x5c + x1c*x2c*x4c*x5c + x1c*x3c*x4c*x5c + 
    x2c*x3c*x4c*x5c + x1c*x2c*x3c*x6c + x1c*x2c*x4c*x6c + x1c*x3c*x4c*x6c + 
    x2c*x3c*x4c*x6c + x1c*x2c*x5c*x6c + x1c*x3c*x5c*x6c + x2c*x3c*x5c*x6c + 
-   x1c*x4c*x5c*x6c + x2c*x4c*x5c*x6c + x3c*x4c*x5c*x6c).real();
-          c[1] = (-(x1c*x2c*x3c*x4c*x5c) - x1c*x2c*x3c*x4c*x6c - x1c*x2c*x3c*x5c*x6c - 
-   x1c*x2c*x4c*x5c*x6c - x1c*x3c*x4c*x5c*x6c - x2c*x3c*x4c*x5c*x6c).real(); 
-	  c[0] = (x1c*x2c*x3c*x4c*x5c*x6c).real();
+   x1c*x4c*x5c*x6c + x2c*x4c*x5c*x6c + x3c*x4c*x5c*x6c);
+          c[1] = real(-(x1c*x2c*x3c*x4c*x5c) - x1c*x2c*x3c*x4c*x6c - x1c*x2c*x3c*x5c*x6c - 
+   x1c*x2c*x4c*x5c*x6c - x1c*x3c*x4c*x5c*x6c - x2c*x3c*x4c*x5c*x6c); 
+	  c[0] = real(x1c*x2c*x3c*x4c*x5c*x6c);
           exsol[0] = x1c;
 	  exsol[1] = x2c;
 	  exsol[2] = x3c;
@@ -500,8 +500,11 @@ int main(int argc, char **argv)
       ic++;	
       if (dojust==-1 || dojust == ic)
 	{
-          oqs.set_coeff(c);
-          oqs.find_roots(csolall[ic]);
+          //oqs.set_coeff(c);
+          //oqs.find_roots(csolall[ic]);
+          for (auto i=0; i < 6; i++)
+            csolall[ic][i] =exsol[i];
+
 	}
       for (ic = 0; ic < maxic; ic++)
 	{
