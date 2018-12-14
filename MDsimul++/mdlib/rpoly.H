@@ -662,7 +662,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       for (i=N-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[N];
 
-      r0 = complex<ntype>(0.0,0.0);
+      r0 = complex<ntype>(0.0,1.0);
       iter = 0;
       sig=1.0;
       // find first zero using laguerre
@@ -869,9 +869,11 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       //cout << "errA = " << errA << " errB=" << errB << "\n";
       // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
       // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
-      if (errA < errB && abs(evalpoly(r0.real())) < abs(evalpoly(r0)))// && abs(r0.imag()) < meps*abs(r0))
+      //if (abs(evalpoly(r0.real())) < abs(evalpoly(r0)))// && abs(r0.imag()) < meps*abs(r0))
+      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps)// && abs(r0.imag()) < meps*abs(r0))
+      //if (errA < errB && (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps) )// && abs(r0.imag()) < meps*abs(r0))
         {
-#if 1
+#if 0
           cout << "qui?!?\n";
           this->show();
           bd.show("quartic deflated coeff=");
@@ -912,6 +914,9 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               this->show("poly=");
               bd.show("deflation coefficients");
               ad.show("quadratic coeff");
+              cout << "errA= " << errA << " errB= " << errB << "\n";
+              cout << "p(r0)=" << evalpoly(r0) << " p(r0.real())= " << evalpoly(r0.real()) << setprecision(32) << "\n";
+              cout << "abs(p(r0))=" << abs(evalpoly(r0)) << " abs(p(r0.real()))= " << abs(evalpoly(r0.real())) << setprecision(32) << "\n";
               exit(-1);
             }
           //bd=bd0;
