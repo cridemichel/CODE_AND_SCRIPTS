@@ -4,7 +4,7 @@
 #include "./rpoly.H"
 #include<complex>
 #ifndef NDEG
-#define NDEG 10
+#define NDEG 6
 #endif
 int main(int argc, char* argv[])
 {
