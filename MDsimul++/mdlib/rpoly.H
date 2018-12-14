@@ -15,6 +15,10 @@
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
+//#define USE_DEFL_NR
+//#define LAGUERRE_POLISH
+#define USE_BRENT
+#define USE_LAGUERRE_ONLY 
 using namespace std;
 template<class T>
 inline const T MAX(const T &a, const T &b)
@@ -32,7 +36,7 @@ class rpoly: public numeric_limits<ntype> {
   int maxdigits;
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
     {
-      const int MAXIT=10000;
+      const int MAXIT=1000000;
       int j;
       ntype df,dx,dxold,f,fh,fl,temp,xh,xl,rts;
 
@@ -97,7 +101,7 @@ class rpoly: public numeric_limits<ntype> {
   //ntype (rpoly<ntype,N>::*func) (ntype x);
   ntype zbrent(const ntype x1, const ntype x2, const ntype tol)
   {
-    const int ITMAX=1000;
+    const int ITMAX=1000000;
     const ntype EPS=numeric_limits<ntype>::epsilon();
     int iter;
     ntype a=x1,b=x2,c=x2,d,e,min1,min2;
@@ -172,7 +176,7 @@ class rpoly: public numeric_limits<ntype> {
         fb=evalpoly(b);
       }
     cout << "Maximum number of iterations exceeded in zbrent";
-    exit(-1);
+    //exit(-1);
     return 0.0;
   }
   ntype oqs_max2(ntype a, ntype b)
@@ -640,11 +644,12 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
         }
       return sum;
     }
-  void even_degree(pvector<complex <ntype>,N>& roots)
+ void laguerre_defl(pvector<complex <ntype>,N>& roots)
     {
       // find initial guess for x here
       complex<double> r0;
       const ntype goldfact=1.618034;
+      const int maxiter_polish=2;
       ntype sig;
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
@@ -680,16 +685,19 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               exit(-1); 
             }
         };
-
+#ifdef LAGUERRE_POLISH
       if (r0.imag()!=0)
         {
           // root polishing by NR
-          complex<ntype> r0old, p=cmon[n]*r0+cmon[n-1];
-          complex<ntype> p1=cmon[n];
+          complex<ntype> r0old, p;
+          complex<ntype> p1;
           ntype err, errold;
-          err=abs(evalpoly(r0));
-          for (iter=0; iter < 8; iter++)
+          for (iter=0; iter < maxiter_polish; iter++)
             {
+              p=cmon[n]*r0+cmon[n-1];
+              p1=cmon[n];
+              if (iter==0)
+                err=abs(p);
               for(i=n-2;i>=0;i--) {
                 p1=p+p1*r0;
                 p=cmon[i]+p*r0;
@@ -701,7 +709,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               r0old=r0;
               r0 -= p/p1;
               errold=err;
-              err=abs(evalpoly(r0));
+              err=abs(p);
               //if (err < errold)
                 //cout << "err=" << err << " errold=" << errold << "\n";
               if (err==0)
@@ -716,13 +724,16 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       else
         {
           // root polishing by NR
-          ntype p=cmon[n]*r0.real()+cmon[n-1];
-          ntype p1=cmon[n];
+          ntype p;
+          ntype p1;
           ntype r0r = r0.real();
           ntype err, errold, r0old;
-          err=abs(evalpoly(r0));
-          for (iter=0; iter < 8; iter++)
+          for (iter=0; iter < maxiter_polish; iter++)
             {
+              p=cmon[n]*r0.real()+cmon[n-1];
+              p1 = cmon[n];
+              if (iter==0)
+                err=abs(p);
               for(i=n-2;i>=0;i--) {
                 p1=p+p1*r0r;
                 p=cmon[i]+p*r0r;
@@ -732,12 +743,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               r0old=r0r;
               r0r -= p/p1;
               errold = err;
-              if (p1==complex<ntype>(0,0))
-                {
-                  break;
-                }
-              r0r -= p/p1;
-              err=abs(evalpoly(r0r));
+              err=abs(p);
               if (err==0)
                 break;
               if (err > errold)
@@ -748,130 +754,8 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
             }
           r0 = complex<ntype>(r0r,0);
         }
-      //cout << "qui\n";
-      // if the imaginary part is small within numerical accuracy we treat r0 as a real number
-      // since in laguer algo sqrt() is involved numerical accuracy means sqrt(numeric_limits<ntype>::epsilon)
-
-      // deflate by (x-r0) and call N-1 degree polynomial solver
-      // backward deflation (i.e. it starts from N down to 1 and calculate all coefficients of N-1 degree 
-      // deflated polynomial of order  
-      //if (r0.imag()!=0)
-      //cout << "r0=" << r0 << "\n";
-      for (i=N; i >=1; i--)
-        {
-          //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff[" << i+1 << "]=" << deflcoeff[i+1]<< "\n";
-          deflcoeff0[i-1] = cmon[i];
-          if (i <= N-1)
-            deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
-        }
-      if (r0.real()!=0.0)
-        {
-          //forward deflation
-          //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
-#if 0
-          deflcoeff1[N-1]=1.0;
-          for (i=0; i < N-1; i++)
-            {
-              deflcoeff1[i] = cmon[i]; 
-              if (i >= 1)
-                deflcoeff1[i] -= deflcoeff1[i-1];
-              deflcoeff1[i] /= -r0.real();
-              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
-            }
-#else
-          deflcoeff1[0]=-cmon[0]/r0.real();
-          deflcoeff1[N-1] = 1.0;
-          //cout << "cmon[0]=" << cmon[0] << " deflcoeff1[0]=" << deflcoeff1[0]<< "\n";
-          for (i=1; i < N-1; i++)
-            {
-              deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
-              //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
-            }
 #endif
-          //deflcoeff1.show();
-          // choose the set which yields smaller error 
-          err0=calc_err_q(deflcoeff0,r0.real());
-          err1=calc_err_q(deflcoeff1,r0.real());
-          if (err0 < err1)
-            {
-              errA = err0;
-              deflcoeff = deflcoeff0;
-            }
-          else
-            {
-              errA = err1;
-              deflcoeff = deflcoeff1;
-            }
-        }
-      else
-        {
-          deflcoeff = deflcoeff0;
-        }
-
-      //ntype errAprima=calc_err_q(deflcoeff,r0.real());
-      use_NR_defl_lin(deflcoeff,r0.real());
-      errA=calc_err_q(deflcoeff,r0.real());
-      //if (errA < errAprima)
-       // cout << "ok " << errAprima << " " << errA << "\n";
-      //roots.show();
-      // find coefficients of quadratic polynomial for deflation
-      ad[2] = 1.0;
-      ad[1] = -2*r0.real();
-      ad[0] = abs(r0)*abs(r0);
-      //do forward and backward deflation and then choose the one which provides smaller error
-      //backward deflation 
-      for (i=N; i >=2;  i--)
-        {
-          bd0[i-2] = cmon[i];
-          if (i <= N-1)
-            bd0[i-2] -= ad[1]*bd0[i-1];
-          if (i <= N-2)
-            bd0[i-2] -= ad[0]*bd0[i];
-        }
-      if (ad[0]!=0)
-        {
-          //forward deflation
-          bd1[N-2]=1.0;
-          for (i=0; i < N-2; i++)
-            {
-              bd1[i] = cmon[i];
-              if (i >= 1)
-                bd1[i] -= bd1[i-1]*ad[1];
-              if (i >= 2)
-                bd1[i] -= bd1[i-2];
-              bd1[i] /= ad[0];
-            }
-          err0=calc_err_defl_quad(bd0, ad);
-          err1=calc_err_defl_quad(bd1, ad);
-          if (err0 < err1)
-            {
-              bd = bd0;
-              errB = err0;
-            }
-          else
-            {
-              bd = bd1;
-              errB = err1;
-            }
-        }
-      else
-        {
-          bd = bd0;
-        }
-   
-     //ntype errBprima = calc_err_defl_quad(bd, ad);  
-     use_NR_defl_quad(bd,ad);
-     errB=calc_err_defl_quad(bd, ad);
-     //if (errB < errBprima)
-       //cout << "prima =" << errBprima << " dopo=" << errB << "\n";
-     
-      // cout << "prima =" << errBprima << " dopo=" << errB << "\n";
-      //cout << "errA = " << errA << " errB=" << errB << "\n";
-      // deflate by (x-r0)*(x-conj(r0)) and call N-2 solver
-      // i.e. we obtain the factorization (x-r0)*(x-conj(r0)*(x^(N-2)+bd[N-2]*x^(N-3)...)
-      //if (abs(evalpoly(r0.real())) < abs(evalpoly(r0)))// && abs(r0.imag()) < meps*abs(r0))
-      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps)// && abs(r0.imag()) < meps*abs(r0))
-      //if (errA < errB && (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps) )// && abs(r0.imag()) < meps*abs(r0))
+      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps)
         {
 #if 0
           cout << "qui?!?\n";
@@ -888,14 +772,58 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           rpoly<ntype,N-1> qp;
           pvector<complex<ntype>,N-1> qr;
           roots[0] = r0;
+          for (i=N; i >=1; i--)
+            {
+              deflcoeff0[i-1] = cmon[i];
+              if (i <= N-1)
+                deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
+            }
+          if (r0.real()!=0.0)
+            {
+              //forward deflation
+#if 0
+              deflcoeff1[N-1]=1.0;
+              for (i=0; i < N-1; i++)
+                {
+                  deflcoeff1[i] = cmon[i]; 
+                  if (i >= 1)
+                    deflcoeff1[i] -= deflcoeff1[i-1];
+                  deflcoeff1[i] /= -r0.real();
+                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                }
+#else
+              deflcoeff1[0]=-cmon[0]/r0.real();
+              deflcoeff1[N-1] = 1.0;
+              for (i=1; i < N-1; i++)
+                {
+                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
+                }
+#endif
+              // choose the set which yields smaller error 
+              err0=calc_err_q(deflcoeff0,r0.real());
+              err1=calc_err_q(deflcoeff1,r0.real());
+              if (err0 < err1)
+                {
+                  //errA = err0;
+                  deflcoeff = deflcoeff0;
+                }
+              else
+                {
+                  //errA = err1;
+                  deflcoeff = deflcoeff1;
+                }
+            }
+          else
+            {
+              deflcoeff = deflcoeff0;
+            }
+
+#ifdef USE_DEFL_NR
+          use_NR_defl_lin(deflcoeff,r0.real());
+#endif
           //refine deflated quartic coefficients thourh Newton-Raphson method
-          //cout << "dopo errA = " << calc_err_q(deflcoeff,r0.real()) << "\n";
           qp.set_coeff(deflcoeff);
-          //deflcoeff.show("quartic coefficients=");
-          //qp.show("quintic equation=");
           qp.find_roots(qr);
-          //qr.show("quintic roots=");
-          //exit(-1);
           for (i=1; i < N; i++)
             roots[i] = qr[i-1];
         }
@@ -905,8 +833,56 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           pvector<complex<ntype>,N-2> ro_quad;
           roots[0] = r0;
           roots[1] = conj(r0);
+          // find coefficients of quadratic polynomial for deflation
+          ad[2] = 1.0;
+          ad[1] = -2*r0.real();
+          ad[0] = abs(r0)*abs(r0);
+          //do forward and backward deflation and then choose the one which provides smaller error
+          //backward deflation 
+          for (i=N; i >=2;  i--)
+            {
+              bd0[i-2] = cmon[i];
+              if (i <= N-1)
+                bd0[i-2] -= ad[1]*bd0[i-1];
+              if (i <= N-2)
+                bd0[i-2] -= ad[0]*bd0[i];
+            }
+          if (ad[0]!=0)
+            {
+              //forward deflation
+              bd1[N-2]=1.0;
+              for (i=0; i < N-2; i++)
+                {
+                  bd1[i] = cmon[i];
+                  if (i >= 1)
+                    bd1[i] -= bd1[i-1]*ad[1];
+                  if (i >= 2)
+                    bd1[i] -= bd1[i-2];
+                  bd1[i] /= ad[0];
+                }
+              err0=calc_err_defl_quad(bd0, ad);
+              err1=calc_err_defl_quad(bd1, ad);
+              if (err0 < err1)
+                {
+                  bd = bd0;
+                  //errB = err0;
+                }
+              else
+                {
+                  bd = bd1;
+                  //errB = err1;
+                }
+            }
+          else
+            {
+              bd = bd0;
+            }
 
-          //cout << "lag roots=" << roots[1] << " " << roots[0] << "\n";
+          //ntype errBprima = calc_err_defl_quad(bd, ad);  
+#ifdef USE_DEFL_NR
+          use_NR_defl_quad(bd,ad);
+#endif
+          //errB=calc_err_defl_quad(bd, ad);
 #if 0
           if (err0 > 1E-4 && err1 > 1E-4)
             { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
@@ -919,10 +895,8 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               cout << "abs(p(r0))=" << abs(evalpoly(r0)) << " abs(p(r0.real()))= " << abs(evalpoly(r0.real())) << setprecision(32) << "\n";
               exit(-1);
             }
-          //bd=bd0;
-          if (err0 > 1E-4 || err1 > 1E-4)
-            cout << "err0=" << err0 << " err1=" << err1 << "\n";
 #endif
+#if 0
           if (bd[4]==0.0)
             {
               bd.show("bd=");
@@ -930,6 +904,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               bd1.show("bd1=");
               exit(-1);
             }
+#endif
           // find zeroes of N-2 degree polynomial
           rp.set_coeff(bd);
           rp.find_roots(ro_quad);
@@ -937,7 +912,6 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           for (i=2; i < N; i++)
             roots[i] = ro_quad[i-2];
         }
-      //cout << "x=" << r0 << "\n";
     } 
   void odd_degree(pvector<complex <ntype>,N>& roots)
     {
@@ -1101,11 +1075,10 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
         } 
       // first root
       //cout << "BOH xleft=" << xleft << " xright=" << xright << "\n";
-#define USE_BRENT
 #ifdef USE_BRENT
       ntype r0 = zbrent(xleft, xright, numeric_limits<ntype>::epsilon());
 #else
-      ntype r0 = rtsafe(xleft, xright, 1E-8);//100*numeric_limits<ntype>::epsilon());
+      ntype r0 = rtsafe(xleft, xright, 1E-8);//1E-8 100*numeric_limits<ntype>::epsilon());
 #endif
       roots[0] = r0;
       //cout << "quintic r0=" << r0 << "\n";
@@ -1146,23 +1119,17 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           deflcoeff = deflcoeff0;
         }
       // refine deflated quartic coefficients here
-      //deflcoeff.show("prima");
-#if 1
-       use_NR_defl_lin(deflcoeff,r0);
-#else
-       use_NR_delf_lin_alt(deflcoeff,r0);
-#endif
+      use_NR_defl_lin(deflcoeff,r0);
 
-       //deflcoeff.show("QUARTIC IN QUINTIC dopo");
-       // calculate roots of quartic
-       quar.set_coeff(deflcoeff);
-       quar.find_roots(qroots);
-       //quar.show("deflq=");
-       //qroots.show("quartic roots=");
-       for (i=1; i < N; i++)
-         {
-           roots[i] = qroots[i-1];
-         }
+      // calculate roots of quartic
+      quar.set_coeff(deflcoeff);
+      quar.find_roots(qroots);
+      //quar.show("deflq=");
+      //qroots.show("quartic roots=");
+      for (i=1; i < N; i++)
+        {
+          roots[i] = qroots[i-1];
+        }
     }
   pvector<ntype,N+1> get_coeff()
     {
@@ -1215,7 +1182,19 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               oqs_quartic_solver(roots);
             }
         }
-      else if constexpr (N <= 10)
+      else if constexpr (N==5)
+        {
+	  if constexpr (force_hqr)
+	    {
+              int ok=1;
+	      solve_numrec(roots, ok);
+	    }
+	  else
+            {
+              odd_degree(roots);
+            }
+        }
+      else if constexpr (N <= 200)
         {
           if constexpr (force_hqr)
 	    {
@@ -1224,12 +1203,16 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
 	    }
 	  else
             {
+#ifdef USE_LAGUERRE_ONLY
+              laguerre_defl(roots);
+#else
               if constexpr (N % 2 == 0)
-                even_degree(roots);
+                laguerre_defl(roots);
               else 
                 odd_degree(roots);
               //quintic(roots);     
-            }   
+#endif 
+            }  
         }
       else
         {
