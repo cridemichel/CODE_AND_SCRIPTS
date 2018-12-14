@@ -500,11 +500,13 @@ int main(int argc, char **argv)
       ic++;	
       if (dojust==-1 || dojust == ic)
 	{
-          //oqs.set_coeff(c);
-          //oqs.find_roots(csolall[ic]);
+#if 1
+          oqs.set_coeff(c);
+          oqs.find_roots(csolall[ic]);
+#else
           for (auto i=0; i < 6; i++)
             csolall[ic][i] =exsol[i];
-
+#endif
 	}
       for (ic = 0; ic < maxic; ic++)
 	{

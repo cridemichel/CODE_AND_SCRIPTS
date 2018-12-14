@@ -122,7 +122,7 @@ int main(int argc, char **argv)
   int k, ic=0;
   rpoly<double,5> oqs;
   rpoly<double,5,true> hqr;
-  srand48(4242);
+  srand48(42);
   
   for (ic=0; ic < 2; ic++)
     for (k=0; k < PEPTS; k++)

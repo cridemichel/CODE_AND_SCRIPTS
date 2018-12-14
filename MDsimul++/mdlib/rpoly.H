@@ -16,9 +16,10 @@
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
 //#define USE_DEFL_NR
-#define LAGUERRE_POLISH
+//#define LAGUERRE_POLISH
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
+//#define FAST_MATH
 using namespace std;
 template<class T>
 inline const T MAX(const T &a, const T &b)
@@ -1317,6 +1318,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   * where coefficients b and c are large (see sec. 2.2 in the manuscript) */ 
   ntype Q, R, theta, A, B, QR, QRSQ, KK, sqrtQ, RQ;;
   const ntype PI2=M_PI/2.0, TWOPI=2.0*M_PI;
+#ifdef FAST_MATH
+  ntype rq3;
+#endif
+ 
   Q = -b/3.0;
   R = 0.5*c;
   if (R==0)
@@ -1347,7 +1352,19 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   if (KK < 0.0)
     {
       sqrtQ=sqrt(Q);
+#ifdef FAST_MATH
+      // se si use -Ofast rq3 può essere >1 o < -1 di quantità minori di machine epsilon 
+      // causando dei NaN
+      rq3 = (R/abs(Q))/sqrtQ;
+      if (rq3 > 1.0)
+        theta = 1.0;
+      else if (rq3 < -1.0)
+        theta  = M_PI;
+      else
+        theta = acos(rq3);
+#else
       theta = acos((R/abs(Q))/sqrtQ);
+#endif
       if (theta < PI2) 
 	sol = -2.0*sqrtQ*cos(theta/3.0);
       else 
@@ -1372,8 +1389,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
 {
   /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
    * (see sec. 2.2 in the manuscript) */ 
-  ntype Q, R, theta, Q3, R2, A, B, sqrtQ, rq3;
-
+  ntype Q, R, theta, Q3, R2, A, B, sqrtQ;
+#ifdef FAST_MATH
+  ntype rq3;
+#endif
   Q = -b/3.0;
   R = 0.5*c;
   // these number could be made larger for long double */
