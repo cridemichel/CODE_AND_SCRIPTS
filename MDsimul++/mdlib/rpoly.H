@@ -1,6 +1,3 @@
-// matrici NxM
-//#include<stdio.h>
-//#include<stdlib.h>
 #include<cstdlib>
 #include<iostream>
 #include<iomanip>
@@ -8,6 +5,7 @@
 #include<complex>
 //#include "pvector.H"
 #include "pmatrix.H"
+#include <algorithm> 
 #include <limits>
 #include <cstdlib>
 #include <array>
@@ -16,7 +14,7 @@
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
 //#define USE_DEFL_NR
-//#define LAGUERRE_POLISH
+#define LAGUERRE_POLISH
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 //#define FAST_MATH
@@ -30,6 +28,7 @@ class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N> cmon;
   pvector<ntype, N> cmonder;
   pvector<ntype, N-1> cmondder;
+  const int maxiter_polish=1;
   int n;
   //force_hqr;
   int imaxarg1,imaxarg2;
@@ -448,9 +447,6 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           fvec[i-1] += -c[i]*r0;
           fvec[i-1] += c[i-1];
         }
-      //cmon.show("monic coeff=");
-      //defc.show("deflcoeff");
-      //fvec.show("errori=");
       errf = 0;
       for (i=1; i < N; i++)
         {
@@ -465,8 +461,6 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
             Jinv[i][j]=r0*Jinv[i-1][j];
           }
 
-      //cout << "errf inizio=" << errf << "\n";
-      // Jinv.show();
       for (iter = 0; iter < 8; iter++)
         {
           cold = c;
@@ -650,7 +644,6 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       // find initial guess for x here
       complex<ntype> r0;
       const ntype goldfact=1.618034;
-      const int maxiter_polish=2;
       ntype sig;
       pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
@@ -879,11 +872,9 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               bd = bd0;
             }
 
-          //ntype errBprima = calc_err_defl_quad(bd, ad);  
 #ifdef USE_DEFL_NR
           use_NR_defl_quad(bd,ad);
 #endif
-          //errB=calc_err_defl_quad(bd, ad);
 #if 0
           if (err0 > 1E-4 && err1 > 1E-4)
             { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
@@ -894,15 +885,6 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               cout << "errA= " << errA << " errB= " << errB << "\n";
               cout << "p(r0)=" << evalpoly(r0) << " p(r0.real())= " << evalpoly(r0.real()) << setprecision(32) << "\n";
               cout << "abs(p(r0))=" << abs(evalpoly(r0)) << " abs(p(r0.real()))= " << abs(evalpoly(r0.real())) << setprecision(32) << "\n";
-              exit(-1);
-            }
-#endif
-#if 0
-          if (bd[4]==0.0)
-            {
-              bd.show("bd=");
-              bd0.show("bd0=");
-              bd1.show("bd1=");
               exit(-1);
             }
 #endif
@@ -949,14 +931,12 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
         if (qroots[i].imag()==0.0 && evalddpoly(qroots[i].real())!=0)
           rqroots[cc++] = qroots[i].real();
       int numr = cc;
-      //qroots.show();
-      //qsort(rqroots, numr, sizeof(ntype),
-      //    [&] (ntype *x, ntype *y){if (*x < *y) return -1; else return 1;});
-      // sort(rqroots.begin(),rqroots.end());
-      if (rqroots[1] < rqroots[0])
-        {
-          swap(rqroots[0],rqroots[1]);
-        }
+      //for (i=0; i < numr; i++)
+        //cout << "PRIMA rqr[" << i <<  "]" << rqroots[i]<< "\n";
+      std::sort(rqroots.begin(),rqroots.end(), [&] (ntype a, ntype b)-> bool {return a < b;});
+      //for (i=0; i < numr; i++)
+        //cout << "DOPO rqr[" << i <<  "]" << rqroots[i] << "\n";
+    
       //cout << "----> "<< rqroots[0] << " "<< rqroots[1] << "\n";
       bool foundleft = false;
       bool foundright = false;
@@ -988,7 +968,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
             {
               xright = r0;
               // quadratic extrapolation
-              xleft = xright-pow(c,1.0/5.0);
+              xleft = xright-pow(c,1.0/N);
               while (evalpoly(xleft) >=0)
                 {
                   delx = xleft - xright;
@@ -1002,7 +982,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               xleft = r0;
               c = evalpoly(xleft);///evalddpoly(xleft);
               //cout << evalpoly(xleft) << "dd=" << evalddpoly(xleft)<<"\n"; 
-              xright = xleft+pow(-c,1.0/5.0);
+              xright = xleft+pow(-c,1.0/N);
               while (evalpoly(xright) <=0)
                 {
                   delx = xright - r0;
@@ -1020,7 +1000,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               xright = rqroots[0];
               // find xleft here
               // quadratic extrapolation
-              xleft = xright-pow(c,1.0/5.0);
+              xleft = xright-pow(c,1.0/N);
               while (evalpoly(xleft) >=0)
                 {
                   delx = xleft - xright;
@@ -1037,7 +1017,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
               //cout << "xleft=" << xleft << "\n";
               // find xright here
               //cout << "c=" << c << "\n";
-              xright = xleft+pow(-c,1.0/5.0);
+              xright = xleft+pow(-c,1.0/N);
               //cout << "xright temp=" << xright << "\n";
               cc=0;
               while (evalpoly(xright) <=0)
