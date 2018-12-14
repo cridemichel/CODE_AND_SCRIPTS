@@ -808,7 +808,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           deflcoeff = deflcoeff0;
         }
 
-      ntype errAprima=calc_err_q(deflcoeff,r0.real());
+      //ntype errAprima=calc_err_q(deflcoeff,r0.real());
       use_NR_defl_lin(deflcoeff,r0.real());
       errA=calc_err_q(deflcoeff,r0.real());
       //if (errA < errAprima)
