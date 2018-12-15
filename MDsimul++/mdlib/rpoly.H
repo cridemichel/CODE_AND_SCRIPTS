@@ -1039,7 +1039,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
             }
           if (foundleft == false && foundright == false)
             {
-              for (i=0; i < numr-1; i++)
+              for (i=0; i < numr; i++)
                 {
                   if (evalpoly(rqroots[i])*evalpoly(rqroots[i+1]) < 0.0)
                     {
@@ -1177,6 +1177,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
 	  else
             {
 #ifdef USE_LAGUERRE_ONLY
+              //odd_degree(roots);
               laguerre_defl(roots);
 #else
               odd_degree(roots);
