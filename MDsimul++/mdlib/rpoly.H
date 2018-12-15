@@ -344,7 +344,7 @@ public:
             for (j=0; j < N; j++)
               {
                 if (i==j)
-                  J[i][j] = (i<N-1)-c[N-1]?:-1.0;// c[N-1]=r0
+                  J[i][j] = (i<N-1)?(-c[N-1]):-1.0;// c[N-1]=r0
                 else if (j==i+1)
                   J[i][j] = 1.0;
                 else 
@@ -874,15 +874,17 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             }
 
 #ifdef USE_DEFL_NR
-          ntype errP, errD;
-          errP = calc_err_q(deflcoeff, r0.real());
+          //ntype errP, errD;
+          //errP = calc_err_q(deflcoeff, r0.real());
           use_NR_defl_lin(deflcoeff,r0);
-          errD = calc_err_q(deflcoeff, r0.real());
+          //errD = calc_err_q(deflcoeff, r0.real());
+#if 0
           if (errD < errP)
             {
               cout << "errP=" << errP << " errD=" << errD << "\n";
 
             }
+#endif
 #endif
           //refine deflated quartic coefficients thourh Newton-Raphson method
           qp.set_coeff(deflcoeff);
