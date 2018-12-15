@@ -9,16 +9,16 @@
 #include <cstdlib>
 #include <array>
 //fix to avoid crash of clang
-#ifndef __clang__// clang crash including this
+#ifndef __clang__ // clang crash including this
 #include<complex>
 #else
-template <class T> class complex { };
+//#include<complex>
 #endif
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
-//#define USE_DEFL_NR
+#define USE_DEFL_NR
 #define LAGUERRE_POLISH
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
@@ -33,7 +33,7 @@ class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N> cmon;
   pvector<ntype, N> cmonder;
   pvector<ntype, N-1> cmondder;
-  const int maxiter_polish=1;
+  const int maxiter_polish=8;
   int n;
   //force_hqr;
   int imaxarg1,imaxarg2;
@@ -312,52 +312,59 @@ public:
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
-#if 0
-  void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
+#if 1
+  void use_NR_defl_lin(pvector<ntype,N>& defc, complex<ntype>& r0)
     {
       ntype errf, errfold, det;
-      pvector<ntype,N-1> c, cold;
-      pvector<ntype,N-1> fvec;
-      pmatrixq<ntype,N-1> Jinv;
+      pvector<ntype,N> c, cold;
+      pvector<ntype,N> fvec;
+      pmatrixq<ntype,N> Jinv, J;
       int i, j, iter;
 
-      for (i=0; i < N-2; i++)
+      for (i=0; i < N-1; i++)
         c[i]=defc[i];
-      for (i=1; i < N; i++)
+      c[N-1] = r0.real();
+      for (i=0; i < N; i++)
         {
-          fvec[i-1] = c[i-1]-r0*((i==N-2)?1:c[i])-cmon[i];
+          fvec[i] = ((i>=1)?(c[i-1]):0.0)-r0.real()*((i<N-1)?c[i]:1.0)-cmon[i];
         } 
       //cmon.show("monic coeff=");
       //defc.show("deflcoeff");
       //fvec.show("errori=");
       errf = 0;
-      for (i=1; i < N; i++)
+      for (i=0; i < N; i++)
         {
-          errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+          errf += abs((cmon[i]==0)?fvec[i]:(fvec[i]/cmon[i]));
         }
       //cout << "errf inizio=" << errf << "\n";
-      for (i=0; i < N-1; i++)
-        for (j=0; j < N-1; j++)
-          Jinv[i][j] = (i==j)?1.0:0.0;
-      for (j=0; j < N-2; j++)
-        for (i=j+1; i < N-1; i++)
-          {
-            Jinv[i][j]=r0*Jinv[i-1][j];
-          }
-      // Jinv.show();
-      for (iter = 0; iter < 8; iter++)
+     for (iter = 0; iter < 8; iter++)
         {
           cold = c;
+          for (i=0; i < N; i++)
+            for (j=0; j < N; j++)
+              {
+                if (i==j)
+                  J[i][j] = (i<N-1)-c[N-1]?:-1.0;// c[N-1]=r0
+                else if (j==i+1)
+                  J[i][j] = 1.0;
+                else 
+                  J[i][j] = 0;
+                if (j==N-1&& i!=j)
+                  J[i][j] = -((i<N-1)?c[i]:1.0);
+              }
+          //J.show();
+          Jinv=J.inv();
+
           c = c - Jinv*fvec;
-          for (i=1; i < N; i++)
+          for (i=0; i < N; i++)
             {
-              fvec[i-1] = c[i-1]-r0*((i==N-2)?1:c[i])-cmon[i];
+              fvec[i] = ((i>=1)?(c[i-1]):0.0)-c[N-1]*((i<N-1)?c[i]:1.0)-cmon[i];
             } 
           errfold = errf;
           errf = 0;
-          for (i=1; i < N; i++)
+          for (i=0; i < N; i++)
             {
-              errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
+              errf += abs((cmon[i]==0)?fvec[i]:(fvec[i]/cmon[i]));
             }
           //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
           if (errf==0)
@@ -372,129 +379,176 @@ public:
         } 
       for (i=0; i < N-1; i++)
         defc[i] = c[i];
+      r0=c[N-1]+r0.imag()*1i;
     }
 
 #else
 void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
-    {
-      ntype errf, errfold, det;
-      pvector<ntype,N-1> c, cold;
-      pvector<ntype,N-1> fvec;
-      pmatrixq<ntype,N-1> Jinv;
-      int i, j, iter;
-      for (i=N-2; i >= 0; i--)
+  {
+    ntype errf, errfold, det;
+    pvector<ntype,N-1> c, cold;
+    pvector<ntype,N-1> fvec;
+    pmatrixq<ntype,N-1> Jinv;
+    int i, j, iter;
+    for (i=N-2; i >= 0; i--)
+      {
+        c[i]=defc[i];
+        fvec[i] = defc[i]-r0*((i==N-2)?1:defc[i+1])-cmon[i+1];
+      } 
+    //cmon.show("monic coeff=");
+    //defc.show("deflcoeff");
+    //fvec.show("errori=");
+    errf = 0;
+    for (i=0; i < N-1; i++)
+      {
+        errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
+      }
+    //cout << "errf inizio=" << errf << "\n";
+    for (i=0; i < N-1; i++)
+      for (j=0; j < N-1; j++)
+        Jinv[i][j] = (i==j)?1.0:0.0;
+    for (j=0; j < N-2; j++)
+      for (i=j+1; i < N-1; i++)
         {
-          c[i]=defc[i];
-          fvec[i] = defc[i]-r0*((i==N-2)?1:defc[i+1])-cmon[i+1];
-        } 
-      //cmon.show("monic coeff=");
-      //defc.show("deflcoeff");
-      //fvec.show("errori=");
-      errf = 0;
-      for (i=0; i < N-1; i++)
-        {
-          errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
+          Jinv[i][j]=r0*Jinv[i-1][j];
         }
-      //cout << "errf inizio=" << errf << "\n";
-      for (i=0; i < N-1; i++)
-        for (j=0; j < N-1; j++)
-          Jinv[i][j] = (i==j)?1.0:0.0;
-      for (j=0; j < N-2; j++)
-        for (i=j+1; i < N-1; i++)
+    // Jinv.show();
+    for (iter = 0; iter < 8; iter++)
+      {
+        cold = c;
+        c = c - Jinv*fvec;
+        for (i=N-2; i >= 0; i--)
           {
-            Jinv[i][j]=r0*Jinv[i-1][j];
+            fvec[i] = c[i]-r0*((i==N-2)?1:c[i+1])-cmon[i+1];
+          } 
+        errfold = errf;
+        errf = 0;
+        for (i=0; i < N-1; i++)
+          {
+            errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
           }
-      // Jinv.show();
-      for (iter = 0; iter < 8; iter++)
-        {
-          cold = c;
-          c = c - Jinv*fvec;
-          for (i=N-2; i >= 0; i--)
-            {
-              fvec[i] = c[i]-r0*((i==N-2)?1:c[i+1])-cmon[i+1];
-            } 
-          errfold = errf;
-          errf = 0;
-          for (i=0; i < N-1; i++)
-            {
-              errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
-            }
-          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
-          if (errf==0)
+        //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
+        if (errf==0)
+          break;
+        if (errf > errfold)
+          {
+            //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
+            c = cold;
             break;
-          if (errf > errfold)
-            {
-              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
-              c = cold;
-              break;
-            }
-          
-        } 
-      for (i=0; i < N-1; i++)
-        defc[i] = c[i];
-    }
+          }
+
+      } 
+    for (i=0; i < N-1; i++)
+      defc[i] = c[i];
+  }
 
 #endif
-  void use_NR_defl_lin_alt(pvector<ntype,N>& bd, ntype r0)
-    {
-      ntype term, errf, errfold;
-      pvector<ntype,N-1> c, cold;
-      pvector<ntype,N-1> fvec;
-      pmatrixq<ntype,N-1> Jinv, J;
-      int i, j, iter;
-      ntype sum=0;
+#if 1
+void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
+  {
+    // bd[N-2] = 1 since all polynomials are in their minic form
+    // hence we do not need to refine this coefficient here
+    ntype term, errf, errfold, det;
+    pvector<ntype,N> cold, c;
+    pvector<ntype,N> fvec;
+    pmatrixq<ntype,N> Jinv, J;
+    int i, j, iter;
+    ntype sum=0;
+    for (i=0; i < N-2; i++)
+      c[i]=bd[i];
+    c[N-2] = ad[0];
+    c[N-1] = ad[1];
+    for (i=0; i < N; i++)
+      {
+        fvec[i] = -cmon[i];
+        if (i <= N-2)
+          fvec[i] += ((i==N-2)?1.0:c[i])*ad[0];
+        if (i >= 1) 
+          fvec[i] += ((i==N-1)?1.0:c[i-1])*ad[1];
+        if (i >=2)
+          fvec[i] += c[i-2];
+      }
+    //cmon.show("monic coeff=");
+    //defc.show("deflcoeff");
+    //fvec.show("errori=");
+    errf = 0;
+    for (i=0; i < N; i++)
+      {
+        errf += abs((cmon[i]==0)?fvec[i]:(fvec[i]/cmon[i]));
+      }
+    //cout << "errf inizio=" << errf << "\n";
+   #if 0
+    pvector<ntype, N-2> b;
+    for (i=0; i < N-2; i++)
+      b[i] = -cmon[i+2];
+    c = Jinv*b;
+    for (i=0; i < N-2; i++)
+      bd[i]=c[i];
+    return;
+#endif
+    // Jinv.show();
+    for (iter = 0; iter < 8; iter++)
+      {
+        cold = c;
+        for (i=0; i < N; i++)
+          for (j=0; j < N; j++)
+            {
+              if (i==j)
+                { 
+                  if (i < N-2)
+                    J[i][j] = c[N-2]; // c[N-2]->ad[0]
+                  else 
+                    J[i][j] = 1.0;
+                }
+              else if (j==i+1)    // c[N-1]->ad[1]
+                {
+                  J[i][j] = c[N-1];
+                }
+              else if (j==i+2)
+                J[i][j] = 1.0;
+              else
+                J[i][j] = 0.0;
+              if (j==N-2 && j!=i)
+                J[i][j] = (i < N-2)?c[i]:1.0;
+              if (j==N-1 && j!=i && i >= 1)
+                J[i][j] = (i < N-1)?c[i-1]:1.0; 
+            }
+        Jinv = J.inv();
 
-      for (i=0; i < N-1; i++)
-        c[i] = bd[i];
-      for (i=1; i < N; i++)
-        {
-          fvec[i-1] = -cmon[i];
-          fvec[i-1] += -c[i]*r0;
-          fvec[i-1] += c[i-1];
-        }
-      errf = 0;
-      for (i=1; i < N; i++)
-        {
-          errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
-        }
-      for (i=0; i < N-1; i++)
-        for (j=0; j < N-1; j++)
-          Jinv[i][j] = (i==j)?1.0:0.0;
-      for (j=0; j < N-2; j++)
-        for (i=j+1; i < N-1; i++)
+        c = c - Jinv*fvec;
+        for (i=0; i < N; i++)
           {
-            Jinv[i][j]=r0*Jinv[i-1][j];
+            fvec[i] = -cmon[i];
+            if (i <= N-2)
+              fvec[i] += ((i==N-2)?1.0:c[i])*c[N-2];
+            if (i >= 1) 
+              fvec[i] += ((i==N-1)?1.0:c[i-1])*c[N-1];
+            if (i >=2)
+              fvec[i] += c[i-2];
           }
-
-      for (iter = 0; iter < 8; iter++)
-        {
-          cold = c;
-          c = c - Jinv*fvec;
-          for (i=1; i < N-1; i++)
-            {
-              fvec[i-1] = -cmon[i];
-              fvec[i-1] += -c[i]*r0;
-              fvec[i-1] += c[i-1];
-            }
-          errfold = errf;
-          for (i=1; i < N; i++)
-            {
-              errf += abs((cmon[i]==0)?fvec[i-1]:(fvec[i-1]/cmon[i]));
-            }
-          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
-          if (errf==0)
+        errfold = errf;
+        for (i=0; i < N; i++)
+          {
+            errf += abs((cmon[i]==0)?fvec[i]:(fvec[i]/cmon[i]));
+          }
+        //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
+        if (errf==0)
+          break;
+        if (errf > errfold)
+          {
+            //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
+            c = cold;
             break;
-          if (errf > errfold)
-            {
-              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
-              c = cold;
-              break;
-            }
-        } 
-      for (i=0; i < N-1; i++)
-        bd[i] = c[i];
-      
-    }
+          }
+      } 
+    for (i=0; i < N-2; i++)
+      bd[i]=c[i];
+    ad[0]=c[N-2];
+    ad[1]=c[N-1];
+  }
+
+
+#else
   void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3> ad)
     {
       // bd[N-2] = 1 since all polynomials are in their minic form
@@ -578,6 +632,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
       for (i=0; i < N-2; i++)
         bd[i]=c[i];
     }
+#endif
  bool laguer(complex<ntype> &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -819,7 +874,15 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
             }
 
 #ifdef USE_DEFL_NR
-          use_NR_defl_lin(deflcoeff,r0.real());
+          ntype errP, errD;
+          errP = calc_err_q(deflcoeff, r0.real());
+          use_NR_defl_lin(deflcoeff,r0);
+          errD = calc_err_q(deflcoeff, r0.real());
+          if (errD < errP)
+            {
+              cout << "errP=" << errP << " errD=" << errD << "\n";
+
+            }
 #endif
           //refine deflated quartic coefficients thourh Newton-Raphson method
           qp.set_coeff(deflcoeff);
@@ -880,7 +943,12 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
             }
 
 #ifdef USE_DEFL_NR
+          //ntype errP, errD;
+          //errP =calc_err_defl_quad(bd, ad);
           use_NR_defl_quad(bd,ad);
+          //errD =calc_err_defl_quad(bd, ad);
+          //if (errD < errD)
+            //cout << ">>>errP = " << errP << " errD=" << errD << "\n";
 #endif
 #if 0
           if (err0 > 1E-4 && err1 > 1E-4)
@@ -1109,7 +1177,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
           deflcoeff = deflcoeff0;
         }
       // refine deflated quartic coefficients here
-      use_NR_defl_lin(deflcoeff,r0);
+      //use_NR_defl_lin(deflcoeff,r0);
 
       // calculate roots of quartic
       quar.set_coeff(deflcoeff);
