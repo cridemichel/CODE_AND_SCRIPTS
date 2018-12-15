@@ -1,14 +1,19 @@
+#include "pmatrix.H"
 #include<cstdlib>
 #include<iostream>
 #include<iomanip>
 #include<cmath>
-#include<complex>
 //#include "pvector.H"
-#include "pmatrix.H"
 #include <algorithm> 
 #include <limits>
 #include <cstdlib>
 #include <array>
+//fix to avoid crash of clang
+#ifndef __clang__// clang crash including this
+#include<complex>
+#else
+template <class T> class complex { };
+#endif
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
@@ -35,7 +40,7 @@ class rpoly: public numeric_limits<ntype> {
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
-    {
+   {
       const int MAXIT=1000000;
       int j;
       ntype df,dx,dxold,f,fh,fl,temp,xh,xl,rts;
