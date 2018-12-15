@@ -1177,7 +1177,6 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
 	  else
             {
 #ifdef USE_LAGUERRE_ONLY
-              //odd_degree(roots);
               laguerre_defl(roots);
 #else
               odd_degree(roots);
