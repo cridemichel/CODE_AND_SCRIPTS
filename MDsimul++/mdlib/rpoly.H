@@ -353,6 +353,8 @@ public:
                   J[i][j] = -((i<N-1)?c[i]:1.0);
               }
           //J.show();
+          if (J.det()==0)
+            break;
           Jinv=J.inv();
 
           c = c - Jinv*fvec;
@@ -513,8 +515,10 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
               if (j==N-1 && j!=i && i >= 1)
                 J[i][j] = (i < N-1)?c[i-1]:1.0; 
             }
+        if (J.det()==0)
+          break;
         Jinv = J.inv();
-
+       
         c = c - Jinv*fvec;
         for (i=0; i < N; i++)
           {
