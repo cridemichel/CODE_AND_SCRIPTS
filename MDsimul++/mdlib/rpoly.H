@@ -12,13 +12,14 @@
 #ifndef __clang__ // clang crash including this
 #include<complex>
 #else
-//#include<complex>
+#include<complex>
 #endif
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
-#define USE_DEFL_NR
+//#define USE_DEFL_NR
+//define USE_FULL_NR
 #define LAGUERRE_POLISH
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
@@ -312,7 +313,7 @@ public:
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
-#if 1
+#ifdef USE_FULL_NR
   void use_NR_defl_lin(pvector<ntype,N>& defc, complex<ntype>& r0)
     {
       ntype errf, errfold, det;
@@ -445,7 +446,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
   }
 
 #endif
-#if 1
+#ifdef USE_FULL_NR
 void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
   {
     // bd[N-2] = 1 since all polynomials are in their minic form
