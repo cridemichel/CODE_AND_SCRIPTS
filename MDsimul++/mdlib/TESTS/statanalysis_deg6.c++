@@ -339,6 +339,7 @@ int main(int argc, char **argv)
   rpoly<double,PDEG> oqs;
   rpoly<double,PDEG,true> hqr;
   srand48(42);
+ 
   
   for (ic=0; ic < 2; ic++)
     for (k=0; k < PEPTS; k++)

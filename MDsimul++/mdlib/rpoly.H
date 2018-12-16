@@ -9,11 +9,7 @@
 #include <cstdlib>
 #include <array>
 //fix to avoid crash of clang
-#ifndef __clang__ // clang crash including this
-#include<complex>
-#else
-#include<complex>
-#endif
+#include <complex>
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
@@ -661,7 +657,12 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             err=abs(b)+abx*err;
           }
           err *= EPS;
-          if (abs(b) <= err) return true;
+          if (abs(b) <= err) 
+            {
+              //if (iter > 15)
+                //cout << "iter=" << iter << "\n";
+              return true;
+            }
           g=d/b;
           g2=g*g;
           h=g2-ntype(2.0)*f/b;
@@ -674,7 +675,11 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
           x1=x-dx;
           if (x == x1) 
-            return true;
+            {
+              //if (iter > 15)
+                //cout << "iter=" << iter << "\n";
+              return true;
+            }
           if (iter % MT != 0) 
             x=x1;
           else 
