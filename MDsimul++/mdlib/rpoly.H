@@ -19,7 +19,7 @@
 #define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
-#define POLISH_NR_REAL // migliorano le prestazioni di un 10%
+#define POLISH_NR_REAL 
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;

@@ -3,6 +3,8 @@
 #include "pmatrix.H"
 #include "./rpoly.H"
 #include<complex>
+#include<list>
+#include<string>
 //#define KAMENY
 //#define MIGNOTTE
 //#define WILK2
@@ -16,58 +18,36 @@
 #define NDEG 10
 #else
 #ifndef NDEG
-#define NDEG 6
+#define NDEG 5
 #endif
 #endif
-// The main function that prints all combinations of  
-// size r in arr[] of size n. This function mainly 
-// uses combinationUtil() 
-#if 0
-void printCombination(int arr[], int n, int r) 
-{ 
-    // A temporary array to store all combination 
-    // one by one 
-    int data[r]; 
-  
-    // Print all combination using temprary array 'data[]' 
-    combinationUtil(arr, n, r, 0, data, 0); 
+
+void print( list<int> l){
+    for(list<int>::iterator it=l.begin(); it!=l.end() ; ++it)
+            cout << " " << *it;
+    cout<<endl;
+}
+
+
+void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<int> &l)
+{
+    if(left==0)
+      {
+        L.push_back(l);
+        //print(L.back());
+        return;
+      }
+    for(int i=index; i<size;i++)
+      {
+        l.push_back(arr[i]);
+        subset(L,arr,size, left-1,i+1,l);
+        l.pop_back();
+      }
 } 
-#endif
-/* arr[]  ---> Input Array 
-   n      ---> Size of input array 
-   r      ---> Size of a combination to be printed 
-   index  ---> Current index in data[] 
-   data[] ---> Temporary array to store current combination 
-   i      ---> index of current element in arr[]     */
-void combinationUtil(int arr[], int n, int r, int index, 
-                     int data[], int i) 
-{ 
-    // Current cobination is ready, print it 
-    if (index == r) { 
-        for (int j = 0; j < r; j++) 
-            printf("%d ", data[j]); 
-        printf("\n"); 
-        return; 
-    } 
-  
-    // When no more elements are there to put in data[] 
-    if (i >= n) 
-        return; 
-  
-    // current is included, put next at next location 
-    data[index] = arr[i]; 
-    combinationUtil(arr, n, r, index + 1, data, i + 1); 
-  
-    // current is excluded, replace it with next 
-    // (Note that i+1 is passed, but index is not 
-    // changed) 
-    combinationUtil(arr, n, r, index, data, i + 1); 
-} 
-  
 int main()
 {
   using numty=double;
-  int i, j, k, k2; 
+  int i, j, k2; 
   rpoly<numty,NDEG> rp;
   rpoly<numty,NDEG,true> rphqr;
   pvector<numty, NDEG+1> c;
@@ -83,36 +63,42 @@ int main()
     }
   //cout << "ntype size=" << sizeof(numty) << "\n";
   cc[NDEG] = 1.0;
-  static int subsets[NDEG][NDEG];
-  int ns;
   // use Vieta's formulas to calculate polynomial coefficients
   // TO DO!! 
   //
-  int inparr[NDEG];
-
-  for (i=0; i < NDEG; i++)
-    inparr[i] = i;
+  std::list<std::list<int>> subsets;// list of list with all subsets
+  list<list<int>> lt;   
+  list<int> l;
+  int array[NDEG];
+  for (j=0; j < NDEG; j++)
+    array[j] = j;
   for (i=0; i < NDEG; i++)
     {
-
-      combinationUtil(inparr, NDEG, NDEG-i, data, i);
-      cc[i]=0;
-
-      for (j=0; j < ns; j++)
+      subset(lt,array,NDEG,NDEG-i,0,l);
+      term=1.0;
+      cc[i] = 0;
+      cout << "qui\n";
+#if 1
+      for(list<list<int>>::iterator it=lt.begin(); it!=lt.end(); ++it)
         {
-          k2=0;
-          term=1.0;
-          while (subsets[ns][k2]!=-1)
+          print(*it);
+          for(list<int>::iterator it2=(*it).begin(); it2!=(*it).end(); ++it2)
             {
-              term *= subsets[ns][k2];
-              k2++;
+              //term *= er[*it]; 
             }
-          if (i%2==0)
-            segno=1;
-          else
-            segno =-1;
-          cc[j] += segno*term;
-        };
+        }
+#endif
+      lt.clear();
+      cout << "term=" << term << "\n";
+      if (i%2==0)
+        segno=-1;
+      else
+        segno=1;
+      cc[i] += term*segno;
+    }
+  for (i=0; i < NDEG+1; i++)
+    {
+      c[i] = real(cc[i]);
     }
 #if 0
   c[5] = (-x1c - x2c - x3c - x4c - x5c - x6c).real();
