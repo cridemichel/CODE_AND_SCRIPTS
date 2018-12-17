@@ -14,13 +14,13 @@
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 #define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
-//#define USE_DEFL_NR
-//define USE_FULL_NR
-#define LAGUERRE_POLISH
+//#define USE_DEFL_NR // metterlo o no non cambia nulla
+//#define USE_FULL_NR // peggiora l'accuratezza attivandolo
+#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
-#define POLISH_NR_REAL 
-#define USE_LAGUER_REAL
+#define POLISH_NR_REAL // migliorano le prestazioni di un 10%
+//#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
 template<class T>
@@ -643,7 +643,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
-      ntype abx,abp,abm,err;
+      ntype abx,abp,abm,err, phi, rho;
       //complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
       ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
@@ -662,10 +662,6 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           d[1]=f[1]=0.0;
           abx=sqrt(x[0]*x[0]+x[1]*x[1]);
           for (j=m-1;j>=0;j--) {
-          //  f=x*f+d;
-          //  d=x*d+b;
-          //  b=x*b+cmon[j];
-
             f0 = f[0];
             f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
             f[1] = x[0]*f[1] + x[1]*f0 + d[1];
@@ -675,7 +671,6 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             b0 = b[0];
             b[0] = x[0]*b[0] - x[1]*b[1] + cmon[j];
             b[1] = x[0]*b[1] + x[1]*b0;
-
             err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
           }
           err *= EPS;
@@ -691,27 +686,35 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           g[1] = (d[1]*b[0] - d[0]*b[1])*invn; 
           g2[0] = g[0]*g[0] - g[1]*g[1];
           g2[1] = 2.0*g[0]*g[1];
-          //g=d/b;
-          //g2=g*g;
           fb[0] = (f[1]*b[1] + f[0]*b[0])*invn;
           fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
-          //h=g2-ntype(2.0)*f/b;
           h[0] = g2[0] - 2.0*fb[0];
           h[1] = g2[1] - 2.0*fb[1];
           sarg[0] = ntype(m-1)*(ntype(m)*h[0] - g2[0]);
           sarg[1] = ntype(m-1)*(ntype(m)*h[1] - g2[1]);
-          sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
-          sq[0]=sqrtcmplx.real();
-          sq[1]=sqrtcmplx.imag();
+          //sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
+          //sq[0]=sqrtcmplx.real();
+          //sq[1]=sqrtcmplx.imag();
+          rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
+          if (rho==0)
+            {
+              sq[0] = sq[1] = 0.0;
+            }
+          else
+            {
+              phi = acos(sarg[0]/rho);
+              if (sarg[1] < 0.0)
+                {
+                  phi = -phi;
+                }
+              rho = sqrt(rho);
+              sq[0] = rho*cos(phi/2.0);
+              sq[1] = rho*sin(phi/2.0);
+            }
           gp[0] = g[0] + sq[0];
           gp[1] = g[1] + sq[1];
-
           gm[0] = g[0] - sq[0];
           gm[1] = g[1] - sq[1]; 
-          //gp=g+sq;
-          //gm=g-sq;
-          //abp=abs(gp);
-          //abm=abs(gm);
           abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
           abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
           if (abp < abm) 
@@ -804,7 +807,6 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
           gp=g+sq;
           gm=g-sq;
-          cout << "gp = " << gp << " gm=" << gm << "\n";
           abp=abs(gp);
           abm=abs(gm);
 
@@ -940,52 +942,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
                   break;
                 }
             }
-#if 0
-            {
-          // root polishing by NR
-          complex<ntype> r0old, p;
-          complex<ntype> p1;
-          ntype err, errold;
-          for (iter=0; iter < maxiter_polish; iter++)
-            {
-              p=cmon[n]*r0+cmon[n-1];
-              p1=cmon[n];
-              if (iter==0)
-                err=abs(p);
-              for(i=n-2;i>=0;i--) {
-                p1=p+p1*r0;
-                p=cmon[i]+p*r0;
-              }
-              if (p1==complex<ntype>(0,0))
-                {
-                  break;
-                }
-              r0old=r0;
-              r0 -= p/p1;
-              errold=err;
-              err=abs(p);
-              //if (err < errold)
-                //cout << "err=" << err << " errold=" << errold << "\n";
-              if (err==0)
-                break;
-              if (err > errold)
-                {
-                  r0=r0old;
-                  break;
-                }
-            }
-
-            }
-
-         if (abs(r0.real() - r0new[0]) > meps || abs(r0.imag()-r0new[1]) >meps) 
-           {
-             cout << "r0-r0new=" << r0 - r0new[0]+1i*r0new[1]<< "\n";
-             cout << "r0= " << r0 << " r0new="<< r0new[0] +1i*r0new[1]<< setprecision(32)<< "\n";  
-          
-           }
-#endif
-         r0=r0new[0] + r0new[1]*1i;
-
+          r0=r0new[0] + r0new[1]*1i;
 #else
           // root polishing by NR
           complex<ntype> r0old, p;
