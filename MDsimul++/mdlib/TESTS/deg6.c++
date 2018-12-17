@@ -9,7 +9,7 @@ int main()
   rpoly<numty,6> rp;
   rpoly<numty,6,true> rphqr;
   pvector<numty, 7> c;
-  //complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
+  complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
   pvector<complex<numty>, 6> roots;
 #if 1
 #if 0
@@ -36,13 +36,13 @@ int main()
   rp.find_roots(roots);
   roots.show("boh"); 
 #endif
-#if 0
+#if 1
   x1c = 1;
-  x2c = 2;
-  x3c = 8;
-  x4c = 9;
-  x5c = 10;
-  x6c = 100;
+  x2c = 10;
+  x3c = 11;
+  x4c = 12;
+  x5c = 1E150;
+  x6c = 1E152;
   cout << "ntype size=" << sizeof(numty) << "\n";
   c[6] = 1.0;
   c[5] = (-x1c - x2c - x3c - x4c - x5c - x6c).real();
@@ -61,7 +61,7 @@ int main()
   //c << -1685011.48498632,162908947.86425, 464224691.56007,20202439788.8921,31022318528.7487, -352127.445371458,1;
    c << -1685011.4849863185081630945205688,162908947.864249706268310546875,3464224691.560069561004638671875,20202439788.892055511474609375,31022318528.748729705810546875,-352127.44537145795766264200210571,1;
 #endif
-#if 0
+#if 1
   rp.set_coeff(c);
   rp.show();
   rp.find_roots(roots);

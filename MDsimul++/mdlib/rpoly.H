@@ -19,6 +19,7 @@
 #define LAGUERRE_POLISH
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
+#define POLISH_NR_REAL 
 //#define FAST_MATH
 using namespace std;
 template<class T>
@@ -753,6 +754,56 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 #ifdef LAGUERRE_POLISH
       if (r0.imag()!=0)
         {
+#ifdef POLISH_NR_REAL
+          // root polishing by NR
+          ntype r0old[2], p[2], r0new[2];
+          ntype p1[2], p0, p10;
+          ntype err, errold, invnp1;
+          r0new[0]=r0.real();
+          r0new[1]=r0.imag();
+          for (iter=0; iter < maxiter_polish; iter++)
+            {
+              
+              p[0]=cmon[n]*r0new[0]+cmon[n-1];
+              p[1]=cmon[n]*r0new[1];    
+              p1[0]=cmon[n];
+              p1[1]=0.0;
+              if (iter==0)
+                err=p[0]*p[0]+p[1]*p[1];
+              for(i=n-2;i>=0;i--) {
+                p10=p1[0];
+                p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
+                p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
+                p0=p[0];
+                p[0]=cmon[i]+p[0]*r0new[0]-p[1]*r0new[1];
+                p[1]=p0*r0new[1]+p[1]*r0new[0];
+              }
+              if (p1[0]==0 && p1[1]==0)
+                {
+                  break;
+                }
+              r0old[0]=r0new[0];
+              r0old[1]=r0new[1];
+              invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
+              r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
+              r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
+              errold=err;
+              err=p[0]*p[0]+p[1]*p[1];
+              //if (err < errold)
+              //cout  << "iter=" << iter << "\n";
+                //cout << "err=" << err << " errold=" << errold << "\n";
+              if (err==0)
+                break;
+          
+              if (err > errold)
+                {
+                  r0new[0]=r0old[0];
+                  r0new[1]=r0old[1];
+                  break;
+                }
+            }
+#if 0
+            {
           // root polishing by NR
           complex<ntype> r0old, p;
           complex<ntype> p1;
@@ -785,6 +836,52 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
                   break;
                 }
             }
+
+            }
+
+         if (abs(r0.real() - r0new[0]) > meps || abs(r0.imag()-r0new[1]) >meps) 
+           {
+             cout << "r0-r0new=" << r0 - r0new[0]+1i*r0new[1]<< "\n";
+             cout << "r0= " << r0 << " r0new="<< r0new[0] +1i*r0new[1]<< setprecision(32)<< "\n";  
+          
+           }
+#endif
+         r0=r0new[0] + r0new[1]*1i;
+
+#else
+          // root polishing by NR
+          complex<ntype> r0old, p;
+          complex<ntype> p1;
+          ntype err, errold;
+          for (iter=0; iter < maxiter_polish; iter++)
+            {
+              p=cmon[n]*r0+cmon[n-1];
+              p1=cmon[n];
+              if (iter==0)
+                err=abs(p);
+              for(i=n-2;i>=0;i--) {
+                p1=p+p1*r0;
+                p=cmon[i]+p*r0;
+              }
+              if (p1==complex<ntype>(0,0))
+                {
+                  break;
+                }
+              r0old=r0;
+              r0 -= p/p1;
+              errold=err;
+              err=abs(p);
+              //if (err < errold)
+                //cout << "err=" << err << " errold=" << errold << "\n";
+              if (err==0)
+                break;
+              if (err > errold)
+                {
+                  r0=r0old;
+                  break;
+                }
+            }
+#endif
         }
       else
         {
