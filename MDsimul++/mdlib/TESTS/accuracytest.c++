@@ -10,7 +10,7 @@
 #endif
 using numty = double;
 void calc_coeff(numty* c, complex<long double> er[]);
-void calc_coeff_dep_on_case(numty* c, complex<long double> *r)
+void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 {
   int i;
 #if CASO==1 
@@ -22,7 +22,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> *r)
       er[i] = 1.0;//er[i-1]/10.0L;
     }
   calc_coeff(c, er);
-  r = er;
+  *r = er;
 #elif CASO==2 
   //Polynomials with few very clustered roots.
   //Kameny  
@@ -185,7 +185,8 @@ int main(int argc, char *argv[])
   rpoly<numty,NDEG> rp;
   rpoly<numty,NDEG,true> rphqr;
   pvector<complex<numty>,NDEG> roots;
-  complex<long double> cr[NDEG], *er=NULL;
+  bool haveroots;
+  complex<long double> cr[NDEG], *er;
   pvector<numty,NDEG+1> c;
   int algo, i;
   numty ca[NDEG+1];
@@ -202,9 +203,9 @@ int main(int argc, char *argv[])
       printf("algorithm must be between 1 and XX algo=%d\n", algo);
       exit(-1);
     }
-  calc_coeff_dep_on_case(ca, er);
+  calc_coeff_dep_on_case(ca, &er);
   char testo[] = "Case CASO";
-  if (er!=NULL)
+  if (er!=nullptr)
     print_roots(testo, er); 
   for (i=0; i < NDEG+1; i++)
     c[i]=ca[i];
