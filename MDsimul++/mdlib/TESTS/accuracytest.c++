@@ -5,36 +5,66 @@
 #include<complex>
 #include<list>
 #include<string>
-#define SET_ROOTS
-//#define KAMENY
-//#define MIGNOTTE
-//#define WILK2
-#ifdef KAMENY
-#define NDEG 9
-#elif defined(MIGNOTTE)
-#define NDEG 6
-#elif defined(WILKINSON)
-#define NDEG 10
-#elif defined(WILK2)
-#define NDEG 10
-#else
-#ifndef NDEG
-#define NDEG 5
-#endif
+#ifndef CASO
+#define CASO 1
 #endif
 using numty = double;
+void calc_coeff(numty* c, complex<long double> er[]);
+void calc_coeff_dep_on_case(numty* c, complex<long double> *r)
+{
+  int i;
+#if CASO==1 
+#define NDEG 10
+  static complex <long double> er[NDEG];
+  er[0]=1;
+  for (i=1; i < NDEG; i++)
+    { 
+      er[i] = er[i-1]/10.0L;
+    }
+  calc_coeff(c, er);
+  r = er;
+#elif CASO==2 
+  //Polynomials with few very clustered roots.
+  //Kameny  
+#define NDEG 9
+  numty K = 1E50;
+  for (auto i=0; i <= NDEG; i++)
+    c[i]=0.0;
+  c[0] = 9.0;
+  c[2] = -6.0*K*K;
+  c[4] = K*K*K*K;
+  c[9] = K*K; 
+  r = NULL;
+#elif CASO==3
+#define NDEG 10
+  for (auto i=0; i <= NDEG; i++)
+    c[i]=0.0;
+  c[NDEG] = 1.0;
+  c[0]=1.0;
+  c[1] = -300.0;
+  c[2] = 30000.0;
+  c[3] = -1E6;
+  r=NULL;
+#elif CASO==5
+#define NDEG 11
+  static numty ct ={-1E22, 2E21, -1E20, 0, 0, 0, 0, 0, 0, 0, 1.0};
+  for (i=0; i < 11; i++)
+   c[i] = ct[i]; 
+  r=NULL;
+#endif
+} 
 int factorial(int n)
 {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
-void sort_sol_opt(int N, complex<numty> *sol, complex<numty> *exsol)
+void sort_sol_opt(complex<numty> sol[NDEG], complex<numty> exsol[NDEG])
 {
   int k1, k2, kk;
   double v, vmin;
-  complex<numty> *solt = new complex<numty>[N];
-  int *perm = new int[N];
-  int *perm_min = new int[N];
-  for (k1=0; k1 < N; k1++)
+  complex<numty> solt[NDEG];
+  int perm[NDEG];
+  int perm_min[NDEG];
+  for (k1=0; k1 < NDEG; k1++)
     {
       perm[k1] = k1;
     }
@@ -48,28 +78,25 @@ void sort_sol_opt(int N, complex<numty> *sol, complex<numty> *exsol)
       }
     if (k1==0 || v < vmin)
       {
-        for (kk=0; kk < N; kk++)
+        for (kk=0; kk < NDEG; kk++)
           perm_min[kk]=perm[kk];
         vmin = v;
       }
   } 
-  while (std::next_permutation(perm,perm+N));
+  while (std::next_permutation(perm,perm+NDEG));
 
-  for (k2=0; k2 < N; k2++)
+  for (k2=0; k2 < NDEG; k2++)
     solt[k2] = sol[k2];
 
-  for (k2=0; k2 < N; k2++)
+  for (k2=0; k2 < NDEG; k2++)
     sol[k2] = solt[perm_min[k2]];
-  delete [] solt;
-  delete [] perm; 
-  delete [] perm_min;
 }
-numty print_accuracy_at(int N, char *str, complex<numty> *csol, complex<numty> *exsol)
+numty print_accuracy_at(char *str, complex<numty> csol[NDEG], complex<numty> exsol[NDEG])
 {
   /* we follow FLocke here */
   int k1;
   numty relerr, relerrmax;
-  for (k1=0; k1 < N; k1++)
+  for (k1=0; k1 < NDEG; k1++)
     {
       relerr=abs((csol[k1] - exsol[k1])/exsol[k1]); 
       if (k1==0 || relerr > relerrmax)
@@ -81,10 +108,10 @@ numty print_accuracy_at(int N, char *str, complex<numty> *csol, complex<numty> *
   return relerrmax;
 }
 
-void print_roots(int N, char *str, complex<numty> *er)
+void print_roots(char *str, complex<long double> *er)
 {
   printf("CASE %s\n", str);
-  for (auto i=0; i < N; i++)
+  for (auto i=0; i < NDEG; i++)
     cout << "root #" << i << " "<< er[i] << setprecision(16) << "\n";
 }
 
@@ -109,28 +136,13 @@ void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<i
         l.pop_back();
       }
 } 
-int main()
+
+void calc_coeff(numty* c, complex<long double> er[NDEG])
 {
-  int i, j; 
-  rpoly<numty,NDEG> rp;
-  rpoly<numty,NDEG,true> rphqr;
-  pvector<numty, NDEG+1> c;
-  pvector<complex<numty>, NDEG> roots;
-  pvector<complex<long double>, NDEG> er;
-  pvector<complex<long double>, NDEG+1> cc;
-  complex<long double> term, segno;
-  complex<numty> *rarr;
-  int N=6;
-#ifdef SET_ROOTS 
-  er[0]=1;
-  for (i=1; i < NDEG; i++)
-    { 
-      er[i] = er[i-1]/10.0L;
-    }
-  //cout << "ntype size=" << sizeof(numty) << "\n";
-  // use Vieta's formulas to calculate polynomial coefficients
-  //
+  int i, j;
   std::list<std::list<int>> subsets;// list containing all subsets of a given length
+  complex<long double> cc[NDEG+1];
+  complex<long double> term, segno;
   // list with all list of subsets
   list<list<int>> lt;   
   // a subset of integers
@@ -162,43 +174,46 @@ int main()
           cc[i] += term*segno;
         }
       lt.clear();
-   }
+    }
   for (i=0; i < NDEG+1; i++)
     {
       c[i] = real(cc[i]);
     }
-   //c << -1685011.4849863185081630945205688,162908947.864249706268310546875,3464224691.560069561004638671875,20202439788.892055511474609375,31022318528.748729705810546875,-352127.44537145795766264200210571,1;
-#elif defined(KAMENY)
-//Polynomials with few very clustered roots.
-//Kameny  
-  numty K = 1E50;
-  for (auto i=0; i <= NDEG; i++)
-    c[i]=0.0;
-  c[0] = 9.0;
-  c[2] = -6.0*K*K;
-  c[4] = K*K*K*K;
-  c[9] = K*K; 
-#elif defined(MIGNOTTE)
-  for (auto i=0; i <= NDEG; i++)
-    c[i]=0.0;
-  c[NDEG] = 1.0;
-  c[0]=1.0;
-  c[1] = -300.0;
-  c[2] = 30000.0;
-  c[3] = -1E6;
-#elif defined(WILKINSON)
-c << 3628800, - 10628640, +12753576, - 8409500, 3416930, -902055, 157773, -18150,1320,-55, 1.0;
-#elif defined(WILK2)
-c << -1E22, 2E21, -1E20, 0, 0, 0, 0, 0, 0, 0, 1.0;
-#endif
+}
+int main(int argc, char *argv[])
+{
+  rpoly<numty,NDEG> rp;
+  rpoly<numty,NDEG,true> rphqr;
+  pvector<complex<numty>,NDEG> roots;
+  complex<long double> cr[NDEG], *er=NULL;
+  pvector<numty,NDEG+1> c;
+  int algo, i;
+  numty ca[NDEG];
+  if (argc == 2)
+    {
+      algo = atoi(argv[1]);
+    }
+  else
+    {
+      algo = 1;
+    }
+  if (algo < 1 || algo > 24)
+    {
+      printf("algorithm must be between 1 and XX algo=%d\n", algo);
+      exit(-1);
+    }
+  calc_coeff_dep_on_case(ca, er);
+  char testo[] = "Case CASO";
+  if (er!=NULL)
+    print_roots(testo, er); 
+  for (i=0; i < NDEG+1; i++)
+    c[i]=ca[i];
   rp.set_coeff(c);
   rp.show();
   rp.find_roots(roots);
   roots.show();  
-  rarr = new complex<numty>[N];
-  for (i=0; i < N; i++)
-    rarr[i] = roots[i];
-  delete [] rarr;
-  exit(-1);
+  for (i=0; i < NDEG; i++)
+    cr[i] = roots[i];
+  // sort roots and calculate relative error
   return 0;
 }
