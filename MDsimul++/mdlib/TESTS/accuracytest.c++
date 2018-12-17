@@ -75,27 +75,28 @@ int main()
   for (i=0; i < NDEG; i++)
     {
       subset(lt,array,NDEG,NDEG-i,0,l);
-      term=1.0;
       cc[i] = 0;
       cout << "qui\n";
 #if 1
       for(list<list<int>>::iterator it=lt.begin(); it!=lt.end(); ++it)
         {
+          term=1.0;
           print(*it);
           for(list<int>::iterator it2=(*it).begin(); it2!=(*it).end(); ++it2)
             {
-              //term *= er[*it]; 
+              term *= er[*it2]; 
+              cout << "er[" << *it2 << "]=" << er[*it2] << "\n";
             }
+          if (i%2==0)
+            segno=-1;
+          else
+            segno=1;
+          cc[i] += term*segno;
         }
 #endif
       lt.clear();
       cout << "term=" << term << "\n";
-      if (i%2==0)
-        segno=-1;
-      else
-        segno=1;
-      cc[i] += term*segno;
-    }
+   }
   for (i=0; i < NDEG+1; i++)
     {
       c[i] = real(cc[i]);
