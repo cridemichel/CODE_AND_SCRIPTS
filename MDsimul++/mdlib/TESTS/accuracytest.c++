@@ -22,6 +22,30 @@
 #define NDEG 5
 #endif
 #endif
+using numty = double;
+numty print_accuracy_at(char *str, complex<numty> *csol, complex<numty> exsol[4])
+{
+  /* we follow FLocke here */
+  int k1;
+  numty relerr, relerrmax;
+  for (k1=0; k1 < 4; k1++)
+    {
+      relerr=abs((csol[k1] - exsol[k1])/exsol[k1]); 
+      if (k1==0 || relerr > relerrmax)
+        {
+          relerrmax=abs((csol[k1] - exsol[k1])/exsol[k1]); 
+        }
+    }
+  printf("[%s] relative accuracy=%.16G\n", str, relerrmax);
+  return relerrmax;
+}
+
+void print_roots(char *str, int N, complex<numty> *er)
+{
+  printf("CASE %s\n", str);
+  for (auto i=0; i < N; i++)
+    cout << "root #" << i << " "<< er[i] << setprecision(16) << "\n";
+}
 
 void print( list<int> l){
     for(list<int>::iterator it=l.begin(); it!=l.end() ; ++it)
@@ -46,7 +70,6 @@ void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<i
 } 
 int main()
 {
-  using numty=double;
   int i, j; 
   rpoly<numty,NDEG> rp;
   rpoly<numty,NDEG,true> rphqr;
@@ -54,18 +77,17 @@ int main()
   pvector<complex<numty>, NDEG> roots;
   pvector<complex<long double>, NDEG> er;
   pvector<complex<long double>, NDEG+1> cc;
-#ifdef SET_ROOTS 
   complex<long double> term, segno;
+#ifdef SET_ROOTS 
   er[0]=1;
   for (i=1; i < NDEG; i++)
     { 
       er[i] = er[i-1]/10.0L;
     }
   //cout << "ntype size=" << sizeof(numty) << "\n";
-  cc[NDEG] = 1.0;
   // use Vieta's formulas to calculate polynomial coefficients
   //
-  std::list<std::list<int>> subsets;// list of list with all subsets
+  std::list<std::list<int>> subsets;// list containing all subsets of a given length
   // list with all list of subsets
   list<list<int>> lt;   
   // a subset of integers
@@ -73,6 +95,7 @@ int main()
   int array[NDEG];
   for (j=0; j < NDEG; j++)
     array[j] = j;
+  cc[NDEG] = 1.0;
   for (i=0; i < NDEG; i++)
     {
       // all subsets of NDEG-i elements are stored in list lt
