@@ -23,12 +23,53 @@
 #endif
 #endif
 using numty = double;
-numty print_accuracy_at(char *str, complex<numty> *csol, complex<numty> exsol[4])
+int factorial(int n)
+{
+  return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
+}
+void sort_sol_opt(int N, complex<numty> *sol, complex<numty> *exsol)
+{
+  int k1, k2, kk;
+  double v, vmin;
+  complex<numty> *solt = new complex<numty>[N];
+  int *perm = new int[N];
+  int *perm_min = new int[N];
+  for (k1=0; k1 < N; k1++)
+    {
+      perm[k1] = k1;
+    }
+  do {
+    //  std::cout << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
+    cout << perm << "\n"; 
+    v = 0;
+    for (k2=0; k2 < 5; k2++)
+      {
+        v += (exsol[k2]==complex<double>(0,0))?abs(sol[perm[k2]]-exsol[k2]):abs((sol[perm[k2]]-exsol[k2])/exsol[k2]);
+      }
+    if (k1==0 || v < vmin)
+      {
+        for (kk=0; kk < N; kk++)
+          perm_min[kk]=perm[kk];
+        vmin = v;
+      }
+  } 
+  while (std::next_permutation(perm,perm+N));
+
+  for (k2=0; k2 < N; k2++)
+    solt[k2] = sol[k2];
+
+  for (k2=0; k2 < N; k2++)
+    sol[k2] = solt[perm_min[k2]];
+  delete [] solt;
+  delete [] perm; 
+  delete [] perm_min;
+}
+numty print_accuracy_at(int N, char *str, complex<numty> *csol, complex<numty> *exsol)
 {
   /* we follow FLocke here */
   int k1;
   numty relerr, relerrmax;
-  for (k1=0; k1 < 4; k1++)
+  for (k1=0; k1 < N; k1++)
     {
       relerr=abs((csol[k1] - exsol[k1])/exsol[k1]); 
       if (k1==0 || relerr > relerrmax)
@@ -40,7 +81,7 @@ numty print_accuracy_at(char *str, complex<numty> *csol, complex<numty> exsol[4]
   return relerrmax;
 }
 
-void print_roots(char *str, int N, complex<numty> *er)
+void print_roots(int N, char *str, complex<numty> *er)
 {
   printf("CASE %s\n", str);
   for (auto i=0; i < N; i++)
