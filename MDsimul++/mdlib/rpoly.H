@@ -20,6 +20,7 @@
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
+#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
 template<class T>
@@ -635,6 +636,137 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
         bd[i]=c[i];
     }
 #endif
+#ifdef USE_LAGUER_REAL
+ bool laguer(complex<ntype> &xc)
+    {
+      const int MR=8,MT=10,MAXIT=MT*MR;
+      const ntype EPS=numeric_limits<ntype>::epsilon();
+      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int iter,j;
+      ntype abx,abp,abm,err;
+      //complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
+      ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
+      complex<ntype> sqrtcmplx;
+      int m=N;
+      //cout << "r0 ini = "<<xc << "\n"; 
+      x[0] = xc.real();
+      x[1] = xc.imag();
+      for (iter=1;iter<=MAXIT;iter++) 
+        {
+          //its=iter;
+          b[0]=cmon[m];
+          b[1]=0.0;
+          err=sqrt(b[0]*b[0]+b[1]*b[1]);
+          d[0]=f[0]=0.0;
+          d[1]=f[1]=0.0;
+          abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+          for (j=m-1;j>=0;j--) {
+          //  f=x*f+d;
+          //  d=x*d+b;
+          //  b=x*b+cmon[j];
+
+            f0 = f[0];
+            f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
+            f[1] = x[0]*f[1] + x[1]*f0 + d[1];
+            d0 = d[0];
+            d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+            d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+            b0 = b[0];
+            b[0] = x[0]*b[0] - x[1]*b[1] + cmon[j];
+            b[1] = x[0]*b[1] + x[1]*b0;
+
+            err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
+          }
+          err *= EPS;
+          if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
+            {
+              //if (iter > 15)
+              //cout << "iter=" << iter << "\n";
+              xc = x[0] + 1i*x[1];
+              return true;
+            }
+          invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
+          g[0] = (d[1]*b[1] + d[0]*b[0])*invn;
+          g[1] = (d[1]*b[0] - d[0]*b[1])*invn; 
+          g2[0] = g[0]*g[0] - g[1]*g[1];
+          g2[1] = 2.0*g[0]*g[1];
+          //g=d/b;
+          //g2=g*g;
+          fb[0] = (f[1]*b[1] + f[0]*b[0])*invn;
+          fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
+          //h=g2-ntype(2.0)*f/b;
+          h[0] = g2[0] - 2.0*fb[0];
+          h[1] = g2[1] - 2.0*fb[1];
+          sarg[0] = ntype(m-1)*(ntype(m)*h[0] - g2[0]);
+          sarg[1] = ntype(m-1)*(ntype(m)*h[1] - g2[1]);
+          sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
+          sq[0]=sqrtcmplx.real();
+          sq[1]=sqrtcmplx.imag();
+          gp[0] = g[0] + sq[0];
+          gp[1] = g[1] + sq[1];
+
+          gm[0] = g[0] - sq[0];
+          gm[1] = g[1] - sq[1]; 
+          //gp=g+sq;
+          //gm=g-sq;
+          //abp=abs(gp);
+          //abm=abs(gm);
+          abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
+          abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
+          if (abp < abm) 
+            {
+              gp[0]=gm[0];
+              gp[1]=gm[1];
+            }
+          //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
+          invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
+          invgp[0] = gp[0]*invn;
+          invgp[1] = -gp[1]*invn;
+
+          //cout << "abp=" << abp << " abm=" << abm << "\n";
+          //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
+          if (MAX(abp,abm) > 0.0)
+            {
+              dx[0]=ntype(m)*invgp[0];
+              dx[1]=ntype(m)*invgp[1];
+            }
+          else
+            {
+              pol[0] = (1.0+abx)*cos(ntype(iter));
+              pol[1] = (1.0+abx)*sin(ntype(iter)); 
+              dx[0]=pol[0];
+              dx[1]=pol[1];
+            }
+          //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
+          //x1=x-dx;
+          x1[0] = x[0] - dx[0];
+          x1[1] = x[1] - dx[1];
+          if (x[0] == x1[0] && x[1]==x1[1]) 
+            {
+              //if (iter > 15)
+                //cout << "iter=" << iter << "\n";
+              xc = x[0] + 1i*x[1];
+              return true;
+            }
+          if (iter % MT != 0) 
+            {
+              x[0]=x1[0];
+              x[1]=x1[1];
+            }
+          else 
+            {
+              x[0] -= frac[iter/MT]*dx[0];
+              x[1] -= frac[iter/MT]*dx[1];
+            }
+          //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
+        }
+      //cout << "too many iterations in laguer\n";
+      xc = x[0] + 1i*x[1];
+      return false;
+    }
+
+#else
  bool laguer(complex<ntype> &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -644,6 +776,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       ntype abx,abp,abm,err;
       complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m=N;
+      //cout << "r0 ini = "<< x << "\n"; 
       for (iter=1;iter<=MAXIT;iter++) 
         {
           //its=iter;
@@ -658,6 +791,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             err=abs(b)+abx*err;
           }
           err *= EPS;
+          //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
           if (abs(b) <= err) 
             {
               //if (iter > 15)
@@ -670,10 +804,15 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
           gp=g+sq;
           gm=g-sq;
+          cout << "gp = " << gp << " gm=" << gm << "\n";
           abp=abs(gp);
           abm=abs(gm);
+
           if (abp < abm) gp=gm;
+          //cout << "abp=" << abp << " abm=" << abm << "\n";
+          //cout << "1/gp=" << 1.0/gp << "\n";
           dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
+          //cout << "dx=" << dx << "\n";
           x1=x-dx;
           if (x == x1) 
             {
@@ -690,6 +829,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       //cout << "too many iterations in laguer\n";
       return false;
     }
+#endif
   ntype calc_err_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
     {
       int i;
@@ -750,7 +890,6 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
               exit(-1); 
             }
         };
-
 #ifdef LAGUERRE_POLISH
       if (r0.imag()!=0)
         {
@@ -763,7 +902,6 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           r0new[1]=r0.imag();
           for (iter=0; iter < maxiter_polish; iter++)
             {
-              
               p[0]=cmon[n]*r0new[0]+cmon[n-1];
               p[1]=cmon[n]*r0new[1];    
               p1[0]=cmon[n];
