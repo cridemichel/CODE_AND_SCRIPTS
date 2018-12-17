@@ -19,7 +19,7 @@
 #define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
-#define POLISH_NR_REAL 
+//#define POLISH_NR_REAL 
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
@@ -1078,7 +1078,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP = calc_err_q(deflcoeff, r0.real());
-          use_NR_defl_lin(deflcoeff,r0);
+          use_NR_defl_lin(deflcoeff,r0.real());
           //errD = calc_err_q(deflcoeff, r0.real());
 #if 0
           if (errD < errP)

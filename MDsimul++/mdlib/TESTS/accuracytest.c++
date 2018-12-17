@@ -14,14 +14,25 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 {
   int i;
 #if CASO==1 
-#define NDEG 5
+#define NDEG 10
   static complex <long double> er[NDEG];
-  er[0]=1;
+  er[0]=0.1;
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = 1.0;//er[i-1]/10.0L;
+      er[i] = er[i-1]/10.0L;
     }
-  calc_coeff(c, er);
+  //calc_coeff(c, er);
+  c[0] = 1.00000000000000053791679056187E-55;
+  c[1] = 1.11111111100000055584244679722E-45;
+  c[2] = 1.12233445443322162787800313739E-36;
+  c[3] = 1.12345790111098789834840761654E-28;
+  c[4] = 1.12357014577977569473069186308E-21;
+  c[5] = 1.12358025801221010756462539505E-15;
+  c[6] = 1.12357014577977572218174173241E-10;
+  c[7] = 1.12345790111098777138700591932E-6;
+  c[8] = 0.0011223344544332213099796513589;
+  c[9] = 0.111111111100000006790544659907;
+  c[10] = 1.0;
   *r = er;
 #elif CASO==2 
   //Polynomials with few very clustered roots.
@@ -51,6 +62,16 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   for (i=0; i < 11; i++)
    c[i] = ct[i]; 
   r=NULL;
+#elif CASO==6
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  er[0]=1;
+  for (i=1; i < NDEG; i++)
+    { 
+      er[i] = er[i-1]/10.0L;
+    }
+  calc_coeff(c, er);
+  *r = er;
 #endif
 } 
 int factorial(int n)
@@ -160,7 +181,7 @@ void calc_coeff(numty* c, complex<long double> er[NDEG])
       for(list<list<int>>::iterator it=lt.begin(); it!=lt.end(); ++it)
         {
           term=1.0;
-          //print(*it);
+          print(*it);
           // loop over one subset
           for(list<int>::iterator it2=(*it).begin(); it2!=(*it).end(); ++it2)
             {
@@ -185,7 +206,6 @@ int main(int argc, char *argv[])
   rpoly<numty,NDEG> rp;
   rpoly<numty,NDEG,true> rphqr;
   pvector<complex<numty>,NDEG> roots;
-  bool haveroots;
   complex<long double> cr[NDEG], *er;
   pvector<numty,NDEG+1> c;
   int algo, i;
