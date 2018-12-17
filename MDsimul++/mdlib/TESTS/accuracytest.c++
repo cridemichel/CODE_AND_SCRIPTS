@@ -14,12 +14,12 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> *r)
 {
   int i;
 #if CASO==1 
-#define NDEG 10
+#define NDEG 5
   static complex <long double> er[NDEG];
   er[0]=1;
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = er[i-1]/10.0L;
+      er[i] = 1.0;//er[i-1]/10.0L;
     }
   calc_coeff(c, er);
   r = er;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
   complex<long double> cr[NDEG], *er=NULL;
   pvector<numty,NDEG+1> c;
   int algo, i;
-  numty ca[NDEG];
+  numty ca[NDEG+1];
   if (argc == 2)
     {
       algo = atoi(argv[1]);
