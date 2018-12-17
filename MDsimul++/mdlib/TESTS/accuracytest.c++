@@ -119,6 +119,8 @@ int main()
   pvector<complex<long double>, NDEG> er;
   pvector<complex<long double>, NDEG+1> cc;
   complex<long double> term, segno;
+  complex<numty> *rarr;
+  int N=6;
 #ifdef SET_ROOTS 
   er[0]=1;
   for (i=1; i < NDEG; i++)
@@ -193,6 +195,10 @@ c << -1E22, 2E21, -1E20, 0, 0, 0, 0, 0, 0, 0, 1.0;
   rp.show();
   rp.find_roots(roots);
   roots.show();  
+  rarr = new complex<numty>[N];
+  for (i=0; i < N; i++)
+    rarr[i] = roots[i];
+  delete [] rarr;
   exit(-1);
   return 0;
 }
