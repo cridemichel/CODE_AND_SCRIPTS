@@ -495,21 +495,22 @@ int main(int argc, char **argv)
       ic = 0;
       if (dojust==-1 || dojust == ic)
         {
-          hqr.set_coeff(c);
-          hqr.find_roots(csolall[ic]);
-        }
-      ic++;	
-      if (dojust==-1 || dojust == ic)
-	{
 #if 1
           oqs.set_coeff(c);
-          oqs.find_roots(csolall[ic]);
+          oqs.zroots(csolall[ic], true);//find_roots(csolall[ic]);
 #else
           for (auto i=0; i < 6; i++)
             csolall[ic][i] =exsol[i];
 #endif
 	}
-      for (ic = 0; ic < maxic; ic++)
+
+      if (dojust==-1 || dojust == ic)
+        {
+          hqr.set_coeff(c);
+          hqr.find_roots(csolall[ic]);
+        }
+      ic++;	
+            for (ic = 0; ic < maxic; ic++)
 	{
 	  if (dojust==-1 || dojust==ic)
 	    sort_sol_opt(csolall[ic], exsol);

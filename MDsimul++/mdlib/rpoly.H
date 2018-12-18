@@ -832,7 +832,88 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       return false;
     }
 #endif
-  ntype calc_err_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
+void laguer(ntype *a, complex<ntype> &x)
+  {
+    const int MR=8,MT=10,MAXIT=MT*MR;
+    const ntype EPS=numeric_limits<ntype>::epsilon();
+    static const ntype frac[MR+1]=
+      {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+    int iter,j;
+    ntype abx,abp,abm,err;
+    complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+
+    int m=N;//a.size()-1;
+    for (iter=1;iter<=MAXIT;iter++) {
+      b=a[m];
+      err=abs(b);
+      d=f=0.0;
+      abx=abs(x);
+      for (j=m-1;j>=0;j--) {
+        f=x*f+d;
+        d=x*d+b;
+        b=x*b+a[j];
+        err=abs(b)+abx*err;
+      }
+      err *= EPS;
+      if (abs(b) <= err) return;
+      g=d/b;
+      g2=g*g;
+      h=g2-2.0*f/b;
+      sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
+      gp=g+sq;
+      gm=g-sq;
+      abp=abs(gp);
+      abm=abs(gm);
+      if (abp < abm) gp=gm;
+      dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
+      x1=x-dx;
+      if (x == x1) return;
+      if (iter % MT != 0) x=x1;
+      else x -= frac[iter/MT]*dx;
+    }
+    //nrerror("too many iterations in laguer");
+    return;
+  }
+
+ void zroots(pvector<complex<ntype>,N> &rootsa, const bool polish)
+   {
+     const ntype EPS=1.0E-14;
+     int i,j,jj;
+     complex<ntype> x,b,c;
+     complex<ntype> roots[N];
+     int m=N; // a.size()-1;
+     complex<ntype> ad[N+1];
+     for (j=0;j<=m;j++) ad[j]=cmon[j];
+     for (j=m-1;j>=0;j--) {
+       x=0.0;
+       complex<ntype> ad_v[j+2];
+       for (jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj];
+       laguer(ad_v,x);
+       if (fabs(imag(x)) <= 2.0*EPS*fabs(real(x)))
+         x=complex<ntype>(ntype(real(x)),0.0);
+       roots[j]=x;
+       b=ad[j+1];
+       for (jj=j;jj>=0;jj--) {
+         c=ad[jj];
+         ad[jj]=b;
+         b=x*b+c;
+       }
+     }
+     if (polish)
+       for (j=0;j<m;j++)
+         laguer(cmon,roots[j]);
+     for (j=1;j<m;j++) {
+       x=roots[j];
+       for (i=j-1;i>=0;i--) {
+         if (real(roots[i]) <= real(x)) break;
+         roots[i+1]=roots[i];
+       }
+       roots[i+1]=x;
+     }
+     for (i=0; i < N; i++)
+       rootsa[i] = roots[i];
+   }
+ ntype calc_err_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
     {
       int i;
       ntype sum=0, term;
