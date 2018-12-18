@@ -14,9 +14,19 @@ void calc_coeff(numty* c, complex<long double> er[]);
 void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 {
   int i;
-#if CASO==1 
-#define NDEG 20
+#if CASO==1
+// wilkinson
+//
+  #define NDEG 10
   static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=0; i < NDEG; i++)
+    { 
+      er[i] = i+1;
+    }
+  calc_coeff(c, er);
+#elif CASO==2 
+#define NDEG 20
   allreal=true;
   er[0]=0.1;
   for (i=1; i < NDEG; i++)
