@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "pmatrix.H"
 #include "./rpoly.H"
-#include<complex>
+//#include<complex>
 #ifndef NDEG
 #define NDEG 6
 #endif

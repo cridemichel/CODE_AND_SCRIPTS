@@ -8,8 +8,8 @@
 #include <limits>
 #include <cstdlib>
 #include <array>
-//fix to avoid crash of clang
 #include <complex>
+//fix to avoid crash of clang
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))

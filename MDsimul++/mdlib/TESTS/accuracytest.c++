@@ -14,14 +14,17 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 {
   int i;
 #if CASO==1 
-#define NDEG 10
+#define NDEG 20
   static complex <long double> er[NDEG];
   er[0]=0.1;
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = er[i-1]/10.0L;
+      er[i] = er[i-1]/(10.0L);
     }
-  //calc_coeff(c, er);
+  calc_coeff(c, er);
+#if 0
+  for (i=0; i < NDEG; i++)
+    cout << "[CALC] c[" << i << "]=" << c[i] << setprecision(20) << "\n";
   c[0] = 1.00000000000000053791679056187E-55;
   c[1] = 1.11111111100000055584244679722E-45;
   c[2] = 1.12233445443322162787800313739E-36;
@@ -33,6 +36,10 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   c[8] = 0.0011223344544332213099796513589;
   c[9] = 0.111111111100000006790544659907;
   c[10] = 1.0;
+#endif
+  for (i=0; i < NDEG; i++)
+    cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+
   *r = er;
 #elif CASO==2 
   //Polynomials with few very clustered roots.
@@ -181,17 +188,27 @@ void calc_coeff(numty* c, complex<long double> er[NDEG])
       for(list<list<int>>::iterator it=lt.begin(); it!=lt.end(); ++it)
         {
           term=1.0;
-          print(*it);
+          //print(*it);
           // loop over one subset
           for(list<int>::iterator it2=(*it).begin(); it2!=(*it).end(); ++it2)
             {
               term *= er[*it2]; 
               //cout << "er[" << *it2 << "]=" << er[*it2] << "\n";
             }
-          if (i%2==0)
-            segno=-1;
+          if (NDEG % 2==1)
+            {
+              if (i%2==0)
+                segno=-1;
+              else
+                segno=1;
+            }
           else
-            segno=1;
+            {
+              if (i%2==0)
+                segno=1;
+              else
+                segno=-1;
+            }
           cc[i] += term*segno;
         }
       lt.clear();
