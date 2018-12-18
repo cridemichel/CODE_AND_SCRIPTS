@@ -874,7 +874,7 @@ void laguer(ntype *a, complex<ntype> &x)
     //nrerror("too many iterations in laguer");
     return;
   }
-
+#if 0
  void zroots(pvector<complex<ntype>,N> &rootsa, const bool polish)
    {
      const ntype EPS=1.0E-14;
@@ -913,6 +913,7 @@ void laguer(ntype *a, complex<ntype> &x)
      for (i=0; i < N; i++)
        rootsa[i] = roots[i];
    }
+#endif
  ntype calc_err_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
     {
       int i;
