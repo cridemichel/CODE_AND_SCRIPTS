@@ -5,6 +5,7 @@
 #include<complex>
 #include<list>
 #include<string>
+bool allreal=false;
 #ifndef CASO
 #define CASO 1
 #endif
@@ -16,6 +17,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 #if CASO==1 
 #define NDEG 20
   static complex <long double> er[NDEG];
+  allreal=true;
   er[0]=0.1;
   for (i=1; i < NDEG; i++)
     { 
@@ -37,8 +39,8 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   c[9] = 0.111111111100000006790544659907;
   c[10] = 1.0;
 #endif
-  for (i=0; i < NDEG; i++)
-    cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+  //for (i=0; i < NDEG; i++)
+    //cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
 
   *r = er;
 #elif CASO==2 
@@ -85,27 +87,29 @@ int factorial(int n)
 {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
-void sort_sol_opt(complex<numty> sol[NDEG], complex<numty> exsol[NDEG])
+void sort_sol_opt(complex<long double> sol[NDEG], complex<long double>* exsol)
 {
   int k1, k2, kk;
   double v, vmin;
   complex<numty> solt[NDEG];
   int perm[NDEG];
   int perm_min[NDEG];
+  bool ini=true;
   for (k1=0; k1 < NDEG; k1++)
     {
       perm[k1] = k1;
     }
   do {
     //  std::cout << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
-    cout << perm << "\n"; 
+    //cout << perm << "\n"; 
     v = 0;
-    for (k2=0; k2 < 5; k2++)
+    for (k2=0; k2 < NDEG; k2++)
       {
-        v += (exsol[k2]==complex<double>(0,0))?abs(sol[perm[k2]]-exsol[k2]):abs((sol[perm[k2]]-exsol[k2])/exsol[k2]);
+        v += (exsol[k2]==complex<long double>(0,0))?abs(sol[perm[k2]]-exsol[k2]):abs((sol[perm[k2]]-exsol[k2])/exsol[k2]);
       }
-    if (k1==0 || v < vmin)
+    if (ini==true || v < vmin)
       {
+        ini=false;
         for (kk=0; kk < NDEG; kk++)
           perm_min[kk]=perm[kk];
         vmin = v;
@@ -119,7 +123,7 @@ void sort_sol_opt(complex<numty> sol[NDEG], complex<numty> exsol[NDEG])
   for (k2=0; k2 < NDEG; k2++)
     sol[k2] = solt[perm_min[k2]];
 }
-numty print_accuracy_at(char *str, complex<numty> csol[NDEG], complex<numty> exsol[NDEG])
+numty print_accuracy_at(char *str, complex<long double>* csol, complex<long double> *exsol)
 {
   /* we follow FLocke here */
   int k1;
@@ -220,9 +224,8 @@ void calc_coeff(numty* c, complex<long double> er[NDEG])
 }
 int main(int argc, char *argv[])
 {
-  rpoly<numty,NDEG> rp;
-  rpoly<numty,NDEG,true> rphqr;
   pvector<complex<numty>,NDEG> roots;
+  char testo2[256];
   complex<long double> cr[NDEG], *er;
   pvector<numty,NDEG+1> c;
   int algo, i;
@@ -246,12 +249,46 @@ int main(int argc, char *argv[])
     print_roots(testo, er); 
   for (i=0; i < NDEG+1; i++)
     c[i]=ca[i];
-  rp.set_coeff(c);
-  rp.show();
-  rp.find_roots(roots);
-  roots.show();  
+  if (algo==0)
+    {
+      rpoly<numty,NDEG> rp;
+      rp.set_coeff(c);
+      rp.show();
+      rp.find_roots(roots);
+      roots.show();  
+      sprintf(testo2, "[OPS]");
+    }
+  else if (algo==1)
+    {
+      rpoly<numty,NDEG,true> rphqr;
+      rphqr.set_coeff(c);
+      rphqr.show("p(x)=");
+      rphqr.find_roots(roots);
+      sprintf(testo2, "[HQR]");
+      roots.show();  
+    }
   for (i=0; i < NDEG; i++)
     cr[i] = roots[i];
   // sort roots and calculate relative error
+  if (allreal==true)
+    {
+      std::array<numty,NDEG> rero;
+      for (i=0; i < NDEG; i++)
+        rero[i] = er[i].real();
+      std::sort(rero.begin(),rero.end(), [&] (numty a, numty b)-> bool {return a < b;});
+      for (i=0; i < NDEG; i++)
+        er[i] = rero[i] + er[i].imag();
+      for (i=0; i < NDEG; i++)
+        rero[i] = cr[i].real();
+      std::sort(rero.begin(),rero.end(), [&] (numty a, numty b)-> bool {return a < b;});
+      for (i=0; i < NDEG; i++)
+        cr[i] = rero[i] + cr[i].imag();
+    }
+  else
+    {
+      sort_sol_opt(cr, er);
+    };
+
+  print_accuracy_at(testo2, cr, er);
   return 0;
 }
