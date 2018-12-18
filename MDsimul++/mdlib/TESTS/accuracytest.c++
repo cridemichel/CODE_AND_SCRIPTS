@@ -95,11 +95,56 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
-      er[i] = 1.0L/pow(2,NDEG-i);
+      er[i] = 1.0L/pow(2,NDEG/2-i);
     }
   calc_coeff(c, er);
   *r = er;
-
+#elif CASO==9
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=0; i < NDEG; i++)
+    { 
+      er[i] = 1.0L/pow(2,NDEG/2-i)-3.0L;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==10
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=0; i < NDEG; i++)
+    { 
+      er[i] = cos(M_PI*(2.0L*(i+1)-1)/40.0L);
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==11
+#define NDEG 20
+  static complex <long double> er[NDEG]={-0.9888308262251285450697429 - 
+  0.1490422661761744469293547*1i, -0.9888308262251285450697429 + 
+  0.1490422661761744469293547*1i, -0.9009688679024191262361023 - 
+  0.4338837391175581204757683*1i, -0.9009688679024191262361023 + 
+  0.4338837391175581204757683*1i, -0.7330518718298263285224315 - 
+  0.6801727377709193901873587*1i, -0.7330518718298263285224315 + 
+  0.6801727377709193901873587*1i, -0.5000000000000000000000000 - 
+  0.8660254037844386467637232*1i, -0.5000000000000000000000000 + 
+  0.8660254037844386467637232*1i, -0.2225209339563144042889026 - 
+  0.9749279121818236070181317*1i, -0.2225209339563144042889026 + 
+  0.9749279121818236070181317*1i, 
+ 0.0747300935864242542909397 - 0.9972037971811801482250299*1i, 
+ 0.0747300935864242542909397 + 0.9972037971811801482250299*1i, 
+ 0.3653410243663950145447380 - 0.9308737486442042556377992*1i, 
+ 0.3653410243663950145447380 + 0.9308737486442042556377992*1i, 
+ 0.6234898018587335305250049 - 0.7818314824680298087084445*1i, 
+ 0.6234898018587335305250049 + 0.7818314824680298087084445*1i, 
+ 0.8262387743159948719451626 - 0.5633200580636220277492615*1i, 
+ 0.8262387743159948719451626 + 0.5633200580636220277492615*1i, 
+ 0.9555728057861407328113341 - 0.2947551744109042168307730*1i, 
+ 0.9555728057861407328113341 + 0.2947551744109042168307730*1i};
+  allreal=true;
+  calc_coeff(c, er);
+  *r = er;
 #elif CASO==30
 #define NDEG 20
   allreal=true;
@@ -356,17 +401,41 @@ int main(int argc, char *argv[])
   // sort roots and calculate relative error
   if (allreal==true)
     {
-      std::array<numty,NDEG> rero;
+      struct rerot { long double re; long double im;};
+      std::array<struct rerot,NDEG> rero;
       for (i=0; i < NDEG; i++)
-        rero[i] = er[i].real();
-      std::sort(rero.begin(),rero.end(), [&] (numty a, numty b)-> bool {return a < b;});
+        {
+          rero[i].re = er[i].real();
+          rero[i].im = er[i].imag();
+        }
+      std::sort(rero.begin(),rero.end(), [&] (struct rerot a, struct rerot b)-> bool {return a.re < b.re;});
+      for (i=0; i < NDEG; i+=2)
+        {
+          if (rero[i].im > rero[i+1].im)
+            swap(rero[i],rero[i+1]);
+        }
       for (i=0; i < NDEG; i++)
-        er[i] = rero[i] + er[i].imag();
+        {
+          er[i] = rero[i].re + 1il*rero[i].im;
+          cout << "EX root= " << er[i] << "\n";
+        }
       for (i=0; i < NDEG; i++)
-        rero[i] = cr[i].real();
-      std::sort(rero.begin(),rero.end(), [&] (numty a, numty b)-> bool {return a < b;});
+        {
+          rero[i].re = cr[i].real();
+          rero[i].im = cr[i].imag();
+        }
+      std::sort(rero.begin(),rero.end(), [&] (struct rerot a, struct rerot b)-> bool {return a.re < b.re;});
+      for (i=0; i < NDEG; i+=2)
+        {
+          if (rero[i].im > rero[i+1].im)
+            swap(rero[i],rero[i+1]);
+        }
+      
       for (i=0; i < NDEG; i++)
-        cr[i] = rero[i] + cr[i].imag();
+        {
+          cr[i] = rero[i].re + 1il*rero[i].im;
+          cout << "CALC root= " << cr[i] << "\n";
+        }
     }
   else
     {
