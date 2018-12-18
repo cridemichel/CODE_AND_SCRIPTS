@@ -7,7 +7,7 @@
 #include<string>
 bool allreal=false;
 #ifndef CASO
-#define CASO 1
+#define CASO 4
 #endif
 using numty = double;
 void calc_coeff(numty* c, complex<long double> er[]);
@@ -17,7 +17,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 #if CASO==1
 // wilkinson
 //
-  #define NDEG 10
+#define NDEG 10
   static complex <long double> er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
@@ -25,7 +25,82 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
       er[i] = i+1;
     }
   calc_coeff(c, er);
-#elif CASO==2 
+  *r = er;
+#elif CASO==2
+// wilkinson
+//
+#define NDEG 15
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=0; i < NDEG; i++)
+    { 
+      er[i] = i+1;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==3
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=0; i < NDEG; i++)
+    { 
+      er[i] = i+1;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==4
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  allreal=true;
+  er[0] = -2.1;
+  for (i=1; i < NDEG; i++)
+    { 
+      er[i] = er[i-1]+0.2L;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==5
+#define NDEG 10
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=1; i < NDEG+1; i++)
+    { 
+      er[i-1] = 1.0L/i;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==6
+#define NDEG 15
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=1; i < NDEG+1; i++)
+    { 
+      er[i-1] = 1.0L/i;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==7
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=1; i < NDEG+1; i++)
+    { 
+      er[i-1] = 1.0L/i;
+    }
+  calc_coeff(c, er);
+  *r = er;
+#elif CASO==8
+#define NDEG 20
+  static complex <long double> er[NDEG];
+  allreal=true;
+  for (i=0; i < NDEG; i++)
+    { 
+      er[i] = 1.0L/pow(2,NDEG-i);
+    }
+  calc_coeff(c, er);
+  *r = er;
+
+#elif CASO==30
 #define NDEG 20
   allreal=true;
   er[0]=0.1;
@@ -34,6 +109,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
       er[i] = er[i-1]/(10.0L);
     }
   calc_coeff(c, er);
+  *r = er;
 #if 0
   for (i=0; i < NDEG; i++)
     cout << "[CALC] c[" << i << "]=" << c[i] << setprecision(20) << "\n";
@@ -51,9 +127,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
 #endif
   //for (i=0; i < NDEG; i++)
     //cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
-
-  *r = er;
-#elif CASO==2 
+#elif CASO==31
   //Polynomials with few very clustered roots.
   //Kameny  
 #define NDEG 9
@@ -65,7 +139,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   c[4] = K*K*K*K;
   c[9] = K*K; 
   r = NULL;
-#elif CASO==3
+#elif CASO==32
 #define NDEG 10
   for (auto i=0; i <= NDEG; i++)
     c[i]=0.0;
@@ -81,7 +155,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   for (i=0; i < 11; i++)
    c[i] = ct[i]; 
   r=NULL;
-#elif CASO==6
+#elif CASO==33
 #define NDEG 20
   static complex <long double> er[NDEG];
   er[0]=1;
