@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
     {
       algo = 1;
     }
-  if (algo < 1 || algo > 24)
+  if (algo < 0 || algo > 1)
     {
       printf("algorithm must be between 1 and XX algo=%d\n", algo);
       exit(-1);
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
       rp.show();
       rp.find_roots(roots);
       roots.show();  
-      sprintf(testo2, "[OPS]");
+      sprintf(testo2, "OPS");
     }
   else if (algo==1)
     {
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
       rphqr.find_roots(roots);
-      sprintf(testo2, "[HQR]");
+      sprintf(testo2, "HQR");
       roots.show();  
     }
   for (i=0; i < NDEG; i++)
