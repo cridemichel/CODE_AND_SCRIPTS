@@ -9,9 +9,11 @@ bool allreal=false, doswap=false;
 #ifndef CASO
 #define CASO 4
 #endif
+#undef M_PI
+#define M_PI 3.1415926535897932384626433832795029L
 using numty = double;
-void calc_coeff(numty* c, complex<long double> er[]);
-void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
+void calc_coeff(long double* c, complex<long double> er[]);
+void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
 {
   int i;
 #if CASO==1
@@ -111,13 +113,59 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
   *r = er;
 #elif CASO==10
 #define NDEG 20
+#if 1
   static complex <long double> er[NDEG];
-  allreal=true;
+
   for (i=0; i < NDEG; i++)
     { 
-      er[i] = cos(M_PI*(2.0L*(i+1)-1)/40.0L);
+      er[i] = cos(M_PI*(2.0L*(i+1L)-1L)/40.0L);
     }
+#endif
   calc_coeff(c, er);
+  allreal=true;
+#if 0
+  static complex <long double> er[NDEG]=
+{-0.98883082622512854506974288293400861L - 
+  0.14904226617617444692935471527721756L*1il, \
+-0.98883082622512854506974288293400861L + 
+  0.14904226617617444692935471527721756L*1il, \
+-0.90096886790241912623610231950744505L - 
+  0.43388373911755812047576833284835875L*1il, \
+-0.90096886790241912623610231950744505L + 
+  0.43388373911755812047576833284835875L*1il, \
+-0.73305187182982632852243148927067191L - 
+  0.68017273777091939018735870103374024L*1il, \
+-0.73305187182982632852243148927067191L + 
+  0.68017273777091939018735870103374024L*1il, \
+-0.50000000000000000000000000000000000L - 
+  0.86602540378443864676372317075293618L*1il, \
+-0.50000000000000000000000000000000000L + 
+  0.86602540378443864676372317075293618L*1il, \
+-0.22252093395631440428890256449679476L - 
+  0.97492791218182360701813168299393122L*1il, \
+-0.22252093395631440428890256449679476L + 
+  0.97492791218182360701813168299393122L*1il, 
+ 0.07473009358642425429093974573476665L - 
+  0.99720379718118014822502987087811927L*1il, 
+ 0.07473009358642425429093974573476665L + 
+  0.99720379718118014822502987087811927L*1il, 
+ 0.36534102436639501454473799892976880L - 
+  0.93087374864420425563779924195127531L*1il, 
+ 0.36534102436639501454473799892976880L + 
+  0.93087374864420425563779924195127531L*1il, 
+ 0.62348980185873353052500488400423981L - 
+  0.78183148246802980870844452667405775L*1il, 
+ 0.62348980185873353052500488400423981L + 
+  0.78183148246802980870844452667405775L*1il, 
+ 0.82623877431599487194516257377267840L - 
+  0.56332005806362202774926153802976051L*1il, 
+ 0.82623877431599487194516257377267840L + 
+  0.56332005806362202774926153802976051L*1il, 
+ 0.95557280578614073281133405376746667L - 
+  0.29475517441090421683077298196019097L*1il, 
+ 0.95557280578614073281133405376746667L + 
+  0.29475517441090421683077298196019097L*1il};  
+#endif
   *r = er;
 #elif CASO==11
 #define NDEG 20
@@ -299,7 +347,7 @@ void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<i
       }
 } 
 
-void calc_coeff(numty* c, complex<long double> er[NDEG])
+void calc_coeff(long double* c, complex<long double> er[NDEG])
 {
   int i, j;
   std::list<std::list<int>> subsets;// list containing all subsets of a given length
@@ -352,6 +400,23 @@ void calc_coeff(numty* c, complex<long double> er[NDEG])
       c[i] = real(cc[i]);
     }
 }
+void print_backward_err(char *str, long double* c, complex<long double> *cr)
+{
+  /* we follow FLocke here */
+  int k1;
+  long double relerr, relerrmax, cc[NDEG+1];
+  calc_coeff(cc,  cr);
+  for (k1=0; k1 < NDEG+1; k1++)
+    {
+      relerr=abs((c[k1]==0)?(cc[k1] - c[k1]):(cc[k1] - c[k1])/c[k1]); 
+      cout << "k1=" << k1 << " relerr" << relerr << " " << c[k1] <<" " << cc[k1] << "\n" ;
+      if (k1==0 || relerr > relerrmax)
+        {
+          relerrmax=abs((c[k1]==0)?(cc[k1] - c[k1]):(cc[k1] - c[k1])/c[k1]); 
+        }
+    }
+  printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
+}
 int main(int argc, char *argv[])
 {
   pvector<complex<numty>,NDEG> roots;
@@ -359,7 +424,7 @@ int main(int argc, char *argv[])
   complex<long double> cr[NDEG], *er;
   pvector<numty,NDEG+1> c;
   int algo, i;
-  numty ca[NDEG+1];
+  long double ca[NDEG+1];
   if (argc == 2)
     {
       algo = atoi(argv[1]);
@@ -395,7 +460,7 @@ int main(int argc, char *argv[])
       rphqr.show("p(x)=");
       rphqr.find_roots(roots);
       sprintf(testo2, "HQR");
-      roots.show();  
+      //roots.show();  
     }
   for (i=0; i < NDEG; i++)
     cr[i] = roots[i];
@@ -412,7 +477,7 @@ int main(int argc, char *argv[])
       std::sort(rero.begin(),rero.end(), [&] (struct rerot a, struct rerot b)-> bool {return a.re < b.re;});
       if (doswap==true)
         {
-          for (i=0; i < NDEG; i+=2)
+          for (i=0; i+1 < NDEG; i+=2)
             {
               if (rero[i].im > rero[i+1].im)
                 swap(rero[i],rero[i+1]);
@@ -431,7 +496,7 @@ int main(int argc, char *argv[])
       std::sort(rero.begin(),rero.end(), [&] (struct rerot a, struct rerot b)-> bool {return a.re < b.re;});
       if (doswap==true)
         {
-          for (i=0; i < NDEG; i+=2)
+          for (i=0; i+1 < NDEG; i+=2)
             {
               if (rero[i].im > rero[i+1].im)
                 swap(rero[i],rero[i+1]);
@@ -447,7 +512,9 @@ int main(int argc, char *argv[])
     {
       sort_sol_opt(cr, er);
     };
-
+  cout << "Forward relarive error:\n";
   print_accuracy_at(testo2, cr, er);
+  //cout << "Backward relarive error:\n";
+  //print_backward_err(testo2, ca, cr); 
   return 0;
 }
