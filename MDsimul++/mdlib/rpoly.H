@@ -832,7 +832,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       return false;
     }
 #endif
-void laguer(ntype *a, complex<ntype> &x)
+void laguer(complex<ntype> *a, complex<ntype> &x)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
     const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -874,7 +874,7 @@ void laguer(ntype *a, complex<ntype> &x)
     //nrerror("too many iterations in laguer");
     return;
   }
-#if 0
+#if 1
  void zroots(pvector<complex<ntype>,N> &rootsa, const bool polish)
    {
      const ntype EPS=1.0E-14;
@@ -883,7 +883,8 @@ void laguer(ntype *a, complex<ntype> &x)
      complex<ntype> roots[N];
      int m=N; // a.size()-1;
      complex<ntype> ad[N+1];
-     for (j=0;j<=m;j++) ad[j]=cmon[j];
+     for (j=0;j<=m-1;j++) ad[j]=cmon[j];
+     ad[m]=1.0;
      for (j=m-1;j>=0;j--) {
        x=0.0;
        complex<ntype> ad_v[j+2];
@@ -900,8 +901,14 @@ void laguer(ntype *a, complex<ntype> &x)
        }
      }
      if (polish)
-       for (j=0;j<m;j++)
-         laguer(cmon,roots[j]);
+       {
+         complex<ntype> ac[N+1];
+         for (i=0; i < N; i++)
+           ac[i] = cmon[i];
+         ac[N] = 1.0;
+         for (j=0;j<N;j++)
+           laguer(ac,roots[j]);
+       }
      for (j=1;j<m;j++) {
        x=roots[j];
        for (i=j-1;i>=0;i--) {
