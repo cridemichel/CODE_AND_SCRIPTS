@@ -5,7 +5,7 @@
 #include<complex>
 #include<list>
 #include<string>
-bool allreal=false;
+bool allreal=false, doswap=false;
 #ifndef CASO
 #define CASO 4
 #endif
@@ -142,6 +142,7 @@ void calc_coeff_dep_on_case(numty* c, complex<long double> **r)
  0.8262387743159948719451626 + 0.5633200580636220277492615*1i, 
  0.9555728057861407328113341 - 0.2947551744109042168307730*1i, 
  0.9555728057861407328113341 + 0.2947551744109042168307730*1i};
+  doswap=true;
   allreal=true;
   calc_coeff(c, er);
   *r = er;
@@ -409,10 +410,13 @@ int main(int argc, char *argv[])
           rero[i].im = er[i].imag();
         }
       std::sort(rero.begin(),rero.end(), [&] (struct rerot a, struct rerot b)-> bool {return a.re < b.re;});
-      for (i=0; i < NDEG; i+=2)
+      if (doswap==true)
         {
-          if (rero[i].im > rero[i+1].im)
-            swap(rero[i],rero[i+1]);
+          for (i=0; i < NDEG; i+=2)
+            {
+              if (rero[i].im > rero[i+1].im)
+                swap(rero[i],rero[i+1]);
+            }
         }
       for (i=0; i < NDEG; i++)
         {
@@ -425,12 +429,14 @@ int main(int argc, char *argv[])
           rero[i].im = cr[i].imag();
         }
       std::sort(rero.begin(),rero.end(), [&] (struct rerot a, struct rerot b)-> bool {return a.re < b.re;});
-      for (i=0; i < NDEG; i+=2)
+      if (doswap==true)
         {
-          if (rero[i].im > rero[i+1].im)
-            swap(rero[i],rero[i+1]);
+          for (i=0; i < NDEG; i+=2)
+            {
+              if (rero[i].im > rero[i+1].im)
+                swap(rero[i],rero[i+1]);
+            }
         }
-      
       for (i=0; i < NDEG; i++)
         {
           cr[i] = rero[i].re + 1il*rero[i].im;
