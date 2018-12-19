@@ -6,11 +6,13 @@
 #include<list>
 #include<string>
 bool allreal=false, doswap=false;
+using ldbl=long double;
 #ifndef CASO
 #define CASO 4
 #endif
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
+#define Complex(x,y) (ldbl(x)+1il*ldbl(y))
 using numty = double;
 void calc_coeff(long double* c, complex<long double> er[]);
 void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
@@ -215,7 +217,49 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   allreal=true;
   calc_coeff(c, er);
   *r = er;
+#elif CASO==12
+#define NDEG 24
+  doswap=true;
+  allreal=true;
+ 
+  static complex <long double> er[NDEG]={
+    Complex(-1.,0.e-32),Complex(-1.,0.e-32),Complex(-1.,0.e-32),Complex(-1.,0.e-32),
+   Complex(-1.,0.e-32),Complex(-0.89947126086410488416113891728654,-0.24732873676667247621980911092121),
+   Complex(-0.89947126086410488416113891728654,0.24732873676667247621980911092121),
+   -0.89022556752713515813893012943296,Complex(-0.80375062207532447719095417066281,
+    -0.54618917813904185277956644267392),Complex(-0.80375062207532447719095417066281,
+    0.54618917813904185277956644267392),Complex(-0.59103875488831034730367517332276,
+    -0.79964372257915130475385604823511),Complex(-0.59103875488831034730367517332276,
+    0.79964372257915130475385604823511),Complex(-0.29590625336941363103542345014473,
+    -0.96505605636922817732257648875763),Complex(-0.29590625336941363103542345014473,
+    0.96505605636922817732257648875763),Complex(0.04276780062814583266730742011479,
+    -1.01915021081338525737903215783262),Complex(0.04276780062814583266730742011479,
+    1.01915021081338525737903215783262),Complex(0.38269864423994507574905714469437,
+    -0.95375714530194341841653011008593),Complex(0.38269864423994507574905714469437,
+    0.95375714530194341841653011008593),Complex(0.68215509497842799147350891988461,
+    -0.77569878126997655533115812082945),Complex(0.68215509497842799147350891988461,
+    0.77569878126997655533115812082945),Complex(0.90461839123737658638039625981471,
+    -0.50564852298246402683956863605666),Complex(0.90461839123737658638039625981471,
+    0.50564852298246402683956863605666),Complex(1.02303974387682543249038703162484,
+    -0.17550813339874416948851540893639),Complex(1.02303974387682543249038703162484,
+    0.17550813339874416948851540893639)}; 
+  static long double cs[NDEG+1]=
+    {1,6,15,20,15,6,1,0,0,0,0,0,0,0,0,0,0,0,0,1,5,10,10,5,1};
+
+  for (i=0; i < NDEG+1; i++)
+    {
+      c[i] = cs[i];
+    }
+  *r = er;
+
+#elif CASO==13
+
+
+#elif CASO==14
+
+
 #elif CASO==15
+// Noferini
 #define NDEG 12
   //roots and coefficients were calculated by Wolfram Mathematica with a precision of 1000 digits
   static complex <long double> er[NDEG]=
@@ -242,6 +286,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   *r = er;
 
 #elif CASO==16
+// Noferini
 #define NDEG 35
   //roots and coefficients were calculated by Wolfram Mathematica with a precision of 1000 digits
   static complex <long double> er[NDEG]=
