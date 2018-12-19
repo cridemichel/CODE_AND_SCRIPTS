@@ -770,6 +770,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
     }
 
 #else
+#if 0
  ntype estimate_M(complex<ntype> p, complex<ntype> dp, complex<ntype> ddp)
    {
      return abs(1.0/(1.0-p*ddp/(dp*dp)));
@@ -779,10 +780,11 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
      const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-      int iter,j, m;
-      ntype abx,abp,abm,err;
-      complex<ntype> dx,x1,p,dp,ddp,g,h,sq,gp,gm,g2, M;
+      int iter,j;
+      ntype abx,abp,abm,err, m;
+      complex<ntype> dx,x1,p,dp,ddp,g,h,sq,gp,gm,g2;
       //cout << "r0 ini = "<< x << "\n"; 
+
       for (iter=1;iter<=MAXIT;iter++) 
         {
           //its=iter;
@@ -796,6 +798,10 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             p=x*p+cmon[j];
             err=abs(p)+abx*err;
           }
+          if (iter==1)
+            m = rint(estimate_M(p,dp,ddp));
+          else
+            cout << "iter=" << iter << " M= " << estimate_M(p,dp,ddp) << "\n";
           err *= EPS;
           //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
           if (abs(p) <= err) 
@@ -806,7 +812,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             }
           g=dp/p;
           g2=g*g;
-          m = rint(estimate_M(p,dp,ddp));
+          cout << "mod lag " << " m=" << m << " x=" << x << "\n";
           ntype fact = ntype(N-m)/(m*(N-1.0));
           h=fact*((N-1.0)*(N-1.0)*g2-ntype(N*(N-1.0))*ddp/p);
           sq=sqrt(h);
@@ -835,6 +841,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       //cout << "too many iterations in laguer\n";
       return false;
    }
+#endif
   bool laguer(complex<ntype> &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -864,15 +871,10 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             {
               //if (iter > 15)
                 //cout << "iter=" << iter << "\n";
-              M = estimate_M(b,d,f);
-              if (abs(M - 1.0) > 0.1)
-                {
-                  cout << "x=" << x << " iter=" << iter << " M=" << abs(M) << "\n";
-                  return laguer_mod(x);
-                 }
-              else
+              //cout << "x=" << x << " iter=" << iter << " abs(M-1)=" << abs(M-1) << "\n";
                 return true;
             }
+
           g=d/b;
           g2=g*g;
           h=g2-ntype(2.0)*f/b;
@@ -890,17 +892,9 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           x1=x-dx;
           if (x == x1) 
             {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
-              M = estimate_M(b,d,f);
-              if (abs(M - 1.0) > 0.1)
-                {
-                  return laguer_mod(x);
-                 }
-              else
-                //cout << "x=" << x << " iter=" << iter << " M=" << abs(M) << "\n";
-                return true;
+              return true;
             }
+
           if (iter % MT != 0) 
             x=x1;
           else 

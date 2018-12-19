@@ -222,29 +222,59 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   doswap=true;
   allreal=true;
  
-  static complex <long double> er[NDEG]={
-    Complex(-1.,0.e-32),Complex(-1.,0.e-32),Complex(-1.,0.e-32),Complex(-1.,0.e-32),
-   Complex(-1.,0.e-32),Complex(-0.89947126086410488416113891728654,-0.24732873676667247621980911092121),
-   Complex(-0.89947126086410488416113891728654,0.24732873676667247621980911092121),
-   -0.89022556752713515813893012943296,Complex(-0.80375062207532447719095417066281,
-    -0.54618917813904185277956644267392),Complex(-0.80375062207532447719095417066281,
-    0.54618917813904185277956644267392),Complex(-0.59103875488831034730367517332276,
-    -0.79964372257915130475385604823511),Complex(-0.59103875488831034730367517332276,
-    0.79964372257915130475385604823511),Complex(-0.29590625336941363103542345014473,
-    -0.96505605636922817732257648875763),Complex(-0.29590625336941363103542345014473,
-    0.96505605636922817732257648875763),Complex(0.04276780062814583266730742011479,
-    -1.01915021081338525737903215783262),Complex(0.04276780062814583266730742011479,
-    1.01915021081338525737903215783262),Complex(0.38269864423994507574905714469437,
-    -0.95375714530194341841653011008593),Complex(0.38269864423994507574905714469437,
-    0.95375714530194341841653011008593),Complex(0.68215509497842799147350891988461,
-    -0.77569878126997655533115812082945),Complex(0.68215509497842799147350891988461,
-    0.77569878126997655533115812082945),Complex(0.90461839123737658638039625981471,
-    -0.50564852298246402683956863605666),Complex(0.90461839123737658638039625981471,
-    0.50564852298246402683956863605666),Complex(1.02303974387682543249038703162484,
-    -0.17550813339874416948851540893639),Complex(1.02303974387682543249038703162484,
-    0.17550813339874416948851540893639)}; 
-  static long double cs[NDEG+1]=
-    {1,6,15,20,15,6,1,0,0,0,0,0,0,0,0,0,0,0,0,1,5,10,10,5,1};
+  static complex <long double> er[NDEG];
+
+  er[0]=Complex(-3.52E2, 0);
+  er[1]=Complex(-3.52E2, 0);
+  er[2]=Complex(-2.8371450777E2, -2.9920517772E2);
+  er[3]=Complex(-2.8371450777E2,  2.9920517772E2);
+  er[4]=Complex(-2.7867414048E2,  6.1005469197E2);
+  er[5]=Complex(-2.7867414048E2, -6.1005469197E2);
+  er[6]=Complex(-2.74892372E2, 0);
+  er[7]=Complex(-2.014171531E2, 0);
+  er[8]=Complex(-1.255366582E2, 0);
+  er[9]=Complex(-9.599999999E1, 0);
+  er[10]=Complex(-8.8692435121E1,  5.5009607430E2);
+  er[11]=Complex(-8.869243512E1, -5.5009607430E2);
+  er[12]=Complex(-1.6000000000E1, 0);
+  er[13]=Complex( 8.23178509855E1, 0);
+  er[14]=Complex( 8.8692435121E1, -5.50096074303E2);
+  er[15]=Complex( 8.8692435121E1,  5.5009607430E2);
+  er[16]=Complex( 1.9293739373E2,  1.60865921259E3);
+  er[17]=Complex( 1.929373937E2, -1.6086592125E3);
+  er[18]=Complex( 2.0141715312E2, 0);
+  er[19]=Complex( 2.7489237213E2, 0);
+  er[20]=Complex( 7.52E2, 0);
+  er[21]=Complex( 7.52E2, 0);
+  er[22]=Complex( 9.1106065E2,  1.5722);
+  er[23]=Complex( 9.1106065E2, -1.5722);
+  static long double cs[NDEG+1];
+  cs[0]=-54765291428198020791747503747742749163073958404455022926495744.;
+  cs[1]=-4052135566767965847649766745769409681058667331648450681896960.;
+  cs[2]=-31969984081155943263834965670035075493639295858977076674560.;
+  cs[3]=575060225471570237690073740639182419333523437771848417280.;
+  cs[4]=7337981286595499156409929740830030318565357725459415040.;
+  cs[5]=6611223380089859336490797585290455483968982077145088.;
+  cs[6]=-195514288747757987122118583800597358656801082441728.;
+  cs[7]=-726907419403715013562762609680450059293446635520.;
+  cs[8]=197178719520196724204974332265013056299335680.;
+  cs[9]=5968852409133617129605588058090797893943296.;
+  cs[10]=16576506891508825500182005531742679597056.;
+  cs[11]=23375026506968330494765978581548924928.;
+  cs[12]=2206941937668751746514177591607296.;
+  cs[13]=-75617855277818001758431020580864.;
+  cs[14]=-204797687173976372829472423936.;
+  cs[15]= -143150263927579584306872320.;
+  cs[16]=  20214880144364480233472.;
+  cs[17]=  453786251090072698880.;
+  cs[18]=  1265052493274939392.;
+  cs[19]= -968887355572224.;
+  cs[20]=  1015406084096.;
+  cs[21]= -3949133824.;
+  cs[22]=  3284992.;
+  cs[23]= -1728.;
+
+  cs[24]=1.0;
 
   for (i=0; i < NDEG+1; i++)
     {
@@ -407,56 +437,56 @@ int factorial(int n)
 {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
-void sort_sol_opt(complex<long double> sol[NDEG], complex<long double>* exsol)
+void sort_sol_opt(complex<long double> *csol, complex<long double>* exsol, long double* allrelerr)
 {
-  int k1, k2, kk;
-  double v, vmin;
-  complex<numty> solt[NDEG];
+  int k1, k2, k2min;
   int perm[NDEG];
-  int perm_min[NDEG];
-  bool ini=true;
+  long double relerr, relerrmin, relerrmax;
+  complex <long double> diff, solt[NDEG];
+  bool used_exsol[NDEG];
+  for (k1=0; k1 < NDEG; k1++)
+    used_exsol[k1]=false;
   for (k1=0; k1 < NDEG; k1++)
     {
-      perm[k1] = k1;
+      bool ini = true;
+      for (k2=0; k2 < NDEG; k2++)
+        {
+          if (used_exsol[k2]==true)
+            continue;
+          diff = csol[k1] - exsol[k2];
+          relerr = (exsol[k2]==complex<long double>(0.0+0.0*1i))?abs(diff):abs(diff/exsol[k2]);
+          if (ini==true || relerr <= relerrmin)
+           {
+             ini=false;
+             k2min=k2;
+             relerrmin = relerr;
+           } 
+        }
+      perm[k1] = k2min;
+      //cout << "perm[" << k1 << "]=" << k2min << "\n";
+      allrelerr[k2min] = relerrmin;
+      used_exsol[k2min]=true;
     }
-  do {
-    //  std::cout << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
-    //cout << perm << "\n"; 
-    v = 0;
-    for (k2=0; k2 < NDEG; k2++)
-      {
-        v += (exsol[k2]==complex<long double>(0,0))?abs(sol[perm[k2]]-exsol[k2]):abs((sol[perm[k2]]-exsol[k2])/exsol[k2]);
-      }
-    if (ini==true || v < vmin)
-      {
-        ini=false;
-        for (kk=0; kk < NDEG; kk++)
-          perm_min[kk]=perm[kk];
-        vmin = v;
-      }
-  } 
-  while (std::next_permutation(perm,perm+NDEG));
 
-  for (k2=0; k2 < NDEG; k2++)
-    solt[k2] = sol[k2];
+  for (k1=0; k1 < NDEG; k1++)
+    solt[k1] = csol[k1];
 
-  for (k2=0; k2 < NDEG; k2++)
-    sol[k2] = solt[perm_min[k2]];
+  for (k1=0; k1 < NDEG; k1++)
+    csol[perm[k1]] = solt[k1];
 }
-numty print_accuracy_at(char *str, complex<long double>* csol, complex<long double> *exsol)
+numty print_accuracy_at(char *str, complex<long double>* csol, complex<long double> *exsol, long double *allrelerr)
 {
   /* we follow FLocke here */
   int k1;
-  numty relerr, relerrmax;
+  long double relerrmax;
   for (k1=0; k1 < NDEG; k1++)
     {
-      relerr=abs((csol[k1] - exsol[k1])/exsol[k1]); 
-      if (k1==0 || relerr > relerrmax)
+      if (k1==0 || allrelerr[k1] > relerrmax)
         {
-          relerrmax=abs((csol[k1] - exsol[k1])/exsol[k1]); 
+          relerrmax=allrelerr[k1];
         }
     }
-  printf("[%s] relative accuracy=%.16G\n", str, relerrmax);
+  printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
   return relerrmax;
 }
 
@@ -567,6 +597,7 @@ int main(int argc, char *argv[])
   pvector<numty,NDEG+1> c;
   int algo, i;
   long double ca[NDEG+1];
+  long double allrelerr[NDEG];
   if (argc == 2)
     {
       algo = atoi(argv[1]);
@@ -608,6 +639,7 @@ int main(int argc, char *argv[])
   for (i=0; i < NDEG; i++)
     cr[i] = roots[i];
   // sort roots and calculate relative error
+#if 0
   if (allreal==true)
     {
       struct rerot { long double re; long double im;};
@@ -655,8 +687,11 @@ int main(int argc, char *argv[])
     {
       sort_sol_opt(cr, er);
     };
+#endif
+  sort_sol_opt(cr, er, allrelerr);
+  print_roots(testo2, cr);
   cout << "Forward relarive error:\n";
-  print_accuracy_at(testo2, cr, er);
+  print_accuracy_at(testo2, cr, er, allrelerr);
   //cout << "Backward relarive error:\n";
   //print_backward_err(testo2, ca, cr); 
   return 0;
