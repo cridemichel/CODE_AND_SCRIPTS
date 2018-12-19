@@ -26,8 +26,23 @@ using namespace std;
 template<class T>
 inline const T MAX(const T &a, const T &b)
         {return b > a ? (b) : (a);}
+
+template <class ntype, int N> 
+class rpoly_base_static 
+{
+
+};
+template <class ntype, int N> 
+class rpoly_base_dynamic 
+{
+
+};
+template <class ntype, int N> using rpolybase = 
+typename std::conditional<(N>0), rpoly_base_static <ntype, N>,
+	 rpoly_base_dynamic <ntype, N>>::type;
+
 template <class ntype, int N, bool force_hqr=false> 
-class rpoly: public numeric_limits<ntype> {
+class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   pvector<ntype, N+1> coeff;
   pvector<ntype, N+1> cmon;
   pvector<ntype, N> cmonder;
