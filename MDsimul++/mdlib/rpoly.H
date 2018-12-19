@@ -29,7 +29,7 @@ inline const T MAX(const T &a, const T &b)
 template <class ntype, int N, bool force_hqr=false> 
 class rpoly: public numeric_limits<ntype> {
   pvector<ntype, N+1> coeff;
-  pvector<ntype, N> cmon;
+  pvector<ntype, N+1> cmon;
   pvector<ntype, N> cmonder;
   pvector<ntype, N-1> cmondder;
   const int maxiter_polish=8;
@@ -832,7 +832,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       return false;
     }
 #endif
-void laguer(complex<ntype> *a, complex<ntype> &x)
+void laguer(complex<ntype> *a, complex<ntype> &x, int m)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
     const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -842,7 +842,6 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
     ntype abx,abp,abm,err;
     complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
 
-    int m=N;//a.size()-1;
     for (iter=1;iter<=MAXIT;iter++) {
       b=a[m];
       err=abs(b);
@@ -877,22 +876,36 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
 #if 1
  void zroots(pvector<complex<ntype>,N> &rootsa, const bool polish)
    {
-     const ntype EPS=1.0E-14;
-     int i,j,jj;
+     const ntype EPS=meps;
+     int i,its,j,jj;
      complex<ntype> x,b,c;
-     complex<ntype> roots[N];
-     int m=N; // a.size()-1;
+     complex<ntype> a[N+1];
+     int m=N;
      complex<ntype> ad[N+1];
-     for (j=0;j<=m-1;j++) ad[j]=cmon[j];
-     ad[m]=1.0;
+     
+     if (coeff[N]==0.0)
+        {
+          cout << "That's not an " << N << "degree polynomial!\n";
+          return;
+        }
+      cmon[N]=1.0;
+      for (i=N-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[N];
+
+     for (j=0;j<=m;j++) 
+       {
+         a[j]=cmon[j];
+         ad[j]=a[j];
+       }
      for (j=m-1;j>=0;j--) {
        x=0.0;
-       complex<ntype> ad_v[j+2];
+       complex<ntype> *ad_v = new complex<ntype>[j+2];
        for (jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj];
-       laguer(ad_v,x);
+       laguer(ad_v,x,j+1);
+       delete [] ad_v;
        if (fabs(imag(x)) <= 2.0*EPS*fabs(real(x)))
-         x=complex<ntype>(ntype(real(x)),0.0);
-       roots[j]=x;
+         x=complex<ntype>(real(x),0.0);
+       rootsa[j]=x;
        b=ad[j+1];
        for (jj=j;jj>=0;jj--) {
          c=ad[jj];
@@ -901,24 +914,17 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
        }
      }
      if (polish)
-       {
-         complex<ntype> ac[N+1];
-         for (i=0; i < N; i++)
-           ac[i] = cmon[i];
-         ac[N] = 1.0;
-         for (j=0;j<N;j++)
-           laguer(ac,roots[j]);
-       }
+       for (j=0;j<m;j++)
+         laguer(a,rootsa[j],m);
      for (j=1;j<m;j++) {
-       x=roots[j];
+       x=rootsa[j];
        for (i=j-1;i>=0;i--) {
-         if (real(roots[i]) <= real(x)) break;
-         roots[i+1]=roots[i];
+         if (real(rootsa[i]) <= real(x)) break;
+         rootsa[i+1]=rootsa[i];
        }
-       roots[i+1]=x;
+       rootsa[i+1]=x;
+       //cout << "x=" << x << "\n";
      }
-     for (i=0; i < N; i++)
-       rootsa[i] = roots[i];
    }
 #endif
  ntype calc_err_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
@@ -941,7 +947,129 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
         }
       return sum;
     }
- void laguerre_defl(pvector<complex <ntype>,N>& roots)
+ void  refine_root(complex<ntype> &r0)
+   {
+     int iter, i;
+     if (r0.imag()!=0)
+       {
+#ifdef POLISH_NR_REAL
+         // root polishing by NR
+         ntype r0old[2], p[2], r0new[2];
+         ntype p1[2], p0, p10;
+         ntype err, errold, invnp1;
+         r0new[0]=r0.real();
+         r0new[1]=r0.imag();
+         for (iter=0; iter < maxiter_polish; iter++)
+           {
+             p[0]=cmon[n]*r0new[0]+cmon[n-1];
+             p[1]=cmon[n]*r0new[1];    
+             p1[0]=cmon[n];
+             p1[1]=0.0;
+             if (iter==0)
+               err=p[0]*p[0]+p[1]*p[1];
+             for(i=n-2;i>=0;i--) {
+               p10=p1[0];
+               p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
+               p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
+               p0=p[0];
+               p[0]=cmon[i]+p[0]*r0new[0]-p[1]*r0new[1];
+               p[1]=p0*r0new[1]+p[1]*r0new[0];
+             }
+             if (p1[0]==0 && p1[1]==0)
+               {
+                 break;
+               }
+             r0old[0]=r0new[0];
+             r0old[1]=r0new[1];
+             invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
+             r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
+             r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
+             errold=err;
+             err=p[0]*p[0]+p[1]*p[1];
+             //if (err < errold)
+             //cout  << "iter=" << iter << "\n";
+             //cout << "err=" << err << " errold=" << errold << "\n";
+             if (err==0)
+               break;
+
+             if (err > errold)
+               {
+                 r0new[0]=r0old[0];
+                 r0new[1]=r0old[1];
+                 break;
+               }
+           }
+         r0=r0new[0] + r0new[1]*1i;
+#else
+         // root polishing by NR
+         complex<ntype> r0old, p;
+         complex<ntype> p1;
+         ntype err, errold;
+         for (iter=0; iter < maxiter_polish; iter++)
+           {
+             p=cmon[n]*r0+cmon[n-1];
+             p1=cmon[n];
+             if (iter==0)
+               err=abs(p);
+             for(i=n-2;i>=0;i--) {
+               p1=p+p1*r0;
+               p=cmon[i]+p*r0;
+             }
+             if (p1==complex<ntype>(0,0))
+               {
+                 break;
+               }
+             r0old=r0;
+             r0 -= p/p1;
+             errold=err;
+             err=abs(p);
+             //if (err < errold)
+             //cout << "err=" << err << " errold=" << errold << "\n";
+             if (err==0)
+               break;
+             if (err > errold)
+               {
+                 r0=r0old;
+                 break;
+               }
+           }
+#endif
+       }
+     else
+       {
+         // root polishing by NR
+         ntype p;
+         ntype p1;
+         ntype r0r = r0.real();
+         ntype err, errold, r0old;
+         for (iter=0; iter < maxiter_polish; iter++)
+           {
+             p=cmon[n]*r0.real()+cmon[n-1];
+             p1 = cmon[n];
+             if (iter==0)
+               err=abs(p);
+             for(i=n-2;i>=0;i--) {
+               p1=p+p1*r0r;
+               p=cmon[i]+p*r0r;
+             }
+             if (p1==complex<ntype>(0,0))
+               break;
+             r0old=r0r;
+             r0r -= p/p1;
+             errold = err;
+             err=abs(p);
+             if (err==0)
+               break;
+             if (err > errold)
+               {
+                 r0r=r0old;
+                 break;
+               }
+           }
+         r0 = complex<ntype>(r0r,0);
+       }
+   }
+ void laguerre_defl(pvector<complex <ntype>,N>& roots,bool polish)
     {
       // find initial guess for x here
       complex<ntype> r0;
@@ -981,125 +1109,9 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
               exit(-1); 
             }
         };
+
 #ifdef LAGUERRE_POLISH
-      if (r0.imag()!=0)
-        {
-#ifdef POLISH_NR_REAL
-          // root polishing by NR
-          ntype r0old[2], p[2], r0new[2];
-          ntype p1[2], p0, p10;
-          ntype err, errold, invnp1;
-          r0new[0]=r0.real();
-          r0new[1]=r0.imag();
-          for (iter=0; iter < maxiter_polish; iter++)
-            {
-              p[0]=cmon[n]*r0new[0]+cmon[n-1];
-              p[1]=cmon[n]*r0new[1];    
-              p1[0]=cmon[n];
-              p1[1]=0.0;
-              if (iter==0)
-                err=p[0]*p[0]+p[1]*p[1];
-              for(i=n-2;i>=0;i--) {
-                p10=p1[0];
-                p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
-                p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
-                p0=p[0];
-                p[0]=cmon[i]+p[0]*r0new[0]-p[1]*r0new[1];
-                p[1]=p0*r0new[1]+p[1]*r0new[0];
-              }
-              if (p1[0]==0 && p1[1]==0)
-                {
-                  break;
-                }
-              r0old[0]=r0new[0];
-              r0old[1]=r0new[1];
-              invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
-              r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
-              r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
-              errold=err;
-              err=p[0]*p[0]+p[1]*p[1];
-              //if (err < errold)
-              //cout  << "iter=" << iter << "\n";
-                //cout << "err=" << err << " errold=" << errold << "\n";
-              if (err==0)
-                break;
-          
-              if (err > errold)
-                {
-                  r0new[0]=r0old[0];
-                  r0new[1]=r0old[1];
-                  break;
-                }
-            }
-          r0=r0new[0] + r0new[1]*1i;
-#else
-          // root polishing by NR
-          complex<ntype> r0old, p;
-          complex<ntype> p1;
-          ntype err, errold;
-          for (iter=0; iter < maxiter_polish; iter++)
-            {
-              p=cmon[n]*r0+cmon[n-1];
-              p1=cmon[n];
-              if (iter==0)
-                err=abs(p);
-              for(i=n-2;i>=0;i--) {
-                p1=p+p1*r0;
-                p=cmon[i]+p*r0;
-              }
-              if (p1==complex<ntype>(0,0))
-                {
-                  break;
-                }
-              r0old=r0;
-              r0 -= p/p1;
-              errold=err;
-              err=abs(p);
-              //if (err < errold)
-                //cout << "err=" << err << " errold=" << errold << "\n";
-              if (err==0)
-                break;
-              if (err > errold)
-                {
-                  r0=r0old;
-                  break;
-                }
-            }
-#endif
-        }
-      else
-        {
-          // root polishing by NR
-          ntype p;
-          ntype p1;
-          ntype r0r = r0.real();
-          ntype err, errold, r0old;
-          for (iter=0; iter < maxiter_polish; iter++)
-            {
-              p=cmon[n]*r0.real()+cmon[n-1];
-              p1 = cmon[n];
-              if (iter==0)
-                err=abs(p);
-              for(i=n-2;i>=0;i--) {
-                p1=p+p1*r0r;
-                p=cmon[i]+p*r0r;
-              }
-              if (p1==complex<ntype>(0,0))
-                break;
-              r0old=r0r;
-              r0r -= p/p1;
-              errold = err;
-              err=abs(p);
-              if (err==0)
-                break;
-              if (err > errold)
-                {
-                  r0r=r0old;
-                  break;
-                }
-            }
-          r0 = complex<ntype>(r0r,0);
-        }
+      refine_root(r0);
 #endif
       if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps)
         {
@@ -1179,7 +1191,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
 #endif
           //refine deflated quartic coefficients thourh Newton-Raphson method
           qp.set_coeff(deflcoeff);
-          qp.find_roots(qr);
+          qp.find_roots(qr, false);
           for (i=1; i < N; i++)
             roots[i] = qr[i-1];
         }
@@ -1258,10 +1270,27 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
 #endif
           // find zeroes of N-2 degree polynomial
           rp.set_coeff(bd);
-          rp.find_roots(ro_quad);
+          rp.find_roots(ro_quad, false);
           //ro_quad.show("quartic roots=");
           for (i=2; i < N; i++)
             roots[i] = ro_quad[i-2];
+        }
+      bool copyroot=false;
+      if (polish==true)
+        {
+          for (i=0; i < N; i++)
+            {
+              // refine conjuigate pairs only once!
+              if (i < N-1 && roots[i] == conj(roots[i+1]))
+                copyroot=true;
+              else 
+                copyroot=false;
+              refine_root(roots[i]);
+              if (copyroot==true)
+                {
+                  roots[i+1] = conj(roots[i]);
+                }
+            }
         }
     } 
   void odd_degree(pvector<complex <ntype>,N>& roots)
@@ -1490,7 +1519,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
     {
       return n; 
     }
-  inline void find_roots(pvector<complex<ntype>,N>& roots)
+  inline void find_roots(pvector<complex<ntype>,N>& roots, bool polish=false)
     {
       if constexpr (N==1)
 	{
@@ -1543,7 +1572,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
 	  else
             {
 #ifdef USE_LAGUERRE_ONLY
-              laguerre_defl(roots);
+              laguerre_defl(roots, polish);
 #else
               odd_degree(roots);
 #endif
@@ -1559,10 +1588,10 @@ void laguer(complex<ntype> *a, complex<ntype> &x)
 	  else
             {
 #ifdef USE_LAGUERRE_ONLY
-              laguerre_defl(roots);
+              laguerre_defl(roots, polish);
 #else
               if constexpr (N % 2 == 0)
-                laguerre_defl(roots);
+                laguerre_defl(roots, polish);
               else 
                 odd_degree(roots);
               //quintic(roots);     

@@ -110,7 +110,8 @@ int main(int argc, char* argv[])
       if (caso==0)
         {
           rp.set_coeff(c);
-          rp.find_roots(roots);
+          //rp.zroots(roots, true);
+          rp.find_roots(roots, false);
         }
       else
         {

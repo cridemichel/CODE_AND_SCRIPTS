@@ -255,7 +255,7 @@ int cmplxreal=0, restart, dojust=-1;
 double cumPEall[MAXSOLV][PEPTS], PEall[MAXSOLV][PEPTS];
 pvector<complex<double>,PDEG> csolall[MAXSOLV];
 pvector<complex<double>,PDEG> exsol;
-char algs[2][64] = {"HQR", "OQS"};
+char algs[2][64] = {"OQS", "HQR"};
 char *ic2algo(int ic)
 {
   if (ic > 2)
@@ -399,7 +399,14 @@ int main(int argc, char **argv)
       printf("numtrials=%lld numout=%lld cmplxreal=%d dojust=%d\n", 
 	     numtrials, numout, cmplxreal, dojust);
     }
-
+  if (dojust==0)
+    {
+      cout << "Using OPS...\n";
+    }
+  else if (dojust==1)
+    {
+      cout << "Using HQR...\n";
+    }
   x1c=x2c=x3c=x4c=x5c=x6c=0;
   for (its=itsI; its < numtrials; its++)
     {
@@ -497,20 +504,21 @@ int main(int argc, char **argv)
         {
 #if 1
           oqs.set_coeff(c);
-          oqs.zroots(csolall[ic], true);//find_roots(csolall[ic]);
+          oqs.find_roots(csolall[ic], false);
+          //oqs.zroots(csolall[ic], true);//find_roots(csolall[ic]);
 #else
           for (auto i=0; i < 6; i++)
             csolall[ic][i] =exsol[i];
 #endif
 	}
 
+      ic++;	
       if (dojust==-1 || dojust == ic)
         {
           hqr.set_coeff(c);
           hqr.find_roots(csolall[ic]);
         }
-      ic++;	
-            for (ic = 0; ic < maxic; ic++)
+      for (ic = 0; ic < maxic; ic++)
 	{
 	  if (dojust==-1 || dojust==ic)
 	    sort_sol_opt(csolall[ic], exsol);
