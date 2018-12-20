@@ -2866,7 +2866,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::sol
 
   pm = new ntype[n*n];//(ntype *)malloc(sizeof(ntype)*N*M);
   hess = new ntype*[n];//(ntype**)malloc(sizeof(ntype*)*N);
-  for (auto i=0; i < n; i++)
+  for (i=0; i < n; i++)
     {
       hess[i] = pm + i*n;
       //cout << "m[" << i << "]=" << m[i] << "\n";
