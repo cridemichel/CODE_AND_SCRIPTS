@@ -308,9 +308,9 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   inline ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq); 
   inline void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
   inline void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2]);
-  inline void balance(ntype **a);
-  inline void hqr(ntype **a, pvector<complex<ntype>,N>& wri, int& ok);
-  inline void QRfactorization(ntype **hess, pvector<complex<ntype>,N>& sol, int& ok);
+  inline void balance(pmatrixq<ntype,N>& a);
+  inline void hqr(pmatrixq<ntype,N>& a, pvector<complex<ntype>,N>& wri, int& ok);
+  inline void QRfactorization(pmatrixq<ntype,N>& hess, pvector<complex<ntype>,N>& sol, int& ok);
   inline void solve_numrec(pvector<complex<ntype>,N>& csol, int& ok);
 public:
   void show(void)
@@ -2722,7 +2722,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
     }
 }
 // NR method based on HQR decomposition
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::balance(ntype **a)
+template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::balance(pmatrixq<ntype,N>& a)
 {
   const ntype RADIX=numeric_limits<ntype>::radix;
   int i, j;
@@ -2777,7 +2777,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::bala
   delete [] scale;
 }
 
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr(ntype **a, pvector<complex<ntype>,N>& wri, int& ok)
+template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr(pmatrixq<ntype,N>& a, pvector<complex<ntype>,N>& wri, int& ok)
 {
   int nn,m,l,k,j,its,i,mmin;
   ntype z,y,x,w,v,u,t,s,r=0.0,q=0.0,p=0.0, anorm=0.0;
@@ -2957,7 +2957,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
       while (l+1 < nn);
     }
 }
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::QRfactorization(ntype **hess, pvector<complex<ntype>,N>& sol, int& ok)
+template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::QRfactorization(pmatrixq<ntype,N>& hess, pvector<complex<ntype>,N>& sol, int& ok)
 {
   /* pag. 615 Num. Rec. */  
   balance(hess);
@@ -2971,25 +2971,18 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::sol
    * eigenvalues are the desired roots and then use the routine Unsymmeig. The roots are returned 
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pag. 497 Num. Rec. */
-  const int m=N;
-  ntype **hess, *pm;
+  int m=n;
+  pmatrixq<ntype,N> hess;
   int i, j, k;
 
-  pm = new ntype[n*n];//(ntype *)malloc(sizeof(ntype)*N*M);
-  hess = new ntype*[n];//(ntype**)malloc(sizeof(ntype*)*N);
-  for (i=0; i < n; i++)
+  if constexpr (N < 0)
     {
-      hess[i] = pm + i*n;
-      //cout << "m[" << i << "]=" << m[i] << "\n";
+      hess.allocate(n);
     }
-
   for (k=0;k<m;k++) { //Construct the matrix.
     hess[0][k] = -coeff[m-k-1]/coeff[m];
     for (j=1;j<m;j++) hess[j][k]=0.0;
     if (k != m-1) hess[k+1][k]=1.0;
   }
   QRfactorization(hess, csol, ok);
-  delete [] hess;
-  delete [] pm;
 }
-
