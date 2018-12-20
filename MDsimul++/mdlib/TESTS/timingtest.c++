@@ -15,6 +15,8 @@ int main(int argc, char* argv[])
   pvector<numty> c;
   //complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
   pvector<complex<numty>> roots;
+  rp.allocate(NDEG);
+
   c.allocate(NDEG+1);
   roots.allocate(NDEG);
 #if 1

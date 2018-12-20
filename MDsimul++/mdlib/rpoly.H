@@ -66,7 +66,6 @@ public:
       coeff = v;
     }
 
-
   rpoly_base_dynamic(int nc): coeff(nc), cmon(nc), cmonder(nc), cmondder(nc)
     {
       n=nc;
@@ -1881,7 +1880,6 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
     }
   rpoly()
     {
-      n=N;
       meps = epsilon();
       eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
       maxf= getmax();
@@ -1897,7 +1895,8 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
     }
 
   rpoly(int nc): rpolybase<ntype,N>(nc)
-    {}
+    {
+    }
   //rpoly() = default;
 #if 0
     {
