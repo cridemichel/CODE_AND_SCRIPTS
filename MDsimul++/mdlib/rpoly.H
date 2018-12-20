@@ -1066,20 +1066,25 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
  void zroots(pvector<complex<ntype>,N> &rootsa, const bool polish)
    {
      const ntype EPS=meps;
-     int i,its,j,jj;
+     int i,j,jj;
      complex<ntype> x,b,c;
-     complex<ntype> a[N+1];
-     int m=N;
-     complex<ntype> ad[N+1];
-     
-     if (coeff[N]==0.0)
+     // FIX THIS!!!! 
+     complex<ntype> *a;
+     int m;
+     complex<ntype> *ad;
+     m=n;
+     ad = new complex<ntype>[n+1];
+     a = new complex<ntype>[n+1];
+     if (coeff[n]==0.0)
         {
           cout << "That's not an " << N << "degree polynomial!\n";
+          delete [] a;
+          delete [] ad;
           return;
         }
-      cmon[N]=1.0;
-      for (i=N-1; i >=0; i--)
-        cmon[i]=coeff[i]/coeff[N];
+      cmon[n]=1.0;
+      for (i=n-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[n];
 
      for (j=0;j<=m;j++) 
        {
@@ -1114,6 +1119,8 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
        rootsa[i+1]=x;
        //cout << "x=" << x << "\n";
      }
+     delete [] a;
+     delete [] ad;
    }
 #endif
  ntype calc_err_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
@@ -1288,7 +1295,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       complex<ntype> r0;
       const ntype goldfact=1.618034;
       ntype sig;
-      pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
+      pvector<ntype> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
       //pvector<complex <ntype>,N> rootsA, rootsB;
       pvector<ntype,3> ad;
@@ -1305,9 +1312,9 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           deflcoeff1.allocate(n);
           deflcoeff.allocate(n);
         }
-      if (coeff[N]==0.0)
+      if (coeff[n]==0.0)
         {
-          cout << "That's not an " << N << "degree polynomial!\n";
+          cout << "That's not an " << n << "degree polynomial!\n";
           return;
         }
       cmon[n]=1.0;
@@ -1531,7 +1538,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
     } 
   void odd_degree(pvector<complex <ntype>,N>& roots)
     {
-      ntype coeffder[N-1];
+      ntype *coeffder;
       rpolyNm1 quar;
       //pvector<complex<ntype>,N-1> qroots;
       pvecNm1<complex<ntype>> qroots;
@@ -1548,8 +1555,9 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           deflcoeff1.allocate(n);
           deflcoeff.allocate(n);
           quar.allocate(n-1);
-        }
      
+        }
+      coeffder = new ntype[n-1];
       if (coeff[n]==0.0)
         {
           cout << "That's not an " << n  << " degree polynomial!\n";
@@ -1760,6 +1768,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
         {
           roots[i] = qroots[i-1];
         }
+      delete [] coeffder;
     }
   pvecNp1<ntype> get_coeff()
     {
@@ -1887,17 +1896,20 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
     }
 
-  rpoly(pvector<ntype,N> v)
+  rpoly(int nc): rpolybase<ntype,N>(nc)
+    {}
+  //rpoly() = default;
+#if 0
     {
-      coeff=v;
-      rpoly();
+      //coeff=v;
+      //rpoly();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
-
   ~rpoly()
     {
 
     }
+#endif
 };
 // quadratic equation
 template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::solve_quadratic(pvector<complex<ntype>,N>&sol)

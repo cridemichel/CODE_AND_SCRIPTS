@@ -10,8 +10,8 @@ int main(int argc, char* argv[])
 {
   using numty=double;
   int caso, j, maxiter;
-  rpoly<numty> rp(NDEG);
-  rpoly<numty,-1,true> rphqr;
+  rpoly<numty> rp;
+  rpoly<numty,-1,true> rphqr(NDEG);
   pvector<numty> c;
   //complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
   pvector<complex<numty>> roots;
