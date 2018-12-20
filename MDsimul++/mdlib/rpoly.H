@@ -64,6 +64,12 @@ public:
   void set_coeff(pvector<ntype,-1> v)
     {
       coeff = v;
+#if 0
+      coeff.show();
+      cout << "n=" << n << "\n";
+      cout << "v=" << v[n]<< "\n";
+        v.show();
+#endif
     }
 
   rpoly_base_dynamic(int nc): coeff(nc), cmon(nc), cmonder(nc), cmondder(nc)
@@ -81,10 +87,10 @@ public:
   void allocate(int nc)
     {
       n=nc;
-      coeff.allocate(n);
-      cmon.allocate(n);
+      coeff.allocate(n+1);
+      cmon.allocate(n+1);
       cmonder.allocate(n);
-      cmondder.allocate(n);
+      cmondder.allocate(n-1);
    }
 
 };
@@ -966,7 +972,8 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       int iter,j;
       ntype abx,abp,abm,err, M;
       complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-      int m=N;
+      int m;
+      m=n;
       //cout << "r0 ini = "<< x << "\n"; 
       for (iter=1;iter<=MAXIT;iter++) 
         {
@@ -1311,6 +1318,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           deflcoeff1.allocate(n);
           deflcoeff.allocate(n);
         }
+      //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
       if (coeff[n]==0.0)
         {
           cout << "That's not an " << n << "degree polynomial!\n";
