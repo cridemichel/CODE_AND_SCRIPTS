@@ -30,25 +30,50 @@ inline const T MAX(const T &a, const T &b)
 template <class ntype, int N> 
 class rpoly_base_static 
 {
-
+public:
+  int n;
+  constexpr static int dynamic = false;
+  pvector<ntype, N+1> coeff;
+  pvector<ntype, N+1> cmon;
+  pvector<ntype, N> cmonder;
+  pvector<ntype, N-1> cmondder;
+  rpoly_base_static() = default;
+  rpoly_base_static(int nc): rpoly_base_static()
+  {
+    n=nc;
+    // empty body
+  }
 };
 template <class ntype, int N> 
 class rpoly_base_dynamic 
 {
-
+public:
+  int n;
+  constexpr static int dynamic = true;
+  pvector<ntype> coeff;
+  pvector<ntype> cmon;
+  pvector<ntype> cmonder;
+  pvector<ntype> cmondder;
+  rpoly_base_dynamic() = default;
+  rpoly_base_dynamic(int nc): coeff(nc), cmon(nc), cmonder(nc), cmondder(nc)
+    {
+      n=nc;
+    }
+  ~rpoly_base_dynamic() = default;
 };
+
 template <class ntype, int N> using rpolybase = 
 typename std::conditional<(N>0), rpoly_base_static <ntype, N>,
 	 rpoly_base_dynamic <ntype, N>>::type;
 
 template <class ntype, int N, bool force_hqr=false> 
 class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
-  pvector<ntype, N+1> coeff;
-  pvector<ntype, N+1> cmon;
-  pvector<ntype, N> cmonder;
-  pvector<ntype, N-1> cmondder;
+  using rpolybase<ntype,N>::n;
+  using rpolybase<ntype,N>::coeff;
+  using rpolybase<ntype,N>::cmon;
+  using rpolybase<ntype,N>::cmonder;
+  using rpolybase<ntype,N>::cmondder;
   const int maxiter_polish=8;
-  int n;
   //force_hqr;
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
@@ -654,7 +679,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 #ifdef USE_LAGUER_REAL
  bool laguer(complex<ntype> &xc)
     {
-      const int MR=8,MT=10,MAXIT=MT*MR;
+      const int MR=8,MT=30,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
@@ -859,7 +884,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 #endif
   bool laguer(complex<ntype> &x)
     {
-      const int MR=8,MT=10,MAXIT=MT*MR;
+      const int MR=8,MT=30,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
@@ -1034,34 +1059,46 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
         }
       return sum;
     }
- void  refine_root(complex<ntype> &r0)
+ void refine_root(complex<ntype> &r0, bool inival=false, complex<ntype> px=0, complex<ntype> dpx=0)
    {
      int iter, i;
+     ntype err;
      if (r0.imag()!=0)
        {
 #ifdef POLISH_NR_REAL
          // root polishing by NR
          ntype r0old[2], p[2], r0new[2];
          ntype p1[2], p0, p10;
-         ntype err, errold, invnp1;
+         ntype errold, invnp1;
          r0new[0]=r0.real();
          r0new[1]=r0.imag();
          for (iter=0; iter < maxiter_polish; iter++)
            {
-             p[0]=cmon[n]*r0new[0]+cmon[n-1];
-             p[1]=cmon[n]*r0new[1];    
-             p1[0]=cmon[n];
-             p1[1]=0.0;
+             if (iter==0 && inival==true)
+               {
+                 p[0] = px.real();
+                 p[1] = px.imag();
+                 p1[0] = dpx.real();
+                 p1[1] = dpx.imag(); 
+               }
+             else
+               {
+                 p[0]=cmon[n]*r0new[0]+cmon[n-1];
+                 p[1]=cmon[n]*r0new[1];    
+                 p1[0]=cmon[n];
+                 p1[1]=0.0;
+                 for(i=n-2;i>=0;i--) {
+                   p10=p1[0];
+                   p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
+                   p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
+                   p0=p[0];
+                   p[0]=cmon[i]+p[0]*r0new[0]-p[1]*r0new[1];
+                   p[1]=p0*r0new[1]+p[1]*r0new[0];
+                 }
+               }
              if (iter==0)
                err=p[0]*p[0]+p[1]*p[1];
-             for(i=n-2;i>=0;i--) {
-               p10=p1[0];
-               p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
-               p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
-               p0=p[0];
-               p[0]=cmon[i]+p[0]*r0new[0]-p[1]*r0new[1];
-               p[1]=p0*r0new[1]+p[1]*r0new[0];
-             }
+
              if (p1[0]==0 && p1[1]==0)
                {
                  break;
@@ -1076,10 +1113,11 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
              //if (err < errold)
              //cout  << "iter=" << iter << "\n";
              //cout << "err=" << err << " errold=" << errold << "\n";
+             //cout << "iter=" << iter << " err=" << err << "\n";
              if (err==0)
                break;
 
-             if (err > errold)
+             if (err >= errold)
                {
                  r0new[0]=r0old[0];
                  r0new[1]=r0old[1];
@@ -1091,19 +1129,27 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
          // root polishing by NR
          complex<ntype> r0old, p;
          complex<ntype> p1;
-         ntype err, errold;
+         ntype errold;
          for (iter=0; iter < maxiter_polish; iter++)
            {
-             p=cmon[n]*r0+cmon[n-1];
-             p1=cmon[n];
-             if (iter==0)
-               err=abs(p);
-             for(i=n-2;i>=0;i--) {
-               p1=p+p1*r0;
-               p=cmon[i]+p*r0;
-             }
-             if (p1==complex<ntype>(0,0))
+              if (iter==0 && inival==true)
                {
+                 p = px;
+                 p1 = dpx;
+               }
+              else 
+                {
+                  p=cmon[n]*r0+cmon[n-1];
+                  p1=cmon[n];
+                  for(i=n-2;i>=0;i--) {
+                    p1=p+p1*r0;
+                    p=cmon[i]+p*r0;
+                  }
+                }
+            if (iter==0)
+              err=abs(p);
+            if (p1==complex<ntype>(0,0))
+              {
                  break;
                }
              r0old=r0;
@@ -1114,7 +1160,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
              //cout << "err=" << err << " errold=" << errold << "\n";
              if (err==0)
                break;
-             if (err > errold)
+             if (err >= errold)
                {
                  r0=r0old;
                  break;
@@ -1128,7 +1174,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
          ntype p;
          ntype p1;
          ntype r0r = r0.real();
-         ntype err, errold, r0old;
+         ntype errold, r0old;
          for (iter=0; iter < maxiter_polish; iter++)
            {
              p=cmon[n]*r0.real()+cmon[n-1];
@@ -1147,14 +1193,17 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
              err=abs(p);
              if (err==0)
                break;
-             if (err > errold)
+             if (err >= errold)
                {
                  r0r=r0old;
                  break;
                }
            }
+
          r0 = complex<ntype>(r0r,0);
        }
+     //if (iter > 2)
+       //cout << "NR iter=" << iter << " err=" << err << "\n";
    }
  void laguerre_defl(pvector<complex <ntype>,N>& roots,bool polish)
     {
@@ -1339,7 +1388,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           //errP =calc_err_defl_quad(bd, ad);
           use_NR_defl_quad(bd,ad);
           //errD =calc_err_defl_quad(bd, ad);
-          //if (errD < errD)
+          //if (errD < errP)
             //cout << ">>>errP = " << errP << " errD=" << errD << "\n";
 #endif
 #if 0
