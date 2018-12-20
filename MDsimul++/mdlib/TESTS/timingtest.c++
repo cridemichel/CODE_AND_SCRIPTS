@@ -10,11 +10,13 @@ int main(int argc, char* argv[])
 {
   using numty=double;
   int caso, j, maxiter;
-  rpoly<numty,NDEG> rp;
-  rpoly<numty,NDEG,true> rphqr;
-  pvector<numty, NDEG+1> c;
+  rpoly<numty> rp(NDEG);
+  rpoly<numty,-1,true> rphqr;
+  pvector<numty> c;
   //complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
-  pvector<complex<numty>, NDEG> roots;
+  pvector<complex<numty>> roots;
+  c.allocate(NDEG+1);
+  roots.allocate(NDEG);
 #if 1
 #if 0
   cq[5] = 1.0;
