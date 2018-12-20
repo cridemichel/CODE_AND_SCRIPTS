@@ -43,7 +43,10 @@ public:
     }
 
 
-  rpoly_base_static() = default;
+  rpoly_base_static()
+    {
+      n=N;
+    }
   rpoly_base_static(int nc): rpoly_base_static()
   {
     n=nc;
@@ -1301,7 +1304,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       complex<ntype> r0;
       const ntype goldfact=1.618034;
       ntype sig;
-      pvector<ntype> deflcoeff0, deflcoeff1, deflcoeff;
+      pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
       //pvector<complex <ntype>,N> rootsA, rootsB;
       pvector<ntype,3> ad;
@@ -1787,88 +1790,177 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
     }
   inline void find_roots(pvector<complex<ntype>,N>& roots, bool polish=false)
     {
-      if (n==1)
-	{
-	  cout << "What?!? You are not able to solve a linear equation come-on!";
-	  exit(-1);
-        }
-      else if (n==2)
+      if constexpr (N < 0)
         {
-	  if constexpr (force_hqr)
-	    {
-              int ok=1;
-	      solve_numrec(roots, ok);
-	    }
-	  else
-	    {
-	      solve_quadratic(roots);
-	    }
-        }
-      else if (n==3) 
-        {
-	  if constexpr (force_hqr)
-	    {
-              int ok=1;
-	      solve_numrec(roots, ok);
-	    }
-	  else
-	    {
-	      solve_cubic_analytic(roots);
-	    }
-        }
-      else if (n==4)
-        {
-	  if constexpr (force_hqr)
-	    {
-              int ok=1;
-	      solve_numrec(roots, ok);
-	    }
-	  else
+          if (n==1)
             {
-              oqs_quartic_solver(roots);
+              cout << "What?!? You are not able to solve a linear equation come-on!";
+              exit(-1);
             }
-        }
-      else if (n==5)
-        {
-	  if constexpr (force_hqr)
-	    {
-              int ok=1;
-	      solve_numrec(roots, ok);
-	    }
-	  else
+          else if (n==2)
             {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+                  solve_quadratic(roots);
+                }
+            }
+          else if (n==3) 
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+                  solve_cubic_analytic(roots);
+                }
+            }
+          else if (n==4)
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+                  oqs_quartic_solver(roots);
+                }
+            }
+          else if (n==5)
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
 #ifdef USE_LAGUERRE_ONLY
-              laguerre_defl(roots, polish);
+                  laguerre_defl(roots, polish);
 #else
-              odd_degree(roots);
+                  odd_degree(roots);
 #endif
+                }
             }
-        }
-      else if (n <= 200)
-        {
-          if constexpr (force_hqr)
-	    {
-              int ok=1;
-	      solve_numrec(roots, ok);
-	    }
-	  else
+          else if (n <= 200)
             {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
 #ifdef USE_LAGUERRE_ONLY
-              laguerre_defl(roots, polish);
+                  laguerre_defl(roots, polish);
 #else
-              if constexpr (n % 2 == 0)
-                laguerre_defl(roots, polish);
-              else 
-                odd_degree(roots);
-              //quintic(roots);     
+                  if constexpr (n % 2 == 0)
+                    laguerre_defl(roots, polish);
+                  else 
+                    odd_degree(roots);
+                  //quintic(roots);     
 #endif 
-            }  
+                }  
+            }
+          else
+            {
+              // use HQR from NUMERICAL RECIPE
+              int ok=1;
+              solve_numrec(roots, ok);
+            }
         }
       else
         {
-          // use HQR from NUMERICAL RECIPE
-          int ok=1;
-	  solve_numrec(roots, ok);
+          if constexpr (N==1)
+            {
+              cout << "What?!? You are not able to solve a linear equation come-on!";
+              exit(-1);
+            }
+          else if constexpr (N==2)
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+                  solve_quadratic(roots);
+                }
+            }
+          else if constexpr (N==3) 
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+                  solve_cubic_analytic(roots);
+                }
+            }
+          else if constexpr (N==4)
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+                  oqs_quartic_solver(roots);
+                }
+            }
+          else if constexpr (N==5)
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+#ifdef USE_LAGUERRE_ONLY
+                  laguerre_defl(roots, polish);
+#else
+                  odd_degree(roots);
+#endif
+                }
+            }
+          else if constexpr (N <= 200)
+            {
+              if constexpr (force_hqr)
+                {
+                  int ok=1;
+                  solve_numrec(roots, ok);
+                }
+              else
+                {
+#ifdef USE_LAGUERRE_ONLY
+                  laguerre_defl(roots, polish);
+#else
+                  if constexpr (N % 2 == 0)
+                    laguerre_defl(roots, polish);
+                  else 
+                    odd_degree(roots);
+                  //quintic(roots);     
+#endif 
+                }  
+            }
+          else
+            {
+              // use HQR from NUMERICAL RECIPE
+              int ok=1;
+              solve_numrec(roots, ok);
+            }
         }
     }
 #if 0
