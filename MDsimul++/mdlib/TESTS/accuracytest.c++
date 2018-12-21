@@ -5,6 +5,7 @@
 #include<complex>
 #include<list>
 #include<string>
+
 bool allreal=false, doswap=false;
 using ldbl=long double;
 #ifndef CASO
@@ -13,7 +14,7 @@ using ldbl=long double;
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
 #define Complex(x,y) (ldbl(x)+1il*ldbl(y))
-using numty = double;
+using numty = double;//mpf_float_500;
 void calc_coeff(long double* c, complex<long double> er[]);
 void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
 {

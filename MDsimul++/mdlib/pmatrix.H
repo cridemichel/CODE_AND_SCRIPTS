@@ -6,7 +6,15 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<cstdlib>
+#if 0
+//#include <boost/multiprecision/gmp.hpp>
+#include <complex>
+#include <boost/multiprecision/mpc.hpp>
+using namespace boost::multiprecision;
+using mpf_float_500 = number<gmp_float<500>>;
+#else
 #include<cmath>
+#endif
 #include<cstring>
 #include "pvector.H"
 #define OPT_INV

@@ -1180,6 +1180,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
          complex<ntype> pc, p1c;
          r0new[0]=r0.real();
          r0new[1]=r0.imag();
+
          for (iter=0; iter < maxiter_polish; iter++)
            {
 #if 1
@@ -1196,7 +1197,18 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                p[1]=p0*r0new[1]+p[1]*r0new[0];
              }
 #endif
-             errold = abs(p[0])+abs(p[1]);
+             if (iter > 0)
+               errold=err;
+             err = abs(p[0])+abs(p[1]);
+             if (err==0)
+               break;
+
+             if (iter > 0 && err >= errold)
+               {
+                 r0new[0]=r0old[0];
+                 r0new[1]=r0old[1];
+                 break;
+               }
              if (p1[0]==0 && p1[1]==0)
                {
                  break;
@@ -1216,23 +1228,15 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                p[1]=p0*r0new[1]+p[1]*r0new[0];
              }
 #endif
-             pc = evalpoly(r0new[0]+1i*r0new[1]);
-             p[0] = pc.real();
-             p[1] = pc.imag();
-             err=abs(p[0])+abs(p[1]);
+             //pc = evalpoly(r0new[0]+1i*r0new[1]);
+             //p[0] = pc.real();
+             //p[1] = pc.imag();
+             //err=abs(p[0])+abs(p[1]);
              //if (err < errold)
              //cout  << "iter=" << iter << "\n";
              //cout << "err=" << err << " errold=" << errold << "\n";
              //cout << "iter=" << iter << " err=" << err << "\n";
-             if (err==0)
-               break;
-
-             if (err >= errold)
-               {
-                 r0new[0]=r0old[0];
-                 r0new[1]=r0old[1];
-                 break;
-               }
+             
            }
          r0=r0new[0] + r0new[1]*1i;
 #else
@@ -1250,7 +1254,19 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                p=cmon[i]+p*r0;
              }
 #endif
-             errold = abs(p.real())+abs(p.imag());
+             if (iter > 0)
+               errold=err;
+
+             err = abs(p.real())+abs(p.imag());
+             if (err==0)
+               break;
+
+             if (iter > 0 && err >= errold)
+               {
+                 r0=r0old;
+                 break;
+               }
+
              if (p1==complex<ntype>(0,0))
                {
                  break;
@@ -1263,17 +1279,10 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                p=cmon[i]+p*r0;
              }
 #endif
-             p = evalpoly(r0);
-             err=abs(p.real())+abs(p.imag());
+             //p = evalpoly(r0);
+             //err=abs(p.real())+abs(p.imag());
              //if (err < errold)
              //cout << "err=" << err << " errold=" << errold << "\n";
-             if (err==0)
-               break;
-             if (err >= errold)
-               {
-                 r0=r0old;
-                 break;
-               }
            }
 #endif
        }
@@ -1292,7 +1301,17 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                p1=p+p1*r0r;
                p=cmon[i]+p*r0r;
              }
-             errold = abs(p);
+             if (iter > 0)
+               errold=err;
+             err = abs(p);
+             if (err==0)
+               break;
+
+             if (iter > 0 && err >= errold)
+               {
+                 r0r=r0old;
+                 break;
+               }
              if (p1==complex<ntype>(0,0))
                break;
              r0old=r0r;
@@ -1303,15 +1322,8 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                p=cmon[i]+p*r0r;
              }
 #endif
-             p = evalpoly(r0r);
-             err=abs(p);
-             if (err==0)
-               break;
-             if (err >= errold)
-               {
-                 r0r=r0old;
-                 break;
-               }
+             //   p = evalpoly(r0r);
+             //err=abs(p);
            }
 
          r0 = complex<ntype>(r0r,0);
