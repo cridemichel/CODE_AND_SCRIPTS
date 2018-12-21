@@ -491,11 +491,14 @@ numty print_accuracy_at(char *str, complex<long double>* csol, complex<long doub
   return relerrmax;
 }
 
-void print_roots(char *str, complex<long double> *er)
+void print_roots(char *str, complex<long double> *er, complex<long double> *cr, long double *allrelerr)
 {
   printf("CASE %s\n", str);
   for (auto i=0; i < NDEG; i++)
-    cout << "root #" << i << " "<< er[i] << setprecision(16) << "\n";
+    {
+      cout << setprecision(16) << "root #" << i << " EX: "<< er[i] << " C:" << cr[i];
+      cout << setprecision(3) << " [ eps: " << allrelerr[i] << " ]\n"; 
+    }
 }
 
 void print( list<int> l){
@@ -614,8 +617,8 @@ int main(int argc, char *argv[])
     }
   calc_coeff_dep_on_case(ca, &er);
   char testo[] = "Case CASO";
-  if (er!=nullptr)
-    print_roots(testo, er); 
+  //if (er!=nullptr)
+    //print_roots(testo, er); 
   for (i=0; i < NDEG+1; i++)
     c[i]=ca[i];
   if (algo==0)
@@ -690,7 +693,7 @@ int main(int argc, char *argv[])
     };
 #endif
   sort_sol_opt(cr, er, allrelerr);
-  print_roots(testo2, cr);
+  print_roots(testo2, er, cr, allrelerr);
   cout << "Forward relarive error:\n";
   print_accuracy_at(testo2, cr, er, allrelerr);
   //cout << "Backward relarive error:\n";
