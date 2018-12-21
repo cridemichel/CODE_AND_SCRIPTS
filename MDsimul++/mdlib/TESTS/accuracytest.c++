@@ -595,10 +595,10 @@ void print_backward_err(char *str, long double* c, complex<long double> *cr)
 }
 int main(int argc, char *argv[])
 {
-  pvector<complex<numty>,NDEG> roots;
+  pvector<complex<numty>,NDEG> roots(NDEG);
   char testo2[256];
   complex<long double> cr[NDEG], *er;
-  pvector<numty,NDEG+1> c;
+  pvector<numty,NDEG+1> c(NDEG+1);
   int algo, i;
   long double ca[NDEG+1];
   long double allrelerr[NDEG];
@@ -616,18 +616,17 @@ int main(int argc, char *argv[])
       exit(-1);
     }
   calc_coeff_dep_on_case(ca, &er);
-  char testo[] = "Case CASO";
-  //if (er!=nullptr)
-    //print_roots(testo, er); 
   for (i=0; i < NDEG+1; i++)
     c[i]=ca[i];
+  c.show("boh");
+  cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
     {
-      rpoly<numty,NDEG> rp;
+      rpoly<numty,NDEG> rp(NDEG);
       rp.set_coeff(c);
       rp.show();
       //rp.zroots(roots,false);
-      rp.find_roots(roots,false);
+      rp.find_roots(roots);
       //roots.show();  
       sprintf(testo2, "OPS");
     }
