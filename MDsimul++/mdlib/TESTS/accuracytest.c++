@@ -593,12 +593,22 @@ void print_backward_err(char *str, long double* c, complex<long double> *cr)
     }
   printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
 }
+//#define STATIC
+
 int main(int argc, char *argv[])
 {
-  pvector<complex<numty>,NDEG> roots(NDEG);
+#ifdef STATIC
+  pvector<complex<numty>,NDEG> roots;
+#else
+  pvector<complex<numty>> roots(NDEG);
+#endif
   char testo2[256];
   complex<long double> cr[NDEG], *er;
+#ifdef STATIC
   pvector<numty,NDEG+1> c(NDEG+1);
+#else
+  pvector<numty> c(NDEG+1);
+#endif 
   int algo, i;
   long double ca[NDEG+1];
   long double allrelerr[NDEG];
@@ -622,7 +632,11 @@ int main(int argc, char *argv[])
   cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
     {
-      rpoly<numty,NDEG> rp(NDEG);
+#ifdef STATIC
+      rpoly<numty,NDEG> rp;
+#else
+      rpoly<numty> rp(NDEG);
+#endif
       rp.set_coeff(c);
       rp.show();
       //rp.zroots(roots,false);
@@ -632,7 +646,11 @@ int main(int argc, char *argv[])
     }
   else if (algo==1)
     {
+#ifdef STATIC
       rpoly<numty,NDEG,true> rphqr;
+#else
+      rpoly<numty,-1,true> rphqr(NDEG);
+#endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
       rphqr.find_roots(roots);
