@@ -37,13 +37,17 @@ public:
   pvector<ntype, N+1> cmon;
   pvector<ntype, N> cmonder;
   pvector<ntype, N-1> cmondder;
+  pvector<ntype, N-1> bd;
+  pvector<ntype, N-1> bd0;
+  pvector<ntype, N-1> bd1;
+  pvector<ntype, N> deflcoeff0;
+  pvector<ntype, N> deflcoeff1;
+  pvector<ntype, N> deflcoeff;
   void set_coeff(pvector<ntype,N+1> v)
     {
       coeff = v;
       //coeff.show("coefficienti=");
     }
-
-
   rpoly_base_static()
     {
       n=N;
@@ -64,6 +68,12 @@ public:
   pvector<ntype> cmon;
   pvector<ntype> cmonder;
   pvector<ntype> cmondder;
+  pvector<ntype> bd0;
+  pvector<ntype> bd1;
+  pvector<ntype> bd;
+  pvector<ntype> deflcoeff0;
+  pvector<ntype> deflcoeff1;
+  pvector<ntype> deflcoeff;
   rpoly_base_dynamic() = default;
   void set_coeff(pvector<ntype,-1> v)
     {
@@ -75,8 +85,24 @@ public:
         v.show();
 #endif
     }
-
-  rpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), cmonder(nc), cmondder(nc-1)
+  void use_vec(int nc, ntype* coeffv, ntype* cmonv, ntype* cmonderv, ntype* cmondderv,
+               ntype* bd0v, ntype *bd1v, ntype* bdv, ntype *deflcoeff0v, ntype* deflcoeff1v, ntype* deflcoeffv)
+    {
+      coeff.use_vec(nc+1,coeffv);
+      cmon.use_vec(nc+1,cmonv);
+      cmonder.use_vec(nc,cmonderv);
+      cmondder.use_vec(nc-1,cmondderv);
+      bd0.use_vec(nc-1,bd0v);
+      bd1.use_vec(nc-1,bd1v);
+      bd.use_vec(nc-1,bdv);
+      deflcoeff0.use_vec(nc,deflcoeff0v);
+      deflcoeff1.use_vec(nc,deflcoeff1v);
+      deflcoeff.use_vec(nc,deflcoeffv);
+      n=nc;
+    }
+ 
+  rpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), cmonder(nc), cmondder(nc-1), bd0(nc-1), bd1(nc-1), bd(nc-1),
+  deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
     {
       n=nc;
     }
@@ -87,6 +113,12 @@ public:
       cmon.deallocate();
       cmonder.deallocate();
       cmondder.deallocate();
+      bd0.deallocate();
+      bd1.deallocate();
+      bd.deallocate();
+      deflcoeff0.deallocate();
+      deflcoeff1.deallocate();
+      deflcoeff.deallocate();
     }
   void allocate(int nc)
     {
@@ -95,8 +127,13 @@ public:
       cmon.allocate(n+1);
       cmonder.allocate(n);
       cmondder.allocate(n-1);
-   }
-
+      bd0.allocate(n-1);
+      bd1.allocate(n-1);
+      bd.allocate(n-1);
+      deflcoeff0.allocate(n);
+      deflcoeff1.allocate(n);
+      deflcoeff.allocate(n);
+    }
 };
 
 template <class ntype, int N> using rpolybase = 
@@ -110,6 +147,12 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   using rpolybase<ntype,N>::cmon;
   using rpolybase<ntype,N>::cmonder;
   using rpolybase<ntype,N>::cmondder;
+  using rpolybase<ntype,N>::bd0;
+  using rpolybase<ntype,N>::bd1;
+  using rpolybase<ntype,N>::bd;
+  using rpolybase<ntype,N>::deflcoeff0;
+  using rpolybase<ntype,N>::deflcoeff1;
+  using rpolybase<ntype,N>::deflcoeff;
   template <class vtype>
   using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
 	 pvector<vtype, -1>>::type;
@@ -1091,7 +1134,6 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
      const ntype EPS=meps;
      int i,j,jj;
      complex<ntype> x,b,c;
-     // FIX THIS!!!! 
      complex<ntype> *a;
      int m;
      complex<ntype> *ad;
@@ -1301,23 +1343,25 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       complex<ntype> r0;
       const ntype goldfact=1.618034;
       ntype sig;
-      pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
+      //pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
       //pvector<complex <ntype>,N> rootsA, rootsB;
       pvector<ntype,3> ad;
-      pvecNm1<ntype> bd, bd0, bd1;
-      pvecNm1<ntype> ro;
+      //pvecNm1<ntype> bd, bd0, bd1;
+      // pvecNm1<ntype> ro;
       int iter, i;
+#if 0
       if constexpr (N < 0)
         {
           bd.allocate(n-1);
           bd0.allocate(n-1);
           bd1.allocate(n-1);
-          ro.allocate(n-1);
+          // ro.allocate(n-1);
           deflcoeff0.allocate(n);
           deflcoeff1.allocate(n);
           deflcoeff.allocate(n);
         }
+#endif
       //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
       if (coeff[n]==0.0)
         {
@@ -1366,12 +1410,15 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           rpolyNm1 qp;
           // pvector<complex<ntype>,N-1> qr;
           pvecNm1<complex<ntype>> qr;
+#if 0
           if constexpr (N < 0)
             {
-              qp.allocate(n-1);
-              qr.allocate(n-1);
+              //qp.allocate(n-1);
+              //qr.allocate(n-1);
+              qr.use_vec(n-1,&(roots[1])); 
+              qp.use_vec(n-1,coeff.v, cmon.v, cmonder.v, cmondder.v);
             }
-
+#endif
           roots[0] = r0;
           for (i=n; i >=1; i--)
             {
@@ -1432,23 +1479,36 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
             }
 #endif
 #endif
+
+          if constexpr (N < 0)
+            {
+              //qp.allocate(n-1);
+              //qr.allocate(n-1);
+              qr.use_vec(n-1,&(roots[1])); 
+              qp.use_vec(n-1,coeff.v, cmon.v, cmonder.v, cmondder.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+            }
+
           //refine deflated quartic coefficients thourh Newton-Raphson method
           qp.set_coeff(deflcoeff);
           qp.find_roots(qr, false);
-          for (i=1; i < n; i++)
-            roots[i] = qr[i-1];
+          if constexpr (N > 0)
+            {
+              for (i=1; i < n; i++)
+                roots[i] = qr[i-1];
+            }
         }
       else
         {
           rpolyNm2 rp;
           //pvector<complex<ntype>,N-2> ro_quad;
           pvecNm2<complex<ntype>> ro_quad;
+#if 0
           if constexpr (N < 0)
             {
               ro_quad.allocate(n-2);
               rp.allocate(n-2);
             }
-     
+#endif
           roots[0] = r0;
           roots[1] = conj(r0);
           // find coefficients of quadratic polynomial for deflation
@@ -1518,12 +1578,21 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
               exit(-1);
             }
 #endif
+          if constexpr (N < 0)
+            {
+              // reuse already allocated vectors
+              rp.use_vec(n-2,coeff.v,cmon.v,cmonder.v,cmondder.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+              ro_quad.use_vec(n-2,&(roots[2]));
+            }
           // find zeroes of N-2 degree polynomial
           rp.set_coeff(bd);
           rp.find_roots(ro_quad, false);
           //ro_quad.show("quartic roots=");
-          for (i=2; i < n; i++)
-            roots[i] = ro_quad[i-2];
+          if constexpr (N > 0)
+            {
+              for (i=2; i < n; i++)
+                roots[i] = ro_quad[i-2];
+            }
         }
       bool copyroot=false;
       if (polish==true)

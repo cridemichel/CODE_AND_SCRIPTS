@@ -6,15 +6,23 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
+//#define STATIC
 int main(int argc, char* argv[])
 {
   using numty=double;
   int caso, j, maxiter;
+#ifdef STATIC
   rpoly<numty,NDEG> rp;
   rpoly<numty,NDEG,true> rphqr;
   pvector<numty,NDEG+1> c;
-  //complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
   pvector<complex<numty>,NDEG> roots;
+#else
+  rpoly<numty,-1> rp(NDEG);
+  rpoly<numty,-1,true> rphqr(NDEG);
+  pvector<numty,-1> c(NDEG+1);
+  pvector<complex<numty>,-1> roots(NDEG);
+#endif
+  //complex<numty> x1c, x2c, x3c, x4c, x5c, x6c;
 #if 0
   rp.allocate(NDEG);
   c.allocate(NDEG+1);

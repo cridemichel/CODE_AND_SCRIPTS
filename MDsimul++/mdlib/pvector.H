@@ -153,6 +153,7 @@ public:
   constexpr static int dynamic = true;
   ntype (*v); 
   int N;
+  bool dealloc=true;
   // copy assignment
   pvecdynp<ntype,NT>& operator=(const pvecdynp<ntype,NT>& v1)
     {
@@ -197,6 +198,12 @@ public:
       N=NN;
       v = new ntype[N];
     }
+  void use_vec(int nc, ntype *vv)
+    {
+      dealloc=false;
+      N=nc;
+      v=vv;
+    }
   void deallocate()
     {
       delete [] v;
@@ -219,7 +226,8 @@ public:
   // destructor
   ~pvecdynp()
     {
-      delete[] v;
+      if (dealloc==true)
+        delete[] v;
     }
 };
 
