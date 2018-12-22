@@ -1878,7 +1878,6 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
   inline void find_roots(pvector<complex<ntype>,N>& roots, bool polish=false, bool backup=true)
     {
       // if backup is true the dynamic version preserve the coefficients after calling this method
-      // (but it is slowe!)
       if constexpr (N < 0)
         {
           if (n==1)
