@@ -14,7 +14,7 @@ using ldbl=long double;
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
 #define Complex(x,y) (ldbl(x)+1il*ldbl(y))
-using numty = double;//mpf_float_500;
+using numty = double;
 void calc_coeff(long double* c, complex<long double> er[]);
 void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
 {
