@@ -593,8 +593,7 @@ void print_backward_err(char *str, long double* c, complex<long double> *cr)
     }
   printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
 }
-//#define STATIC
-
+#define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC

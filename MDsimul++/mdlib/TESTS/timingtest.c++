@@ -7,6 +7,7 @@
 #define NDEG 6
 #endif
 //#define STATIC
+// fino a N=40 la versione statica è più veloce
 int main(int argc, char* argv[])
 {
   using numty=double;
