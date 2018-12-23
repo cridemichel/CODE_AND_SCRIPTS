@@ -7,11 +7,51 @@
 using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
-#define USE_LAPACK
+//#define USE_LAPACK
 #define VEC_COMMA_INIT
 #ifdef USE_LAPACK
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
+#endif
+#if 1
+//#include<complex>
+//#include <boost/multiprecision/gmp.hpp>
+#include<cmath>
+//#include <complex>
+//#include <boost/multiprecision/mpfr.hpp> 
+//#include <boost/multiprecision/mpc.hpp>
+//#ifndef __MULTIPREC__
+#define __MULTIPREC__
+#include <iomanip>
+#if 0
+#include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/multiprecision/cpp_complex.hpp> 
+
+typedef number<cpp_dec_float<200>> vldbl;
+//typedef number<mpfr_float_backend<50>>    mpfr_float_50
+//
+//typedef number<mpfr_float_backend<50> >  vldbl;
+ template <unsigned Digits, backends::digit_base_type DigitBase = backends::digit_base_10, class Allocator = void, class Exponent = int, Exponent MinExponent = 0, Exponent MaxExponent = 0>
+   using cpp_complex_backend = complex_adaptor<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinExponent, MaxExponent> >;
+
+   template <unsigned Digits, backends::digit_base_type DigitBase = digit_base_10, class Allocator = void, class Exponent = int, Exponent MinExponent = 0, Exponent MaxExponent = 0, expression_template_option ExpressionTemplates = et_off>
+   using cpp_complex = number<complex_adaptor<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinExponent, MaxExponent> >, ExpressionTemplates>;
+typedef cpp_complex<200> cmplx;
+#endif
+#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace std;
+using namespace boost::multiprecision;
+using namespace boost;
+//typedef number<gmp_float<200>> vldbl;
+typedef number<mpfr_float_backend<200> >   vldbl;
+typedef number<mpc_complex_backend<200> >   cmplx;
+
+//#endif
+//using complex = boost::multiprecision::mpc_complex_50;
+#else
+#include<cmath>
 #endif
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy

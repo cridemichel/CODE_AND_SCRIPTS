@@ -1,61 +1,61 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "pmatrix.H"
-#include "./rpoly.H"
+#include "pmatrix_mp.H"
+#include "./rpoly_mp.H"
 #include<complex>
 #include<list>
 #include<string>
 
 bool allreal=false, doswap=false;
-using ldbl=long double;
+using ldbl=vldbl;
 #ifndef CASO
 #define CASO 4
 #endif
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
 #define Complex(x,y) (ldbl(x)+1il*ldbl(y))
-using numty = double;
-void calc_coeff(long double* c, complex<long double> er[]);
-void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
+using numty = vldbl;//double;
+void calc_coeff(vldbl* c, cmplx er[]);
+void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
 {
   int i;
 #if CASO==1
   // wilkinson
   //
 #define NDEG 10
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = i+1;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==2
   // wilkinson
   //
 #define NDEG 15
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = i+1;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==3
 #define NDEG 20
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = i+1;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==4
 #define NDEG 20
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   er[0] = -2.1;
   for (i=1; i < NDEG; i++)
@@ -63,61 +63,61 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
       er[i] = er[i-1]+0.2L;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==5
 #define NDEG 10
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
       er[i-1] = 1.0L/i;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==6
 #define NDEG 15
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
       er[i-1] = 1.0L/i;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==7
 #define NDEG 20
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
       er[i-1] = 1.0L/i;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==8
 #define NDEG 20
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = 1.0L/pow(2,NDEG/2-i);
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==9
 #define NDEG 20
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = 1.0L/pow(2,NDEG/2-i)-3.0L;
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==10
 #define NDEG 20
 #if 0
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
 
   for (i=0; i < NDEG; i++)
     { 
@@ -127,7 +127,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   allreal=true;
 #if 1
   doswap=true;
-  static complex <long double> er[NDEG]=
+  static cmplx er[NDEG]=
     {-0.98883082622512854506974288293400861L - 
       0.14904226617617444692935471527721756L*1il, \
         -0.98883082622512854506974288293400861L + 
@@ -170,10 +170,10 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
         0.29475517441090421683077298196019097L*1il};  
 #endif
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==11
 #define NDEG 20
-  static complex <long double> er[NDEG]=
+  static cmplx er[NDEG]=
     {-0.98883082622512854506974288293400861L- 
       0.14904226617617444692935471527721756L*1il, 
       -0.98883082622512854506974288293400861L+ 
@@ -217,13 +217,13 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   doswap=true;
   allreal=true;
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #elif CASO==12
 #define NDEG 24
   doswap=true;
   allreal=true;
  
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
 
   er[0]=Complex(-3.52E2L, 0);
   er[1]=Complex(-3.52E2L, 0);
@@ -249,7 +249,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   er[21]=Complex( 7.52E2L, 0L);
   er[22]=Complex( 9.1106065E2L,  1.5722L);
   er[23]=Complex( 9.1106065E2L, -1.5722L);
-  static long double cs[NDEG+1];
+  static vldbl cs[NDEG+1];
   cs[0]=-54765291428198020791747503747742749163073958404455022926495744.L;
   cs[1]=-4052135566767965847649766745769409681058667331648450681896960.L;
   cs[2]=-31969984081155943263834965670035075493639295858977076674560.L;
@@ -281,7 +281,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
     {
       c[i] = cs[i];
     }
-  *r = er;
+  r = er;
 
 #elif CASO==13
 
@@ -293,7 +293,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
 // Noferini
 #define NDEG 12
   //roots and coefficients were calculated by Wolfram Mathematica with a precision of 1000 digits
-  static complex <long double> er[NDEG]=
+  static cmplx er[NDEG]=
     {4.6783738689934637477470956503276e-14,3.593464181785079996420231643529e-10,
    0.71315932408901343233326922076029,-0.37460208174361406896066147763122,
    -0.72465168650045961190528692375604,0.73436066385675994997813804359153,
@@ -303,7 +303,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   doswap=false;
   allreal=true;
 
-  static long double cs[NDEG+1]={-7.4535809976555373129332791846744e-26,1.5934065119636233867683029604694e-12,
+  static vldbl cs[NDEG+1]={-7.4535809976555373129332791846744e-26,1.5934065119636233867683029604694e-12,
    -0.0044336022632989170089290997184383,0.0113879060225037412685170930364,
    0.087649800127665380958117305226893,-0.34172448886511450921576879764911,
    -0.1028434743793867531666720875538,2.0354824813590990435428325566779,
@@ -314,13 +314,13 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
     {
       c[i] = cs[i];
     }
-  *r = er;
+  r = er;
 
 #elif CASO==16
 // Noferini
 #define NDEG 35
   //roots and coefficients were calculated by Wolfram Mathematica with a precision of 1000 digits
-  static complex <long double> er[NDEG]=
+  static cmplx er[NDEG]=
     {-1.2411014081169485749720046374712e-12,7.0414870784977958688104322165598e-11,
       -1.1009740691481262157709498052086,1.5099233137877368012385266380292,
       0.55325068571508822704738370366753,0.69822314886842319800567269068431,
@@ -342,7 +342,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   doswap=false;
   allreal=true;
 
-  static long double cs[NDEG+1]={
+  static vldbl cs[NDEG+1]={
     1.2206094960416340906834578680468e-31,9.6615438846790090923275525883592e-20,
     -1.3967063075503082065104296976722e-9,2.3785023237495565148223572868933e-7,
     -9.5300697944611868773994541074766e-8,-0.000034357952282030902005958581364579,
@@ -366,7 +366,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
     {
       c[i] = cs[i];
     }
-  *r = er;
+  r = er;
 #elif CASO==30
 #define NDEG 20
   allreal=true;
@@ -376,7 +376,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
       er[i] = er[i-1]/(10.0L);
     }
   calc_coeff(c, er);
-  *r = er;
+  r = er;
 #if 0
   for (i=0; i < NDEG; i++)
     cout << "[CALC] c[" << i << "]=" << c[i] << setprecision(20) << "\n";
@@ -405,7 +405,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   c[2] = -6.0*K*K;
   c[4] = K*K*K*K;
   c[9] = K*K; 
-  r = NULL;
+  //r = NULL;
 #elif CASO==32
 #define NDEG 10
   for (auto i=0; i <= NDEG; i++)
@@ -415,7 +415,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   c[1] = -300.0;
   c[2] = 30000.0;
   c[3] = -1E6;
-  r=NULL;
+  //r=NULL;
 #elif CASO==5
 #define NDEG 11
   static numty ct ={-1E22, 2E21, -1E20, 0, 0, 0, 0, 0, 0, 0, 1.0};
@@ -424,7 +424,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
   r=NULL;
 #elif CASO==33
 #define NDEG 20
-  static complex <long double> er[NDEG];
+  static cmplx er[NDEG];
   er[0]=1;
   for (i=1; i < NDEG; i++)
     { 
@@ -438,12 +438,12 @@ int factorial(int n)
 {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
-void sort_sol_opt(complex<long double> *csol, complex<long double>* exsol, long double* allrelerr)
+void sort_sol_opt(cmplx csol[], cmplx exsol[], vldbl allrelerr[])
 {
   int k1, k2, k2min;
   int perm[NDEG];
-  long double relerr, relerrmin, relerrmax;
-  complex <long double> diff, solt[NDEG];
+  vldbl relerr, relerrmin, relerrmax;
+  cmplx diff, solt[NDEG];
   bool used_exsol[NDEG];
   for (k1=0; k1 < NDEG; k1++)
     used_exsol[k1]=false;
@@ -455,7 +455,7 @@ void sort_sol_opt(complex<long double> *csol, complex<long double>* exsol, long 
           if (used_exsol[k2]==true)
             continue;
           diff = csol[k1] - exsol[k2];
-          relerr = (exsol[k2]==complex<long double>(0.0+0.0*1i))?abs(diff):abs(diff/exsol[k2]);
+          relerr = (exsol[k2]==cmplx(0.0,0.0))?abs(diff):abs(diff/exsol[k2]);
           if (ini==true || relerr <= relerrmin)
            {
              ini=false;
@@ -475,11 +475,11 @@ void sort_sol_opt(complex<long double> *csol, complex<long double>* exsol, long 
   for (k1=0; k1 < NDEG; k1++)
     csol[perm[k1]] = solt[k1];
 }
-numty print_accuracy_at(char *str, complex<long double>* csol, complex<long double> *exsol, long double *allrelerr)
+numty print_accuracy_at(char *str, cmplx csol[], cmplx exsol[], vldbl allrelerr[])
 {
   /* we follow FLocke here */
   int k1;
-  long double relerrmax;
+  vldbl relerrmax;
   for (k1=0; k1 < NDEG; k1++)
     {
       if (k1==0 || allrelerr[k1] > relerrmax)
@@ -487,11 +487,11 @@ numty print_accuracy_at(char *str, complex<long double>* csol, complex<long doub
           relerrmax=allrelerr[k1];
         }
     }
-  printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
+  cout << "[" << str << "relative accuracy=" <<  relerrmax << "\n";
   return relerrmax;
 }
 
-void print_roots(char *str, complex<long double> *er, complex<long double> *cr, long double *allrelerr)
+void print_roots(char *str, cmplx er[], cmplx cr[], vldbl allrelerr[])
 {
   printf("CASE %s\n", str);
   for (auto i=0; i < NDEG; i++)
@@ -523,12 +523,12 @@ void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<i
       }
 } 
 
-void calc_coeff(long double* c, complex<long double> er[NDEG])
+void calc_coeff(vldbl c[], cmplx er[NDEG])
 {
   int i, j;
   std::list<std::list<int>> subsets;// list containing all subsets of a given length
-  complex<long double> cc[NDEG+1];
-  complex<long double> term, segno;
+  cmplx cc[NDEG+1];
+  cmplx term, segno;
   // list with all list of subsets
   list<list<int>> lt;   
   // a subset of integers
@@ -576,41 +576,43 @@ void calc_coeff(long double* c, complex<long double> er[NDEG])
       c[i] = real(cc[i]);
     }
 }
-void print_backward_err(char *str, long double* c, complex<long double> *cr)
+#if 0
+void print_backward_err(char *str, vldbl c[], cmplx cr[])
 {
   /* we follow FLocke here */
   int k1;
-  long double relerr, relerrmax, cc[NDEG+1];
+  vldbl relerr, relerrmax, cc[NDEG+1];
   calc_coeff(cc,  cr);
   for (k1=0; k1 < NDEG+1; k1++)
     {
-      relerr=abs((c[k1]==0)?(cc[k1] - c[k1]):(cc[k1] - c[k1])/c[k1]); 
+      relerr=abs((c[k1]==vldbl(0.0))?(cc[k1] - c[k1]):(cc[k1] - c[k1])/c[k1]); 
       cout << "k1=" << k1 << " relerr" << relerr << " " << c[k1] <<" " << cc[k1] << "\n" ;
       if (k1==0 || relerr > relerrmax)
         {
           relerrmax=abs((c[k1]==0)?(cc[k1] - c[k1]):(cc[k1] - c[k1])/c[k1]); 
         }
     }
-  printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
+  cout << "[" << str << "relative accuracy=" << relerrmax << "\n";
 }
+#endif
 #define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
-  pvector<complex<numty>,NDEG> roots;
+  pvector<cmplx,NDEG> roots;
 #else
-  pvector<complex<numty>> roots(NDEG);
+  pvector<cmplx> roots(NDEG);
 #endif
   char testo2[256];
-  complex<long double> cr[NDEG], *er;
+  cmplx cr[NDEG], *er;
 #ifdef STATIC
   pvector<numty,NDEG+1> c(NDEG+1);
 #else
   pvector<numty> c(NDEG+1);
 #endif 
   int algo, i;
-  long double ca[NDEG+1];
-  long double allrelerr[NDEG];
+  numty ca[NDEG+1];
+  numty allrelerr[NDEG];
   if (argc == 2)
     {
       algo = atoi(argv[1]);
@@ -624,7 +626,7 @@ int main(int argc, char *argv[])
       printf("algorithm must be between 1 and XX algo=%d\n", algo);
       exit(-1);
     }
-  calc_coeff_dep_on_case(ca, &er);
+  calc_coeff_dep_on_case(ca, er);
   for (i=0; i < NDEG+1; i++)
     c[i]=ca[i];
   c.show("boh");
@@ -662,7 +664,7 @@ int main(int argc, char *argv[])
 #if 0
   if (allreal==true)
     {
-      struct rerot { long double re; long double im;};
+      struct rerot { vldbl re; vldbl im;};
       std::array<struct rerot,NDEG> rero;
       for (i=0; i < NDEG; i++)
         {
