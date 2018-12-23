@@ -2196,7 +2196,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   else
     {
       RQ = R/Q;
-      KK = copysign(1.0,Q)*(RQ*RQ/Q-1.0);
+      KK = copysign(ntype(1.0),Q)*(RQ*RQ/Q-1.0);
     }
 
   if (KK < 0.0)
@@ -2223,10 +2223,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   else
     {
       if (abs(Q) < abs(R))
-	A = -copysign(1.0,R)*cbrt(abs(R)*(1.0+sqrt(KK)));
+	A = -copysign(ntype(1.0),R)*cbrt(abs(R)*(1.0+sqrt(KK)));
       else
 	{
-	  A = -copysign(1.0,R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
+	  A = -copysign(ntype(1.0),R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
 	}
       if (A==0.0)
 	B=0.0;
@@ -2277,7 +2277,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
     }
   else
     {
-      A = -copysign(1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign(ntype(1.0),R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
        if (A==0.0)
 	B=0.0;
       else
