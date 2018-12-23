@@ -6,11 +6,11 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
-//#define STATIC
+#define STATIC
 // fino a N=40 la versione statica è più veloce
+using numty=double;
 int main(int argc, char* argv[])
 {
-  using numty=double;
   int caso, j, maxiter;
 #ifdef STATIC
   rpoly<numty,NDEG> rp;
