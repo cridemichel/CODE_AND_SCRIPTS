@@ -15,36 +15,7 @@ void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float 
 #endif
 #include<complex>
 #include<cmath>
-#define USE_MULTIPREC
-#ifdef USE_MULTIPREC
-#include <iomanip>
-#define MP1 // MP1 backend is much faster (around 4 times!)
-#ifdef MP1
-#include <boost/multiprecision/gmp.hpp>
-#include <boost/multiprecision/mpc.hpp>
-#include <boost/multiprecision/mpfr.hpp>
-//using namespace std;
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using dbl200 = number<mpfr_float_backend<200>>;
-using cmplx200 = number<mpc_complex_backend<200>>;
-using cmplx=cmplx200;
-#else
-#include <boost/multiprecision/cpp_bin_float.hpp> 
-#include <boost/multiprecision/cpp_complex.hpp>
-//using namespace std;
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using dbl200 = number<cpp_bin_float<200>>;
-using cmplx200 = cpp_complex<200>;
-//using cmplx=cmplx200;
-#endif
-#else
-#include<complex>
-#include<cmath>
-#endif
+
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy
 struct VOpTypes

@@ -10,6 +10,33 @@
 #include <cstdlib>
 #include <vector>
 #include <array>
+#define USE_MULTIPREC
+#ifdef USE_MULTIPREC
+#include <iomanip>
+#define MP1 // MP1 backend is much faster (around 4 times!)
+#ifdef MP1
+#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+//using namespace std;
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using dbl200 = number<mpfr_float_backend<200>>;
+using cmplx200 = number<mpc_complex_backend<200>>;
+//using cmplx=cmplx200;
+#else
+#include <boost/multiprecision/cpp_bin_float.hpp> 
+#include <boost/multiprecision/cpp_complex.hpp>
+//using namespace std;
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using dbl200 = number<cpp_bin_float<200>>;
+using cmplx200 = cpp_complex<200>;
+//using cmplx=cmplx200;
+#endif
+#endif
 //#include <complex>
 //fix to avoid crash of clang
 #define Sqr(x) ((x)*(x))
@@ -149,7 +176,7 @@ public:
 template <class ntype, int N> using rpolybase = 
 typename std::conditional<(N>0), rpoly_base_static <ntype, N>,
 	 rpoly_base_dynamic <ntype, N>>::type;
-
+ 
 template <class ntype, int N=-1, bool force_hqr=false> 
 class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   using rpolybase<ntype,N>::n;
@@ -163,6 +190,16 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   using rpolybase<ntype,N>::deflcoeff0;
   using rpolybase<ntype,N>::deflcoeff1;
   using rpolybase<ntype,N>::deflcoeff;
+#ifdef USE_MULTIPREC
+  static const int numlin=std::numeric_limits<ntype>::digits10;
+#ifdef MP1
+  using cmplx=typename std::conditional<boost::is_same<ntype,number<mpfr_float_backend<numlin>>>::value,
+    number<mpc_complex_backend<std::numeric_limits<ntype>::digits10>>,complex<ntype>>::type;
+#else
+  using cmplx=typename std::conditional<boost::is_same<ntype,number<cpp_bin_float<numlin>>>::value,
+    cpp_complex<std::numeric_limits<ntype>::digits10>,complex<ntype>>::type;
+#endif
+#endif
   template <class vtype>
   using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
 	 pvector<vtype, -1>>::type;
@@ -2128,7 +2165,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::sol
   /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
    * according to the method described in Numerical Recipe book */  
   ntype a, b, c, Q, R, theta, Q3, R2, A, B;
-  const ntype sqrt32=sqrt(3)/2.0;
+  const ntype sqrt32=sqrt(ntype(3.0))/2.0;
   a = coeff[2]/coeff[3];
   b = coeff[1]/coeff[3];
   c = coeff[0]/coeff[3];
