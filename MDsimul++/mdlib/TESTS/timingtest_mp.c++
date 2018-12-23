@@ -2,13 +2,16 @@
 #include <stdio.h>
 #include "pmatrix_mp.H"
 #include "./rpoly_mp.H"
+
+
+
 //#include<complex>
 #ifndef NDEG
 #define NDEG 6
 #endif
 #define STATIC
 // fino a N=40 la versione statica è più veloce
-using numty=vldbl;
+using numty=dbl200;
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;
