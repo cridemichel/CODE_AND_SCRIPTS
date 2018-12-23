@@ -6,9 +6,9 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
-//#define STATIC
+#define STATIC
 // fino a N=40 la versione statica è più veloce
-using numty=double;
+using numty=vldbl;
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
         {
           rp.set_coeff(c);
           //rp.zroots(roots, true);
-          rp.find_roots(roots, false);
+          rp.find_roots(roots);
         }
       else
         {

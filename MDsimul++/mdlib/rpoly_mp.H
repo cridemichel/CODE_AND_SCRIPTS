@@ -10,12 +10,6 @@
 #include <cstdlib>
 #include <vector>
 #include <array>
-#if 0
-inline ntype copysign(ntype a, ntype b)
-{
-  return 
-} 
-#endif
 //#include <complex>
 //fix to avoid crash of clang
 #define Sqr(x) ((x)*(x))
@@ -1408,7 +1402,7 @@ void laguer(cmplx *a, cmplx &x, int m)
       // and retry (a limited number of times though!)
       if constexpr (N < 0)
         {
-          cbak.allocate(n-1);
+          cbak.allocate(n+1);
           if (backup)
             {
               cbak = coeff;
@@ -3046,7 +3040,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 			  r=0.0;
 			  if (k+1 != nn) 
 			    r=a[k+2][k-1];
-			  if ((x=abs(p)+abs(q)+abs(r)) != 0.0)
+			  if ((x=abs(p)+abs(q)+abs(r)) != ntype(0.0))
 			    {
 			      p /= x;
 			      //Scale to prevent over flow or under flow.
@@ -3054,7 +3048,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 			      r /= x;
 			    }
 			}
-		      if ((s=SIGN(sqrt(p*p+q*q+ r*r),p)) != 0.0)
+		      if ((s=SIGN(sqrt(p*p+q*q+ r*r),p)) != ntype(0.0))
 			{
 			  if (k == m) 
 			    {

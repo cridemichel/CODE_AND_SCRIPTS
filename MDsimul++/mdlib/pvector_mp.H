@@ -45,8 +45,8 @@ using namespace std;
 using namespace boost::multiprecision;
 using namespace boost;
 //typedef number<gmp_float<200>> vldbl;
-typedef number<mpfr_float_backend<200> >   vldbl;
-typedef number<mpc_complex_backend<200> >   cmplx;
+typedef number<mpfr_float_backend<500> >   vldbl;
+typedef number<mpc_complex_backend<500> >   cmplx;
 
 //#endif
 //using complex = boost::multiprecision::mpc_complex_50;

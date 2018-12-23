@@ -1384,7 +1384,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       // and retry (a limited number of times though!)
       if constexpr (N < 0)
         {
-          cbak.allocate(n-1);
+          cbak.allocate(n+1);
           if (backup)
             {
               cbak = coeff;
