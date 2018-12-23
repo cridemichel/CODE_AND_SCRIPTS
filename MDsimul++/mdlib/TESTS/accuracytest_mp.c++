@@ -13,9 +13,9 @@ using ldbl=vldbl;
 #endif
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
-#define Complex(x,y) (ldbl(x)+1il*ldbl(y))
 using numty = vldbl;//double;
-void calc_coeff(vldbl* c, cmplx er[]);
+cmplx er[1000];
+void calc_coeff(vldbl c[], cmplx er[]);
 void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
 {
   int i;
@@ -35,14 +35,12 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
   // wilkinson
   //
 #define NDEG 15
-  static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = i+1;
     }
   calc_coeff(c, er);
-  r = er;
 #elif CASO==3
 #define NDEG 20
   static cmplx er[NDEG];
@@ -55,7 +53,6 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
   r = er;
 #elif CASO==4
 #define NDEG 20
-  static cmplx er[NDEG];
   allreal=true;
   er[0] = -2.1;
   for (i=1; i < NDEG; i++)
@@ -63,7 +60,6 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
       er[i] = er[i-1]+0.2L;
     }
   calc_coeff(c, er);
-  r = er;
 #elif CASO==5
 #define NDEG 10
   static cmplx er[NDEG];
@@ -320,7 +316,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
 // Noferini
 #define NDEG 35
   //roots and coefficients were calculated by Wolfram Mathematica with a precision of 1000 digits
-  static cmplx er[NDEG]=
+  static cmplx erl[NDEG]=
     {-1.2411014081169485749720046374712e-12,7.0414870784977958688104322165598e-11,
       -1.1009740691481262157709498052086,1.5099233137877368012385266380292,
       0.55325068571508822704738370366753,0.69822314886842319800567269068431,
@@ -339,6 +335,8 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
       1.0577528780235342793204416601796,-0.87506945052129112363103003063229,
       1.5063591474908893183951161464415,-1.280008562142808787985258106032,
       -0.38663280512671670128482646047247};
+  for (i=0; i < NDEG; i++)
+    er[i]=erl[i];
   doswap=false;
   allreal=true;
 
@@ -366,7 +364,6 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
     {
       c[i] = cs[i];
     }
-  r = er;
 #elif CASO==30
 #define NDEG 20
   allreal=true;
@@ -523,7 +520,7 @@ void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<i
       }
 } 
 
-void calc_coeff(vldbl c[], cmplx er[NDEG])
+void calc_coeff(vldbl c[], cmplx er[])
 {
   int i, j;
   std::list<std::list<int>> subsets;// list containing all subsets of a given length
@@ -595,7 +592,7 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
   cout << "[" << str << "relative accuracy=" << relerrmax << "\n";
 }
 #endif
-#define STATIC
+//#define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
@@ -604,7 +601,7 @@ int main(int argc, char *argv[])
   pvector<cmplx> roots(NDEG);
 #endif
   char testo2[256];
-  cmplx cr[NDEG], *er;
+  cmplx cr[NDEG];
 #ifdef STATIC
   pvector<numty,NDEG+1> c(NDEG+1);
 #else
