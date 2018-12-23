@@ -174,9 +174,8 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   template <class vtype>
   using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
 	 pmatrixq<vtype, -1>>::type;
- template <class vtype>
-  using stlarr = typename std::conditional<(N>0), array<vtype,N-1>,
-	 vector<vtype>>::type;
+ template <class vtype, int NT>
+  using stlarr = typename conditional<(NT>0), array<vtype,NT-1>, vector<vtype>>::type;
 
   ntype px, dpx; 
 
@@ -1639,7 +1638,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       pvecNm1<complex<ntype>> qroots;
       //pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       complex<ntype> quadr[2];
-      stlarr<ntype> rqroots;
+      stlarr<ntype,N-1> rqroots;
       ntype goldfact = 1.618034;
       ntype delx, c;
       pvector<ntype, N> cmonder(N);

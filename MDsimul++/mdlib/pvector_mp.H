@@ -13,7 +13,8 @@ using namespace std;
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
 #endif
-#if 1
+#define USE_MULTIPREC
+#ifdef USE_MULTIPREC
 //#include<complex>
 //#include <boost/multiprecision/gmp.hpp>
 #include<cmath>
@@ -21,7 +22,6 @@ void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float 
 //#include <boost/multiprecision/mpfr.hpp> 
 //#include <boost/multiprecision/mpc.hpp>
 //#ifndef __MULTIPREC__
-#define __MULTIPREC__
 #include <iomanip>
 #if 0
 #include <boost/multiprecision/cpp_dec_float.hpp>
@@ -42,16 +42,18 @@ typedef cpp_complex<200> cmplx;
 #include <boost/multiprecision/mpc.hpp>
 #include <boost/multiprecision/mpfr.hpp>
 using namespace std;
-using namespace boost::multiprecision;
 using namespace boost;
+using namespace boost::multiprecision;
 //typedef number<gmp_float<200>> vldbl;
 typedef number<mpfr_float_backend<500> >   vldbl;
 typedef number<mpc_complex_backend<500> >   cmplx;
-
 //#endif
 //using complex = boost::multiprecision::mpc_complex_50;
 #else
+#include<complex>
 #include<cmath>
+typedef double vldbl;
+typedef complex<double> cmplx;
 #endif
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy
