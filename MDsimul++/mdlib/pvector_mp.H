@@ -13,48 +13,37 @@ using namespace std;
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
 #endif
+#include<complex>
+#include<cmath>
 #define USE_MULTIPREC
 #ifdef USE_MULTIPREC
-//#include<complex>
-//#include <boost/multiprecision/gmp.hpp>
-#include<cmath>
-//#include <complex>
-//#include <boost/multiprecision/mpfr.hpp> 
-//#include <boost/multiprecision/mpc.hpp>
-//#ifndef __MULTIPREC__
 #include <iomanip>
-#if 0
-#include <boost/multiprecision/cpp_dec_float.hpp>
-#include <boost/multiprecision/cpp_complex.hpp> 
-
-typedef number<cpp_dec_float<200>> vldbl;
-//typedef number<mpfr_float_backend<50>>    mpfr_float_50
-//
-//typedef number<mpfr_float_backend<50> >  vldbl;
- template <unsigned Digits, backends::digit_base_type DigitBase = backends::digit_base_10, class Allocator = void, class Exponent = int, Exponent MinExponent = 0, Exponent MaxExponent = 0>
-   using cpp_complex_backend = complex_adaptor<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinExponent, MaxExponent> >;
-
-   template <unsigned Digits, backends::digit_base_type DigitBase = digit_base_10, class Allocator = void, class Exponent = int, Exponent MinExponent = 0, Exponent MaxExponent = 0, expression_template_option ExpressionTemplates = et_off>
-   using cpp_complex = number<complex_adaptor<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinExponent, MaxExponent> >, ExpressionTemplates>;
-typedef cpp_complex<200> cmplx;
-#endif
+#define MP1 // MP1 backend is much faster (around 4 times!)
+#ifdef MP1
 #include <boost/multiprecision/gmp.hpp>
 #include <boost/multiprecision/mpc.hpp>
 #include <boost/multiprecision/mpfr.hpp>
-using namespace std;
+//using namespace std;
 using namespace boost;
 using namespace boost::multiprecision;
-//typedef number<gmp_float<200>> vldbl;
-#define NUM_DIGITS 64
-typedef number<mpfr_float_backend<NUM_DIGITS> > vldbl;
-typedef number<mpc_complex_backend<NUM_DIGITS> > cmplx;
-//#endif
-//using complex = boost::multiprecision::mpc_complex_50;
+using namespace boost::multiprecision::backends;
+using dbl200 = number<mpfr_float_backend<200>>;
+using cmplx200 = number<mpc_complex_backend<200>>;
+using cmplx=cmplx200;
+#else
+#include <boost/multiprecision/cpp_bin_float.hpp> 
+#include <boost/multiprecision/cpp_complex.hpp>
+//using namespace std;
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using dbl200 = number<cpp_bin_float<200>>;
+using cmplx200 = cpp_complex<200>;
+//using cmplx=cmplx200;
+#endif
 #else
 #include<complex>
 #include<cmath>
-typedef double vldbl;
-typedef complex<double> cmplx;
 #endif
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy

@@ -16,7 +16,8 @@
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
 //#define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
-inline vldbl SIGN(vldbl a, vldbl b)
+template <class ntype>
+inline ntype SIGN(ntype a, ntype b)
 {
   if ((b) > 0)
     return abs(a);
@@ -330,7 +331,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
         if (fabs(d) > tol1)
           b += d;
         else
-          b += SIGN(tol1,xm);
+          b += SIGN<ntype>(tol1,xm);
         fb=evalpoly(b);
       }
     cout << "Maximum number of iterations exceeded in zbrent";
@@ -2967,7 +2968,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 		  if (q >= 0.0)
 		    {
 		      //...a real pair.
-		      z=p+SIGN(z,p);
+		      z=p+SIGN<ntype>(z,p);
 		      wri[nn-1]=wri[nn]=x+z;
 		      if (z != 0.0)
 			wri[nn]=x-w/z;
@@ -3048,7 +3049,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 			      r /= x;
 			    }
 			}
-		      if ((s=SIGN(sqrt(p*p+q*q+ r*r),p)) != ntype(0.0))
+		      if ((s=SIGN<ntype>(sqrt(p*p+q*q+ r*r),p)) != ntype(0.0))
 			{
 			  if (k == m) 
 			    {
