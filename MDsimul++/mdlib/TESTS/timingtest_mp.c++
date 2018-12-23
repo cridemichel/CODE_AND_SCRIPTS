@@ -9,11 +9,12 @@
 #define STATIC
 // fino a N=40 la versione statica è più veloce
 using numty=dbl200;
+using cmplx=cmplx200;
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;
 #ifdef STATIC
-  rpoly<numty,NDEG> rp;
+  rpoly<numty,NDEG,false> rp;
   rpoly<numty,NDEG,true> rphqr;
   pvector<numty,NDEG+1> c;
   pvector<cmplx,NDEG> roots;
