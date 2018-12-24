@@ -186,9 +186,9 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   template <class vtype>
   using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
 	 pvector<vtype, -1>>::type;
-  using rpolyNm1 = typename std::conditional<(N>0),  rpoly<ntype, N-1>,
+  using rpolyNm1 = typename std::conditional<(N>0),  rpoly<ntype, N-1,force_hqr,cmplx>,
 	 rpoly<ntype, -1,force_hqr,cmplx>>::type;
-  using rpolyNm2 = typename std::conditional<(N>0),  rpoly<ntype, N-2>,
+  using rpolyNm2 = typename std::conditional<(N>0),  rpoly<ntype, N-2,force_hqr,cmplx>,
 	 rpoly<ntype, -1,force_hqr,cmplx>>::type;
   template <class vtype>
   using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
@@ -538,14 +538,14 @@ public:
               {
                 if (i==j)
                   {
-                    J[i][j] = (i<n-1)?(-c[n-1]):ntype(-1.0);// c[N-1]=r0
+                    J[i][j] = (i<n-1)?(-c[n-1]):((ntype)-1.0);// c[N-1]=r0
                   }                
                 else if (j==i+1)
                   J[i][j] = 1.0;
                 else 
                   J[i][j] = 0;
                 if (j==N-1&& i!=j)
-                  J[i][j] = -((i<n-1)?c[i]:ntype(1.0));
+                  J[i][j] = -((i<n-1)?c[i]:((ntype)1.0));
               }
           //J.show();
           if (J.det()==0)
@@ -911,8 +911,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
           h[0] = g2[0] - 2.0*fb[0];
           h[1] = g2[1] - 2.0*fb[1];
-          sarg[0] = ntype(m-1)*(ntype(m)*h[0] - g2[0]);
-          sarg[1] = ntype(m-1)*(ntype(m)*h[1] - g2[1]);
+          sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
+          sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
           //sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
           //sq[0]=sqrtcmplx.real();
           //sq[1]=sqrtcmplx.imag();
@@ -952,13 +952,13 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
           if (MAX(abp,abm) > 0.0)
             {
-              dx[0]=ntype(m)*invgp[0];
-              dx[1]=ntype(m)*invgp[1];
+              dx[0]=((ntype)m)*invgp[0];
+              dx[1]=((ntype)m)*invgp[1];
             }
           else
             {
-              pol[0] = (1.0+abx)*cos(ntype(iter));
-              pol[1] = (1.0+abx)*sin(ntype(iter)); 
+              pol[0] = (1.0+abx)*cos((ntype)iter);
+              pol[1] = (1.0+abx)*sin((ntype)iter); 
               dx[0]=pol[0];
               dx[1]=pol[1];
             }
@@ -1099,7 +1099,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 
           g=d/b;
           g2=g*g;
-          h=g2-ntype(2.0)*f/b;
+          h=g2-((ntype)2.0)*f/b;
           sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
           gp=g+sq;
           gm=g-sq;
@@ -2142,7 +2142,7 @@ template <class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N,for
   /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
    * according to the method described in Numerical Recipe book */  
   ntype a, b, c, Q, R, theta, Q3, R2, A, B;
-  const ntype sqrt32=sqrt(ntype(3.0))/2.0;
+  const ntype sqrt32=sqrt((ntype)3.0)/2.0;
   a = coeff[2]/coeff[3];
   b = coeff[1]/coeff[3];
   c = coeff[0]/coeff[3];
@@ -2159,7 +2159,7 @@ template <class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N,for
     }
   else
     {
-      A = -copysign(ntype(1.0),R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
       if (A==0.0)
 	B=0.0;
       else
@@ -2205,7 +2205,7 @@ template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,fo
   else
     {
       RQ = R/Q;
-      KK = copysign(ntype(1.0),Q)*(RQ*RQ/Q-1.0);
+      KK = copysign((ntype)1.0,Q)*(RQ*RQ/Q-1.0);
     }
 
   if (KK < 0.0)
@@ -2232,10 +2232,10 @@ template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,fo
   else
     {
       if (abs(Q) < abs(R))
-	A = -copysign(ntype(1.0),R)*cbrt(abs(R)*(1.0+sqrt(KK)));
+	A = -copysign((ntype)1.0,R)*cbrt(abs(R)*(1.0+sqrt(KK)));
       else
 	{
-	  A = -copysign(ntype(1.0),R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
+	  A = -copysign((ntype)1.0,R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
 	}
       if (A==0.0)
 	B=0.0;
@@ -2286,7 +2286,7 @@ template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,fo
     }
   else
     {
-      A = -copysign(ntype(1.0),R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
        if (A==0.0)
 	B=0.0;
       else
@@ -3055,7 +3055,7 @@ template<class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N, for
 			  r=0.0;
 			  if (k+1 != nn) 
 			    r=a[k+2][k-1];
-			  if ((x=abs(p)+abs(q)+abs(r)) != ntype(0.0))
+			  if ((x=abs(p)+abs(q)+abs(r)) != ((ntype)0.0))
 			    {
 			      p /= x;
 			      //Scale to prevent over flow or under flow.
@@ -3063,7 +3063,7 @@ template<class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N, for
 			      r /= x;
 			    }
 			}
-		      if ((s=SIGN<ntype>(sqrt(p*p+q*q+ r*r),p)) != ntype(0.0))
+		      if ((s=SIGN<ntype>(sqrt(p*p+q*q+ r*r),p)) != ((ntype)0.0))
 			{
 			  if (k == m) 
 			    {
