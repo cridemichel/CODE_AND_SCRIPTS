@@ -197,8 +197,8 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   template <class vtype>
   using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
 	 pmatrixq<vtype, -1>>::type;
- //template <class vtype>
- // using stlarr = typename std::conditional<(N>0), std::array<vtype,N-1>, std::vector<vtype>>::type;
+ template <class vtype, int NT>
+  using stlarr = typename std::conditional<(NT>0), std::array<vtype,NT-1>, std::vector<vtype>>::type;
 
   ntype px, dpx; 
 
@@ -537,13 +537,15 @@ public:
             for (j=0; j < n; j++)
               {
                 if (i==j)
-                  J[i][j] = (i<n-1)?(-c[n-1]):-1.0;// c[N-1]=r0
+                  {
+                    J[i][j] = (i<n-1)?(-c[n-1]):ntype(-1.0);// c[N-1]=r0
+                  }                
                 else if (j==i+1)
                   J[i][j] = 1.0;
                 else 
                   J[i][j] = 0;
                 if (j==N-1&& i!=j)
-                  J[i][j] = -((i<n-1)?c[i]:1.0);
+                  J[i][j] = -((i<n-1)?c[i]:ntype(1.0));
               }
           //J.show();
           if (J.det()==0)
@@ -646,7 +648,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
 
 #endif
 #ifdef USE_FULL_NR
-void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
+void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
   {
     // bd[N-2] = 1 since all polynomials are in their minic form
     // hence we do not need to refine this coefficient here
@@ -763,7 +765,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 
 
 #else
-  void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3> ad)
+  void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3> ad)
     {
       // bd[N-2] = 1 since all polynomials are in their minic form
       // hence we do not need to refine this coefficient here
@@ -1514,7 +1516,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP = calc_err_q(deflcoeff, r0.real());
-          use_NR_defl_lin(deflcoeff,r0.real());
+          use_NR_defl_lin(deflcoeff,r0);
           //errD = calc_err_q(deflcoeff, r0.real());
 #if 0
           if (errD < errP)
@@ -1664,7 +1666,6 @@ void laguer(cmplx *a, cmplx &x, int m)
             }
         }
     } 
-#if 0
   void odd_degree(pvector<cmplx,N>& roots)
     {
       ntype *coeffder;
@@ -1673,7 +1674,7 @@ void laguer(cmplx *a, cmplx &x, int m)
       pvecNm1<cmplx> qroots;
       //pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       cmplx quadr[2];
-      stlarr<ntype> rqroots;
+      stlarr<ntype,N> rqroots;
       ntype goldfact = 1.618034;
       ntype delx, c;
       pvector<ntype, N> cmonder(N);
@@ -1901,7 +1902,6 @@ void laguer(cmplx *a, cmplx &x, int m)
           roots[i] = qroots[i-1];
         }
     }
-#endif
   pvecNp1<ntype> get_coeff()
     {
       return coeff;

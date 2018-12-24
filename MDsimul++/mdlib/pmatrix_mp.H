@@ -10,7 +10,7 @@
 #include<cstring>
 #include "pvector_mp.H"
 #define OPT_INV
-//#define MAT_USE_LAPACK
+#define MAT_USE_LAPACK
 #define MAT_COMMA_INIT
 //#define LAZY_MUL
 //N.B. Lazy evaluation of matrix multiplication has not been fully implemented yet
@@ -660,7 +660,7 @@ public:
       //MatDoub b(a.nrows(),0); //Dummy vector with zero columns.
       return gaussj<int>(0);
     }
-  inline pmatrixq<ntype,NT> ludcmp(pvector<int,NT>& indx, double& d) const
+  inline pmatrixq<ntype,NT> ludcmp(pvector<int,NT>& indx, ntype& d) const
     {
       /* LU decomposition routine  borrowed from Numerical Recipe */
       /* return the LU decomposition of calling matrix (i.e. *this) */
@@ -936,9 +936,9 @@ public:
         }
     }
 
-  inline double detgenNR() const
+  inline ntype detgenNR() const
     {
-      double d;
+      ntype d;
       pmatrixq<ntype,NT> m1;
       int j;
       pvector<int,NT> indx;
