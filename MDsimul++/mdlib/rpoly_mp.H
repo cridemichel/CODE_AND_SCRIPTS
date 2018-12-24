@@ -1100,7 +1100,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           g=d/b;
           g2=g*g;
           h=g2-((ntype)2.0)*f/b;
-          sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
+          // SONO ARRIVATO QUI CON IL CASTING
+          sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
           gp=g+sq;
           gm=g-sq;
           abp=abs(gp);
@@ -1109,7 +1110,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (abp < abm) gp=gm;
           //cout << "abp=" << abp << " abm=" << abm << "\n";
           //cout << "1/gp=" << 1.0/gp << "\n";
-          dx=(MAX(abp,abm) > 0.0) ? cmplx(m)/cmplx(gp) : polar(ntype(1+abx),ntype(iter));
+          dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
           //cout << "dx=" << dx << "\n";
           x1=x-dx;
           if (x == x1) 
@@ -1152,13 +1153,13 @@ void laguer(cmplx *a, cmplx &x, int m)
       g=d/b;
       g2=g*g;
       h=g2-2.0*f/b;
-      sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
+      sq=sqrt(((ntype)(m-1))*(((ntype)m)*h-g2));
       gp=g+sq;
       gm=g-sq;
       abp=abs(gp);
       abm=abs(gm);
       if (abp < abm) gp=gm;
-      dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
+      dx=MAX(abp,abm) > 0.0 ? ((ntype)m)/gp : polar(1+abx,((ntype)iter));
       x1=x-dx;
       if (x == x1) return;
       if (iter % MT != 0) x=x1;
