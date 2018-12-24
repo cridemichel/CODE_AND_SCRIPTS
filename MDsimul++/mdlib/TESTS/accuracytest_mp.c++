@@ -5,16 +5,42 @@
 #include<complex>
 #include<list>
 #include<string>
-
+#define USE_MULTIPREC
+#ifdef USE_MULTIPREC
+#include <iomanip>
+#define MP1 // MP1 backend is much faster (around 4 times!)
+#ifdef MP1
+#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace std;
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using dbl200 = number<mpfr_float_backend<200>>;
+using cmplx200 = number<mpc_complex_backend<200>>;
+//using cmplx=cmplx200;
+#else
+#include <boost/multiprecision/cpp_bin_float.hpp> 
+#include <boost/multiprecision/cpp_complex.hpp>
+using namespace std;
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using dbl200 = number<cpp_bin_float<200>>;
+using cmplx200 = cpp_complex<200>;
+//using cmplx=cmplx200;
+#endif
+#endif
 bool allreal=false, doswap=false;
-using vldbl=double;//dbl200;
-using cmplx=complex<double>;//cmplx200;
+using vldbl=long double;//dbl200;
+using cmplx=complex<long double>;//cmplx200;
 #ifndef CASO
 #define CASO 4
 #endif
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
-using numty = vldbl;//double;
+using numty = long double;
 cmplx er[1000];
 void calc_coeff(vldbl c[], cmplx er[]);
 void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
@@ -55,10 +81,10 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
 #elif CASO==4
 #define NDEG 20
   allreal=true;
-  er[0] = -2.1;
+  er[0] = -2.1L;
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = er[i-1]+numty(0.2);
+      er[i] = er[i-1]+0.2L;
     }
   calc_coeff(c, er);
 #elif CASO==5
@@ -597,16 +623,16 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
-  pvector<cmplx,NDEG> roots;
+  pvector<complex<double>,NDEG> roots;
 #else
-  pvector<cmplx> roots(NDEG);
+  pvector<complex<double>> roots(NDEG);
 #endif
   char testo2[256];
   cmplx cr[NDEG];
 #ifdef STATIC
-  pvector<numty,NDEG+1> c(NDEG+1);
+  pvector<double,NDEG+1> c(NDEG+1);
 #else
-  pvector<numty> c(NDEG+1);
+  pvector<double> c(NDEG+1);
 #endif 
   int algo, i;
   numty ca[NDEG+1];
@@ -632,9 +658,9 @@ int main(int argc, char *argv[])
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<numty,NDEG> rp;
+      rpoly<double,NDEG,false> rp;
 #else
-      rpoly<numty> rp(NDEG);
+      rpoly<double,-1,false> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -646,9 +672,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<numty,NDEG,true> rphqr;
+      rpoly<double,NDEG,true> rphqr;
 #else
-      rpoly<numty,-1,true> rphqr(NDEG);
+      rpoly<double,-1,true> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
