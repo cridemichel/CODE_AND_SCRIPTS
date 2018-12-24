@@ -316,7 +316,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
 // Noferini
 #define NDEG 12
   //roots and coefficients were calculated by Wolfram Mathematica with a precision of 1000 digits
-  static cmplx er[NDEG]=
+  static cmplx erl[NDEG]=
     {4.6783738689934637477470956503276e-14,3.593464181785079996420231643529e-10,
    0.71315932408901343233326922076029,-0.37460208174361406896066147763122,
    -0.72465168650045961190528692375604,0.73436066385675994997813804359153,
@@ -337,7 +337,9 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
     {
       c[i] = cs[i];
     }
-  r = er;
+  for (i=0; i < NDEG; i++)
+    er[i]=erl[i];
+  
 
 #elif CASO==16
 // Noferini
