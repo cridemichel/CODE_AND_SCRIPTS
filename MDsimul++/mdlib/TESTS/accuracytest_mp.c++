@@ -32,15 +32,18 @@ using cmplx200 = cpp_complex<200>;
 //using cmplx=cmplx200;
 #endif
 #endif
+template <int N, int digits=200>
+using rpolymp = rpoly<number<mpfr_float_backend<digits>>,N,false,number<mpc_complex_backend<digits>>>;
+
 bool allreal=false, doswap=false;
-using vldbl=long double;//dbl200;
-using cmplx=complex<long double>;//cmplx200;
+using vldbl=dbl200;
+using cmplx=cmplx200;
 #ifndef CASO
 #define CASO 4
 #endif
 #undef M_PI
 #define M_PI 3.1415926535897932384626433832795029L
-using numty = long double;
+using numty = vldbl;
 cmplx er[1000];
 void calc_coeff(vldbl c[], cmplx er[]);
 void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
@@ -625,16 +628,16 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
-  pvector<complex<double>,NDEG> roots;
+  pvector<cmplx>,NDEG> roots;
 #else
-  pvector<complex<double>> roots(NDEG);
+  pvector<cmplx> roots(NDEG);
 #endif
   char testo2[256];
   cmplx cr[NDEG];
 #ifdef STATIC
-  pvector<double,NDEG+1> c(NDEG+1);
+  pvector<vldbl,NDEG+1> c(NDEG+1);
 #else
-  pvector<double> c(NDEG+1);
+  pvector<vldbl> c(NDEG+1);
 #endif 
   int algo, i;
   numty ca[NDEG+1];
@@ -660,9 +663,9 @@ int main(int argc, char *argv[])
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<double,NDEG,false> rp;
+      rpoly<vldbl,NDEG,false,cmplx> rp;
 #else
-      rpoly<double,-1,false> rp(NDEG);
+      rpoly<vldbl,-1,false,cmplx> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -674,9 +677,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<double,NDEG,true> rphqr;
+      rpoly<vldbl,NDEG,true,cmplx> rphqr;
 #else
-      rpoly<double,-1,true> rphqr(NDEG);
+      rpoly<vldbl,-1,true,cmplx> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
