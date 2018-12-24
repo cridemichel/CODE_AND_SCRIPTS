@@ -7,7 +7,8 @@
 #include<string>
 
 bool allreal=false, doswap=false;
-using ldbl=vldbl;
+using vldbl=double;//dbl200;
+using cmplx=complex<double>;//cmplx200;
 #ifndef CASO
 #define CASO 4
 #endif
@@ -57,7 +58,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
   er[0] = -2.1;
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = er[i-1]+0.2L;
+      er[i] = er[i-1]+numty(0.2);
     }
   calc_coeff(c, er);
 #elif CASO==5

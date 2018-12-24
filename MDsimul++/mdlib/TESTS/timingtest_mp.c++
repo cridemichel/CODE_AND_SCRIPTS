@@ -6,7 +6,7 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
-#define STATIC
+//#define STATIC
 // fino a N=40 la versione statica è più veloce
 using numty=dbl200;
 using cmplx=cmplx200;
