@@ -624,11 +624,11 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
   cout << "[" << str << "relative accuracy=" << relerrmax << "\n";
 }
 #endif
-//#define STATIC
+#define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
-  pvector<cmplx>,NDEG> roots;
+  pvector<cmplx,NDEG> roots;
 #else
   pvector<cmplx> roots(NDEG);
 #endif
