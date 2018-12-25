@@ -8,19 +8,29 @@
 #endif
 //#define STATIC
 // fino a N=40 la versione statica è più veloce
-using numty=dbl200;
-using cmplx=cmplx200;
+#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace std;
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+//using dbl200 = number<mpfr_float_backend<200>>;
+//using cmplx200 = number<mpc_complex_backend<200>>;
+
+using numty=number<mpfr_float_backend<200>>;//number<gmp_float<200>>;
+using cmplx=number<mpc_complex_backend<200>>;
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;
 #ifdef STATIC
-  rpoly<numty,NDEG,false> rp;
-  rpoly<numty,NDEG,true> rphqr;
+  rpoly<numty,NDEG,false,cmplx> rp;
+  rpoly<numty,NDEG,true.cmplx> rphqr;
   pvector<numty,NDEG+1> c;
   pvector<cmplx,NDEG> roots;
 #else
-  rpoly<numty,-1> rp(NDEG);
-  rpoly<numty,-1,true> rphqr(NDEG);
+  rpoly<numty,-1,false,cmplx> rp(NDEG);
+  rpoly<numty,-1,true,cmplx> rphqr(NDEG);
   pvector<numty,-1> c(NDEG+1);
   pvector<cmplx,-1> roots(NDEG);
 #endif
