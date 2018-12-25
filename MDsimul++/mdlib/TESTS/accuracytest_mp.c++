@@ -34,7 +34,7 @@ using cmplx200 = cpp_complex<200>;
 #endif
 template <int N, int digits=200>
 using rpolymp = rpoly<number<mpfr_float_backend<digits>>,N,false,number<mpc_complex_backend<digits>>>;
-
+#define Complex(x,y) cmplx((x),(y))
 bool allreal=false, doswap=false;
 using vldbl=dbl200;
 using cmplx=cmplx200;
@@ -46,21 +46,20 @@ using cmplx=cmplx200;
 using numty = vldbl;
 cmplx er[1000];
 void calc_coeff(vldbl c[], cmplx er[]);
-void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
+void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
 {
   int i;
 #if CASO==1
   // wilkinson
   //
 #define NDEG 10
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = i+1;
     }
   calc_coeff(c, er);
-  r = er;
 #elif CASO==2
   // wilkinson
   //
@@ -73,73 +72,72 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
   calc_coeff(c, er);
 #elif CASO==3
 #define NDEG 20
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
       er[i] = i+1;
     }
   calc_coeff(c, er);
-  r = er;
 #elif CASO==4
 #define NDEG 20
   allreal=true;
-  er[0] = -2.1L;
+  er[0] = vldbl(-2.1L);
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = er[i-1]+0.2L;
+      er[i] = er[i-1]+vldbl(0.2L);
     }
   calc_coeff(c, er);
 #elif CASO==5
 #define NDEG 10
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
-      er[i-1] = 1.0L/i;
+      er[i-1] = vldb(1.0L)/vldbl(i);
     }
   calc_coeff(c, er);
-  r = er;
+  //r = er;
 #elif CASO==6
 #define NDEG 15
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
-      er[i-1] = 1.0L/i;
+      er[i-1] = vldb(1.0L)/vldbl(i);
     }
   calc_coeff(c, er);
-  r = er;
+  //r = er;
 #elif CASO==7
 #define NDEG 20
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
-      er[i-1] = 1.0L/i;
+      er[i-1] = cmplx(1.0)/cmplx(i);
     }
   calc_coeff(c, er);
-  r = er;
+  //r = er;
 #elif CASO==8
 #define NDEG 20
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
-      er[i] = 1.0L/pow(2,NDEG/2-i);
+      er[i] = vldbl(1.0L)/pow(vldbl(2),NDEG/2-i);
     }
   calc_coeff(c, er);
-  r = er;
+  //r = er;
 #elif CASO==9
 #define NDEG 20
-  static cmplx er[NDEG];
+  //static cmplx er[NDEG];
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
-      er[i] = 1.0L/pow(2,NDEG/2-i)-3.0L;
+      er[i] = vldbl(1.0L)/pow(2,NDEG/2-i)-vldbl(3.0L);
     }
   calc_coeff(c, er);
-  r = er;
+  //r = er;
 #elif CASO==10
 #define NDEG 20
 #if 0
@@ -153,7 +151,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
   allreal=true;
 #if 1
   doswap=true;
-  static cmplx er[NDEG]=
+  static cmplx erl[NDEG]=
     {-0.98883082622512854506974288293400861L - 
       0.14904226617617444692935471527721756L*1il, \
         -0.98883082622512854506974288293400861L + 
@@ -196,10 +194,11 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
         0.29475517441090421683077298196019097L*1il};  
 #endif
   calc_coeff(c, er);
-  r = er;
+  for (i=0; i < NDEG; i++)
+    er[i]=erl[i];
 #elif CASO==11
 #define NDEG 20
-  static cmplx er[NDEG]=
+  static cmplx erl[NDEG]=
     {-0.98883082622512854506974288293400861L- 
       0.14904226617617444692935471527721756L*1il, 
       -0.98883082622512854506974288293400861L+ 
@@ -242,39 +241,41 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
         0.29475517441090421683077298196019097L*1il};
   doswap=true;
   allreal=true;
-  calc_coeff(c, er);
-  r = er;
+  calc_coeff(c, erl);
+  for (i=0; i < NDEG; i++)
+    er[i]=erl[i];
+  
 #elif CASO==12
 #define NDEG 24
   doswap=true;
   allreal=true;
  
-  static cmplx er[NDEG];
+  static cmplx erl[NDEG];
 
-  er[0]=Complex(-3.52E2L, 0);
-  er[1]=Complex(-3.52E2L, 0);
-  er[2]=Complex(-2.8371450777E2L, -2.9920517772E2L);
-  er[3]=Complex(-2.8371450777E2L,  2.9920517772E2L);
-  er[4]=Complex(-2.7867414048E2L,  6.1005469197E2L);
-  er[5]=Complex(-2.7867414048E2L, -6.1005469197E2L);
-  er[6]=Complex(-2.74892372E2L, 0L);
-  er[7]=Complex(-2.014171531E2L, 0L);
-  er[8]=Complex(-1.255366582E2L, 0L);
-  er[9]=Complex(-9.599999999E1L, 0L);
-  er[10]=Complex(-8.8692435121E1L,  5.5009607430E2L);
-  er[11]=Complex(-8.869243512E1L, -5.5009607430E2L);
-  er[12]=Complex(-1.6000000000E1L, 0L);
-  er[13]=Complex( 8.23178509855E1L, 0L);
-  er[14]=Complex( 8.8692435121E1L, -5.50096074303E2L);
-  er[15]=Complex( 8.8692435121E1L,  5.5009607430E2L);
-  er[16]=Complex( 1.9293739373E2L,  1.60865921259E3L);
-  er[17]=Complex( 1.929373937E2L, -1.6086592125E3L);
-  er[18]=Complex( 2.0141715312E2L, 0L);
-  er[19]=Complex( 2.7489237213E2L, 0L);
-  er[20]=Complex( 7.52E2L, 0L);
-  er[21]=Complex( 7.52E2L, 0L);
-  er[22]=Complex( 9.1106065E2L,  1.5722L);
-  er[23]=Complex( 9.1106065E2L, -1.5722L);
+  erl[0]=Complex(-3.52E2L, 0);
+  erl[1]=Complex(-3.52E2L, 0);
+  erl[2]=Complex(-2.8371450777E2L, -2.9920517772E2L);
+  erl[3]=Complex(-2.8371450777E2L,  2.9920517772E2L);
+  erl[4]=Complex(-2.7867414048E2L,  6.1005469197E2L);
+  erl[5]=Complex(-2.7867414048E2L, -6.1005469197E2L);
+  erl[6]=Complex(-2.74892372E2L, 0L);
+  erl[7]=Complex(-2.014171531E2L, 0L);
+  erl[8]=Complex(-1.255366582E2L, 0L);
+  erl[9]=Complex(-9.599999999E1L, 0L);
+  erl[10]=Complex(-8.8692435121E1L,  5.5009607430E2L);
+  erl[11]=Complex(-8.869243512E1L, -5.5009607430E2L);
+  erl[12]=Complex(-1.6000000000E1L, 0L);
+  erl[13]=Complex( 8.23178509855E1L, 0L);
+  erl[14]=Complex( 8.8692435121E1L, -5.50096074303E2L);
+  erl[15]=Complex( 8.8692435121E1L,  5.5009607430E2L);
+  erl[16]=Complex( 1.9293739373E2L,  1.60865921259E3L);
+  erl[17]=Complex( 1.929373937E2L, -1.6086592125E3L);
+  erl[18]=Complex( 2.0141715312E2L, 0L);
+  erl[19]=Complex( 2.7489237213E2L, 0L);
+  erl[20]=Complex( 7.52E2L, 0L);
+  erl[21]=Complex( 7.52E2L, 0L);
+  erl[22]=Complex( 9.1106065E2L,  1.5722L);
+  erl[23]=Complex( 9.1106065E2L, -1.5722L);
   static vldbl cs[NDEG+1];
   cs[0]=-54765291428198020791747503747742749163073958404455022926495744.L;
   cs[1]=-4052135566767965847649766745769409681058667331648450681896960.L;
@@ -307,7 +308,9 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx r[])
     {
       c[i] = cs[i];
     }
-  r = er;
+  for (i=0; i < NDEG; i++)
+    er[i]=erl[i];
+  
 
 #elif CASO==13
 
@@ -628,16 +631,16 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
-  pvector<cmplx,NDEG> roots;
+  pvector<complex<double>,NDEG> roots;
 #else
-  pvector<cmplx> roots(NDEG);
+  pvector<complex<double>> roots(NDEG);
 #endif
   char testo2[256];
   cmplx cr[NDEG];
 #ifdef STATIC
-  pvector<vldbl,NDEG+1> c(NDEG+1);
+  pvector<double,NDEG+1> c(NDEG+1);
 #else
-  pvector<vldbl> c(NDEG+1);
+  pvector<double> c(NDEG+1);
 #endif 
   int algo, i;
   numty ca[NDEG+1];
@@ -657,15 +660,15 @@ int main(int argc, char *argv[])
     }
   calc_coeff_dep_on_case(ca, er);
   for (i=0; i < NDEG+1; i++)
-    c[i]=ca[i];
+    c[i]=((double)ca[i]);
   c.show("boh");
   cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<vldbl,NDEG,false,cmplx> rp;
+      rpoly<double,NDEG,false> rp;
 #else
-      rpoly<vldbl,-1,false,cmplx> rp(NDEG);
+      rpoly<double,-1,false> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -677,9 +680,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<vldbl,NDEG,true,cmplx> rphqr;
+      rpoly<double,NDEG,true> rphqr;
 #else
-      rpoly<vldbl,-1,true,cmplx> rphqr(NDEG);
+      rpoly<double,-1,true> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
@@ -688,7 +691,7 @@ int main(int argc, char *argv[])
       //roots.show();  
     }
   for (i=0; i < NDEG; i++)
-    cr[i] = roots[i];
+    cr[i] = cmplx(roots[i]);
   // sort roots and calculate relative error
 #if 0
   if (allreal==true)
