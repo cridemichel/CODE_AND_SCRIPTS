@@ -1383,13 +1383,9 @@ void laguer(cmplx *a, cmplx &x, int m)
       cmplx r0;
       const ntype goldfact=1.618034;
       ntype sig;
-      //pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
-      //pvector<cmplx,N> rootsA, rootsB;
       pvector<ntype,3> ad;
-      pvector<ntype> cbak;
-      //pvecNm1<ntype> bd, bd0, bd1;
-      // pvecNm1<ntype> ro;
+      typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
       int iter, i;
 #if 0
       if constexpr (N < 0)
@@ -1403,6 +1399,7 @@ void laguer(cmplx *a, cmplx &x, int m)
           deflcoeff.allocate(n);
         }
 #endif
+
       //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
       if (coeff[n]==0.0)
         {
@@ -1418,6 +1415,7 @@ void laguer(cmplx *a, cmplx &x, int m)
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
+#if 1
       if constexpr (N < 0)
         {
           cbak.allocate(n+1);
@@ -1426,6 +1424,7 @@ void laguer(cmplx *a, cmplx &x, int m)
               cbak = coeff;
             }
         }
+#endif
       while (!laguer(r0))
         {
           r0 = sig*cmplx(drand48()-0.5,drand48()-0.5);
@@ -1642,6 +1641,7 @@ void laguer(cmplx *a, cmplx &x, int m)
                 roots[i] = ro_quad[i-2];
             }
         }
+#if 1
       if constexpr (N < 0)
         {
           if (backup)
@@ -1666,6 +1666,7 @@ void laguer(cmplx *a, cmplx &x, int m)
                 }
             }
         }
+#endif
     } 
   void odd_degree(pvector<cmplx,N>& roots)
     {
@@ -1914,6 +1915,7 @@ void laguer(cmplx *a, cmplx &x, int m)
   inline void find_roots(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
     {
       // if backup is true the dynamic version preserve the coefficients after calling this method
+
       if constexpr (N < 0)
         {
           if (n==1)
@@ -2609,6 +2611,7 @@ template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,fo
       cout << "That's not a quartic!\n";
       return;
     }
+
   a=coeff[3]/coeff[4];
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];

@@ -230,7 +230,9 @@ public:
   ~pvecdynp()
     {
       if (dealloc==true)
-        delete[] v;
+        {
+          delete[] v;
+        }
     }
 };
 
