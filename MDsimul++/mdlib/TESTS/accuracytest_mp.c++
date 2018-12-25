@@ -36,8 +36,8 @@ template <int N, int digits=200>
 using rpolymp = rpoly<number<mpfr_float_backend<digits>>,N,false,number<mpc_complex_backend<digits>>>;
 #define Complex(x,y) cmplx((x),(y))
 bool allreal=false, doswap=false;
-using vldbl=dbl200;
-using cmplx=cmplx200;
+using vldbl=long double;
+using cmplx=complex<long double>;
 #ifndef CASO
 #define CASO 4
 #endif
@@ -94,7 +94,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
-      er[i-1] = vldb(1.0L)/vldbl(i);
+      er[i-1] = vldbl(1.0L)/vldbl(i);
     }
   calc_coeff(c, er);
   //r = er;
@@ -104,7 +104,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   allreal=true;
   for (i=1; i < NDEG+1; i++)
     { 
-      er[i-1] = vldb(1.0L)/vldbl(i);
+      er[i-1] = vldbl(1.0L)/vldbl(i);
     }
   calc_coeff(c, er);
   //r = er;
@@ -134,7 +134,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
-      er[i] = vldbl(1.0L)/pow(2,NDEG/2-i)-vldbl(3.0L);
+      er[i] = 1.0L/pow(((long double)2),NDEG/2-i)-3.0L;
     }
   calc_coeff(c, er);
   //r = er;
@@ -193,7 +193,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
       0.95557280578614073281133405376746667L + 
         0.29475517441090421683077298196019097L*1il};  
 #endif
-  calc_coeff(c, er);
+  calc_coeff(c, erl);
   for (i=0; i < NDEG; i++)
     er[i]=erl[i];
 #elif CASO==11
@@ -519,7 +519,9 @@ numty print_accuracy_at(char *str, cmplx csol[], cmplx exsol[], vldbl allrelerr[
           relerrmax=allrelerr[k1];
         }
     }
-  cout << "[" << str << "relative accuracy=" <<  relerrmax << "\n";
+
+  printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
+  //cout << setprecision(15) << "[" << str << "relative accuracy=" <<  relerrmax << "\n";
   return relerrmax;
 }
 
@@ -568,12 +570,12 @@ void calc_coeff(vldbl c[], cmplx er[])
   int array[NDEG];
   for (j=0; j < NDEG; j++)
     array[j] = j;
-  cc[NDEG] = 1.0;
+  cc[NDEG] = 1.0L;
   for (i=0; i < NDEG; i++)
     {
       // all subsets of NDEG-i elements are stored in list lt
       subset(lt,array,NDEG,NDEG-i,0,l);
-      cc[i] = 0;
+      cc[i] = 0L;
       // loop over all subsets
       for(list<list<int>>::iterator it=lt.begin(); it!=lt.end(); ++it)
         {
