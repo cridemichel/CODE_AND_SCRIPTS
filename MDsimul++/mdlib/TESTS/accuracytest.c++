@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "pmatrix.H"
-#include "./rpoly.H"
+#include "pmatrix_mp.H"
+#include "./rpoly_mp.H"
 #include<complex>
 #include<list>
 #include<string>
@@ -57,7 +57,7 @@ void calc_coeff_dep_on_case(long double* c, complex<long double> **r)
 #define NDEG 20
   static complex <long double> er[NDEG];
   allreal=true;
-  er[0] = -2.1;
+  er[0] = -2.1L;
   for (i=1; i < NDEG; i++)
     { 
       er[i] = er[i-1]+0.2L;
