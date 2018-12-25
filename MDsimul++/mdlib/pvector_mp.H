@@ -280,7 +280,7 @@ public:
   using pvecbase<ntype,NT>::v;
   using pvecbase<ntype,NT>::N;
   // /numeric_limits<complex<double>>::digits10=0 that's why I set explicitly 16;//fix this!
-  static const int maxdigits=32;//numeric_limits<ntype>::digits10;
+  static const int maxdigits=std::numeric_limits<ntype>::digits10-1;
 
   pvector<ntype,NT>(int NN): pvecbase<ntype,NT>(NN)
     {
@@ -585,7 +585,7 @@ public:
       cout << "{";
       for (i=0; i < N; i++)
 	{
-	  cout << setprecision(maxdigits) << v[i];
+	  cout << setprecision(maxdigits-1) << v[i];
 	  if (i < N-1)
 	    cout << ",";
 	}

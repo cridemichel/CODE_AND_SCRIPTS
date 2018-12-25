@@ -405,9 +405,9 @@ public:
 	      cout << "-";
 	    }
 	  if (i==0)
-	    cout << setprecision(2*maxdigits) << abs(coeff[i]);
+	    cout << setprecision(maxdigits) << abs(coeff[i]);
 	  else if (i > 0 && abs(coeff[i]) != 1.0)
-	    cout << setprecision(2*maxdigits) << abs(coeff[i])<< "*";
+	    cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
 	 
 	  if ( i > 1)
 	    {
@@ -2101,7 +2101,7 @@ void laguer(cmplx *a, cmplx &x, int m)
       meps = epsilon();
       eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
       maxf= getmax();
-      maxdigits = numeric_limits<ntype>::digits10;
+      maxdigits = numeric_limits<ntype>::digits10-1;
       //force_hqr=0;
       maxf2 = pow(maxf,0.5)/10.0;
       maxf3 = pow(maxf,1.0/3.0)/10.0;
