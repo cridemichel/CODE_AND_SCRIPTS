@@ -580,7 +580,7 @@ public:
     }
 
 #else
-void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
+void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
   {
     ntype errf, errfold, det;
     pvecNm1<ntype> c, cold;
@@ -597,7 +597,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
     for (i=n-2; i >= 0; i--)
       {
         c[i]=defc[i];
-        fvec[i] = defc[i]-r0*((i==n-2)?1:defc[i+1])-cmon[i+1];
+        fvec[i] = defc[i]-r0.real()*((i==n-2)?1:defc[i+1])-cmon[i+1];
       } 
     //cmon.show("monic coeff=");
     //defc.show("deflcoeff");
@@ -614,7 +614,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
     for (j=0; j < n-2; j++)
       for (i=j+1; i < n-1; i++)
         {
-          Jinv[i][j]=r0*Jinv[i-1][j];
+          Jinv[i][j]=r0.real()*Jinv[i-1][j];
         }
     // Jinv.show();
     for (iter = 0; iter < 8; iter++)
@@ -623,7 +623,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
         c = c - Jinv*fvec;
         for (i=n-2; i >= 0; i--)
           {
-            fvec[i] = c[i]-r0*((i==n-2)?1:c[i+1])-cmon[i+1];
+            fvec[i] = c[i]-r0.real()*((i==n-2)?1:c[i+1])-cmon[i+1];
           } 
         errfold = errf;
         errf = 0;
