@@ -1,4 +1,5 @@
-#include "pmatrix.H"
+#include "pvector_mp.H"
+#include "pmatrix_mp.H"
 #include<cstdlib>
 #include<iostream>
 #include<iomanip>
@@ -9,12 +10,21 @@
 #include <cstdlib>
 #include <vector>
 #include <array>
-#include <complex>
+
+//#include <complex>
 //fix to avoid crash of clang
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
         (imaxarg1) : (imaxarg2))
-#define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
+//#define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
+template <class ntype>
+inline ntype SIGN(ntype a, ntype b)
+{
+  if ((b) > 0)
+    return abs(a);
+  else
+    return -abs(a);
+}
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 #define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
@@ -140,8 +150,8 @@ public:
 template <class ntype, int N> using rpolybase = 
 typename std::conditional<(N>0), rpoly_base_static <ntype, N>,
 	 rpoly_base_dynamic <ntype, N>>::type;
-
-template <class ntype, int N=-1, bool force_hqr=false> 
+ 
+template <class ntype, int N=-1, bool force_hqr=false, class cmplx=complex<ntype>> 
 class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   using rpolybase<ntype,N>::n;
   using rpolybase<ntype,N>::coeff;
@@ -154,6 +164,19 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   using rpolybase<ntype,N>::deflcoeff0;
   using rpolybase<ntype,N>::deflcoeff1;
   using rpolybase<ntype,N>::deflcoeff;
+#if 0
+#ifdef USE_MULTIPREC
+  static const int numlin=std::numeric_limits<ntype>::digits10;
+#ifdef MP1
+  using cmplx=typename std::conditional<boost::is_same<ntype,number<mpfr_float_backend<numlin>>>::value,
+    number<mpc_complex_backend<std::numeric_limits<ntype>::digits10>>,complex<ntype>>::type;
+#else
+  using cmplx=typename std::conditional<boost::is_same<ntype,number<cpp_bin_float<numlin>>>::value,
+    cpp_complex<std::numeric_limits<ntype>::digits10>,complex<ntype>>::type;
+#endif
+#endif
+#endif
+  //using cmplx=cmplx;
   template <class vtype>
   using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
 	 pvector<vtype, -1>>::type;
@@ -163,10 +186,10 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   template <class vtype>
   using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
 	 pvector<vtype, -1>>::type;
-  using rpolyNm1 = typename std::conditional<(N>0),  rpoly<ntype, N-1>,
-	 rpoly<ntype, -1>>::type;
-  using rpolyNm2 = typename std::conditional<(N>0),  rpoly<ntype, N-2>,
-	 rpoly<ntype, -1>>::type;
+  using rpolyNm1 = typename std::conditional<(N>0),  rpoly<ntype, N-1,force_hqr,cmplx>,
+	 rpoly<ntype, -1,force_hqr,cmplx>>::type;
+  using rpolyNm2 = typename std::conditional<(N>0),  rpoly<ntype, N-2,force_hqr,cmplx>,
+	 rpoly<ntype, -1,force_hqr,cmplx>>::type;
   template <class vtype>
   using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
 	 pmatrixq<vtype, -1>>::type;
@@ -175,7 +198,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
 	 pmatrixq<vtype, -1>>::type;
  template <class vtype, int NT>
-  using stlarr = typename conditional<(NT>0), array<vtype,NT-1>, vector<vtype>>::type;
+  using stlarr = typename std::conditional<(NT>0), std::array<vtype,NT-1>, std::vector<vtype>>::type;
 
   ntype px, dpx; 
 
@@ -322,7 +345,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
         if (fabs(d) > tol1)
           b += d;
         else
-          b += SIGN(tol1,xm);
+          b += SIGN<ntype>(tol1,xm);
         fb=evalpoly(b);
       }
     cout << "Maximum number of iterations exceeded in zbrent";
@@ -342,24 +365,24 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
       t = oqs_max2(a,b);
       return oqs_max2(t,c);
     }
-  //void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
-  inline void solve_quadratic(pvector<complex<ntype>,N>& sol);
-  inline void solve_cubic_analytic(pvector<complex<ntype>,N>& sol);
-  inline void oqs_quartic_solver(pvector<complex<ntype>,N>& roots);
+  //void oqs_quartic_solver(pvector<cmplx,N>& roots);
+  inline void solve_quadratic(pvector<cmplx,N>& sol);
+  inline void solve_cubic_analytic(pvector<cmplx,N>& sol);
+  inline void oqs_quartic_solver(pvector<cmplx,N>& roots);
   inline void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
   inline void oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol);
   inline void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled);
   inline ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3);
   inline ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
-	    			       complex<ntype> aq, complex<ntype> bq, complex<ntype> cq, complex<ntype> dq);
+	    			       cmplx aq, cmplx bq, cmplx cq, cmplx dq);
   inline ntype oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq);
   inline ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq); 
   inline void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
-  inline void oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2]);
+  inline void oqs_solve_quadratic(ntype a, ntype b, cmplx roots[2]);
   inline void balance(pmatrixq<ntype,N>& a);
-  inline void hqr(pmatrixq<ntype,N>& a, pvector<complex<ntype>,N>& wri, int& ok);
-  inline void QRfactorization(pmatrixq<ntype,N>& hess, pvector<complex<ntype>,N>& sol, int& ok);
-  inline void solve_numrec(pvector<complex<ntype>,N>& csol, int& ok);
+  inline void hqr(pmatrixq<ntype,N>& a, pvector<cmplx,N>& wri, int& ok);
+  inline void QRfactorization(pmatrixq<ntype,N>& hess, pvector<cmplx,N>& sol, int& ok);
+  inline void solve_numrec(pvector<cmplx,N>& csol, int& ok);
 public:
   void show(void)
     {
@@ -382,9 +405,9 @@ public:
 	      cout << "-";
 	    }
 	  if (i==0)
-	    cout << setprecision(2*maxdigits) << abs(coeff[i]);
+	    cout << setprecision(maxdigits) << abs(coeff[i]);
 	  else if (i > 0 && abs(coeff[i]) != 1.0)
-	    cout << setprecision(2*maxdigits) << abs(coeff[i])<< "*";
+	    cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
 	 
 	  if ( i > 1)
 	    {
@@ -395,20 +418,20 @@ public:
 	}
       cout << "\n";
     }
-   complex<ntype> evalpoly(complex<ntype> x)
+   cmplx evalpoly(cmplx x)
     {
       // evaluate polynomail via Horner's formula 
-      complex<ntype> bn=0.0;
+      cmplx bn=cmplx(0.0);
       for (int i=n; i >= 0; i--)
         {
           bn = cmon[i] + bn*x;
         }
       return bn;
     }
-   complex<ntype> evaldpoly(complex<ntype> x)
+   cmplx evaldpoly(cmplx x)
     {
       // evaluate polynomail via Horner's formula 
-      complex<ntype> bn=0.0;
+      cmplx bn=0.0;
       for (int i=n-1; i >= 0; i--)
         {
           bn = (i+1)*cmon[i+1] + bn*x;
@@ -457,16 +480,25 @@ public:
       ntype sum=0;
       for (i=0; i < n; i++)
         {
-          if (i == 0)
-            sum += (cmon[i]==0)?abs(r0*c[i]+cmon[i]):abs((r0*c[i]+cmon[i])/cmon[i]);
+          if (i == 0){
+            if (cmon[i]==0)
+              {
+                sum+=abs(r0*c[i]+cmon[i]);} 
+            else 
+              {
+                sum=+abs((r0*c[i]+cmon[i])/cmon[i]);}
+          }
           else 
-            sum += (cmon[i]==0)?abs(-c[i-1] + r0*c[i] + cmon[i]):abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
+            if (cmon[i]==0)
+              sum +=abs(-c[i-1] + r0*c[i] + cmon[i]);
+            else
+              sum +=abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
         }
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
 #ifdef USE_FULL_NR
-  void use_NR_defl_lin(pvector<ntype,N>& defc, complex<ntype>& r0)
+  void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx& r0)
     {
       ntype errf, errfold, det;
       pvector<ntype,N> c, cold;
@@ -505,13 +537,15 @@ public:
             for (j=0; j < n; j++)
               {
                 if (i==j)
-                  J[i][j] = (i<n-1)?(-c[n-1]):-1.0;// c[N-1]=r0
+                  {
+                    J[i][j] = (i<n-1)?(-c[n-1]):((ntype)-1.0);// c[N-1]=r0
+                  }                
                 else if (j==i+1)
                   J[i][j] = 1.0;
                 else 
                   J[i][j] = 0;
                 if (j==N-1&& i!=j)
-                  J[i][j] = -((i<n-1)?c[i]:1.0);
+                  J[i][j] = -((i<n-1)?c[i]:((ntype)1.0));
               }
           //J.show();
           if (J.det()==0)
@@ -542,11 +576,11 @@ public:
         } 
       for (i=0; i < n-1; i++)
         defc[i] = c[i];
-      r0=c[N-1]+r0.imag()*1i;
+      r0=cmplx(c[N-1],r0.imag());
     }
 
 #else
-void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
+void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
   {
     ntype errf, errfold, det;
     pvecNm1<ntype> c, cold;
@@ -563,7 +597,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
     for (i=n-2; i >= 0; i--)
       {
         c[i]=defc[i];
-        fvec[i] = defc[i]-r0*((i==n-2)?1:defc[i+1])-cmon[i+1];
+        fvec[i] = defc[i]-r0.real()*((i==n-2)?1:defc[i+1])-cmon[i+1];
       } 
     //cmon.show("monic coeff=");
     //defc.show("deflcoeff");
@@ -580,7 +614,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
     for (j=0; j < n-2; j++)
       for (i=j+1; i < n-1; i++)
         {
-          Jinv[i][j]=r0*Jinv[i-1][j];
+          Jinv[i][j]=r0.real()*Jinv[i-1][j];
         }
     // Jinv.show();
     for (iter = 0; iter < 8; iter++)
@@ -589,7 +623,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
         c = c - Jinv*fvec;
         for (i=n-2; i >= 0; i--)
           {
-            fvec[i] = c[i]-r0*((i==n-2)?1:c[i+1])-cmon[i+1];
+            fvec[i] = c[i]-r0.real()*((i==n-2)?1:c[i+1])-cmon[i+1];
           } 
         errfold = errf;
         errf = 0;
@@ -614,7 +648,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, ntype r0)
 
 #endif
 #ifdef USE_FULL_NR
-void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
+void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
   {
     // bd[N-2] = 1 since all polynomials are in their minic form
     // hence we do not need to refine this coefficient here
@@ -640,7 +674,9 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       {
         fvec[i] = -cmon[i];
         if (i <= n-2)
-          fvec[i] += ((i==n-2)?1.0:c[i])*ad[0];
+          {
+            fvec[i] += ((i==n-2)?1.0:c[i])*ad[0];
+          }
         if (i >= 1) 
           fvec[i] += ((i==n-1)?1.0:c[i-1])*ad[1];
         if (i >=2)
@@ -729,7 +765,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 
 
 #else
-  void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3> ad)
+  void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3> ad)
     {
       // bd[N-2] = 1 since all polynomials are in their minic form
       // hence we do not need to refine this coefficient here
@@ -822,17 +858,17 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
     }
 #endif
 #ifdef USE_LAGUER_REAL
- bool laguer(complex<ntype> &xc)
+ bool laguer(cmplx &xc)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
       ntype abx,abp,abm,err, phi, rho;
-      //complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
       ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
-      complex<ntype> sqrtcmplx;
+      cmplx sqrtcmplx;
       int m=n;
       //cout << "r0 ini = "<<xc << "\n"; 
       x[0] = xc.real();
@@ -863,7 +899,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             {
               //if (iter > 15)
               //cout << "iter=" << iter << "\n";
-              xc = x[0] + 1i*x[1];
+              xc = cmplx(x[0],x[1]);
               return true;
             }
           invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
@@ -875,8 +911,8 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
           h[0] = g2[0] - 2.0*fb[0];
           h[1] = g2[1] - 2.0*fb[1];
-          sarg[0] = ntype(m-1)*(ntype(m)*h[0] - g2[0]);
-          sarg[1] = ntype(m-1)*(ntype(m)*h[1] - g2[1]);
+          sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
+          sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
           //sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
           //sq[0]=sqrtcmplx.real();
           //sq[1]=sqrtcmplx.imag();
@@ -916,13 +952,13 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
           if (MAX(abp,abm) > 0.0)
             {
-              dx[0]=ntype(m)*invgp[0];
-              dx[1]=ntype(m)*invgp[1];
+              dx[0]=((ntype)m)*invgp[0];
+              dx[1]=((ntype)m)*invgp[1];
             }
           else
             {
-              pol[0] = (1.0+abx)*cos(ntype(iter));
-              pol[1] = (1.0+abx)*sin(ntype(iter)); 
+              pol[0] = (1.0+abx)*cos((ntype)iter);
+              pol[1] = (1.0+abx)*sin((ntype)iter); 
               dx[0]=pol[0];
               dx[1]=pol[1];
             }
@@ -934,7 +970,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
             {
               //if (iter > 15)
                 //cout << "iter=" << iter << "\n";
-              xc = x[0] + 1i*x[1];
+              xc = cmplx(x[0],x[1]);
               return true;
             }
           if (iter % MT != 0) 
@@ -950,24 +986,24 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
         }
       //cout << "too many iterations in laguer\n";
-      xc = x[0] + 1i*x[1];
+      xc = cmplx(x[0],x[1]);
       return false;
     }
 
 #else
 #if 0
- ntype estimate_M(complex<ntype> p, complex<ntype> dp, complex<ntype> ddp)
+ ntype estimate_M(cmplx p, cmplx dp, cmplx ddp)
    {
      return abs(1.0/(1.0-p*ddp/(dp*dp)));
    }
- bool laguer_mod(complex<ntype> &x)
+ bool laguer_mod(cmplx &x)
    {
      const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
       ntype abx,abp,abm,err, m;
-      complex<ntype> dx,x1,p,dp,ddp,g,h,sq,gp,gm,g2;
+      cmplx dx,x1,p,dp,ddp,g,h,sq,gp,gm,g2;
       //cout << "r0 ini = "<< x << "\n"; 
 
       for (iter=1;iter<=MAXIT;iter++) 
@@ -1027,14 +1063,14 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       return false;
    }
 #endif
-  bool laguer(complex<ntype> &x)
+  bool laguer(cmplx &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
       ntype abx,abp,abm,err, M;
-      complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m;
       m=n;
       //cout << "r0 ini = "<< x << "\n"; 
@@ -1063,8 +1099,9 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
 
           g=d/b;
           g2=g*g;
-          h=g2-ntype(2.0)*f/b;
-          sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
+          h=g2-((ntype)2.0)*f/b;
+          // SONO ARRIVATO QUI CON IL CASTING
+          sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
           gp=g+sq;
           gm=g-sq;
           abp=abs(gp);
@@ -1073,7 +1110,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
           if (abp < abm) gp=gm;
           //cout << "abp=" << abp << " abm=" << abm << "\n";
           //cout << "1/gp=" << 1.0/gp << "\n";
-          dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
+          dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
           //cout << "dx=" << dx << "\n";
           x1=x-dx;
           if (x == x1) 
@@ -1090,7 +1127,7 @@ void use_NR_defl_quad(pvector<ntype,N-1>& bd, pvector<ntype,3>& ad)
       return false;
     }
 #endif
-void laguer(complex<ntype> *a, complex<ntype> &x, int m)
+void laguer(cmplx *a, cmplx &x, int m)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
     const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -1098,7 +1135,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
     ntype abx,abp,abm,err;
-    complex<ntype> dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
 
     for (iter=1;iter<=MAXIT;iter++) {
       b=a[m];
@@ -1116,13 +1153,13 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       g=d/b;
       g2=g*g;
       h=g2-2.0*f/b;
-      sq=sqrt(ntype(m-1)*(ntype(m)*h-g2));
+      sq=sqrt(((ntype)(m-1))*(((ntype)m)*h-g2));
       gp=g+sq;
       gm=g-sq;
       abp=abs(gp);
       abm=abs(gm);
       if (abp < abm) gp=gm;
-      dx=MAX(abp,abm) > 0.0 ? ntype(m)/gp : polar(1+abx,ntype(iter));
+      dx=MAX(abp,abm) > 0.0 ? ((ntype)m)/gp : polar(1+abx,((ntype)iter));
       x1=x-dx;
       if (x == x1) return;
       if (iter % MT != 0) x=x1;
@@ -1132,17 +1169,17 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
     return;
   }
 #if 1
- void zroots(pvector<complex<ntype>,N> &rootsa, const bool polish)
+ void zroots(pvector<cmplx,N> &rootsa, const bool polish)
    {
      const ntype EPS=meps;
      int i,j,jj;
-     complex<ntype> x,b,c;
-     complex<ntype> *a;
+     cmplx x,b,c;
+     cmplx *a;
      int m;
-     complex<ntype> *ad;
+     cmplx *ad;
      m=n;
-     ad = new complex<ntype>[n+1];
-     a = new complex<ntype>[n+1];
+     ad = new cmplx[n+1];
+     a = new cmplx[n+1];
      if (coeff[n]==0.0)
         {
           cout << "That's not an " << N << "degree polynomial!\n";
@@ -1161,12 +1198,12 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
        }
      for (j=m-1;j>=0;j--) {
        x=0.0;
-       complex<ntype> *ad_v = new complex<ntype>[j+2];
+       cmplx *ad_v = new cmplx[j+2];
        for (jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj];
        laguer(ad_v,x,j+1);
        delete [] ad_v;
        if (fabs(imag(x)) <= 2.0*EPS*fabs(real(x)))
-         x=complex<ntype>(real(x),0.0);
+         x=cmplx(real(x),0.0);
        rootsa[j]=x;
        b=ad[j+1];
        for (jj=j;jj>=0;jj--) {
@@ -1211,7 +1248,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
         }
       return sum;
     }
- void refine_root(complex<ntype> &r0)
+ void refine_root(cmplx &r0)
    {
      int iter,i;
      ntype err;
@@ -1222,7 +1259,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
          ntype r0old[2], p[2], r0new[2];
          ntype p1[2], p0, p10;
          ntype errold, invnp1;
-         complex<ntype> pc, p1c;
+         cmplx pc, p1c;
          r0new[0]=r0.real();
          r0new[1]=r0.imag();
 
@@ -1267,11 +1304,11 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
              r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
              r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
            }
-         r0=r0new[0] + r0new[1]*1i;
+         r0=cmplx(r0new[0], r0new[1]);
 #else
          // root polishing by NR
-         complex<ntype> r0old, p;
-         complex<ntype> p1;
+         cmplx r0old, p;
+         cmplx p1;
          ntype errold;
          for (iter=0; iter < maxiter_polish; iter++)
            {
@@ -1294,7 +1331,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                  break;
                }
 
-             if (p1==complex<ntype>(0,0))
+             if (p1==cmplx(0,0))
                {
                  break;
                }
@@ -1329,30 +1366,26 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                  r0r=r0old;
                  break;
                }
-             if (p1==complex<ntype>(0,0))
+             if (p1==cmplx(0,0))
                break;
              r0old=r0r;
              r0r -= p/p1;
            }
 
-         r0 = complex<ntype>(r0r,0);
+         r0 = cmplx(r0r,0);
        }
      //if (iter > 2)
        //cout << "NR iter=" << iter << " err=" << err << "\n";
    }
- void laguerre_defl(pvector<complex <ntype>,N>& roots,bool polish=false, bool backup=false)
+ void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
     {
       // find initial guess for x here
-      complex<ntype> r0;
+      cmplx r0;
       const ntype goldfact=1.618034;
       ntype sig;
-      //pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
       ntype err0,err1, errA, errB;
-      //pvector<complex <ntype>,N> rootsA, rootsB;
       pvector<ntype,3> ad;
-      pvector<ntype> cbak;
-      //pvecNm1<ntype> bd, bd0, bd1;
-      // pvecNm1<ntype> ro;
+      typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
       int iter, i;
 #if 0
       if constexpr (N < 0)
@@ -1366,6 +1399,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           deflcoeff.allocate(n);
         }
 #endif
+
       //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
       if (coeff[n]==0.0)
         {
@@ -1375,12 +1409,13 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-      r0 = complex<ntype>(0.0,1.0);
+      r0 = cmplx(0.0,1.0);
       iter = 0;
       sig=1.0;
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
+#if 1
       if constexpr (N < 0)
         {
           cbak.allocate(n+1);
@@ -1389,9 +1424,10 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
               cbak = coeff;
             }
         }
+#endif
       while (!laguer(r0))
         {
-          r0 = sig*complex<ntype>(drand48()-0.5,drand48()-0.5);
+          r0 = sig*cmplx(drand48()-0.5,drand48()-0.5);
           sig *= goldfact; 
           iter++;
           if (iter > 1000)
@@ -1419,8 +1455,8 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
           exit(-1);
 #endif
           rpolyNm1 qp;
-          // pvector<complex<ntype>,N-1> qr;
-          pvecNm1<complex<ntype>> qr;
+          // pvector<cmplx,N-1> qr;
+          pvecNm1<cmplx> qr;
 #if 0
           if constexpr (N < 0)
             {
@@ -1480,7 +1516,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP = calc_err_q(deflcoeff, r0.real());
-          use_NR_defl_lin(deflcoeff,r0.real());
+          use_NR_defl_lin(deflcoeff,r0);
           //errD = calc_err_q(deflcoeff, r0.real());
 #if 0
           if (errD < errP)
@@ -1511,8 +1547,8 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       else
         {
           rpolyNm2 rp;
-          //pvector<complex<ntype>,N-2> ro_quad;
-          pvecNm2<complex<ntype>> ro_quad;
+          //pvector<cmplx,N-2> ro_quad;
+          pvecNm2<cmplx> ro_quad;
 #if 0
           if constexpr (N < 0)
             {
@@ -1605,6 +1641,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                 roots[i] = ro_quad[i-2];
             }
         }
+#if 1
       if constexpr (N < 0)
         {
           if (backup)
@@ -1629,16 +1666,17 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
                 }
             }
         }
+#endif
     } 
-  void odd_degree(pvector<complex <ntype>,N>& roots)
+  void odd_degree(pvector<cmplx,N>& roots)
     {
       ntype *coeffder;
       rpolyNm1 quar;
-      //pvector<complex<ntype>,N-1> qroots;
-      pvecNm1<complex<ntype>> qroots;
+      //pvector<cmplx,N-1> qroots;
+      pvecNm1<cmplx> qroots;
       //pvector<ntype,N> deflcoeff0, deflcoeff1, deflcoeff;
-      complex<ntype> quadr[2];
-      stlarr<ntype,N-1> rqroots;
+      cmplx quadr[2];
+      stlarr<ntype,N> rqroots;
       ntype goldfact = 1.618034;
       ntype delx, c;
       pvector<ntype, N> cmonder(N);
@@ -1693,8 +1731,8 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
         {
           rpolyNm2 cub;
           ntype r0;
-          //pvector<complex<ntype>,N-2> cubroots;
-          pvecNm2<complex<ntype>> cubroots;
+          //pvector<cmplx,N-2> cubroots;
+          pvecNm2<cmplx> cubroots;
           if constexpr (N < 0)
             cubroots.allocate(n-2);
 
@@ -1874,9 +1912,10 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
     {
       return n; 
     }
-  inline void find_roots(pvector<complex<ntype>,N>& roots, bool polish=false, bool backup=true)
+  inline void find_roots(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
     {
       // if backup is true the dynamic version preserve the coefficients after calling this method
+
       if constexpr (N < 0)
         {
           if (n==1)
@@ -2062,7 +2101,7 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
       meps = epsilon();
       eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
       maxf= getmax();
-      maxdigits = numeric_limits<ntype>::digits10;
+      maxdigits = numeric_limits<ntype>::digits10-1;
       //force_hqr=0;
       maxf2 = pow(maxf,0.5)/10.0;
       maxf3 = pow(maxf,1.0/3.0)/10.0;
@@ -2090,9 +2129,9 @@ void laguer(complex<ntype> *a, complex<ntype> &x, int m)
 #endif
 };
 // quadratic equation
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::solve_quadratic(pvector<complex<ntype>,N>&sol)
+template<class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,force_hqr,cmplx>::solve_quadratic(pvector<cmplx,N>&sol)
 {
-  complex<ntype> r[2];
+  cmplx r[2];
   ntype a,b;
   a = coeff[1]/coeff[2];
   b = coeff[0]/coeff[2];
@@ -2101,12 +2140,12 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::solv
   sol[1] = r[1];
 }
 // cubic polynomial
-template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::solve_cubic_analytic(pvector<complex<ntype>,N>& sol)
+template <class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N,force_hqr, cmplx>::solve_cubic_analytic(pvector<cmplx,N>& sol)
 {
   /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
    * according to the method described in Numerical Recipe book */  
   ntype a, b, c, Q, R, theta, Q3, R2, A, B;
-  const ntype sqrt32=sqrt(3)/2.0;
+  const ntype sqrt32=sqrt((ntype)3.0)/2.0;
   a = coeff[2]/coeff[3];
   b = coeff[1]/coeff[3];
   c = coeff[0]/coeff[3];
@@ -2123,19 +2162,19 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::sol
     }
   else
     {
-      A = -copysign(1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
       if (A==0.0)
 	B=0.0;
       else
 	B = Q/A;
       sol[0] = (A+B) - a/3.0;
-      sol[1] = -0.5*(A+B)-a/3.0+complex<ntype>(0,1)*sqrt32*(A-B);
-      sol[2] = -0.5*(A+B)-a/3.0-complex<ntype>(0,1)*sqrt32*(A-B);
+      sol[1] = -0.5*(A+B)-a/3.0+cmplx(0,1)*sqrt32*(A-B);
+      sol[2] = -0.5*(A+B)-a/3.0-cmplx(0,1)*sqrt32*(A-B);
     }
 }
 
 // quartics with OQS
-template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
+template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,force_hqr,cmplx>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
 {
  /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
   * where coefficients b and c are large (see sec. 2.2 in the manuscript) */ 
@@ -2169,7 +2208,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   else
     {
       RQ = R/Q;
-      KK = copysign(1.0,Q)*(RQ*RQ/Q-1.0);
+      KK = copysign((ntype)1.0,Q)*(RQ*RQ/Q-1.0);
     }
 
   if (KK < 0.0)
@@ -2196,10 +2235,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   else
     {
       if (abs(Q) < abs(R))
-	A = -copysign(1.0,R)*cbrt(abs(R)*(1.0+sqrt(KK)));
+	A = -copysign((ntype)1.0,R)*cbrt(abs(R)*(1.0+sqrt(KK)));
       else
 	{
-	  A = -copysign(1.0,R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
+	  A = -copysign((ntype)1.0,R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
 	}
       if (A==0.0)
 	B=0.0;
@@ -2208,7 +2247,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
       sol = A+B;
     }
 }
-template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol)
+template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,force_hqr,cmplx>::oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol)
 {
   /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
    * (see sec. 2.2 in the manuscript) */ 
@@ -2250,7 +2289,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
     }
   else
     {
-      A = -copysign(1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
        if (A==0.0)
 	B=0.0;
       else
@@ -2258,7 +2297,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
       sol = A+B; /* this is always largest root even if A=B */
     }
 }
-template <class ntype, int N, bool force_hqr> void  rpoly<ntype,N,force_hqr>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled)
+template <class ntype, int N, bool force_hqr, class cmplx> void  rpoly<ntype,N,force_hqr, cmplx>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled)
 {
   /* find phi0 as the dominant root of the depressed and shifted cubic 
    * in eq. (64) (see also the discussion in sec. 2.2 of the manuscript) */
@@ -2359,18 +2398,27 @@ template <class ntype, int N, bool force_hqr> void  rpoly<ntype,N,force_hqr>::oq
     }
   phi0 = x;
 }
-template <class ntype, int N, bool force_hqr> ntype  rpoly<ntype,N,force_hqr>::oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3)
+template <class ntype, int N, bool force_hqr, class cmplx> ntype  rpoly<ntype,N,force_hqr,cmplx>::oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3)
 {
   /* Eq. (21) in the manuscript */
   ntype sum;
-  sum =  (b==0)?abs(d2 + l1*l1 + 2.0*l3):abs(((d2 + l1*l1 + 2.0*l3)-b)/b);
-  sum += (c==0)?abs(2.0*d2*l2 + 2.0*l1*l3):abs(((2.0*d2*l2 + 2.0*l1*l3)-c)/c);
-  sum += (d==0)?abs(d2*l2*l2 + l3*l3):abs(((d2*l2*l2 + l3*l3)-d)/d);
+  if (b==0.0)
+    sum =  abs(d2 + l1*l1 + 2.0*l3);
+  else 
+    sum =  abs(((d2 + l1*l1 + 2.0*l3)-b)/b);
+  if (c==0.0)
+    sum += abs(2.0*d2*l2 + 2.0*l1*l3);
+  else 
+    sum += abs(((2.0*d2*l2 + 2.0*l1*l3)-c)/c);
+  if (d==0.0)
+    sum += abs(d2*l2*l2 + l3*l3);
+  else 
+    sum += abs(((d2*l2*l2 + l3*l3)-d)/d);
   return sum;
 }
-template <class ntype, int N, bool force_hqr> 
-ntype rpoly<ntype,N, force_hqr>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntype c, ntype d, complex<ntype> aq, 
-                                                         complex<ntype> bq, complex<ntype> cq, complex<ntype> dq)
+template <class ntype, int N, bool force_hqr, class cmplx> 
+ntype rpoly<ntype,N, force_hqr,cmplx>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntype c, ntype d, cmplx aq, 
+                                                         cmplx bq, cmplx cq, cmplx dq)
 {
   /* Eq. (53) in the manuscript for complex alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq) */
   ntype sum;
@@ -2380,26 +2428,50 @@ ntype rpoly<ntype,N, force_hqr>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntyp
   sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N, bool force_hqr> ntype rpoly<ntype,N,force_hqr>::oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq)
+template <class ntype, int N, bool force_hqr, class cmplx> ntype rpoly<ntype,N,force_hqr,cmplx>::oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq)
 {
   /* Eq. (53) in the manuscript for real alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq)*/
   ntype sum;
-  sum = (d==0)?abs(bq*dq):abs((bq*dq-d)/d);
-  sum += (c==0)?abs(bq*cq + aq*dq):abs(((bq*cq + aq*dq) - c)/c);
-  sum +=(b==0)?abs(bq + aq*cq + dq):abs(((bq + aq*cq + dq) - b)/b);
-  sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
+
+  if (d==0.0)
+    sum = abs(bq*dq);
+  else
+    sum = abs((bq*dq-d)/d);
+
+  if (c==0.0)
+    sum += abs(bq*cq + aq*dq);
+  else 
+    sum += abs(((bq*cq + aq*dq) - c)/c);
+
+  if (b==0.0)
+    sum +=abs(bq + aq*cq + dq);
+  else 
+    sum +=abs(((bq + aq*cq + dq) - b)/b);
+  if (a==0.0)
+    sum +=abs(aq + cq);
+  else 
+    sum +=abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N, bool force_hqr> ntype  rpoly<ntype,N,force_hqr>::oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq)
+template <class ntype, int N, bool force_hqr, class cmplx> ntype  rpoly<ntype,N,force_hqr,cmplx>::oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq)
 {
   /* Eq. (40) in the manuscript */
   ntype sum;
-  sum = (c==0)?abs(bq*cq + aq*dq):abs(((bq*cq + aq*dq) - c)/c);
-  sum +=(b==0)?abs(bq + aq*cq + dq):abs(((bq + aq*cq + dq) - b)/b);
-  sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
+  if (c==0.0)
+    sum = abs(bq*cq + aq*dq);
+  else
+    sum = abs(((bq*cq + aq*dq) - c)/c);
+  if (b==0.0)
+  sum +=abs(bq + aq*cq + dq);
+  else 
+  sum +=abs(((bq + aq*cq + dq) - b)/b);
+  if (a==0.0)
+    sum +=abs(aq + cq);
+  else 
+    sum +=abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ)
+template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,force_hqr, cmplx>::oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ)
 {
   /* Newton-Raphson described in sec. 2.3 of the manuscript for complex
    * coefficients a,b,c,d */
@@ -2420,7 +2492,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   errf=0;
   for (k1=0; k1 < 4; k1++)
     {
-      errf += (vr[k1]==0)?abs(fvec[k1]):abs(fvec[k1]/vr[k1]);
+      if (vr[k1]==0)
+        errf += abs(fvec[k1]);
+      else
+        errf +=abs(fvec[k1]/vr[k1]);
     }
   for (iter = 0; iter < 8; iter++)
     {
@@ -2465,7 +2540,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
       errf=0;
       for (k1=0; k1 < 4; k1++)
 	{
-	  errf += (vr[k1]==0)?abs(fvec[k1]):abs(fvec[k1]/vr[k1]);
+        if (vr[k1]==0)
+	  errf += abs(fvec[k1]);
+        else
+	  errf += abs(fvec[k1]/vr[k1]);
 	}
       if (errf==0)
 	break;
@@ -2481,7 +2559,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
   CQ=x[2];
   DQ=x[3];
 }
-template <class ntype, int N, bool force_hqr> void  rpoly<ntype,N, force_hqr>::oqs_solve_quadratic(ntype a, ntype b, complex<ntype> roots[2])
+template <class ntype, int N, bool force_hqr, class cmplx> void  rpoly<ntype,N, force_hqr,cmplx>::oqs_solve_quadratic(ntype a, ntype b, cmplx roots[2])
 { 
   ntype div,sqrtd,diskr,zmax,zmin;
   diskr=a*a-4*b;   
@@ -2498,18 +2576,18 @@ template <class ntype, int N, bool force_hqr> void  rpoly<ntype,N, force_hqr>::o
 	zmin=0.0;
       else
 	zmin=b/zmax;
-      roots[0]=complex<ntype>(zmax,0.0);
-      roots[1]=complex<ntype>(zmin,0.0);
+      roots[0]=cmplx(zmax,0.0);
+      roots[1]=cmplx(zmin,0.0);
     } 
   else
     {   
       sqrtd = sqrt(-diskr);
-      roots[0]=complex<ntype>(-a/2,sqrtd/2);
-      roots[1]=complex<ntype>(-a/2,-sqrtd/2);      
+      roots[0]=cmplx(-a/2,sqrtd/2);
+      roots[1]=cmplx(-a/2,-sqrtd/2);      
     }   
 }
 
-template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs_quartic_solver(pvector<complex<ntype>,N>& roots)
+template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,force_hqr,cmplx>::oqs_quartic_solver(pvector<cmplx,N>& roots)
 {
   /* USAGE:
    *
@@ -2522,7 +2600,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
    * the four roots will be stored in the complex array roots roots[] 
    *
    * */
-  complex<ntype> acx1, bcx1, ccx1, dcx1,acx,bcx,ccx,dcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
+  cmplx acx1, bcx1, ccx1, dcx1,acx,bcx,ccx,dcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
   ntype l2m[12], d2m[12], res[12], resmin, bl311, dml3l3, err0=0, err1=0, aq1, bq1, cq1, dq1; 
   ntype a,b,c,d,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3],gamma,del2;
   int realcase[2], whichcase, k1, k, kmin, nsol;
@@ -2533,6 +2611,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
       cout << "That's not a quartic!\n";
       return;
     }
+
   a=coeff[3]/coeff[4];
   b=coeff[2]/coeff[4];
   c=coeff[1]/coeff[4];
@@ -2678,8 +2757,8 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
     {
       /* Case II eqs. (47)-(50) */
       gamma=sqrt(d2); 
-      acx=complex<ntype>(l1,gamma);  
-      bcx=complex<ntype>(l3,gamma*l2);
+      acx=cmplx(l1,gamma);  
+      bcx=cmplx(l3,gamma*l2);
       ccx = conj(acx);
       dcx = conj(bcx);
       realcase[0] = 0; 
@@ -2711,7 +2790,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
 	{
 	  realcase[1] = 0;
 	  acx1 = l1;
-	  bcx1 = complex<ntype>(l3,sqrt(d3));
+	  bcx1 = cmplx(l3,sqrt(d3));
 	  ccx1 = l1;
 	  dcx1 = conj(bcx1);
 	  err1 = oqs_calc_err_abcd_cmplx(a, b, c, d, acx1, bcx1, ccx1, dcx1); 
@@ -2753,10 +2832,10 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
       /* complex coefficients of p1 and p2 */
       if (whichcase==0) // d2!=0
 	{
-	  cdiskr=acx*acx/complex<ntype>(4.0)-bcx;               
+	  cdiskr=acx*acx/cmplx(4.0)-bcx;               
 	  /* calculate the roots as roots of p1(x) and p2(x) (see end of sec. 2.1) */
-	  zx1=-acx/complex<ntype>(2.0)+sqrt(cdiskr);
-	  zx2=-acx/complex<ntype>(2.0)-sqrt(cdiskr);
+	  zx1=-acx/cmplx(2.0)+sqrt(cdiskr);
+	  zx2=-acx/cmplx(2.0)-sqrt(cdiskr);
 	  if(abs(zx1) > abs(zx2))
 	    zxmax=zx1;
 	  else
@@ -2770,9 +2849,9 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
       else // d2 ~ 0
 	{
 	  /* never gets here! */
-	  cdiskr=sqrt(acx*acx-complex<ntype>(4.0)*bcx);
-	  zx1 = -complex<ntype>(0.5)*(acx+cdiskr);
-	  zx2 = -complex<ntype>(0.5)*(acx-cdiskr);
+	  cdiskr=sqrt(acx*acx-cmplx(4.0)*bcx);
+	  zx1 = -cmplx(0.5)*(acx+cdiskr);
+	  zx2 = -cmplx(0.5)*(acx-cdiskr);
 	  if (abs(zx1) > abs(zx2))
 	    zxmax = zx1;
 	  else
@@ -2780,9 +2859,9 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
 	  zxmin = bcx/zxmax;
 	  roots[0] = zxmax;
 	  roots[1] = zxmin;
-	  cdiskr=sqrt(ccx*ccx-complex<ntype>(4.0)*dcx);
-	  zx1 = -complex<ntype>(0.5)*(ccx+cdiskr);
-	  zx2 = -complex<ntype>(0.5)*(ccx-cdiskr);
+	  cdiskr=sqrt(ccx*ccx-cmplx(4.0)*dcx);
+	  zx1 = -cmplx(0.5)*(ccx+cdiskr);
+	  zx2 = -cmplx(0.5)*(ccx-cdiskr);
 	  if (abs(zx1) > abs(zx2))
 	    zxmax = zx1;
 	  else
@@ -2801,7 +2880,7 @@ template <class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::oqs
     }
 }
 // NR method based on HQR decomposition
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::balance(pmatrixq<ntype,N>& a)
+template<class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,force_hqr,cmplx>::balance(pmatrixq<ntype,N>& a)
 {
   const ntype RADIX=numeric_limits<ntype>::radix;
   int i, j;
@@ -2856,7 +2935,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N,force_hqr>::bala
   delete [] scale;
 }
 
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr(pmatrixq<ntype,N>& a, pvector<complex<ntype>,N>& wri, int& ok)
+template<class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N, force_hqr,cmplx>::hqr(pmatrixq<ntype,N>& a, pvector<cmplx,N>& wri, int& ok)
 {
   int nn,m,l,k,j,its,i,mmin;
   ntype z,y,x,w,v,u,t,s,r=0.0,q=0.0,p=0.0, anorm=0.0;
@@ -2907,7 +2986,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 		  if (q >= 0.0)
 		    {
 		      //...a real pair.
-		      z=p+SIGN(z,p);
+		      z=p+SIGN<ntype>(z,p);
 		      wri[nn-1]=wri[nn]=x+z;
 		      if (z != 0.0)
 			wri[nn]=x-w/z;
@@ -2915,7 +2994,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 		  else
 		    {
 		      //...a complex pair.
-		      wri[nn]=complex<ntype>(x+p,-z);
+		      wri[nn]=cmplx(x+p,-z);
 		      wri[nn-1]=conj(wri[nn]);
 		    }
 		  nn -= 2;
@@ -2980,7 +3059,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 			  r=0.0;
 			  if (k+1 != nn) 
 			    r=a[k+2][k-1];
-			  if ((x=abs(p)+abs(q)+abs(r)) != 0.0)
+			  if ((x=abs(p)+abs(q)+abs(r)) != ((ntype)0.0))
 			    {
 			      p /= x;
 			      //Scale to prevent over flow or under flow.
@@ -2988,7 +3067,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 			      r /= x;
 			    }
 			}
-		      if ((s=SIGN(sqrt(p*p+q*q+ r*r),p)) != 0.0)
+		      if ((s=SIGN<ntype>(sqrt(p*p+q*q+ r*r),p)) != ((ntype)0.0))
 			{
 			  if (k == m) 
 			    {
@@ -3015,7 +3094,7 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
 				}
 			      a[k+1][j] -= p*y;
 			      a[k][j] -= p*x;
-			    }
+                            }
 			  mmin = nn < k+3 ? nn : k+3;
 			  for (i=l;i<mmin+1;i++)
 			    {
@@ -3036,13 +3115,13 @@ template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::hqr
       while (l+1 < nn);
     }
 }
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::QRfactorization(pmatrixq<ntype,N>& hess, pvector<complex<ntype>,N>& sol, int& ok)
+template<class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N, force_hqr,cmplx>::QRfactorization(pmatrixq<ntype,N>& hess, pvector<cmplx,N>& sol, int& ok)
 {
   /* pag. 615 Num. Rec. */  
   balance(hess);
   hqr(hess, sol, ok);
 }
-template<class ntype, int N, bool force_hqr> void rpoly<ntype,N, force_hqr>::solve_numrec(pvector<complex<ntype>,N>& csol, int& ok)
+template<class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N, force_hqr,cmplx>::solve_numrec(pvector<cmplx,N>& csol, int& ok)
 {
   /* Find all the roots of a polynomial with real coefficients, 
    * coeff[4]*x^4+coeff[3]*x^3+coeff[2]*x^2+coeff[1]*x+coeff[0], 

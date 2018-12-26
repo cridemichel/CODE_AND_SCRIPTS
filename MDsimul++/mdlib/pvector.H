@@ -13,6 +13,9 @@ using namespace std;
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
 #endif
+#include<complex>
+#include<cmath>
+
 #ifdef VEC_LAZY_EVAL
 // possible types of operation that can be made lazy
 struct VOpTypes
@@ -227,7 +230,9 @@ public:
   ~pvecdynp()
     {
       if (dealloc==true)
-        delete[] v;
+        {
+          delete[] v;
+        }
     }
 };
 
@@ -275,7 +280,7 @@ public:
   using pvecbase<ntype,NT>::v;
   using pvecbase<ntype,NT>::N;
   // /numeric_limits<complex<double>>::digits10=0 that's why I set explicitly 16;//fix this!
-  static const int maxdigits=32;//numeric_limits<ntype>::digits10;
+  static const int maxdigits=std::numeric_limits<ntype>::digits10-1;
 
   pvector<ntype,NT>(int NN): pvecbase<ntype,NT>(NN)
     {
@@ -580,7 +585,7 @@ public:
       cout << "{";
       for (i=0; i < N; i++)
 	{
-	  cout << setprecision(maxdigits) << v[i];
+	  cout << setprecision(maxdigits-1) << v[i];
 	  if (i < N-1)
 	    cout << ",";
 	}

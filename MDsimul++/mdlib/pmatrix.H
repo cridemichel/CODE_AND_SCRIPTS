@@ -6,22 +6,9 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<cstdlib>
-#if 0
-//#include <boost/multiprecision/gmp.hpp>
-//#include<cmath>
-//#include <complex>
-//#include <boost/multiprecision/mpc.hpp>
-#include <iomanip>
-#include <boost/multiprecision/cpp_dec_float.hpp>
-using namespace std;
-using namespace boost::multiprecision;
-using namespace boost::math;
-typedef number<cpp_dec_float<200>> vldbl;
-#else
 #include<cmath>
-#endif
 #include<cstring>
-#include "pvector.H"
+#include "pvector_mp.H"
 #define OPT_INV
 #define MAT_USE_LAPACK
 #define MAT_COMMA_INIT
@@ -573,7 +560,7 @@ struct matpars
   static const int DynNoLazy = -2;
 };
 // for large matrices use dynamic allocation to avoid stack overflow!
-// conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
+// std::conditional metafunction returns either one of the two types depending on the condition (N>matpars::NMAX in this 
 // case)
 template <class ntype, int NT=-1> using pmatrixb = 
 typename std::conditional<(NT>matpars::NMAX||NT <=0), pmatrixd <ntype, NT>,
@@ -594,7 +581,7 @@ public:
 
   using pvec = pvector<ntype,NT>;
   template <class T=pvec>
-    pmatrixq<ntype,NT> gaussj(typename conditional<is_same<T,pvec>::value, T&, int>::type b) const
+    pmatrixq<ntype,NT> gaussj(typename  std::conditional< std::is_same<T,pvec>::value, T&, int>::type b) const
       {
         // a matrix with m columns (instead of a vector) could be supplied to solve many linear systems at once  
         int i,icol,irow,j,k,l,ll;
@@ -628,7 +615,7 @@ public:
           ++(ipiv[icol]);
           if (irow != icol) {
             for (l=0;l<n;l++) SWAP(a[irow][l],a[icol][l]);
-            if constexpr (is_same<pvec,T>::value)
+            if constexpr ( std::is_same<pvec,T>::value)
               SWAP(b[irow],b[icol]);
             // a matrix with m columns could be supplied to solve many linear systems at once  
             //for (l=0;l<m;l++) SWAP(b[irow][l],b[icol][l]);
@@ -645,7 +632,7 @@ public:
           pivinv=1.0/a[icol][icol];
           a[icol][icol]=1.0;
           for (l=0;l<n;l++) a[icol][l] *= pivinv;
-          if constexpr (is_same<pvec,T>::value)
+          if constexpr ( std::is_same<pvec,T>::value)
             b[icol] *= pivinv;
           // a matrix with m columns could be supplied to solve many linear systems at once  
           //for (l=0;l<m;l++) b[icol][l] *= pivinv;
@@ -654,7 +641,7 @@ public:
               dum=a[ll][icol];
               a[ll][icol]=0.0;
               for (l=0;l<n;l++) a[ll][l] -= a[icol][l]*dum;
-              if constexpr (is_same<pvec,T>::value)
+              if constexpr ( std::is_same<pvec,T>::value)
                 b[ll][l] -= b[icol]*dum;
               // a matrix with m columns could be supplied to solve many linear systems at once  
               //   for (l=0;l<m;l++) b[ll][l] -= b[icol][l]*dum;
@@ -673,7 +660,7 @@ public:
       //MatDoub b(a.nrows(),0); //Dummy vector with zero columns.
       return gaussj<int>(0);
     }
-  inline pmatrixq<ntype,NT> ludcmp(pvector<int,NT>& indx, double& d) const
+  inline pmatrixq<ntype,NT> ludcmp(pvector<int,NT>& indx, ntype& d) const
     {
       /* LU decomposition routine  borrowed from Numerical Recipe */
       /* return the LU decomposition of calling matrix (i.e. *this) */
@@ -949,9 +936,9 @@ public:
         }
     }
 
-  inline double detgenNR() const
+  inline ntype detgenNR() const
     {
-      double d;
+      ntype d;
       pmatrixq<ntype,NT> m1;
       int j;
       pvector<int,NT> indx;
@@ -970,7 +957,7 @@ public:
     {
 #ifdef MAT_USE_LAPACK
       // LAPACK and BLAS are available only for float and double
-      if constexpr (is_same<ntype, double>::value)
+      if constexpr ( std::is_same<ntype, double>::value)
         {
           double d=1.0;
           int j;	
@@ -991,7 +978,7 @@ public:
           delete [] IPIV;
           return d;
         }
-      else if constexpr (is_same<ntype, float>::value)
+      else if constexpr ( std::is_same<ntype, float>::value)
         {
           double d=1.0;
           int j;	
@@ -1099,7 +1086,7 @@ public:
 #ifdef MAT_USE_LAPACK
       if (N > NMAXINV)
         {
-          if constexpr (is_same<ntype, double>::value)
+          if constexpr ( std::is_same<ntype, double>::value)
             {    
               // Transpose(Inverse(M))=Inverse(Transpose(M))
               // hence we do not have to do anything to account
@@ -1116,7 +1103,7 @@ public:
               delete[] IPIV;
               return om;
             }
-          else if constexpr (is_same<ntype, float>::value)
+          else if constexpr ( std::is_same<ntype, float>::value)
             {
               pmatrixq<ntype,NT> om;
               if constexpr (NT < 0)
@@ -1542,9 +1529,9 @@ public:
     {
       pvector<ntype, NT> eval;
       int ok;
-      if constexpr (is_same<ntype, double>::value)
+      if constexpr ( std::is_same<ntype, double>::value)
         wrap_dsyev(&(m[0][0]), NULL, &(eval[0]), N, &ok);
-      else if constexpr (is_same<ntype, double>::value)
+      else if constexpr ( std::is_same<ntype, double>::value)
         wrap_ssyev(&(m[0][0]), NULL, &(eval[0]), N, &ok);
       return eval;
     }
@@ -1552,9 +1539,9 @@ public:
     {
       pvector<ntype, NT> eval;
       int ok;
-      if constexpr (is_same<ntype, double>::value)
+      if constexpr ( std::is_same<ntype, double>::value)
         wrap_dsyev(&(m[0][0]), &(m1[0][0]), &(eval[0]), N, &ok, true);
-      else if constexpr (is_same<ntype, double>::value)
+      else if constexpr ( std::is_same<ntype, double>::value)
         wrap_ssyev(&(m[0][0]), &(m1[0][0]), &(eval[0]), N, &ok,true);
       return eval;
     }
@@ -1564,7 +1551,7 @@ public:
     {
 #ifdef MAT_USE_LAPACK
       int ok;
-      if constexpr (is_same<ntype, double>::value)
+      if constexpr ( std::is_same<ntype, double>::value)
         {
           pvector<ntype,NT> sol;
           if constexpr (NT < 0)
@@ -1573,7 +1560,7 @@ public:
           wrap_dgesv(&(m[0][0]), &(sol[0]), N, &ok);
           return sol;
         }
-      else if constexpr (is_same<ntype, float>::value)
+      else if constexpr ( std::is_same<ntype, float>::value)
         {
           pvector<ntype,NT> sol;
           if constexpr (NT < 0)
@@ -1742,9 +1729,9 @@ public:
 #ifdef MAT_USE_LAPACK
       if (N > NMAXMUL) 
         {
-          if constexpr (is_same<ntype, double>::value)
+          if constexpr ( std::is_same<ntype, double>::value)
             wrap_dgemv('t', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
-          else if constexpr (is_same<ntype, float>::value)
+          else if constexpr ( std::is_same<ntype, float>::value)
             wrap_sgemv('t', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
           else
             {
@@ -1789,9 +1776,9 @@ public:
 #ifdef MAT_USE_LAPACK
       if (N > NMAXMUL) 
         {
-          if constexpr (is_same<ntype, double>::value)
+          if constexpr ( std::is_same<ntype, double>::value)
             wrap_dgemv('n', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
-          else if constexpr (is_same<ntype, float>::value)
+          else if constexpr ( std::is_same<ntype, float>::value)
             wrap_sgemv('n', &(v2.m[0][0]), &(m[0][0]), &(v1.v[0]), N);
           else
             {
@@ -1926,11 +1913,11 @@ public:
 #ifdef MAT_USE_LAPACK
       if (N > NMAXMUL)
         {
-          if constexpr (is_same<ntype, double>::value)
+          if constexpr ( std::is_same<ntype, double>::value)
             {
               wrap_dgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]),NT, alpha, beta);
             }
-          else if constexpr (is_same<ntype, float>::value)
+          else if constexpr ( std::is_same<ntype, float>::value)
             {
               wrap_sgemm(&(m[0][0]), &(m1.m[0][0]), &(m2.m[0][0]),NT, alpha, beta);
             }
@@ -2035,9 +2022,9 @@ public:
 #ifdef MAT_USE_LAPACK
           if (N > NMAXMUL)  
             {
-              if constexpr (is_same<ntype, double>::value)
+              if constexpr ( std::is_same<ntype, double>::value)
                 wrap_dgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
-              else if constexpr (is_same<ntype, float>::value)
+              else if constexpr ( std::is_same<ntype, float>::value)
                 wrap_sgemm(&(m2.m[0][0]), &(m[0][0]), &(m1.m[0][0]), N);
               else
                 {
@@ -2148,7 +2135,7 @@ public:
           cout << "{";
           for (j=0; j < N; j++)
             { 
-              cout << setprecision(std::numeric_limits<ntype>::digits10) << m[i][j];
+              cout << setprecision(std::numeric_limits<ntype>::digits10-1) << m[i][j];
               if (j < N-1)
                 cout << ",";
             }
@@ -2227,7 +2214,7 @@ inline auto operator+(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 // se N < NLAZY restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
-  // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
+  // std::conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
  // typename std::conditional<((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy),pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatPlusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
 inline auto operator+(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
@@ -2276,7 +2263,7 @@ inline auto operator-(pmatrixq<ntype,NT> const& p, AnOpM<ntype,NT, tipo, Lhs, Rh
 // se N < NLAZY restituisce pmatrixq e usa direttamente il metodo addition di fatto quindi evitando la lazy evaluation 
 // altrimenti resituisce AnOpM e usa la lazy evaluation
   template <typename ntype, int NT> 
-  // conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
+  // std::conditional restituisce il giusto tipo in base alla condizione (N <= NLAZY)
   //typename std::conditional <((NT<=matpars::NLAZY&&NT >=0)||NT==matpars::DynNoLazy), pmatrixq<ntype,NT>,AnOpM<ntype,NT, MOpTypes::MatMinusMat, pmatrixq<ntype,NT>, pmatrixq<ntype,NT>>>::type
 inline auto operator-(pmatrixq<ntype,NT> const& lhs, pmatrixq<ntype,NT> const& rhs) 
 {
