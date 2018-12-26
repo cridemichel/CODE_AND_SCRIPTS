@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "pmatrix_mp.H"
-#include "./rpoly_mp.H"
+#include "pmatrix.H"
+#include "./rpoly.H"
 //#include<complex>
 #ifndef NDEG
 #define NDEG 6
