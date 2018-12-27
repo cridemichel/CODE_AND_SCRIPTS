@@ -6,38 +6,36 @@
 #include<list>
 #include<string>
 #define USE_MULTIPREC
-#ifdef USE_MULTIPREC
 #include <iomanip>
-#define MP1 // MP1 backend is much faster (around 4 times!)
-#ifdef MP1
-#include <boost/multiprecision/gmp.hpp>
-#include <boost/multiprecision/mpc.hpp>
-#include <boost/multiprecision/mpfr.hpp>
 using namespace std;
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using dbl200 = number<mpfr_float_backend<200>>;
-using cmplx200 = number<mpc_complex_backend<200>>;
-//using cmplx=cmplx200;
-#else
+#ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
-using namespace std;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using dbl200 = number<cpp_bin_float<200>>;
-using cmplx200 = cpp_complex<200>;
-//using cmplx=cmplx200;
-#endif
+using vldbl = number<cpp_bin_float<200>>;
+using cmplx = cpp_complex<200>;
+#elif defined(GMP_MP)
+#include <boost/multiprecision/gmp.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using vldbl=number<gmp_float<200>>;
+using cmplx=complex<numty>;
+#else
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using vldbl=number<mpfr_float_backend<200>>;
+using cmplx=number<mpc_complex_backend<200>>;
 #endif
 template <int N, int digits=200>
 using rpolymp = rpoly<number<mpfr_float_backend<digits>>,N,false,number<mpc_complex_backend<digits>>>;
 #define Complex(x,y) cmplx((x),(y))
 bool allreal=false, doswap=false;
-using vldbl=long double;
-using cmplx=complex<long double>;
 #ifndef CASO
 #define CASO 4
 #endif
@@ -134,7 +132,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   allreal=true;
   for (i=0; i < NDEG; i++)
     { 
-      er[i] = 1.0L/pow(((long double)2),NDEG/2-i)-3.0L;
+      er[i] = 1.0L/pow(((vldbl)2),NDEG/2-i)-3.0L;
     }
   calc_coeff(c, er);
   //r = er;
@@ -399,16 +397,15 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
     {
       c[i] = cs[i];
     }
-#elif CASO==30
-#define NDEG 20
+#elif CASO==21
+#define NDEG 10
   allreal=true;
-  er[0]=0.1;
+  er[0]=vldbl(0.1);
   for (i=1; i < NDEG; i++)
     { 
-      er[i] = er[i-1]/(10.0L);
+      er[i] = er[i-1]/vldbl(10.0L);
     }
   calc_coeff(c, er);
-  r = er;
 #if 0
   for (i=0; i < NDEG; i++)
     cout << "[CALC] c[" << i << "]=" << c[i] << setprecision(20) << "\n";
@@ -426,6 +423,65 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
 #endif
   //for (i=0; i < NDEG; i++)
   //cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+
+#elif CASO==22
+#define NDEG 20
+  allreal=true;
+  er[0]=vldbl(0.1);
+  for (i=1; i < NDEG; i++)
+    { 
+      er[i] = er[i-1]/vldbl(10.0L);
+    }
+  calc_coeff(c, er);
+#if 0
+  for (i=0; i < NDEG; i++)
+    cout << "[CALC] c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+  c[0] = 1.00000000000000053791679056187E-55;
+  c[1] = 1.11111111100000055584244679722E-45;
+  c[2] = 1.12233445443322162787800313739E-36;
+  c[3] = 1.12345790111098789834840761654E-28;
+  c[4] = 1.12357014577977569473069186308E-21;
+  c[5] = 1.12358025801221010756462539505E-15;
+  c[6] = 1.12357014577977572218174173241E-10;
+  c[7] = 1.12345790111098777138700591932E-6;
+  c[8] = 0.0011223344544332213099796513589;
+  c[9] = 0.111111111100000006790544659907;
+  c[10] = 1.0;
+#endif
+  //for (i=0; i < NDEG; i++)
+  //cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+#elif CASO==26
+#define NDEG 60
+  allreal=true;
+  int ii;
+  vldbl pi = 2.0*acos(vldbl(0.0));
+  for  (ii=-14; ii <= 0; ii++)
+    er[14+ii]= 0.9*exp(cmplx(0,ii*pi/2.0/15.0));
+  for  (ii=1; ii <= 15; ii++)
+    er[14+ii] = conj(er[15-ii]);
+  for  (ii=16; ii <= 30; ii++)
+    er[14+ii] = exp(cmplx(0,ii*pi/2.0/15.0));
+  for  (ii=31; ii <= 45; ii++)
+    er[14+ii] = conj(er[75-ii]);
+  calc_coeff(c, er);
+#if 0
+  for (i=0; i < NDEG; i++)
+    cout << "[CALC] c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+  c[0] = 1.00000000000000053791679056187E-55;
+  c[1] = 1.11111111100000055584244679722E-45;
+  c[2] = 1.12233445443322162787800313739E-36;
+  c[3] = 1.12345790111098789834840761654E-28;
+  c[4] = 1.12357014577977569473069186308E-21;
+  c[5] = 1.12358025801221010756462539505E-15;
+  c[6] = 1.12357014577977572218174173241E-10;
+  c[7] = 1.12345790111098777138700591932E-6;
+  c[8] = 0.0011223344544332213099796513589;
+  c[9] = 0.111111111100000006790544659907;
+  c[10] = 1.0;
+#endif
+  //for (i=0; i < NDEG; i++)
+  //cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
+
 #elif CASO==31
   //Polynomials with few very clustered roots.
   //Kameny  
@@ -520,8 +576,8 @@ numty print_accuracy_at(char *str, cmplx csol[], cmplx exsol[], vldbl allrelerr[
         }
     }
 
-  printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
-  //cout << setprecision(15) << "[" << str << "relative accuracy=" <<  relerrmax << "\n";
+  //printf("[%s] relative accuracy=%.16LG\n", str, relerrmax);
+  cout << setprecision(16) << "[" << str << "relative accuracy=" <<  relerrmax << "\n";
   return relerrmax;
 }
 
@@ -531,7 +587,7 @@ void print_roots(char *str, cmplx er[], cmplx cr[], vldbl allrelerr[])
   for (auto i=0; i < NDEG; i++)
     {
       cout << setprecision(16) << "root #" << i << " EX: "<< er[i] << " C:" << cr[i];
-      cout << setprecision(3) << " [ eps: " << allrelerr[i] << " ]\n"; 
+      cout << setprecision(16) << " [ eps: " << allrelerr[i] << " ]\n"; 
     }
 }
 
@@ -541,6 +597,62 @@ void print( list<int> l){
     cout<<endl;
 }
 
+
+void calc_coeff(vldbl co[], cmplx er[])
+{
+  vldbl rr[NDEG], ir[NDEG], c[NDEG+1], alpha, beta, zero;
+  int ii, jj;
+
+  zero = 0.0;
+  for (ii=0; ii < NDEG; ii++)
+    {
+      rr[ii] = er[ii].real();
+      ir[ii] = er[ii].imag();
+      c[ii]  = 0.0;
+    }
+  c[NDEG]=1.0;
+  ii=0;
+  
+  while (ii < NDEG)
+    { 
+      if (ir[ii] == zero) 
+        {
+          alpha = -rr[ii];
+          for (jj=ii; ii >= 0; jj--)
+            {         
+              //do jj=ii,1,-1
+              if (jj==0)
+                c[jj] = c[jj] + alpha;
+              else
+                c[jj] = c[jj] + alpha*c[jj-1];
+            }
+          ii=ii+1;
+        }
+      else
+        {
+          alpha = - rr[ii]*2.0;
+          beta = rr[ii]*rr[ii] + ir[ii]*ir[ii];
+          for (jj=ii+1; jj >= 0; jj--)
+            { 
+              //do jj=ii+1,1,-1
+              if (jj == 1)
+                {
+                  c[jj] = c[jj] + alpha*c[jj-1] + beta;
+                }
+              else if (jj == 0) 
+                {
+                  c[jj] = c[jj] + alpha;
+                }
+              else 
+                c[jj] = c[jj] + alpha*c[jj-1] + beta*c[jj-2];
+            }
+          ii=ii+2;
+        }
+    }
+  for (ii=0;ii <= NDEG; ii++)
+     co[ii] = c[ii];
+}
+#if 0
 void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<int> &l)
 {
     if(left==0)
@@ -610,6 +722,7 @@ void calc_coeff(vldbl c[], cmplx er[])
       c[i] = real(cc[i]);
     }
 }
+#endif
 #if 0
 void print_backward_err(char *str, vldbl c[], cmplx cr[])
 {
@@ -662,7 +775,7 @@ int main(int argc, char *argv[])
     }
   calc_coeff_dep_on_case(ca, er);
   for (i=0; i < NDEG+1; i++)
-    c[i]=((double)ca[i]);
+    c[i]=ca[i];
   c.show("boh");
   cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
