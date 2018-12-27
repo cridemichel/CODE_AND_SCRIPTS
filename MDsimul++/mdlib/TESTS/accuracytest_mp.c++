@@ -14,8 +14,8 @@ using namespace std;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl = number<cpp_bin_float<500>>;
-using cmplx = cpp_complex<500>;
+using vldbl = number<cpp_bin_float<200>>;
+using cmplx = cpp_complex<200>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #elif defined(GMP_MP)
