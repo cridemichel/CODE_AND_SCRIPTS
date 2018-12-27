@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "pmatrix_fixfp.H"
-#include "./rpoly_fixfp.H"
+#include "pmatrix.H"
+#include "./rpoly.H"
 #include<complex>
 #include<list>
 #include<string>
 #include <iomanip>
 using namespace std;
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -794,9 +794,9 @@ int main(int argc, char *argv[])
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<pdbl,NDEG,false> rp;
+      rpoly<pdbl,NDEG,false,pcmplx> rp;
 #else
-      rpoly<pdbl,-1,false> rp(NDEG);
+      rpoly<pdbl,-1,false,pcmplx> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -808,9 +808,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<pdbl,NDEG,true> rphqr;
+      rpoly<pdbl,NDEG,true,pcmplx> rphqr;
 #else
-      rpoly<pdbl,-1,true> rphqr(NDEG);
+      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
