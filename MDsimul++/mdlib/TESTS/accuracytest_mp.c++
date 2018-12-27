@@ -465,13 +465,13 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
 #define NDEG 60
   //allreal=true;
   int ii;
-  vldbl pi = 2.0*acos(vldbl(0.0));
+  vldbl pi = boost::math::constants::pi<vldbl>();//2.0*acos(vldbl(0.0));
   for  (ii=-14; ii <= 0; ii++)
-    er[14+ii]= vldbl(0.9L)*exp(cmplx(0,ii*pi/vldbl(2.0L)/vldbl(15.0L)));
+    er[14+ii]= vldbl(0.9L)*exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(15.0L)));
   for  (ii=1; ii <= 15; ii++)
     er[14+ii] = conj(er[15-ii]);
   for  (ii=16; ii <= 30; ii++)
-    er[14+ii] = exp(cmplx(0,ii*pi/vldbl(2.0L)/vldbl(15.0L)));
+    er[14+ii] = exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(15.0L)));
   for  (ii=31; ii <= 45; ii++)
     er[14+ii] = conj(er[75-ii]);
   calc_coeff(c, er);
