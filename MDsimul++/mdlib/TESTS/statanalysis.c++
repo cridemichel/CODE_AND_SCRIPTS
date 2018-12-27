@@ -161,7 +161,7 @@ double ranf(void)
 {
   return drand48();
 }
-void sort_sol_opt(cmplx csol[], cmplx exsol[], vldbl allrelerr[])
+void sort_sol_opt(pvector<pcmplx,NDEG>& csol, pvector<cmplx,NDEG>& exsol, vldbl allrelerr[])
 {
   int k1, k2, k2min;
   int perm[NDEG];
@@ -177,7 +177,7 @@ void sort_sol_opt(cmplx csol[], cmplx exsol[], vldbl allrelerr[])
         {
           if (used_exsol[k2]==true)
             continue;
-          diff = csol[k1] - exsol[k2];
+          diff = cmplx(csol[k1]) - exsol[k2];
           relerr = (exsol[k2]==cmplx(0.0,0.0))?abs(diff):abs(diff/exsol[k2]);
           if (ini==true || relerr <= relerrmin)
            {
@@ -193,10 +193,10 @@ void sort_sol_opt(cmplx csol[], cmplx exsol[], vldbl allrelerr[])
     }
 
   for (k1=0; k1 < NDEG; k1++)
-    solt[k1] = csol[k1];
+    solt[k1] = cmplx(csol[k1]);
 
   for (k1=0; k1 < NDEG; k1++)
-    csol[perm[k1]] = solt[k1];
+    csol[perm[k1]] = pcmplx(solt[k1]);
 }
 #if 0
 void sort_sol_opt(pvector<complex<double>,5>& sol, pvector<complex<double>,5>& exsol)
@@ -229,7 +229,7 @@ void sort_sol_opt(pvector<complex<double>,5>& sol, pvector<complex<double>,5>& e
 int cmplxreal=0, restart, dojust=-1;
 double cumPEall[MAXSOLV][PEPTS], PEall[MAXSOLV][PEPTS];
 pvector<pcmplx,NDEG> csolall[MAXSOLV];
-char algs[2][64] = {"HQR", "OQS", "AUR"};
+char algs[3][64] = {"OQS", "HQR", "AUR"};
 char *ic2algo(int ic)
 {
   if (ic > 2)
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
   pvector<cmplx,NDEG> exsol;
   pvector<pcmplx,NDEG> csol;
   pvector<pdbl,NDEG+1> co;
-  long long int numtrials, its, numout, itsI;
+  long long int numtrials, its=0, numout, itsI;
   int numpts, ilogdE;
   int k, ic=0, i;
   rpoly<pdbl,NDEG> oqs;
@@ -379,17 +379,17 @@ int main(int argc, char **argv)
       if (its > 0 && (its % (numtrials/numout) == 0))
 	{
           if (cmplxreal == 0)
-	    printf("[SAMPLE A sig=%G %G]>>> its=%lld/%lld\n", sig, sig2, its, numtrials);
+	    printf("[SAMPLE A sig=%G %G]>>> its=%lld/%lld\n", double(sig), double(sig2), its, numtrials);
           else if (cmplxreal==1)
-	    printf("[SAMPLE B sig=%G %G]>>> its=%lld/%lld\n", sig, sig2, its, numtrials);
+	    printf("[SAMPLE B sig=%G %G]>>> its=%lld/%lld\n", double(sig), double(sig2), its, numtrials);
 	  else if (cmplxreal==2)
-	    printf("[SAMPLE C sig=%G %G]>>> its=%lld/%lld\n", sig, sig2, its, numtrials);
+	    printf("[SAMPLE C sig=%G %G]>>> its=%lld/%lld\n", double(sig), double(sig2), its, numtrials);
           else if (cmplxreal==3)
-	    printf("[SAMPLE D sig=%G %G]>>> its=%lld/%lld\n", sig, sig2, its, numtrials);
+	    printf("[SAMPLE D sig=%G %G]>>> its=%lld/%lld\n", double(sig), double(sig2), its, numtrials);
 	  else if (cmplxreal==4)
-            printf("[SAMPLE E sig=%G %G]>>> its=%lld/%lld\n", sig, sig2, its, numtrials);
+            printf("[SAMPLE E sig=%G %G]>>> its=%lld/%lld\n", double(sig), double(sig2), its, numtrials);
           else if (cmplxreal==5)
-            printf("[SAMPLE F sig=%G %G]>>> its=%lld/%lld\n", sig, sig2, its, numtrials);
+            printf("[SAMPLE F sig=%G %G]>>> its=%lld/%lld\n", double(sig), double(sig2), its, numtrials);
 	  save_PE(its, numpts, dlogdE, logdEmin);
 	}
       /* generate 4 random roots */
@@ -432,7 +432,7 @@ int main(int argc, char **argv)
           for (i=0; i < NDEG; i++)
             exsol[i] = cmplx(sig*(ranf()-0.5),0.0);
 	}
-      else if (cmplxreal == 5)
+      if (cmplxreal == 5)
 	{
 	  co[5]=1.0;
           for (i=0; i < NDEG; i++)
@@ -445,16 +445,17 @@ int main(int argc, char **argv)
 
       ic = 0;
       if (dojust==-1 || dojust == ic)
-        {
-          hqr.set_coeff(co);
-          hqr.find_roots(csolall[ic]);
-        }
-      ic++;	
-      if (dojust==-1 || dojust == ic)
 	{
           oqs.set_coeff(co);
           oqs.find_roots(csolall[ic]);
 	}
+
+      ic++;	
+      if (dojust==-1 || dojust == ic)
+        {
+          hqr.set_coeff(co);
+          hqr.find_roots(csolall[ic]);
+        }
 #ifdef AURENTZ
       ic++;	
       if (dojust==-1 || dojust == ic)
