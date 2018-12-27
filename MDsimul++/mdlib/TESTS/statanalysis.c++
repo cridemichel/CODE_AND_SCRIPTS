@@ -2,13 +2,203 @@
 #include<stdio.h>
 #include "../rpoly.H"
 #include <complex>
-int perm[120][5]= {{0, 1, 2, 3, 4}, {0, 1, 2, 4, 3}, {0, 1, 3, 2, 4}, {0, 1, 3, 4, 2}, {0, 1, 4, 2, 3}, {0, 1, 4, 3, 2}, {0, 2, 1, 3, 4}, {0, 2, 1, 4, 3}, {0, 2, 3, 1, 4}, {0, 2, 3, 4, 1}, {0, 2, 4, 1, 3}, {0, 2, 4, 3, 1}, {0, 3, 1, 2, 4}, {0, 3, 1, 4, 2}, {0, 3, 2, 1, 4}, {0, 3, 2, 4, 1}, {0, 3, 4, 1, 2}, {0, 3, 4, 2, 1}, {0, 4, 1, 2, 3}, {0, 4, 1, 3, 2}, {0, 4, 2, 1, 3}, {0, 4, 2, 3, 1}, {0, 4, 3, 1, 2}, {0, 4, 3, 2, 1}, {1, 0, 2, 3, 4}, {1, 0, 2, 4, 3}, {1, 0, 3, 2, 4}, {1, 0, 3, 4, 2}, {1, 0, 4, 2, 3}, {1, 0, 4, 3, 2}, {1, 2, 0, 3, 4}, {1, 2, 0, 4, 3}, {1, 2, 3, 0, 4}, {1, 2, 3, 4, 0}, {1, 2, 4, 0, 3}, {1, 2, 4, 3, 0}, {1, 3, 0, 2, 4}, {1, 3, 0, 4, 2}, {1, 3, 2, 0, 4}, {1, 3, 2, 4, 0}, {1, 3, 4, 0, 2}, {1, 3, 4, 2, 0}, {1, 4, 0, 2, 3}, {1, 4, 0, 3, 2}, {1, 4, 2, 0, 3}, {1, 4, 2, 3, 0}, {1, 4, 3, 0, 2}, {1, 4, 3, 2, 0}, {2, 0, 1, 3, 4}, {2, 0, 1, 4, 3}, {2, 0, 3, 1, 4}, {2, 0, 3, 4, 1}, {2, 0, 4, 1, 3}, {2, 0, 4, 3, 1}, {2, 1, 0, 3, 4}, {2, 1, 0, 4, 3}, {2, 1, 3, 0, 4}, {2, 1, 3, 4, 0}, {2, 1, 4, 0, 3}, {2, 1, 4, 3, 0}, {2, 3, 0, 1, 4}, {2, 3, 0, 4, 1}, {2, 3, 1, 0, 4}, {2, 3, 1, 4, 0}, {2, 3, 4, 0, 1}, {2, 3, 4, 1, 0}, {2, 4, 0, 1, 3}, {2, 4, 0, 3, 1}, {2, 4, 1, 0, 3}, {2, 4, 1, 3, 0}, {2, 4, 3, 0, 1}, {2, 4, 3, 1, 0}, {3, 0, 1, 2, 4}, {3, 0, 1, 4, 2}, {3, 0, 2, 1, 4}, {3, 0, 2, 4, 1}, {3, 0, 4, 1, 2}, {3, 0, 4, 2, 1}, {3, 1, 0, 2, 4}, {3, 1, 0, 4, 2}, {3, 1, 2, 0, 4}, {3, 1, 2, 4, 0}, {3, 1, 4, 0, 2}, {3, 1, 4, 2, 0}, {3, 2, 0, 1, 4}, {3, 2, 0, 4, 1}, {3, 2, 1, 0, 4}, {3, 2, 1, 4, 0}, {3, 2, 4, 0, 1}, {3, 2, 4, 1, 0}, {3, 4, 0, 1, 2}, {3, 4, 0, 2, 1}, {3, 4, 1, 0, 2}, {3, 4, 1, 2, 0}, {3, 4, 2, 0, 1}, {3, 4, 2, 1, 0}, {4, 0, 1, 2, 3}, {4, 0, 1, 3, 2}, {4, 0, 2, 1, 3}, {4, 0, 2, 3, 1}, {4, 0, 3, 1, 2}, {4, 0, 3, 2, 1}, {4, 1, 0, 2, 3}, {4, 1, 0, 3, 2}, {4, 1, 2, 0, 3}, {4, 1, 2, 3, 0}, {4, 1, 3, 0, 2}, {4, 1, 3, 2, 0}, {4, 2, 0, 1, 3}, {4, 2, 0, 3, 1}, {4, 2, 1, 0, 3}, {4, 2, 1, 3, 0}, {4, 2, 3, 0, 1}, {4, 2, 3, 1, 0}, {4, 3, 0, 1, 2}, {4, 3, 0, 2, 1}, {4, 3, 1, 0, 2}, {4, 3, 1, 2, 0}, {4, 3, 2, 0, 1}, {4, 3, 2, 1, 0}};
+#define AURENTZ
+#define MPC_MP
+#define NDEG 15
+#ifdef AURENTZ
+extern "C" {
+extern void damvw_(int *, double*, double *, double *, int *, int*);
+extern void balance_(int *N, double *c, int *nnew, double *cn, double *alpha);
+}
+void wrap_balance(int n, pvector<double,NDEG+1>& c, double *alpha)
+{
+  double caur[NDEG], caurn[NDEG];
+  int i, nnew; 
+  //  for (i=0; i <= NDEG; i++)
+  //printf("c[%d]=%.15G\n", i, c[i]);
+  for (i=0; i < NDEG; i++)
+    {
+      caur[i] = c[NDEG-i-1]/c[NDEG];
+      //printf("caur[%d]=%.15G\n", i, caur[i]);
+    }
+  balance_(&n, caur, &nnew, caurn, alpha);
+#if 1
+  for (i=0; i < NDEG; i++)
+    {
+      c[i] = caurn[i];
+      //printf("roots= %.15G %.15G\n", rroots[i], iroots[i]);
+    }
+  c[NDEG]=1.0;
+#endif
+  //for (i=0; i <= NDEG; i++)
+    //printf("dopo c[%d]=%.15G\n", i, c[i]);
+ 
+}
+void wrap_damvw(int N, pvector<double,NDEG+1> c, pvector<complex<double>,NDEG>& roots, int balanced)
+{
+  double rroots[NDEG], iroots[NDEG];
+  int i, flag, iterations[NDEG];
+  double caur[NDEG];
+  int n=N;
+  //for (i=0; i <= PDEG; i++)
+    //printf("c[%d]=%.15G\n", i, c[i]);
+  if (balanced==0)
+    {
+      for (i=0; i < NDEG; i++)
+        {
+          caur[i] = c[NDEG-i-1]/c[NDEG];
+        }
+    }
+  else
+    {
+      for (i=0; i < NDEG; i++)
+        {
+          //cout << "caur=" << caur[i] << "\n";
+          caur[i] = c[i];
+        }
+    }
+  damvw_(&n,caur,rroots,iroots,iterations,&flag);
+  for (i=0; i < NDEG; i++)
+    {
+      roots[i] = complex<double>(rroots[i],iroots[i]);
+      //printf("roots= %.15G %.15G\n", rroots[i], iroots[i]);
+    }
+} 
+#endif
+#ifdef CPP_MP
+#include <boost/multiprecision/cpp_bin_float.hpp> 
+#include <boost/multiprecision/cpp_complex.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using vldbl = number<cpp_bin_float<200>>;
+using cmplx = cpp_complex<200>;
+using pdbl=vldbl;
+using pcmplx=cmplx;
+#elif defined(GMP_MP)
+#include <boost/multiprecision/gmp.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using vldbl=number<gmp_float<200>>;
+using cmplx=complex<numty>;
+using pdbl=vldbl;
+using pcmplx=cmplx;
+#elif defined(MPC_MP)
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using vldbl=number<mpfr_float_backend<200>>;
+using cmplx=number<mpc_complex_backend<200>>;
+using pdbl=double;
+using pcmplx=complex<double>;
+#else
+using vldbl=long double;
+using cmplx=complex<vldbl>;
+using pdbl=double;
+using pcmplx=complex<pdbl>;
+#endif
 
+void calc_coeff(pvector<pdbl,NDEG+1>& co, pvector<cmplx,NDEG> er)
+{
+  vldbl rr[NDEG], ir[NDEG], c[NDEG+1], alpha, beta, zero;
+  int ii, jj;
+
+  zero = 0.0;
+  for (ii=0; ii < NDEG; ii++)
+    {
+      rr[ii] = er[ii].real();
+      ir[ii] = er[ii].imag();
+      c[ii]  = 0.0;
+    }
+  c[NDEG]=1.0;
+  ii=0;
+  
+  while (ii < NDEG)
+    { 
+      if (ir[ii] == zero) 
+        {
+          alpha = -rr[ii];
+          for (jj=ii; jj >= 0; jj--)
+            {         
+              //do jj=ii,1,-1
+              if (jj==0)
+                c[jj] = c[jj] + alpha;
+              else
+                c[jj] = c[jj] + alpha*c[jj-1];
+            }
+          ii=ii+1;
+        }
+      else
+        {
+          alpha = -rr[ii]*2.0;
+          beta = rr[ii]*rr[ii] + ir[ii]*ir[ii];
+          for (jj=ii+1; jj >= 0; jj--)
+            { 
+              //cout << "jj=" << jj << "\n";
+              //do jj=ii+1,1,-1
+              if (jj == 1)
+                {
+                  c[jj] = c[jj] + alpha*c[jj-1] + beta;
+                }
+              else if (jj == 0) 
+                {
+                  c[jj] = c[jj] + alpha;
+                }
+              else 
+                c[jj] = c[jj] + alpha*c[jj-1] + beta*c[jj-2];
+            }
+          ii=ii+2;
+        }
+    }
+  for (ii=0; ii < NDEG; ii++)
+     co[ii] = pdbl(c[NDEG-ii-1]);
+  co[NDEG]=1.0;
+}
 double ranf(void)
 {
   return drand48();
 }
+void sort_sol_opt(cmplx csol[], cmplx exsol[], vldbl allrelerr[])
+{
+  int k1, k2, k2min;
+  int perm[NDEG];
+  vldbl relerr, relerrmin, relerrmax;
+  cmplx diff, solt[NDEG];
+  bool used_exsol[NDEG];
+  for (k1=0; k1 < NDEG; k1++)
+    used_exsol[k1]=false;
+  for (k1=0; k1 < NDEG; k1++)
+    {
+      bool ini = true;
+      for (k2=0; k2 < NDEG; k2++)
+        {
+          if (used_exsol[k2]==true)
+            continue;
+          diff = csol[k1] - exsol[k2];
+          relerr = (exsol[k2]==cmplx(0.0,0.0))?abs(diff):abs(diff/exsol[k2]);
+          if (ini==true || relerr <= relerrmin)
+           {
+             ini=false;
+             k2min=k2;
+             relerrmin = relerr;
+           } 
+        }
+      perm[k1] = k2min;
+      //cout << "perm[" << k1 << "]=" << k2min << "\n";
+      allrelerr[k2min] = relerrmin;
+      used_exsol[k2min]=true;
+    }
 
+  for (k1=0; k1 < NDEG; k1++)
+    solt[k1] = csol[k1];
+
+  for (k1=0; k1 < NDEG; k1++)
+    csol[perm[k1]] = solt[k1];
+}
+#if 0
 void sort_sol_opt(pvector<complex<double>,5>& sol, pvector<complex<double>,5>& exsol)
 {
   int k1, k2, k1min;
@@ -33,13 +223,13 @@ void sort_sol_opt(pvector<complex<double>,5>& sol, pvector<complex<double>,5>& e
   for (k2=0; k2 < 5; k2++)
     sol[k2] = solt[perm[k1min][k2]];
 }
+#endif
 #define MAXSOLV 2
 #define PEPTS 100
 int cmplxreal=0, restart, dojust=-1;
 double cumPEall[MAXSOLV][PEPTS], PEall[MAXSOLV][PEPTS];
-pvector<complex<double>,5> csolall[MAXSOLV];
-pvector<complex<double>,5> exsol;
-char algs[2][64] = {"HQR", "OQS"};
+pvector<pcmplx,NDEG> csolall[MAXSOLV];
+char algs[2][64] = {"HQR", "OQS", "AUR"};
 char *ic2algo(int ic)
 {
   if (ic > 2)
@@ -62,7 +252,7 @@ void print_legend(FILE *f)
 }
 int maxic=2, icref;
 char fname[256];
-void save_PE(long long int numtrials, int numpts, double dlogdE, double logdEmin)
+void save_PE(long long int numtrials, int numpts, vldbl dlogdE, vldbl logdEmin)
 {
   FILE *f;
   int k, kk, ic;
@@ -76,7 +266,7 @@ void save_PE(long long int numtrials, int numpts, double dlogdE, double logdEmin
 	{
 	  if (PEall[ic][k]==0) 
 	    continue;
-	  fprintf(f, "%.32G %.32G\n", k*dlogdE+logdEmin, PEall[ic][k]/((double)numtrials)/4.);
+	  fprintf(f, "%.32G %.32G\n", k*dlogdE+logdEmin, double(PEall[ic][k]/((double)numtrials)/4.));
 	}
       fclose(f);
     }
@@ -104,7 +294,7 @@ void save_PE(long long int numtrials, int numpts, double dlogdE, double logdEmin
 	{
 	  if (cumPEall[ic][k]==0)
 	    continue;
-	  fprintf(f, "%.32G %.32G\n", k*dlogdE+logdEmin, cumPEall[ic][k]);
+	  fprintf(f, "%.32G %.32G\n", double(k*dlogdE+logdEmin), double(cumPEall[ic][k]));
 	}
       fclose(f);
     }
@@ -112,16 +302,17 @@ void save_PE(long long int numtrials, int numpts, double dlogdE, double logdEmin
 
 int main(int argc, char **argv)
 {
-  complex<long double> x1c, x2c, x3c, x4c, x5c; 
-  double logdE, dlogdE, logdEmax, logdEmin, sig, sig2;
-  pvector<double,6> c;
-  double dE;
-  long double x1,y1;
+  vldbl logdE, dlogdE, logdEmax, logdEmin, sig, sig2;
+  vldbl dE, x1, y1;
+  pvector<cmplx,NDEG> exsol;
+  pvector<pcmplx,NDEG> csol;
+  pvector<pdbl,NDEG+1> co;
   long long int numtrials, its, numout, itsI;
   int numpts, ilogdE;
-  int k, ic=0;
-  rpoly<double,5> oqs;
-  rpoly<double,5,true> hqr;
+  int k, ic=0, i;
+  rpoly<pdbl,NDEG> oqs;
+  rpoly<pdbl,NDEG,true> hqr;
+  vldbl allrelerr[NDEG];
   srand48(42);
   
   for (ic=0; ic < 2; ic++)
@@ -183,7 +374,6 @@ int main(int argc, char **argv)
 	     numtrials, numout, cmplxreal, dojust);
     }
 
-  x1c=x2c=x3c=x4c=x5c=0;
   for (its=itsI; its < numtrials; its++)
     {
       if (its > 0 && (its % (numtrials/numout) == 0))
@@ -205,90 +395,90 @@ int main(int argc, char **argv)
       /* generate 4 random roots */
       if (cmplxreal==2) /* 4 complex */
 	{
-	  x1 = sig2*(ranf()-0.5);
-	  y1 = sig2*(ranf()-0.5);
-	  x1c = complex<long double>(x1, y1);
-	  x2c = complex<long double>(x1,-y1);
-	  x1 = sig*(ranf()-0.5);
-	  y1 = sig*(ranf()-0.5);
-	  x3c = complex<long double>(x1,y1);
-	  x4c = complex<long double>(x1,-y1);
-          x5c = complex<long double>(sig*(ranf()-0.5),0);
-	}
+          for (i=0; i < NDEG; i++)
+            {
+              x1 = sig2*(ranf()-0.5);
+              y1 = sig2*(ranf()-0.5);
+              exsol[i] = cmplx(x1, y1);
+              if (i+1==NDEG)
+                break;
+              exsol[i+1]=cmplx(x1,-y1);
+            }
+          if (NDEG%2==1)
+            {
+              exsol[NDEG] = sig2*(ranf()-0.5);
+            }
+        }
       else if (cmplxreal==1) /* two complex two real */
 	{
-	  x1 = sig2*(ranf()-0.5);
-	  y1 = sig2*(ranf()-0.5);
-	  x1c = complex<long double>(x1,y1);
-	  x2c = complex<long double>(x1,-y1);
-	  x1 = sig*(ranf()-0.5);
-	  y1 = sig*(ranf()-0.5);
-	  x3c = x1;
-	  x4c = y1;
-          x5c = complex<long double>(sig*(ranf()-0.5),0);
+          for (i=0; i < NDEG; i++)
+            { 
+              x1 = sig2*(ranf()-0.5);
+              y1 = sig2*(ranf()-0.5);
+              exsol[i] = cmplx(x1,y1);
+              if (i+1==NDEG) 
+                break;
+              exsol[i+1] = cmplx(x1,-y1);
+              if (i+2==NDEG) 
+                break;
+              exsol[i+2] = cmplx(sig*(ranf()-0.5),0);
+              if (i+3==NDEG)
+                break;
+              exsol[i+3] = cmplx(sig*(ranf()-0.5),0);
+            }
 	}
       else if (cmplxreal==0)/* four real */
 	{
-	  x1c = sig*(ranf()-0.5);
-	  x2c = sig*(ranf()-0.5);
-	  x3c = sig*(ranf()-0.5);
-	  x4c = sig*(ranf()-0.5);
-	  x5c = sig*(ranf()-0.5);
+          for (i=0; i < NDEG; i++)
+            exsol[i] = cmplx(sig*(ranf()-0.5),0.0);
 	}
-      
-      if (cmplxreal == 5)
+      else if (cmplxreal == 5)
 	{
-	  c[5]=1.0;
-          c[4]= ranf()-0.5;
-	  c[3]=ranf()-0.5;
-	  c[2]=ranf()-0.5;
-	  c[1]=ranf()-0.5;
-	  c[0]=ranf()-0.5;
+	  co[5]=1.0;
+          for (i=0; i < NDEG; i++)
+            co[i]= ranf()-0.5;
 	}
       else
 	{
-          c[5] = 1.0;
-          c[4] = (-(x1c+x2c+x3c+x4c+x5c)).real();
-          c[3] = (x1c*x2c + x1c*x3c + x2c*x3c + x1c*x4c + x2c*x4c + x3c*x4c + x1c*x5c + 
-                  x2c*x5c + x3c*x5c + x4c*x5c).real(); 
-          c[2] = (-(x1c*x2c*x3c) - x1c*x2c*x4c - x1c*x3c*x4c - x2c*x3c*x4c - x1c*x2c*x5c - x1c*x3c*x5c - x2c*x3c*x5c - 
-                  x1c*x4c*x5c - x2c*x4c*x5c - x3c*x4c*x5c).real();
-          c[1] =(x1c*x2c*x3c*x4c + x1c*x2c*x3c*x5c + x1c*x2c*x4c*x5c + 
-                 x1c*x3c*x4c*x5c + x2c*x3c*x4c*x5c).real();
-          c[0] =(-x1c*x2c*x3c*x4c*x5c).real(); 
-	  exsol[0] = x1c;
-	  exsol[1] = x2c;
-	  exsol[2] = x3c;
-	  exsol[3] = x4c;
-          exsol[4] = x5c;
+          calc_coeff(co, exsol);
         }
 
       ic = 0;
       if (dojust==-1 || dojust == ic)
         {
-          hqr.set_coeff(c);
+          hqr.set_coeff(co);
           hqr.find_roots(csolall[ic]);
         }
       ic++;	
       if (dojust==-1 || dojust == ic)
 	{
-          oqs.set_coeff(c);
+          oqs.set_coeff(co);
           oqs.find_roots(csolall[ic]);
 	}
+#ifdef AURENTZ
+      ic++;	
+      if (dojust==-1 || dojust == ic)
+	{
+          //  oqs.set_coeff(c);
+          //  oqs.find_roots(csolall[ic]);
+	}
+
+#endif
       for (ic = 0; ic < maxic; ic++)
 	{
 	  if (dojust==-1 || dojust==ic)
-	    sort_sol_opt(csolall[ic], exsol);
+	    sort_sol_opt(csolall[ic], exsol, allrelerr);
 	}
       for (ic=0; ic < maxic; ic++)
 	{
 	  if (dojust >= 0 && dojust!=ic)
 	    continue;
-	  for (k=0; k < 5; k++)
+	  for (k=0; k < NDEG; k++)
 	    {	
-	     dE = (exsol[k]!=complex<double>(0,0))?abs((csolall[ic][k] - exsol[k])/exsol[k]):
-	       abs(csolall[ic][k] - exsol[k]); 
-	      if (dE > 0.0)
+	     dE = allrelerr[k]; 
+               //(exsol[k]!=complex<double>(0,0))?abs((csolall[ic][k] - exsol[k])/exsol[k]):
+	       //abs(csolall[ic][k] - exsol[k]); 
+             if (dE > 0.0)
 		{
 		  logdE=log10(dE)-logdEmin;
 		  ilogdE=(int)(logdE/dlogdE);
