@@ -6,7 +6,9 @@
 #include<list>
 #include<string>
 #include <iomanip>
+static int balance=1;
 using namespace std;
+#define AURENTZ
 #define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
@@ -35,8 +37,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
-using pdbl=vldbl;//double;
-using pcmplx=cmplx;//complex<double>;
+using pdbl=double;
+using pcmplx=complex<double>;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
@@ -532,7 +534,56 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   calc_coeff(c, er);
   *r = er;
 #endif
+}
+#ifdef AURENTZ
+extern "C" {
+extern void damvw_(int *, double*, double *, double *, int *, int*);
+extern void balance_(int *N, double c[NDEG+1], int *nnew, double cn[NDEG+1], double *alpha);
+}
+void wrap_balance(int n, pvector<double,NDEG+1> c)
+{
+  double caur[NDEG], alpha, caurn[NDEG];
+  int i, nnew; 
+  //for (i=0; i <= PDEG; i++)
+    //printf("c[%d]=%.15G\n", i, c[i]);
+  for (i=0; i < NDEG; i++)
+    {
+      caur[i] = c[NDEG-i-1]/c[NDEG];
+      //printf("caur[%d]=%.15G\n", i, caur[i]);
+    }
+  balance_(&n, caur, &nnew, caurn, &alpha);
+  for (i=0; i < NDEG; i++)
+    {
+      c[i] = caurn[NDEG-i-1];
+      //printf("roots= %.15G %.15G\n", rroots[i], iroots[i]);
+    }
+  c[NDEG]=1.0;
+}
+void wrap_damvw(int N, pvector<double,NDEG+1> c, pvector<complex<double>,NDEG> roots, int balanced)
+{
+  double rroots[NDEG], iroots[NDEG];
+  int i, flag, iterations[NDEG];
+  double caur[NDEG];
+
+  //for (i=0; i <= PDEG; i++)
+    //printf("c[%d]=%.15G\n", i, c[i]);
+  if (balanced==0)
+    {
+      for (i=0; i < NDEG; i++)
+        {
+          caur[i] = c[NDEG-i-1]/c[NDEG];
+          //printf("caur[%d]=%.15G\n", i, caur[i]);
+        }
+    }
+  damvw_(&N,caur,rroots,iroots,iterations,&flag);
+  for (i=0; i < NDEG; i++)
+    {
+      roots[i] = complex<double>(rroots[i],iroots[i]);
+      //printf("roots= %.15G %.15G\n", rroots[i], iroots[i]);
+    }
 } 
+#endif
+
 int factorial(int n)
 {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
@@ -755,7 +806,7 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
   cout << "[" << str << "relative accuracy=" << relerrmax << "\n";
 }
 #endif
-//#define STATIC
+#define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
@@ -781,7 +832,7 @@ int main(int argc, char *argv[])
     {
       algo = 1;
     }
-  if (algo < 0 || algo > 1)
+  if (algo < 0 || algo > 2)
     {
       printf("algorithm must be between 1 and XX algo=%d\n", algo);
       exit(-1);
@@ -818,6 +869,30 @@ int main(int argc, char *argv[])
       sprintf(testo2, "HQR");
       //roots.show();  
     }
+  else if (algo==1)
+    {
+#ifdef STATIC
+      rpoly<pdbl,NDEG,true,pcmplx> rphqr;
+#else
+      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
+#endif
+      rphqr.set_coeff(c);
+      rphqr.show("p(x)=");
+      rphqr.find_roots(roots);
+      sprintf(testo2, "HQR");
+      //roots.show();  
+    }
+#ifdef AURENTZ
+  else if (algo==2)
+    {
+      if (balance==1)
+        wrap_balance(NDEG,c);
+      wrap_damvw(NDEG,c,roots, balance);
+
+      sprintf(testo2, "HQR");
+      //roots.show();  
+    }
+#endif
   for (i=0; i < NDEG; i++)
     cr[i] = cmplx(roots[i]);
   // sort roots and calculate relative error
