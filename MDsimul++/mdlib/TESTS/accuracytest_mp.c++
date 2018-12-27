@@ -8,6 +8,7 @@
 #define USE_MULTIPREC
 #include <iomanip>
 using namespace std;
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -16,6 +17,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl = number<cpp_bin_float<200>>;
 using cmplx = cpp_complex<200>;
+using pdbl=vldbl;
+using pcmplx=cmplx;
 #elif defined(GMP_MP)
 #include <boost/multiprecision/gmp.hpp>
 using namespace boost;
@@ -23,7 +26,9 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<gmp_float<200>>;
 using cmplx=complex<numty>;
-#else
+using pdbl=vldbl;
+using pcmplx=cmplx;
+#elif defined(MPC_MP)
 #include <boost/multiprecision/mpc.hpp>
 #include <boost/multiprecision/mpfr.hpp>
 using namespace boost;
@@ -31,9 +36,16 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
+using pdbl=double;
+using pcmplx=complex<double>;
+#else
+using vldbl=long double;
+using cmplx=complex<vldbl>;
+using pdbl=double;
+using pcmplx=complex<pdbl>;
 #endif
-template <int N, int digits=200>
-using rpolymp = rpoly<number<mpfr_float_backend<digits>>,N,false,number<mpc_complex_backend<digits>>>;
+//template <int N, int digits=200>
+//using rpolymp = rpoly<number<mpfr_float_backend<digits>>,N,false,number<mpc_complex_backend<digits>>>;
 #define Complex(x,y) cmplx((x),(y))
 bool allreal=false, doswap=false;
 #ifndef CASO
@@ -452,15 +464,15 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   //cout << " c[" << i << "]=" << c[i] << setprecision(20) << "\n";
 #elif CASO==26
 #define NDEG 60
-  allreal=true;
+  //allreal=true;
   int ii;
   vldbl pi = 2.0*acos(vldbl(0.0));
   for  (ii=-14; ii <= 0; ii++)
-    er[14+ii]= 0.9*exp(cmplx(0,ii*pi/2.0/15.0));
+    er[14+ii]= vldbl(0.9L)*exp(cmplx(0,ii*pi/vldbl(2.0L)/vldbl(15.0L)));
   for  (ii=1; ii <= 15; ii++)
     er[14+ii] = conj(er[15-ii]);
   for  (ii=16; ii <= 30; ii++)
-    er[14+ii] = exp(cmplx(0,ii*pi/2.0/15.0));
+    er[14+ii] = exp(cmplx(0,ii*pi/vldbl(2.0L)/vldbl(15.0L)));
   for  (ii=31; ii <= 45; ii++)
     er[14+ii] = conj(er[75-ii]);
   calc_coeff(c, er);
@@ -748,16 +760,16 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
-  pvector<cmplx,NDEG> roots;
+  pvector<pcmplx,NDEG> roots;
 #else
-  pvector<cmplx> roots(NDEG);
+  pvector<pcmplx> roots(NDEG);
 #endif
   char testo2[256];
   cmplx cr[NDEG];
 #ifdef STATIC
-  pvector<vldbl,NDEG+1> c(NDEG+1);
+  pvector<pdbl,NDEG+1> c(NDEG+1);
 #else
-  pvector<vldbl> c(NDEG+1);
+  pvector<pdbl> c(NDEG+1);
 #endif 
   int algo, i;
   numty ca[NDEG+1];
@@ -777,15 +789,15 @@ int main(int argc, char *argv[])
     }
   calc_coeff_dep_on_case(ca, er);
   for (i=0; i < NDEG+1; i++)
-    c[i]=ca[i];
+    c[i]=double(ca[i]);
   c.show("boh");
   cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<vldbl,NDEG,false,cmplx> rp;
+      rpoly<pdbl,NDEG,false,pcmplx> rp;
 #else
-      rpoly<vldbl,-1,false,cmplx> rp(NDEG);
+      rpoly<pdbl,-1,false,pcmplx> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -797,9 +809,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<vldbl,NDEG,true,cmplx> rphqr;
+      rpoly<pdbl,NDEG,true,pcmplx> rphqr;
 #else
-      rpoly<vldbl,-1,true,cmplx> rphqr(NDEG);
+      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
