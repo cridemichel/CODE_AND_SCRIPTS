@@ -6,7 +6,7 @@
 #include<list>
 #include<string>
 #include <iomanip>
-static int balance=1;
+static int balance=0;
 using namespace std;
 #define AURENTZ
 #define MPC_MP
@@ -467,13 +467,14 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
 #define NDEG 60
   //allreal=true;
   int ii;
+  vldbl m=20;
   vldbl pi = boost::math::constants::pi<vldbl>();//2.0*acos(vldbl(0.0));
   for  (ii=-14; ii <= 0; ii++)
-    er[14+ii]= vldbl(0.9L)*exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(15.0L)));
+    er[14+ii]= vldbl(0.9L)*exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/m));
   for  (ii=1; ii <= 15; ii++)
     er[14+ii] = conj(er[15-ii]);
   for  (ii=16; ii <= 30; ii++)
-    er[14+ii] = exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(15.0L)));
+    er[14+ii] = exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/m));
   for  (ii=31; ii <= 45; ii++)
     er[14+ii] = conj(er[75-ii]);
   calc_coeff(c, er);
@@ -540,7 +541,7 @@ extern "C" {
 extern void damvw_(int *, double*, double *, double *, int *, int*);
 extern void balance_(int *N, double c[NDEG+1], int *nnew, double cn[NDEG+1], double *alpha);
 }
-void wrap_balance(int n, pvector<double,NDEG+1> c)
+void wrap_balance(int n, pvector<double,NDEG+1>& c)
 {
   double caur[NDEG], alpha, caurn[NDEG];
   int i, nnew; 
@@ -559,12 +560,12 @@ void wrap_balance(int n, pvector<double,NDEG+1> c)
     }
   c[NDEG]=1.0;
 }
-void wrap_damvw(int N, pvector<double,NDEG+1> c, pvector<complex<double>,NDEG> roots, int balanced)
+void wrap_damvw(int N, pvector<double,NDEG+1> c, pvector<complex<double>,NDEG>& roots, int balanced)
 {
   double rroots[NDEG], iroots[NDEG];
   int i, flag, iterations[NDEG];
   double caur[NDEG];
-
+  int n=N;
   //for (i=0; i <= PDEG; i++)
     //printf("c[%d]=%.15G\n", i, c[i]);
   if (balanced==0)
@@ -572,10 +573,17 @@ void wrap_damvw(int N, pvector<double,NDEG+1> c, pvector<complex<double>,NDEG> r
       for (i=0; i < NDEG; i++)
         {
           caur[i] = c[NDEG-i-1]/c[NDEG];
-          //printf("caur[%d]=%.15G\n", i, caur[i]);
         }
     }
-  damvw_(&N,caur,rroots,iroots,iterations,&flag);
+  else
+    {
+      for (i=0; i < NDEG; i++)
+        {
+          //cout << "caur=" << caur[i] << "\n";
+          caur[i] = c[NDEG-i-1];
+        }
+    }
+  damvw_(&n,caur,rroots,iroots,iterations,&flag);
   for (i=0; i < NDEG; i++)
     {
       roots[i] = complex<double>(rroots[i],iroots[i]);
@@ -806,7 +814,7 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
   cout << "[" << str << "relative accuracy=" << relerrmax << "\n";
 }
 #endif
-#define STATIC
+//#define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
@@ -885,11 +893,16 @@ int main(int argc, char *argv[])
 #ifdef AURENTZ
   else if (algo==2)
     {
+      pvector<double,NDEG+1> ca;
+      pvector<complex<double>,NDEG> rootsa;
+      for (i=0; i < NDEG+1; i++)
+       ca[i]=c[i]; 
       if (balance==1)
-        wrap_balance(NDEG,c);
-      wrap_damvw(NDEG,c,roots, balance);
-
-      sprintf(testo2, "HQR");
+        wrap_balance(NDEG,ca);
+      wrap_damvw(NDEG,ca, rootsa, balance);
+      for (i=0; i < NDEG; i++)
+        roots[i]=rootsa[i]; 
+      sprintf(testo2, "AUR");
       //roots.show();  
     }
 #endif
