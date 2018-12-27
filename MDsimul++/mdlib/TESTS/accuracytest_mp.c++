@@ -650,8 +650,9 @@ void calc_coeff(vldbl co[], cmplx er[])
           ii=ii+2;
         }
     }
-  for (ii=0;ii <= NDEG; ii++)
-     co[ii] = c[ii];
+  for (ii=0; ii < NDEG; ii++)
+     co[ii] = c[NDEG-ii-1];
+  co[NDEG]=1.0;
 }
 #if 0
 void subset(list<list<int>>& L, int arr[], int size, int left, int index, list<int> &l)
