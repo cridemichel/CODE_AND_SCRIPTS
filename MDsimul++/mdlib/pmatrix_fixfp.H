@@ -21,7 +21,7 @@ typedef number<cpp_dec_float<200>> vldbl;
 #include<cmath>
 #endif
 #include<cstring>
-#include "pvector.H"
+#include "pvector_fixfp.H"
 #define OPT_INV
 #define MAT_USE_LAPACK
 #define MAT_COMMA_INIT

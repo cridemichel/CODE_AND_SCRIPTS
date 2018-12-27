@@ -1,4 +1,4 @@
-#include "pmatrix.H"
+#include "pmatrix_fixfp.H"
 #include<cstdlib>
 #include<iostream>
 #include<iomanip>
