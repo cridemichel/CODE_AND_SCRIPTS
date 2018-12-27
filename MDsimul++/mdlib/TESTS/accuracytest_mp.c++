@@ -14,8 +14,8 @@ using namespace std;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl = number<cpp_bin_float<200>>;
-using cmplx = cpp_complex<200>;
+using vldbl = number<cpp_bin_float<500>>;
+using cmplx = cpp_complex<500>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #elif defined(GMP_MP)
@@ -35,8 +35,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
-using pdbl=double;
-using pcmplx=complex<double>;
+using pdbl=vldbl;//double;
+using pcmplx=cmplx;//complex<double>;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
@@ -788,7 +788,7 @@ int main(int argc, char *argv[])
     }
   calc_coeff_dep_on_case(ca, er);
   for (i=0; i < NDEG+1; i++)
-    c[i]=double(ca[i]);
+    c[i]=pdbl(ca[i]);
   c.show("boh");
   cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
