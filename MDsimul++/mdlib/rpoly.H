@@ -25,7 +25,7 @@ inline ntype SIGN(ntype a, ntype b)
   else
     return -abs(a);
 }
-//#define USE_DEFL_NR // metterlo o no non cambia nulla
+#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 #define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 #define USE_BRENT

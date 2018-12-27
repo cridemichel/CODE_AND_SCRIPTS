@@ -586,7 +586,6 @@ public:
         // a matrix with m columns (instead of a vector) could be supplied to solve many linear systems at once  
         int i,icol,irow,j,k,l,ll;
         ntype big,dum,pivinv;
-        static const int n=N;
         //static const int m=N;
         pvector<int,NT> indxc,indxr,ipiv;
         pmatrixq<ntype,NT> a;
@@ -598,23 +597,26 @@ public:
             ipiv.allocate(N);
           }
         a = *this;
-        for (j=0;j<n;j++) ipiv[j]=0;
-        for (i=0;i<n;i++) {
+        for (j=0;j<N;j++) ipiv[j]=0;
+        for (i=0;i<N;i++) {
           big=0.0;
-          for (j=0;j<n;j++)
+          for (j=0;j<N;j++)
             if (ipiv[j] != 1)
-              for (k=0;k<n;k++) {
+              for (k=0;k<N;k++) {
                 if (ipiv[k] == 0) {
-                  if (fabs(a[j][k]) >= big) {
-                    big=fabs(a[j][k]);
+                  //cout << " i,j=" << i << "," << j << "\n";
+                    //cout << "big=" << big << " a=" << a[j][k] << " i,j=" << i << "," << j << " n=" << n << "\n";
+                  if (abs(a[j][k]) >= big) {
+                    big=abs(a[j][k]);
                     irow=j;
                     icol=k;
                   }
+                  //cout << "dopo\n";
                 }
               }
           ++(ipiv[icol]);
           if (irow != icol) {
-            for (l=0;l<n;l++) SWAP(a[irow][l],a[icol][l]);
+            for (l=0;l<N;l++) SWAP(a[irow][l],a[icol][l]);
             if constexpr ( std::is_same<pvec,T>::value)
               SWAP(b[irow],b[icol]);
             // a matrix with m columns could be supplied to solve many linear systems at once  
@@ -631,25 +633,25 @@ public:
             }
           pivinv=1.0/a[icol][icol];
           a[icol][icol]=1.0;
-          for (l=0;l<n;l++) a[icol][l] *= pivinv;
+          for (l=0;l<N;l++) a[icol][l] *= pivinv;
           if constexpr ( std::is_same<pvec,T>::value)
             b[icol] *= pivinv;
           // a matrix with m columns could be supplied to solve many linear systems at once  
           //for (l=0;l<m;l++) b[icol][l] *= pivinv;
-          for (ll=0;ll<n;ll++)
+          for (ll=0;ll<N;ll++)
             if (ll != icol) {
               dum=a[ll][icol];
               a[ll][icol]=0.0;
-              for (l=0;l<n;l++) a[ll][l] -= a[icol][l]*dum;
+              for (l=0;l<N;l++) a[ll][l] -= a[icol][l]*dum;
               if constexpr ( std::is_same<pvec,T>::value)
                 b[ll][l] -= b[icol]*dum;
               // a matrix with m columns could be supplied to solve many linear systems at once  
               //   for (l=0;l<m;l++) b[ll][l] -= b[icol][l]*dum;
             }
         }
-        for (l=n-1;l>=0;l--) {
+        for (l=N-1;l>=0;l--) {
           if (indxr[l] != indxc[l])
-            for (k=0;k<n;k++)
+            for (k=0;k<N;k++)
               SWAP(a[k][indxr[l]],a[k][indxc[l]]);
         }
         return a;

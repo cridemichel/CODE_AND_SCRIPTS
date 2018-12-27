@@ -645,7 +645,7 @@ void calc_coeff(vldbl co[], cmplx er[])
           beta = rr[ii]*rr[ii] + ir[ii]*ir[ii];
           for (jj=ii+1; jj >= 0; jj--)
             { 
-              cout << "jj=" << jj << "\n";
+              //cout << "jj=" << jj << "\n";
               //do jj=ii+1,1,-1
               if (jj == 1)
                 {
