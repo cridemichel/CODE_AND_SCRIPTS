@@ -467,16 +467,16 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
 #define NDEG 60
   //allreal=true;
   int ii;
-  vldbl m=20;
+  int m=15;
   vldbl pi = boost::math::constants::pi<vldbl>();//2.0*acos(vldbl(0.0));
-  for  (ii=-14; ii <= 0; ii++)
-    er[14+ii]= vldbl(0.9L)*exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/m));
-  for  (ii=1; ii <= 15; ii++)
-    er[14+ii] = conj(er[15-ii]);
-  for  (ii=16; ii <= 30; ii++)
-    er[14+ii] = exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/m));
-  for  (ii=31; ii <= 45; ii++)
-    er[14+ii] = conj(er[75-ii]);
+  for  (ii=-m+1; ii <= 0; ii++)
+    er[m-1+ii]= vldbl(0.9L)*exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(m)));
+  for  (ii=1; ii <= m; ii++)
+    er[m-1+ii] = conj(er[m-ii]);
+  for  (ii=m+1; ii <= 2*m; ii++)
+    er[m-1+ii] = exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(m)));
+  for  (ii=2*m+1; ii <= 3*m; ii++)
+    er[m-1+ii] = conj(er[5*m-ii]);
   calc_coeff(c, er);
 #if 0
   for (i=0; i < NDEG; i++)
@@ -853,9 +853,9 @@ int main(int argc, char *argv[])
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<pdbl,NDEG,false,pcmplx> rp;
+      rpoly<pdbl,NDEG,false, cmplx> rp;
 #else
-      rpoly<pdbl,-1,false,pcmplx> rp(NDEG);
+      rpoly<pdbl,-1,false,cmplx> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -867,22 +867,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<pdbl,NDEG,true,pcmplx> rphqr;
+      rpoly<pdbl,NDEG,true,cmplx> rphqr;
 #else
-      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
-#endif
-      rphqr.set_coeff(c);
-      rphqr.show("p(x)=");
-      rphqr.find_roots(roots);
-      sprintf(testo2, "HQR");
-      //roots.show();  
-    }
-  else if (algo==1)
-    {
-#ifdef STATIC
-      rpoly<pdbl,NDEG,true,pcmplx> rphqr;
-#else
-      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
+      rpoly<pdbl,-1,true,cmplx> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
