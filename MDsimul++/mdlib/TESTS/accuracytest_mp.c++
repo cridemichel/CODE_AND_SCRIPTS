@@ -618,7 +618,7 @@ void calc_coeff(vldbl co[], cmplx er[])
       if (ir[ii] == zero) 
         {
           alpha = -rr[ii];
-          for (jj=ii; ii >= 0; jj--)
+          for (jj=ii; jj >= 0; jj--)
             {         
               //do jj=ii,1,-1
               if (jj==0)
@@ -630,10 +630,11 @@ void calc_coeff(vldbl co[], cmplx er[])
         }
       else
         {
-          alpha = - rr[ii]*2.0;
+          alpha = -rr[ii]*2.0;
           beta = rr[ii]*rr[ii] + ir[ii]*ir[ii];
           for (jj=ii+1; jj >= 0; jj--)
             { 
+              cout << "jj=" << jj << "\n";
               //do jj=ii+1,1,-1
               if (jj == 1)
                 {
@@ -742,7 +743,7 @@ void print_backward_err(char *str, vldbl c[], cmplx cr[])
   cout << "[" << str << "relative accuracy=" << relerrmax << "\n";
 }
 #endif
-#define STATIC
+//#define STATIC
 int main(int argc, char *argv[])
 {
 #ifdef STATIC
