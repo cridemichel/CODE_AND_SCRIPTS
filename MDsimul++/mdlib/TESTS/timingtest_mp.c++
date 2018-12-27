@@ -8,18 +8,39 @@
 #endif
 //#define STATIC
 // fino a N=40 la versione statica è più veloce
-#include <boost/multiprecision/gmp.hpp>
-#include <boost/multiprecision/mpc.hpp>
-#include <boost/multiprecision/mpfr.hpp>
+//By defining both numty and cmplx and supplying cmplx to rpoly class as template parameter (see below)
+//one can use: 
+//1) mpfr+mpc by defining both numty and cmplx 
+//2) cpp_bin_float + cpp_complex
+//otherwise one can use mpfr, cpp_bin_float or gmp_float
+//with complex<numty> where numty can be mpfr, cpp_bin_float or gmp_float
+//The most efficient solution is 1)
+
 using namespace std;
+#ifdef CPP_MP
+#include <boost/multiprecision/cpp_bin_float.hpp> 
+#include <boost/multiprecision/cpp_complex.hpp>
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-//using dbl200 = number<mpfr_float_backend<200>>;
-//using cmplx200 = number<mpc_complex_backend<200>>;
-
-using numty=number<mpfr_float_backend<200>>;//number<gmp_float<200>>;
+using numty = number<cpp_bin_float<200>>;
+using cmplx = cpp_complex<200>;
+#elif defined(GMP_MP)
+#include <boost/multiprecision/gmp.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty=number<gmp_float<200>>;
+using cmplx=complex<numty>;
+#else
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
+#endif
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;

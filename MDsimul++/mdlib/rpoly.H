@@ -2168,8 +2168,10 @@ template <class ntype, int N, bool force_hqr,class cmplx> void rpoly<ntype,N,for
       else
 	B = Q/A;
       sol[0] = (A+B) - a/3.0;
-      sol[1] = -0.5*(A+B)-a/3.0+cmplx(0,1)*sqrt32*(A-B);
-      sol[2] = -0.5*(A+B)-a/3.0-cmplx(0,1)*sqrt32*(A-B);
+      sol[1] = cmplx(-0.5*(A+B)-a/3.0,sqrt32*(A-B));
+      sol[2] = conj(sol[1]);
+      //sol[1] = -0.5*(A+B)-a/3.0+cmplx(0,1)*sqrt32*(A-B);
+      //sol[2] = -0.5*(A+B)-a/3.0-cmplx(0,1)*sqrt32*(A-B);
     }
 }
 
