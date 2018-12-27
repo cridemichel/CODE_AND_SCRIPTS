@@ -853,9 +853,9 @@ int main(int argc, char *argv[])
   if (algo==0)
     {
 #ifdef STATIC
-      rpoly<pdbl,NDEG,false, cmplx> rp;
+      rpoly<pdbl,NDEG,false, pcmplx> rp;
 #else
-      rpoly<pdbl,-1,false,cmplx> rp(NDEG);
+      rpoly<pdbl,-1,false,pcmplx> rp(NDEG);
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -867,9 +867,9 @@ int main(int argc, char *argv[])
   else if (algo==1)
     {
 #ifdef STATIC
-      rpoly<pdbl,NDEG,true,cmplx> rphqr;
+      rpoly<pdbl,NDEG,true,pcmplx> rphqr;
 #else
-      rpoly<pdbl,-1,true,cmplx> rphqr(NDEG);
+      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
       rphqr.show("p(x)=");
