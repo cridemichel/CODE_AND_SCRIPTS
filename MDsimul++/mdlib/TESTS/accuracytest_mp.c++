@@ -8,7 +8,7 @@
 #include <iomanip>
 static int balance=0;
 using namespace std;
-#define AURENTZ
+//#define AURENTZ
 #define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
@@ -183,7 +183,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   allreal=true;
 #if 1
   doswap=true;
-  static cmplx erl[NDEG]=
+  static complex<long double> erl[NDEG]=
     {-0.98883082622512854506974288293400861L - 
       0.14904226617617444692935471527721756L*1il, \
         -0.98883082622512854506974288293400861L + 
@@ -225,12 +225,13 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
       0.95557280578614073281133405376746667L + 
         0.29475517441090421683077298196019097L*1il};  
 #endif
-  calc_coeff(c, erl);
   for (i=0; i < NDEG; i++)
-    er[i]=erl[i];
+    er[i]=cmplx(erl[i]);
+
+  calc_coeff(c, er);
 #elif CASO==11
 #define NDEG 20
-  static cmplx erl[NDEG]=
+  static complex<long double> erl[NDEG]=
     {-0.98883082622512854506974288293400861L- 
       0.14904226617617444692935471527721756L*1il, 
       -0.98883082622512854506974288293400861L+ 
@@ -273,10 +274,10 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
         0.29475517441090421683077298196019097L*1il};
   doswap=true;
   allreal=true;
-  calc_coeff(c, erl);
   for (i=0; i < NDEG; i++)
-    er[i]=erl[i];
+    er[i]=cmplx(erl[i]);
   
+  calc_coeff(c, er);
 #elif CASO==12
 #define NDEG 24
   doswap=true;
