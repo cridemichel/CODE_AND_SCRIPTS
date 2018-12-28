@@ -1409,7 +1409,8 @@ void laguer(cmplx *a, cmplx &x, int m)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-      r0 = cmplx(0.0,1.0);
+      //r0 = cmplx(0.0,1.0);
+      r0=0.0;
       iter = 0;
       sig=1.0;
       // find first zero using laguerre
