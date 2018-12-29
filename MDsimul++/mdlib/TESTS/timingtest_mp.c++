@@ -32,21 +32,24 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using numty=number<gmp_float<200>>;
 using cmplx=complex<numty>;
-#else
+#elif defined(MPC_MP)
 #include <boost/multiprecision/mpc.hpp>
 #include <boost/multiprecision/mpfr.hpp>
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<200>>;
+using numty=doublenumber<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
+#else
+using numty=double;
+using cmplx=complex<double>;
 #endif
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;
 #ifdef STATIC
   rpoly<numty,NDEG,false,cmplx> rp;
-  rpoly<numty,NDEG,true.cmplx> rphqr;
+  rpoly<numty,NDEG,true,cmplx> rphqr;
   pvector<numty,NDEG+1> c;
   pvector<cmplx,NDEG> roots;
 #else
@@ -133,7 +136,7 @@ int main(int argc, char* argv[])
   //exit(-1);
 #endif
   srand48(4242);
-  numty sig=1E10;
+  numty sig=1.0;//E10;
   if (argc>=2)
     caso = atoi(argv[1]);
   else

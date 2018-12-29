@@ -1438,6 +1438,7 @@ void laguer(cmplx *a, cmplx &x, int m)
             }
         };
 
+      // cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
@@ -1976,7 +1977,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 200)
+          else if (n <= 1000)
             {
               if constexpr (force_hqr)
                 {
@@ -2054,7 +2055,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 200)
+          else if constexpr (N <= 1000)
             {
               if constexpr (force_hqr)
                 {
