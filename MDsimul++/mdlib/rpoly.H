@@ -1122,6 +1122,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             x=x1;
           else 
             x -= frac[iter/MT]*dx;
+                  
         }
       //refine_root(x);
       //cout << "too many iterations in laguer\n";
@@ -1182,15 +1183,15 @@ void laguer(cmplx *a, cmplx &x, int m)
      ad = new cmplx[n+1];
      a = new cmplx[n+1];
      if (coeff[n]==0.0)
-        {
-          cout << "That's not an " << N << "degree polynomial!\n";
-          delete [] a;
-          delete [] ad;
-          return;
-        }
-      cmon[n]=1.0;
-      for (i=n-1; i >=0; i--)
-        cmon[i]=coeff[i]/coeff[n];
+       {
+         cout << "That's not an " << N << "degree polynomial!\n";
+         delete [] a;
+         delete [] ad;
+         return;
+       }
+     cmon[n]=1.0;
+     for (i=n-1; i >=0; i--)
+       cmon[i]=coeff[i]/coeff[n];
 
      for (j=0;j<=m;j++) 
        {
@@ -1215,7 +1216,9 @@ void laguer(cmplx *a, cmplx &x, int m)
      }
      if (polish)
        for (j=0;j<m;j++)
-         laguer(a,rootsa[j],m);
+         {
+           laguer(a,rootsa[j],m);
+         }
      for (j=1;j<m;j++) {
        x=rootsa[j];
        for (i=j-1;i>=0;i--) {
@@ -1383,8 +1386,8 @@ void laguer(cmplx *a, cmplx &x, int m)
       // find initial guess for x here
       cmplx r0;
       const ntype goldfact=1.618034;
-      ntype sig, sigold;
-      bool mulsig=true;
+      ntype sig;// sigold;
+      //bool mulsig=true;
       ntype err0,err1, errA, errB;
       pvector<ntype,3> ad;
       typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
@@ -1429,24 +1432,22 @@ void laguer(cmplx *a, cmplx &x, int m)
             }
         }
 #endif
+      int MAXSTPS=1000, MT=100;
       while (!laguer(r0))
         {
-          r0 =polar(sig,2.0*M_PI*(drand48()-0.5));
-          sigold=sig;
-          if (mulsig==true)
-            sig *= goldfact;
-          if (sig > pow(std::numeric_limits<ntype>::max(),0.2)/goldfact)
-            {
-              sig=sigold;
-              mulsig=false;
-            }
+          r0 = polar(ntype(sig*drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
-          if (iter > 10000)
+          if (iter%MT==0)
+            sig*=goldfact;
+          if (iter > MAXSTPS)
             {
               cout << "Laguerre can not converge, I am sorry...\n";
+              cmon.show("coeff=");
+              cout << "size=" << cmon.size()<<"\n";
               exit(-1); 
             }
         };
+#if 0
       if (iter > 0)
         cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
       if (isnan(r0.real())|| isinf(r0.real()))
@@ -1454,6 +1455,7 @@ void laguer(cmplx *a, cmplx &x, int m)
           cout << "bah\n";
           exit(-1);
         }
+#endif
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
@@ -1514,6 +1516,7 @@ void laguer(cmplx *a, cmplx &x, int m)
               // choose the set which yields smaller error 
               err0=calc_err_q(deflcoeff0,r0.real());
               err1=calc_err_q(deflcoeff1,r0.real());
+              
               if (err0 < err1)
                 {
                   //errA = err0;
@@ -1529,7 +1532,9 @@ void laguer(cmplx *a, cmplx &x, int m)
             {
               deflcoeff = deflcoeff0;
             }
-
+          cout << "N=" << n << " r0=" << r0<< "\n";
+          deflcoeff0.show("boh2A");
+          deflcoeff1.show("boh2B");
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP = calc_err_q(deflcoeff, r0.real());
@@ -1605,6 +1610,7 @@ void laguer(cmplx *a, cmplx &x, int m)
                 }
               err0=calc_err_defl_quad(bd0, ad);
               err1=calc_err_defl_quad(bd1, ad);
+
               if (err0 < err1)
                 {
                   bd = bd0;
@@ -1620,6 +1626,8 @@ void laguer(cmplx *a, cmplx &x, int m)
             {
               bd = bd0;
             }
+          cout << "N=" << n << "\n";
+          bd.show("boh3");
 
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
@@ -1992,7 +2000,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 60)
+          else if (n <= 2000)
             {
               if constexpr (force_hqr)
                 {
@@ -2070,7 +2078,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 60)
+          else if constexpr (N <= 2000)
             {
               if constexpr (force_hqr)
                 {

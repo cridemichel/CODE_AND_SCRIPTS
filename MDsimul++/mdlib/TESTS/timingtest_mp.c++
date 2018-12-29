@@ -17,6 +17,7 @@
 //The most efficient solution is 1)
 
 using namespace std;
+//#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -38,7 +39,7 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=doublenumber<mpfr_float_backend<200>>;
+using numty=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
 #else
 using numty=double;
@@ -136,7 +137,7 @@ int main(int argc, char* argv[])
   //exit(-1);
 #endif
   srand48(4242);
-  numty sig=1.0;//E10;
+  numty sig=1.0;
   if (argc>=2)
     caso = atoi(argv[1]);
   else
@@ -152,9 +153,10 @@ int main(int argc, char* argv[])
     }
   else
     maxiter = 1000000;
+  c[NDEG]=1.0;
   for (int i=0; i < maxiter; i++)
     {
-      for (j=0; j < NDEG+1; j++)
+      for (j=0; j < NDEG; j++)
         c[j]=sig*(drand48()-0.5);
       if (caso==0)
         {
