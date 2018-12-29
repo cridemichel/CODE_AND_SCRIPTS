@@ -1413,11 +1413,8 @@ void laguer(cmplx *a, cmplx &x, int m)
         cmon[i]=coeff[i]/coeff[n];
       //r0 = cmplx(0.0,1.0);
 
-      sig=pow(std::numeric_limits<ntype>::max(),0.5)/goldfact;
-      if (n > 100)
-        r0=cmplx(sig,0);
-      else
-        r0=0.0;
+      sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
+      r0=0.0;
       iter = 0;
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
@@ -1438,7 +1435,7 @@ void laguer(cmplx *a, cmplx &x, int m)
           sigold=sig;
           if (mulsig==true)
             sig *= goldfact;
-          if (isnan(sig) || isinf(sig))
+          if (sig > pow(std::numeric_limits<ntype>::max(),0.1)/goldfact)
             {
               sig=sigold;
               mulsig=false;
@@ -1450,8 +1447,13 @@ void laguer(cmplx *a, cmplx &x, int m)
               exit(-1); 
             }
         };
-      if (iter > 10)
+      if (iter > 0)
         cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
+      if (isnan(r0.real())|| isinf(r0.real()))
+        {
+          cout << "bah\n";
+          exit(-1);
+        }
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
@@ -1990,7 +1992,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 10000)
+          else if (n <= 100)
             {
               if constexpr (force_hqr)
                 {
@@ -2068,7 +2070,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 10000)
+          else if constexpr (N <= 100)
             {
               if constexpr (force_hqr)
                 {
