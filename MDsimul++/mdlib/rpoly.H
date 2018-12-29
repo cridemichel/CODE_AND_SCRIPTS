@@ -1123,6 +1123,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           else 
             x -= frac[iter/MT]*dx;
         }
+      //refine_root(x);
       //cout << "too many iterations in laguer\n";
       return false;
     }
@@ -1412,7 +1413,7 @@ void laguer(cmplx *a, cmplx &x, int m)
       //r0 = cmplx(0.0,1.0);
       r0=0.0;
       iter = 0;
-      sig=1.0;
+      sig=pow(std::numeric_limits<ntype>::max(),0.5);
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
@@ -1431,14 +1432,14 @@ void laguer(cmplx *a, cmplx &x, int m)
           r0 = sig*cmplx(drand48()-0.5,drand48()-0.5);
           sig *= goldfact; 
           iter++;
-          if (iter > 1000)
+          if (iter > 10000)
             {
               cout << "Laguerre can not converge, I am sorry...\n";
               exit(-1); 
             }
         };
-
-      // cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
+      if (iter > 0)
+        cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
@@ -1977,7 +1978,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 1000)
+          else if (n <= 100)
             {
               if constexpr (force_hqr)
                 {
@@ -2055,7 +2056,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 1000)
+          else if constexpr (N <= 100)
             {
               if constexpr (force_hqr)
                 {
