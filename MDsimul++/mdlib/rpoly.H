@@ -1383,7 +1383,8 @@ void laguer(cmplx *a, cmplx &x, int m)
       // find initial guess for x here
       cmplx r0;
       const ntype goldfact=1.618034;
-      ntype sig;
+      ntype sig, sigold;
+      bool mulsig=true;
       ntype err0,err1, errA, errB;
       pvector<ntype,3> ad;
       typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
@@ -1411,9 +1412,13 @@ void laguer(cmplx *a, cmplx &x, int m)
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
       //r0 = cmplx(0.0,1.0);
-      r0=0.0;
+
+      sig=pow(std::numeric_limits<ntype>::max(),0.5)/goldfact;
+      if (n > 100)
+        r0=cmplx(sig,0);
+      else
+        r0=0.0;
       iter = 0;
-      sig=pow(std::numeric_limits<ntype>::max(),0.5);
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
@@ -1429,8 +1434,15 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
       while (!laguer(r0))
         {
-          r0 = sig*cmplx(drand48()-0.5,drand48()-0.5);
-          sig *= goldfact; 
+          r0 =polar(sig,2.0*M_PI*(drand48()-0.5));
+          sigold=sig;
+          if (mulsig==true)
+            sig *= goldfact;
+          if (isnan(sig) || isinf(sig))
+            {
+              sig=sigold;
+              mulsig=false;
+            }
           iter++;
           if (iter > 10000)
             {
@@ -1438,7 +1450,7 @@ void laguer(cmplx *a, cmplx &x, int m)
               exit(-1); 
             }
         };
-      if (iter > 0)
+      if (iter > 10)
         cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
@@ -1978,7 +1990,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 100)
+          else if (n <= 10000)
             {
               if constexpr (force_hqr)
                 {
@@ -2056,7 +2068,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 100)
+          else if constexpr (N <= 10000)
             {
               if constexpr (force_hqr)
                 {
