@@ -1435,7 +1435,7 @@ void laguer(cmplx *a, cmplx &x, int m)
           sigold=sig;
           if (mulsig==true)
             sig *= goldfact;
-          if (sig > pow(std::numeric_limits<ntype>::max(),0.1)/goldfact)
+          if (sig > pow(std::numeric_limits<ntype>::max(),0.2)/goldfact)
             {
               sig=sigold;
               mulsig=false;
@@ -1992,7 +1992,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 100)
+          else if (n <= 60)
             {
               if constexpr (force_hqr)
                 {
@@ -2070,7 +2070,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 100)
+          else if constexpr (N <= 60)
             {
               if constexpr (force_hqr)
                 {
