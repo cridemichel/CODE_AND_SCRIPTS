@@ -1455,8 +1455,9 @@ void laguer(cmplx *a, cmplx &x, int m)
             }
           if (iter > MAXSTPS)
             {
-              cout << "Laguerre can not converge, I am sorry...\n";
-              cmon.show("coeff=");
+              cout << "[ERROR] Laguerre method did not converge:\n";
+              cout << "this problem can be fixed by using floating point number\n";
+              cout << "with higher precision (e.g. long double and complex<long double>\n";
               exit(-1); 
             }
         };
