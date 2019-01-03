@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-#include "./cpoly.H"
+#include "../cpoly.H"
 //#include<complex>
 #ifndef NDEG
 #define NDEG 6
@@ -49,13 +49,11 @@ int main(int argc, char* argv[])
 {
   int caso, j, maxiter;
 #ifdef STATIC
-  rpoly<numty,NDEG,false,cmplx> rp;
-  rpoly<numty,NDEG,true,cmplx> rphqr;
-  pvector<numty,NDEG+1> c;
+  cpoly<cmplx,NDEG> rp;
+  pvector<cmplx,NDEG+1> c;
   pvector<cmplx,NDEG> roots;
 #else
-  rpoly<numty,-1,false,cmplx> rp(NDEG);
-  rpoly<numty,-1,true,cmplx> rphqr(NDEG);
+  cpoly<numty,-1> rp(NDEG);
   pvector<numty,-1> c(NDEG+1);
   pvector<cmplx,-1> roots(NDEG);
 #endif
@@ -174,11 +172,6 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           rp.set_coeff(c);
           //rp.zroots(roots, true);
           rp.find_roots(roots);
-        }
-      else
-        {
-          rphqr.set_coeff(c);
-          rphqr.find_roots(roots);
         }
     }
 #if 0
