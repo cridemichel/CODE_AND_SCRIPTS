@@ -1070,7 +1070,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
       ntype abx,abp,abm,err, M;
-      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2, dxold;
       int m;
       m=n;
       //cout << "r0 ini = "<< x << "\n"; 
@@ -1095,9 +1095,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 
           if (abs(b) <= err) 
             {
-              //if (iter > 15)
-              //cout << "iter=" << iter << "\n";
-              //cout << "x=" << x << " iter=" << iter << " abs(M-1)=" << abs(M-1) << "\n";
               return true;
             }
 
@@ -1114,12 +1111,12 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (abp < abm) gp=gm;
           //cout << "abp=" << abp << " abm=" << abm << "\n";
           //cout << "1/gp=" << 1.0/gp << "\n";
+          dxold=dx;
           dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
           //cout << "dx=" << dx << "\n";
           x1=x-dx;
           if (x == x1) 
             {
-              cout << "qui?!?\n";
               return true;
             }
 
@@ -1389,7 +1386,8 @@ void laguer(cmplx *a, cmplx &x, int m)
 
          r0 = cmplx(r0r,0);
        }
-     //if (iter > 2)
+
+     //if (iter > 0)
        //cout << "NR iter=" << iter << " err=" << err << "\n";
    }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
@@ -1397,7 +1395,7 @@ void laguer(cmplx *a, cmplx &x, int m)
      // find initial guess for x here
      cmplx r0;
      const ntype goldfact=1.618034;
-     ntype sig;// sigold;
+     ntype sig, sigold;
      //bool mulsig=true;
      ntype err0,err1, errA, errB;
      pvector<ntype,3> ad;
@@ -1425,8 +1423,6 @@ void laguer(cmplx *a, cmplx &x, int m)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-      //cmon.show("mamah");
-      //r0 = cmplx(0.0,1.0);
 
       sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
       r0=0.0;
@@ -1444,60 +1440,36 @@ void laguer(cmplx *a, cmplx &x, int m)
             }
         }
 #endif
-      //cout << "r0=" << r0 << "\n";
       r0=0.0;
       int MAXSTPS=1000, MT=100;
+      sigold=0.0;
       while (!laguer(r0))
         {
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0 = polar(ntype(sig*drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
-          //if (iter%MT==0)
-            //sig*=goldfact;
+
+          if (iter%MT==0)
+            {
+              sigold=sig;
+              sig*=goldfact;
+            }
           if (iter > MAXSTPS)
             {
               cout << "Laguerre can not converge, I am sorry...\n";
               cmon.show("coeff=");
-              cout << "size=" << cmon.size()<<"\n";
               exit(-1); 
             }
         };
-      //cout << "p(" << r0 << ")=" << evalpoly(r0) << "\n";
-#if 0
       if (iter > 0)
-        cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
-      if (isnan(r0.real())|| isinf(r0.real()))
-        {
-          cout << "bah\n";
-          exit(-1);
-        }
-#endif
+        cout << "qui iter=" << iter << "\n";
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
-#if 0
-      if (isnan(r0.real()||isinf(r0.real())))
-        {
-          cout << "mah...\n"; 
-          exit(1);
-        }
-#endif
       if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps*abs(r0))
         {
-#if 0
-          cout << "qui?!?\n";
-          this->show();
-          bd.show("quartic deflated coeff=");
-          ad.show("quadratic deflated coeff=");
-          deflcoeff.show("quintic deflated coeff=");
-          cout << "r0=" << r0 << setprecision(20) << "\n";
-          cout << "err0= " << err0 << " err1= " << err1 << "\n";
-          cout << "errA= " << errA << " errB= " << errB << "\n";
-          cout << "p(r0)=" << evalpoly(r0) << " p(r0.real())= " << evalpoly(r0.real()) << setprecision(32) << "\n";
-          exit(-1);
-#endif
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
           pvecNm1<cmplx> qr;
@@ -1558,21 +1530,11 @@ void laguer(cmplx *a, cmplx &x, int m)
             {
               deflcoeff = deflcoeff0;
             }
-          //cout << "N=" << n << " r0=" << r0<< "\n";
-          //deflcoeff0.show("boh2A");
-          //deflcoeff1.show("boh2B");
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP = calc_err_q(deflcoeff, r0.real());
           use_NR_defl_lin(deflcoeff,r0);
           //errD = calc_err_q(deflcoeff, r0.real());
-#if 0
-          if (errD < errP)
-            {
-              cout << "errP=" << errP << " errD=" << errD << "\n";
-
-            }
-#endif
 #endif
 
           if constexpr (N < 0)
@@ -1583,12 +1545,8 @@ void laguer(cmplx *a, cmplx &x, int m)
               qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
             }
 
-
           //refine deflated quartic coefficients thourh Newton-Raphson method
           qp.set_coeff(deflcoeff);
-          //qp.show("mah");
-          //cout << "size=" << n << "deflsize=" << deflcoeff.size()<< "\n";
-          //deflcoeff.show("arimah");
           
           qp.find_roots(qr, false, false);
           if constexpr (N > 0)
@@ -1666,22 +1624,6 @@ void laguer(cmplx *a, cmplx &x, int m)
           //ntype errP, errD;
           //errP =calc_err_defl_quad(bd, ad);
           use_NR_defl_quad(bd,ad);
-          //errD =calc_err_defl_quad(bd, ad);
-          //if (errD < errP)
-            //cout << ">>>errP = " << errP << " errD=" << errD << "\n";
-#endif
-#if 0
-          if (err0 > 1E-4 && err1 > 1E-4)
-            { cout << "Nm1 err0=" << err0 << " err1=" << err1 << "\n";
-              cout << "r0=" << r0 << "\n";
-              this->show("poly=");
-              bd.show("deflation coefficients");
-              ad.show("quadratic coeff");
-              cout << "errA= " << errA << " errB= " << errB << "\n";
-              cout << "p(r0)=" << evalpoly(r0) << " p(r0.real())= " << evalpoly(r0.real()) << setprecision(32) << "\n";
-              cout << "abs(p(r0))=" << abs(evalpoly(r0)) << " abs(p(r0.real()))= " << abs(evalpoly(r0.real())) << setprecision(32) << "\n";
-              exit(-1);
-            }
 #endif
           if constexpr (N < 0)
             {
@@ -2033,7 +1975,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if (n <= 2000)
+          else if (n <= 200)
             {
               if constexpr (force_hqr)
                 {
@@ -2111,7 +2053,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
                 }
             }
-          else if constexpr (N <= 2000)
+          else if constexpr (N <= 200)
             {
               if constexpr (force_hqr)
                 {

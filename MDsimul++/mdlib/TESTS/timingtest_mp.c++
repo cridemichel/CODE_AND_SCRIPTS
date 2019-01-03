@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-#include "./cpoly.H"
+#include "./rpoly.H"
 //#include<complex>
 #ifndef NDEG
 #define NDEG 6
@@ -42,8 +42,8 @@ using namespace boost::multiprecision::backends;
 using numty=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
 #else
-using numty=double;
-using cmplx=complex<double>;
+using numty=long double;
+using cmplx=complex<long double>;
 #endif
 int main(int argc, char* argv[])
 {

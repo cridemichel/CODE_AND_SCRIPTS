@@ -30,7 +30,7 @@ inline ntype SIGN(ntype a, ntype b)
 #define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
-#define POLISH_NR_REAL 
+//#define POLISH_NR_REAL 
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
@@ -38,55 +38,55 @@ template<class T>
 inline const T MAX(const T &a, const T &b)
         {return b > a ? (b) : (a);}
 
-template <class ntype, int N> 
-class rpoly_base_static 
+template <class cmplx, int N> 
+class cpoly_base_static 
 {
 public:
   int n;
   constexpr static int dynamic = false;
-  pvector<ntype, N+1> coeff;
-  pvector<ntype, N+1> cmon;
+  pvector<cmplx, N+1> coeff;
+  pvector<cmplx, N+1> cmon;
  // pvector<ntype, N> cmonder;
  // pvector<ntype, N-1> cmondder;
-  pvector<ntype, N-1> bd;
-  pvector<ntype, N-1> bd0;
-  pvector<ntype, N-1> bd1;
-  pvector<ntype, N> deflcoeff0;
-  pvector<ntype, N> deflcoeff1;
-  pvector<ntype, N> deflcoeff;
-  void set_coeff(pvector<ntype,N+1> v)
+  pvector<cmplx, N-1> bd;
+  pvector<cmplx, N-1> bd0;
+  pvector<cmplx, N-1> bd1;
+  pvector<cmplx, N> deflcoeff0;
+  pvector<cmplx, N> deflcoeff1;
+  pvector<cmplx, N> deflcoeff;
+  void set_coeff(pvector<cmplx,N+1> v)
     {
       coeff = v;
       //coeff.show("coefficienti=");
     }
-  rpoly_base_static()
+  cpoly_base_static()
     {
       n=N;
     }
-  rpoly_base_static(int nc): rpoly_base_static()
+  cpoly_base_static(int nc): cpoly_base_static()
   {
     n=nc;
     // empty body
   }
 };
-template <class ntype, int N> 
-class rpoly_base_dynamic 
+template <class cmplx, int N> 
+class cpoly_base_dynamic 
 {
 public:
   int n;
   constexpr static int dynamic = true;
-  pvector<ntype> coeff;
-  pvector<ntype> cmon;
+  pvector<cmplx> coeff;
+  pvector<cmplx> cmon;
   //pvector<ntype> cmonder;
   //pvector<ntype> cmondder;
-  pvector<ntype> bd0;
-  pvector<ntype> bd1;
-  pvector<ntype> bd;
-  pvector<ntype> deflcoeff0;
-  pvector<ntype> deflcoeff1;
-  pvector<ntype> deflcoeff;
-  rpoly_base_dynamic() = default;
-  void set_coeff(pvector<ntype,-1> v)
+  pvector<cmplx> bd0;
+  pvector<cmplx> bd1;
+  pvector<cmplx> bd;
+  pvector<cmplx> deflcoeff0;
+  pvector<cmplx> deflcoeff1;
+  pvector<cmplx> deflcoeff;
+  cpoly_base_dynamic() = default;
+  void set_coeff(pvector<cmplx,-1> v)
     {
       coeff = v;
 #if 0
@@ -96,8 +96,8 @@ public:
         v.show();
 #endif
     }
-  void use_vec(int nc, ntype* coeffv, ntype* cmonv,
-               ntype* bd0v, ntype *bd1v, ntype* bdv, ntype *deflcoeff0v, ntype* deflcoeff1v, ntype* deflcoeffv)
+  void use_vec(int nc, cmplx* coeffv, cmplx* cmonv,
+               cmplx* bd0v, cmplx *bd1v, cmplx* bdv, cmplx *deflcoeff0v, cmplx* deflcoeff1v, cmplx* deflcoeffv)
     {
       coeff.use_vec(nc+1,coeffv);
       cmon.use_vec(nc+1,cmonv);
@@ -112,12 +112,12 @@ public:
       n=nc;
     }
  
-  rpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), bd0(nc-1), bd1(nc-1), bd(nc-1),
+  cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), bd0(nc-1), bd1(nc-1), bd(nc-1),
   deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
     {
       n=nc;
     }
-  ~rpoly_base_dynamic() = default;
+  ~cpoly_base_dynamic() = default;
   void deallocate(void)
     {
       coeff.deallocate();
@@ -147,23 +147,23 @@ public:
     }
 };
 
-template <class ntype, int N> using rpolybase = 
-typename std::conditional<(N>0), rpoly_base_static <ntype, N>,
-	 rpoly_base_dynamic <ntype, N>>::type;
+template <class cmplx, int N> using cpolybase = 
+typename std::conditional<(N>0), cpoly_base_static <cmplx, N>,
+	 cpoly_base_dynamic <cmplx, N>>::type;
  
-template <class ntype, int N=-1> 
-class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
-  using rpolybase<ntype,N>::n;
-  using rpolybase<ntype,N>::coeff;
-  using rpolybase<ntype,N>::cmon;
-  //using rpolybase<ntype,N>::cmonder;
-  //using rpolybase<ntype,N>::cmondder;
-  using rpolybase<ntype,N>::bd0;
-  using rpolybase<ntype,N>::bd1;
-  using rpolybase<ntype,N>::bd;
-  using rpolybase<ntype,N>::deflcoeff0;
-  using rpolybase<ntype,N>::deflcoeff1;
-  using rpolybase<ntype,N>::deflcoeff;
+template <class cmplx, int N=-1, class ntype=double> 
+class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
+  using cpolybase<cmplx,N>::n;
+  using cpolybase<cmplx,N>::coeff;
+  using cpolybase<cmplx,N>::cmon;
+  //using cpolybase<ntype,N>::cmonder;
+  //using cpolybase<ntype,N>::cmondder;
+  using cpolybase<cmplx,N>::bd0;
+  using cpolybase<cmplx,N>::bd1;
+  using cpolybase<cmplx,N>::bd;
+  using cpolybase<cmplx,N>::deflcoeff0;
+  using cpolybase<cmplx,N>::deflcoeff1;
+  using cpolybase<cmplx,N>::deflcoeff;
 #if 0
 #ifdef USE_MULTIPREC
   static const int numlin=std::numeric_limits<ntype>::digits10;
@@ -176,7 +176,6 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
 #endif
 #endif
 #endif
-  using cmplx=ntype;
   template <class vtype>
   using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
 	 pvector<vtype, -1>>::type;
@@ -186,14 +185,13 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   template <class vtype>
   using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
 	 pvector<vtype, -1>>::type;
-  using rpolyNm1 = typename std::conditional<(N>0),  rpoly<ntype, N-1>,
-	 rpoly<ntype, -1>>::type;
-  using rpolyNm2 = typename std::conditional<(N>0),  rpoly<ntype, N-2>,
-	 rpoly<ntype, -1>>::type;
+  using cpolyNm1 = typename std::conditional<(N>0),  cpoly<cmplx, N-1>,
+	 cpoly<cmplx, -1>>::type;
+  using cpolyNm2 = typename std::conditional<(N>0),  cpoly<cmplx, N-2>,
+	 cpoly<cmplx, -1>>::type;
   template <class vtype>
   using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
 	 pmatrixq<vtype, -1>>::type;
-
   template <class vtype>
   using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
 	 pmatrixq<vtype, -1>>::type;
@@ -207,7 +205,9 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
-  
+
+  inline void solve_quadratic(pvector<cmplx,N>& sol);
+#if 0 
   ntype oqs_max2(ntype a, ntype b)
     {
       if (a >= b)
@@ -222,7 +222,6 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
       return oqs_max2(t,c);
     }
   //void oqs_quartic_solver(pvector<cmplx,N>& roots);
-  inline void solve_quadratic(pvector<cmplx,N>& sol);
   inline void solve_cubic_analytic(pvector<cmplx,N>& sol);
   inline void oqs_quartic_solver(pvector<cmplx,N>& roots);
   inline void oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol);
@@ -239,6 +238,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   inline void hqr(pmatrixq<ntype,N>& a, pvector<cmplx,N>& wri, int& ok);
   inline void QRfactorization(pmatrixq<ntype,N>& hess, pvector<cmplx,N>& sol, int& ok);
   inline void solve_numrec(pvector<cmplx,N>& csol, int& ok);
+#endif
 public:
   void show(void)
     {
@@ -295,10 +295,10 @@ public:
       return bn;
     }
 
-  ntype evalddpoly(ntype x)
+  cmplx evalddpoly(cmplx x)
     {
       // evaluate second derivative of polynomail via Horner's formula 
-      ntype bn=0.0;
+      cmplx bn=0.0;
       if (n == 1)
         return 0;
       for (int i=n-2; i >= 0; i--)
@@ -307,14 +307,14 @@ public:
         }
       return bn;
     }
-  ntype calc_err_q(pvector<ntype,N> c, ntype r0)
+  ntype calc_err_q(pvector<cmplx,N> c, cmplx r0)
     {
       int i;
       ntype sum=0;
       for (i=0; i < n; i++)
         {
           if (i == 0){
-            if (cmon[i]==0)
+            if (cmon[i]==cmplx(0.0,0.0))
               {
                 sum+=abs(r0*c[i]+cmon[i]);} 
             else 
@@ -322,7 +322,7 @@ public:
                 sum=+abs((r0*c[i]+cmon[i])/cmon[i]);}
           }
           else 
-            if (cmon[i]==0)
+            if (cmon[i]==cmplx(0.0,0.0))
               sum +=abs(-c[i-1] + r0*c[i] + cmon[i]);
             else
               sum +=abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
@@ -330,6 +330,7 @@ public:
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
     }
+#if 0
 void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
   {
     ntype errf, errfold, det;
@@ -395,212 +396,8 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
     for (i=0; i < n-1; i++)
       defc[i] = c[i];
   }
-
-#ifdef USE_LAGUER_REAL
- bool laguer(cmplx &xc)
-    {
-      const int MR=8,MT=10,MAXIT=MT*MR;
-      const ntype EPS=numeric_limits<ntype>::epsilon();
-      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-      int iter,j;
-      ntype abx,abp,abm,err, phi, rho;
-      //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
-      ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
-      cmplx sqrtcmplx;
-      int m=n;
-      //cout << "r0 ini = "<<xc << "\n"; 
-      x[0] = xc.real();
-      x[1] = xc.imag();
-      for (iter=1;iter<=MAXIT;iter++) 
-        {
-          //its=iter;
-          b[0]=cmon[m];
-          b[1]=0.0;
-          err=sqrt(b[0]*b[0]+b[1]*b[1]);
-          d[0]=f[0]=0.0;
-          d[1]=f[1]=0.0;
-          abx=sqrt(x[0]*x[0]+x[1]*x[1]);
-          for (j=m-1;j>=0;j--) {
-            f0 = f[0];
-            f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
-            f[1] = x[0]*f[1] + x[1]*f0 + d[1];
-            d0 = d[0];
-            d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
-            d[1] = x[0]*d[1] + x[1]*d0 + b[1];
-            b0 = b[0];
-            b[0] = x[0]*b[0] - x[1]*b[1] + cmon[j];
-            b[1] = x[0]*b[1] + x[1]*b0;
-            err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
-          }
-          err *= EPS;
-          if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
-            {
-              //if (iter > 15)
-              //cout << "iter=" << iter << "\n";
-              xc = cmplx(x[0],x[1]);
-              return true;
-            }
-          invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
-          g[0] = (d[1]*b[1] + d[0]*b[0])*invn;
-          g[1] = (d[1]*b[0] - d[0]*b[1])*invn; 
-          g2[0] = g[0]*g[0] - g[1]*g[1];
-          g2[1] = 2.0*g[0]*g[1];
-          fb[0] = (f[1]*b[1] + f[0]*b[0])*invn;
-          fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
-          h[0] = g2[0] - 2.0*fb[0];
-          h[1] = g2[1] - 2.0*fb[1];
-          sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
-          sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
-          //sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
-          //sq[0]=sqrtcmplx.real();
-          //sq[1]=sqrtcmplx.imag();
-          rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
-          if (rho==0)
-            {
-              sq[0] = sq[1] = 0.0;
-            }
-          else
-            {
-              phi = acos(sarg[0]/rho);
-              if (sarg[1] < 0.0)
-                {
-                  phi = -phi;
-                }
-              rho = sqrt(rho);
-              sq[0] = rho*cos(phi/2.0);
-              sq[1] = rho*sin(phi/2.0);
-            }
-          gp[0] = g[0] + sq[0];
-          gp[1] = g[1] + sq[1];
-          gm[0] = g[0] - sq[0];
-          gm[1] = g[1] - sq[1]; 
-          abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
-          abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
-          if (abp < abm) 
-            {
-              gp[0]=gm[0];
-              gp[1]=gm[1];
-            }
-          //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
-          invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
-          invgp[0] = gp[0]*invn;
-          invgp[1] = -gp[1]*invn;
-
-          //cout << "abp=" << abp << " abm=" << abm << "\n";
-          //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
-          if (MAX(abp,abm) > 0.0)
-            {
-              dx[0]=((ntype)m)*invgp[0];
-              dx[1]=((ntype)m)*invgp[1];
-            }
-          else
-            {
-              pol[0] = (1.0+abx)*cos((ntype)iter);
-              pol[1] = (1.0+abx)*sin((ntype)iter); 
-              dx[0]=pol[0];
-              dx[1]=pol[1];
-            }
-          //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
-          //x1=x-dx;
-          x1[0] = x[0] - dx[0];
-          x1[1] = x[1] - dx[1];
-          if (x[0] == x1[0] && x[1]==x1[1]) 
-            {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
-              xc = cmplx(x[0],x[1]);
-              return true;
-            }
-          if (iter % MT != 0) 
-            {
-              x[0]=x1[0];
-              x[1]=x1[1];
-            }
-          else 
-            {
-              x[0] -= frac[iter/MT]*dx[0];
-              x[1] -= frac[iter/MT]*dx[1];
-            }
-          //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
-        }
-      //cout << "too many iterations in laguer\n";
-      xc = cmplx(x[0],x[1]);
-      return false;
-    }
-#else
-#if 0
- ntype estimate_M(cmplx p, cmplx dp, cmplx ddp)
-   {
-     return abs(1.0/(1.0-p*ddp/(dp*dp)));
-   }
- bool laguer_mod(cmplx &x)
-   {
-     const int MR=8,MT=10,MAXIT=MT*MR;
-      const ntype EPS=numeric_limits<ntype>::epsilon();
-      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-      int iter,j;
-      ntype abx,abp,abm,err, m;
-      cmplx dx,x1,p,dp,ddp,g,h,sq,gp,gm,g2;
-      //cout << "r0 ini = "<< x << "\n"; 
-
-      for (iter=1;iter<=MAXIT;iter++) 
-        {
-          //its=iter;
-          p=cmon[N];
-          err=abs(p);
-          dp=ddp=0.0;
-          abx=abs(x);
-          for (j=N-1;j>=0;j--) {
-            ddp=x*ddp+dp;
-            dp=x*dp+p;
-            p=x*p+cmon[j];
-            err=abs(p)+abx*err;
-          }
-          if (iter==1)
-            m = rint(estimate_M(p,dp,ddp));
-          else
-            cout << "iter=" << iter << " M= " << estimate_M(p,dp,ddp) << "\n";
-          err *= EPS;
-          //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-          if (abs(p) <= err) 
-            {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
-              return true;
-            }
-          g=dp/p;
-          g2=g*g;
-          cout << "mod lag " << " m=" << m << " x=" << x << "\n";
-          ntype fact = ntype(N-m)/(m*(N-1.0));
-          h=fact*((N-1.0)*(N-1.0)*g2-ntype(N*(N-1.0))*ddp/p);
-          sq=sqrt(h);
-          gp=g+sq;
-          gm=g-sq;
-          abp=abs(gp);
-          abm=abs(gm);
-
-          if (abp < abm) gp=gm;
-          //cout << "abp=" << abp << " abm=" << abm << "\n";
-          //cout << "1/gp=" << 1.0/gp << "\n";
-          dx=MAX(abp,abm) > 0.0 ? ntype(N)/gp : polar(1+abx,ntype(iter));
-          //cout << "dx=" << dx << "\n";
-          x1=x-dx;
-          if (x == x1) 
-            {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
-               return true;
-            }
-          if (iter % MT != 0) 
-            x=x1;
-          else 
-            x -= frac[iter/MT]*dx;
-        }
-      //cout << "too many iterations in laguer\n";
-      return false;
-   }
 #endif
+
   bool laguer(cmplx &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
@@ -670,264 +467,44 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
       //cout << "too many iterations in laguer\n";
       return false;
     }
-#endif
-void laguer(cmplx *a, cmplx &x, int m)
-  {
-    const int MR=8,MT=10,MAXIT=MT*MR;
-    const ntype EPS=numeric_limits<ntype>::epsilon();
-    static const ntype frac[MR+1]=
-      {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-    int iter,j;
-    ntype abx,abp,abm,err;
-    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-
-    for (iter=1;iter<=MAXIT;iter++) {
-      b=a[m];
-      err=abs(b);
-      d=f=0.0;
-      abx=abs(x);
-      for (j=m-1;j>=0;j--) {
-        f=x*f+d;
-        d=x*d+b;
-        b=x*b+a[j];
-        err=abs(b)+abx*err;
-      }
-      err *= EPS;
-      if (abs(b) <= err) return;
-      g=d/b;
-      g2=g*g;
-      h=g2-2.0*f/b;
-      sq=sqrt(((ntype)(m-1))*(((ntype)m)*h-g2));
-      gp=g+sq;
-      gm=g-sq;
-      abp=abs(gp);
-      abm=abs(gm);
-      if (abp < abm) gp=gm;
-      dx=MAX(abp,abm) > 0.0 ? ((ntype)m)/gp : polar(1+abx,((ntype)iter));
-      x1=x-dx;
-      if (x == x1) return;
-      if (iter % MT != 0) x=x1;
-      else x -= frac[iter/MT]*dx;
-    }
-    //nrerror("too many iterations in laguer");
-    return;
-  }
-#if 1
- void zroots(pvector<cmplx,N> &rootsa, const bool polish)
-   {
-     const ntype EPS=meps;
-     int i,j,jj;
-     cmplx x,b,c;
-     cmplx *a;
-     int m;
-     cmplx *ad;
-     m=n;
-     ad = new cmplx[n+1];
-     a = new cmplx[n+1];
-     if (coeff[n]==0.0)
-       {
-         cout << "That's not an " << N << "degree polynomial!\n";
-         delete [] a;
-         delete [] ad;
-         return;
-       }
-     cmon[n]=1.0;
-     for (i=n-1; i >=0; i--)
-       cmon[i]=coeff[i]/coeff[n];
-     //cmon.show("bboh");
-     for (j=0;j<=m;j++) 
-       {
-         a[j]=cmon[j];
-         ad[j]=a[j];
-       }
-     for (j=m-1;j>=0;j--) {
-       x=0.0;
-       cmplx *ad_v = new cmplx[j+2];
-       for (jj=0;jj<j+2;jj++) ad_v[jj]=ad[jj];
-       laguer(ad_v,x,j+1);
-       delete [] ad_v;
-       if (fabs(imag(x)) <= 2.0*EPS*fabs(real(x)))
-         x=cmplx(real(x),0.0);
-       rootsa[j]=x;
-       b=ad[j+1];
-       for (jj=j;jj>=0;jj--) {
-         c=ad[jj];
-         ad[jj]=b;
-         b=x*b+c;
-       }
-     }
-     if (polish)
-       for (j=0;j<m;j++)
-         {
-           laguer(a,rootsa[j],m);
-         }
-     for (j=1;j<m;j++) {
-       x=rootsa[j];
-       for (i=j-1;i>=0;i--) {
-         if (real(rootsa[i]) <= real(x)) break;
-         rootsa[i+1]=rootsa[i];
-       }
-       rootsa[i+1]=x;
-#if 0
-       if (isnan(x.real()) || isinf(x.real()))
-         {
-           cout << "x=" << x << "\n";
-           exit(1);
-         }
-#endif
-     }
-     delete [] a;
-     delete [] ad;
-   }
-#endif
- ntype calc_err_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
-    {
-      int i;
-      ntype sum=0, term;
-      for (i=0; i < n; i++)
-        {
-          term=cmon[i];
-          if (i <= n-2) 
-            term -= bd[i]*ad[0];
-          if (i >= 1 && i <= n-1)
-            term -= bd[i-1]*ad[1];
-          if (i >= 2)
-            term -= bd[i-2];
-          if (cmon[i]==0)
-            sum+=abs(term);
-          else
-            sum+=abs(term/cmon[i]);
-        }
-      return sum;
-    }
  void refine_root(cmplx &r0)
    {
      int iter,i;
      ntype err;
-     if (r0.imag()!=0)
+     // root polishing by NR
+     cmplx r0old, p;
+     cmplx p1;
+     ntype errold;
+     for (iter=0; iter < maxiter_polish; iter++)
        {
-#ifdef POLISH_NR_REAL
-         // root polishing by NR
-         ntype r0old[2], p[2], r0new[2];
-         ntype p1[2], p0, p10;
-         ntype errold, invnp1;
-         cmplx pc, p1c;
-         r0new[0]=r0.real();
-         r0new[1]=r0.imag();
+         p=cmon[n]*r0+cmon[n-1];
+         p1=cmon[n];
+         for(i=n-2;i>=0;i--) {
+           p1=p+p1*r0;
+           p=cmon[i]+p*r0;
+         }
+         if (iter > 0)
+           errold=err;
 
-         for (iter=0; iter < maxiter_polish; iter++)
+         err = abs(p.real())+abs(p.imag());
+         if (err==0)
+           break;
+
+         if (iter > 0 && err >= errold)
            {
-             p[0]=cmon[n]*r0new[0]+cmon[n-1];
-             p[1]=cmon[n]*r0new[1];    
-             p1[0]=cmon[n];
-             p1[1]=0.0;
-             for(i=n-2;i>=0;i--) {
-               p10=p1[0];
-               p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
-               p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
-               p0=p[0];
-               p[0]=cmon[i]+p[0]*r0new[0]-p[1]*r0new[1];
-               p[1]=p0*r0new[1]+p[1]*r0new[0];
-             }
-             if (iter > 0)
-               errold=err;
-             err = abs(p[0])+abs(p[1]);
-
-             //cout << "iter=" << iter << " err=" << err << "\n";
-             if (err==0)
-               {
-                 //cout << "QUI1 iter=" << iter << " err=" << err << "\n";
-                 break;
-               }
-             if (iter > 0 && err >= errold)
-               {
-                 //cout << "QUI2 iter=" << iter << " err=" << err << "\n";
-                 r0new[0]=r0old[0];
-                 r0new[1]=r0old[1];
-                 break;
-               }
-             if (p1[0]==0 && p1[1]==0)
-               {
-                 break;
-               }
-             r0old[0]=r0new[0];
-             r0old[1]=r0new[1];
-             invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
-             r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
-             r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
-           }
-         r0=cmplx(r0new[0], r0new[1]);
-#else
-         // root polishing by NR
-         cmplx r0old, p;
-         cmplx p1;
-         ntype errold;
-         for (iter=0; iter < maxiter_polish; iter++)
-           {
-             p=cmon[n]*r0+cmon[n-1];
-             p1=cmon[n];
-             for(i=n-2;i>=0;i--) {
-               p1=p+p1*r0;
-               p=cmon[i]+p*r0;
-             }
-             if (iter > 0)
-               errold=err;
-
-             err = abs(p.real())+abs(p.imag());
-             if (err==0)
-               break;
-
-             if (iter > 0 && err >= errold)
-               {
-                 r0=r0old;
-                 break;
-               }
-
-             if (p1==cmplx(0,0))
-               {
-                 break;
-               }
-             r0old=r0;
-             r0 -= p/p1;
-           }
-#endif
-       }
-     else
-       {
-         // root polishing by NR
-         ntype p;
-         ntype p1;
-         ntype r0r = r0.real();
-         ntype errold, r0old;
-         for (iter=0; iter < maxiter_polish; iter++)
-           {
-             p=cmon[n]*r0.real()+cmon[n-1];
-             p1 = cmon[n];
-             for(i=n-2;i>=0;i--) {
-               p1=p+p1*r0r;
-               p=cmon[i]+p*r0r;
-             }
-             if (iter > 0)
-               errold=err;
-             err = abs(p);
-             if (err==0)
-               break;
-
-             if (iter > 0 && err >= errold)
-               {
-                 r0r=r0old;
-                 break;
-               }
-             if (p1==cmplx(0,0))
-               break;
-             r0old=r0r;
-             r0r -= p/p1;
+             r0=r0old;
+             break;
            }
 
-         r0 = cmplx(r0r,0);
+         if (p1==cmplx(0,0))
+           {
+             break;
+           }
+         r0old=r0;
+         r0 -= p/p1;
        }
      //if (iter > 2)
-       //cout << "NR iter=" << iter << " err=" << err << "\n";
+     //cout << "NR iter=" << iter << " err=" << err << "\n";
    }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
    {
@@ -937,8 +514,8 @@ void laguer(cmplx *a, cmplx &x, int m)
      ntype sig;// sigold;
      //bool mulsig=true;
      ntype err0,err1, errA, errB;
-     pvector<ntype,3> ad;
-     typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
+     pvector<cmplx,3> ad;
+     typename std::conditional<(N < 0),pvector<cmplx>,bool>::type cbak;
      int iter, i;
 #if 0
       if constexpr (N < 0)
@@ -954,7 +531,7 @@ void laguer(cmplx *a, cmplx &x, int m)
 #endif
 
       //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
-      if (coeff[n]==0.0)
+      if (coeff[n]==cmplx(0.0,0.0))
         {
           cout << "That's not an " << n << "degree polynomial!\n";
           return;
@@ -966,7 +543,7 @@ void laguer(cmplx *a, cmplx &x, int m)
       //r0 = cmplx(0.0,1.0);
 
       sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
-      r0=0.0;
+      r0=cmplx(0.0,0.0);
       iter = 0;
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
@@ -1018,7 +595,7 @@ void laguer(cmplx *a, cmplx &x, int m)
           exit(1);
         }
 #endif
-          rpolyNm1 qp;
+          cpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
           pvecNm1<cmplx> qr;
           //cout << "minus one r0=" << r0 << "\n";
@@ -1215,7 +792,7 @@ void laguer(cmplx *a, cmplx &x, int m)
     {
       return numeric_limits<ntype>::max();
     }
-  rpoly()
+  cpoly()
     {
       meps = epsilon();
       eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
@@ -1231,36 +808,36 @@ void laguer(cmplx *a, cmplx &x, int m)
       //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
     }
 
-  rpoly(int nc): rpolybase<ntype,N>(nc)
+  cpoly(int nc): cpolybase<ntype,N>(nc)
     {
     }
-  //rpoly() = default;
+  //cpoly() = default;
 #if 0
     {
       //coeff=v;
-      //rpoly();
+      //cpoly();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
-  ~rpoly()
+  ~cpoly()
     {
 
     }
 #endif
 };
 // quadratic equation
-template<class ntype, int N> void rpoly<ntype,N>::solve_quadratic(pvector<cmplx,N>&sol)
+template<class cmplx, int N, class ntype> void cpoly<cmplx,N,ntype>::solve_quadratic(pvector<cmplx,N>&sol)
 {
   cmplx acx,bcx,zx1,zx2,cdiskr,zxmax,zxmin;
   acx = coeff[1]/coeff[2];
   bcx = coeff[0]/coeff[2];
-  cdiskr=csqrt(acx*acx-4.0*bcx);
+  cdiskr=sqrt(acx*acx-4.0*bcx);
   zx1 = -0.5*(acx+cdiskr);
   zx2 = -0.5*(acx-cdiskr);
-  if (cabs(zx1) > cabs(zx2))
+  if (abs(zx1) > abs(zx2))
     zxmax = zx1;
   else
     zxmax = zx2;
-  if (zxmax==0)
+  if (zxmax==cmplx(0.0,0.0))
     zxmin=0;
   else
     zxmin = bcx/zxmax;
@@ -1268,8 +845,9 @@ template<class ntype, int N> void rpoly<ntype,N>::solve_quadratic(pvector<cmplx,
   sol[0] = zxmin;
   sol[1] = zxmax;
 }
+#if 0
 // cubic polynomial
-template <class ntype, int N> void rpoly<ntype,N>::solve_cubic_analytic(pvector<cmplx,N>& sol)
+template <class ntype, int N> void cpoly<ntype,N>::solve_cubic_analytic(pvector<cmplx,N>& sol)
 {
   /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
    * according to the method described in Numerical Recipe book */  
@@ -1305,7 +883,7 @@ template <class ntype, int N> void rpoly<ntype,N>::solve_cubic_analytic(pvector<
 }
 
 // quartics with OQS
-template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
+template <class ntype, int N> void cpoly<ntype,N>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
 {
  /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
   * where coefficients b and c are large (see sec. 2.2 in the manuscript) */ 
@@ -1378,7 +956,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depr
       sol = A+B;
     }
 }
-template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol)
+template <class ntype, int N> void cpoly<ntype,N>::oqs_solve_cubic_analytic_depressed(ntype b, ntype c, ntype& sol)
 {
   /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
    * (see sec. 2.2 in the manuscript) */ 
@@ -1428,7 +1006,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_solve_cubic_analytic_depr
       sol = A+B; /* this is always largest root even if A=B */
     }
 }
-template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled)
+template <class ntype, int N> void  cpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled)
 {
   /* find phi0 as the dominant root of the depressed and shifted cubic 
    * in eq. (64) (see also the discussion in sec. 2.2 of the manuscript) */
@@ -1529,7 +1107,7 @@ template <class ntype, int N> void  rpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
     }
   phi0 = x;
 }
-template <class ntype, int N> ntype  rpoly<ntype,N>::oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3)
+template <class ntype, int N> ntype  cpoly<ntype,N>::oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3)
 {
   /* Eq. (21) in the manuscript */
   ntype sum;
@@ -1548,7 +1126,7 @@ template <class ntype, int N> ntype  rpoly<ntype,N>::oqs_calc_err_ldlt(ntype b, 
   return sum;
 }
 template <class ntype, int N> 
-ntype rpoly<ntype,N>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntype c, ntype d, cmplx aq, 
+ntype cpoly<ntype,N>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntype c, ntype d, cmplx aq, 
                                                          cmplx bq, cmplx cq, cmplx dq)
 {
   /* Eq. (53) in the manuscript for complex alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq) */
@@ -1559,7 +1137,7 @@ ntype rpoly<ntype,N>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntype c, ntype 
   sum +=(a==0)?abs(aq + cq):abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N> ntype rpoly<ntype,N>::oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq)
+template <class ntype, int N> ntype cpoly<ntype,N>::oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq)
 {
   /* Eq. (53) in the manuscript for real alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq)*/
   ntype sum;
@@ -1584,7 +1162,7 @@ template <class ntype, int N> ntype rpoly<ntype,N>::oqs_calc_err_abcd(ntype a, n
     sum +=abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N> ntype  rpoly<ntype,N>::oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq)
+template <class ntype, int N> ntype  cpoly<ntype,N>::oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq)
 {
   /* Eq. (40) in the manuscript */
   ntype sum;
@@ -1602,7 +1180,7 @@ template <class ntype, int N> ntype  rpoly<ntype,N>::oqs_calc_err_abc(ntype a, n
     sum +=abs(((aq + cq) - a)/a);
   return sum;
 }
-template <class ntype, int N> void rpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ)
+template <class ntype, int N> void cpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ)
 {
   /* Newton-Raphson described in sec. 2.3 of the manuscript for complex
    * coefficients a,b,c,d */
@@ -1690,7 +1268,7 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
   CQ=x[2];
   DQ=x[3];
 }
-template <class ntype, int N> void  rpoly<ntype,N>::oqs_solve_quadratic(ntype a, ntype b, cmplx roots[2])
+template <class ntype, int N> void  cpoly<ntype,N>::oqs_solve_quadratic(ntype a, ntype b, cmplx roots[2])
 { 
   ntype div,sqrtd,diskr,zmax,zmin;
   diskr=a*a-4*b;   
@@ -1718,7 +1296,7 @@ template <class ntype, int N> void  rpoly<ntype,N>::oqs_solve_quadratic(ntype a,
     }   
 }
 
-template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<cmplx,N>& roots)
+template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cmplx,N>& roots)
 {
   /* USAGE:
    *
@@ -2010,3 +1588,4 @@ template <class ntype, int N> void rpoly<ntype,N>::oqs_quartic_solver(pvector<cm
         }
     }
 }
+#endif

@@ -9,7 +9,7 @@
 static int balance=0;
 using namespace std;
 //#define AURENTZ
-#define MPC_MP
+//#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -857,7 +857,7 @@ int main(int argc, char *argv[])
       rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
 #endif
       rphqr.set_coeff(c);
-      rphqr.show("p(x)=");
+      //rphqr.show("p(x)=");
       rphqr.find_roots(roots);
       sprintf(testo2, "HQR");
       //roots.show();  
