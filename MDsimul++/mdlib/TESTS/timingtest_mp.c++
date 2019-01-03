@@ -42,8 +42,8 @@ using namespace boost::multiprecision::backends;
 using numty=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
 #else
-using numty=long double;
-using cmplx=complex<long double>;
+using numty=double;
+using cmplx=complex<double>;
 #endif
 int main(int argc, char* argv[])
 {

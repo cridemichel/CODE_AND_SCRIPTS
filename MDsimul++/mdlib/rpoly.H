@@ -1070,7 +1070,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
       ntype abx,abp,abm,err, M;
-      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2, dxold;
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m;
       m=n;
       //cout << "r0 ini = "<< x << "\n"; 
@@ -1089,9 +1089,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           }
           err *= EPS;
           //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-          if (isinf(b.real()) || isinf(b.imag()) || isnan(b.real()) ||
-              isnan(b.imag()))
-            return false;
+          if (isinf(abs(b)) || isnan(abs(b)))
+              return false;
 
           if (abs(b) <= err) 
             {
@@ -1101,7 +1100,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           g=d/b;
           g2=g*g;
           h=g2-((ntype)2.0)*f/b;
-          // SONO ARRIVATO QUI CON IL CASTING
           sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
           gp=g+sq;
           gm=g-sq;
@@ -1111,7 +1109,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (abp < abm) gp=gm;
           //cout << "abp=" << abp << " abm=" << abm << "\n";
           //cout << "1/gp=" << 1.0/gp << "\n";
-          dxold=dx;
           dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
           //cout << "dx=" << dx << "\n";
           x1=x-dx;
@@ -1463,8 +1460,8 @@ void laguer(cmplx *a, cmplx &x, int m)
               exit(-1); 
             }
         };
-      if (iter > 0)
-        cout << "qui iter=" << iter << "\n";
+      //if (iter > 0)
+        //cout << "qui iter=" << iter << "\n";
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
