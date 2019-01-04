@@ -1905,7 +1905,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 #endif
                 }
             }
-          else if (n <= 60)
+          else 
             {
               if constexpr (force_hqr)
                 {
@@ -1916,12 +1916,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                 {
                   laguerre_defl(roots, polish, backup);
                 }  
-            }
-          else
-            {
-              // use HQR from NUMERICAL RECIPE
-              int ok=1;
-              solve_numrec(roots, ok);
             }
         }
       else
@@ -1983,7 +1977,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 #endif
                 }
             }
-          else if constexpr (N <= 60)
+          else 
             {
               if constexpr (force_hqr)
                 {
@@ -2002,12 +1996,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                   //quintic(roots);     
 #endif 
                 }  
-            }
-          else
-            {
-              // use HQR from NUMERICAL RECIPE
-              int ok=1;
-              solve_numrec(roots, ok);
             }
         }
     }
