@@ -393,7 +393,7 @@ public:
       int i;
       if (str!=NULL)
 	cout <<  str;
-      for (i=N; i >= 0; i--)
+      for (i=n; i >= 0; i--)
 	{
 	  if (coeff[i] > 0)
     	    {
@@ -1090,8 +1090,12 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           err *= EPS;
           //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
           if (isinf(abs(b)) || isnan(abs(b)))
+            {
+              //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+              //cout << "x=" << x << "\n";
+              //cout << "p(x)=" << evalpoly(x) << "\n";
               return false;
-
+            }
           if (abs(b) <= err) 
             {
               return true;
