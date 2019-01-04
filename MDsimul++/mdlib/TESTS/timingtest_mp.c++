@@ -6,7 +6,7 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
-#define STATIC
+//#define STATIC
 // fino a N=40 la versione statica è più veloce
 //By defining both numty and cmplx and supplying cmplx to rpoly class as template parameter (see below)
 //one can use: 
@@ -15,9 +15,29 @@
 //otherwise one can use mpfr, cpp_bin_float or gmp_float
 //with complex<numty> where numty can be mpfr, cpp_bin_float or gmp_float
 //The most efficient solution is 1)
+double gauss(void)
+{
+  double  a1=3.949846138, a3 = 0.252408784, a5 = 0.076542912, 
+    a7 = 0.008355968, a9 = 0.029899776;
+  double sum, r, r2;
+  int i;
+
+  sum = 0.0;
+
+  for(i=0; i < 12; i++)
+    {
+      sum = sum + drand48();
+    }
+  
+  r  = ( sum - 6.0 ) / 4.0;
+  r2 = r * r;
+
+  return  (((( a9 * r2 + a7 ) * r2 + a5 ) * r2 + a3 ) * r2 + a1 ) * r;
+
+}
 
 using namespace std;
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -43,7 +63,7 @@ using numty=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
 #else
 using numty=double;
-using cmplx=complex<double>;
+using cmplx=complex<numty>;
 #endif
 int main(int argc, char* argv[])
 {
