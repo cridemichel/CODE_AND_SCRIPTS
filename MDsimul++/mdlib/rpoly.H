@@ -991,79 +991,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
     }
 
 #else
-#if 0
- ntype estimate_M(cmplx p, cmplx dp, cmplx ddp)
-   {
-     return abs(1.0/(1.0-p*ddp/(dp*dp)));
-   }
- bool laguer_mod(cmplx &x)
-   {
-     const int MR=8,MT=10,MAXIT=MT*MR;
-      const ntype EPS=numeric_limits<ntype>::epsilon();
-      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-      int iter,j;
-      ntype abx,abp,abm,err, m;
-      cmplx dx,x1,p,dp,ddp,g,h,sq,gp,gm,g2;
-      //cout << "r0 ini = "<< x << "\n"; 
-
-      for (iter=1;iter<=MAXIT;iter++) 
-        {
-          //its=iter;
-          p=cmon[N];
-          err=abs(p);
-          dp=ddp=0.0;
-          abx=abs(x);
-          for (j=N-1;j>=0;j--) {
-            ddp=x*ddp+dp;
-            dp=x*dp+p;
-            p=x*p+cmon[j];
-            err=abs(p)+abx*err;
-          }
-          if (iter==1)
-            m = rint(estimate_M(p,dp,ddp));
-          else
-            cout << "iter=" << iter << " M= " << estimate_M(p,dp,ddp) << "\n";
-          err *= EPS;
-          //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-          if (abs(p) <= err) 
-            {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
-              return true;
-            }
-          g=dp/p;
-          g2=g*g;
-          cout << "mod lag " << " m=" << m << " x=" << x << "\n";
-          ntype fact = ntype(N-m)/(m*(N-1.0));
-          h=fact*((N-1.0)*(N-1.0)*g2-ntype(N*(N-1.0))*ddp/p);
-          sq=sqrt(h);
-          gp=g+sq;
-          gm=g-sq;
-          abp=abs(gp);
-          abm=abs(gm);
-
-          if (abp < abm) gp=gm;
-          //cout << "abp=" << abp << " abm=" << abm << "\n";
-          //cout << "1/gp=" << 1.0/gp << "\n";
-          dx=MAX(abp,abm) > 0.0 ? ntype(N)/gp : polar(1+abx,ntype(iter));
-          //cout << "dx=" << dx << "\n";
-          x1=x-dx;
-          if (x == x1) 
-            {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
-               return true;
-            }
-          if (iter % MT != 0) 
-            x=x1;
-          else 
-            x -= frac[iter/MT]*dx;
-        }
-      //cout << "too many iterations in laguer\n";
-      return false;
-   }
-#endif
-  bool laguer(cmplx &x)
+ bool laguer(cmplx &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -1132,7 +1060,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       return false;
     }
 #endif
-void laguer(cmplx *a, cmplx &x, int m)
+ void laguer(cmplx *a, cmplx &x, int m)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
     const ntype EPS=numeric_limits<ntype>::epsilon();

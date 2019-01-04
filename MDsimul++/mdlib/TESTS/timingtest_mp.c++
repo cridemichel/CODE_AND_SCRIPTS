@@ -6,7 +6,7 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
-//#define STATIC
+#define STATIC
 // fino a N=40 la versione statica è più veloce
 //By defining both numty and cmplx and supplying cmplx to rpoly class as template parameter (see below)
 //one can use: 
