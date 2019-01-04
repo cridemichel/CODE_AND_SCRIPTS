@@ -1905,7 +1905,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 #endif
                 }
             }
-          else if (n <= 200)
+          else if (n <= 60)
             {
               if constexpr (force_hqr)
                 {
@@ -1983,7 +1983,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 #endif
                 }
             }
-          else if constexpr (N <= 200)
+          else if constexpr (N <= 60)
             {
               if constexpr (force_hqr)
                 {
