@@ -31,7 +31,6 @@ inline ntype SIGN(ntype a, ntype b)
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
-//#define RESCALE_POLY
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
@@ -1401,37 +1400,9 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       int MAXSTPS=1000;// MT=100;
       //sigold=0.0;
       
-#ifdef RESCALE_POLY
-      bool rescaled=false;
-      ntype SF, scfact=pow(maxf,1.0/ntype(n))/(1+2.0*meps);
-
-      if (scfact < 1.0)
-        scfact=1.0;
-#endif
       //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
       while (!laguer(r0, flag))
         {
-#ifdef RESCALE_POLY
-          if (flag==2 && iter==0 && !rescaled)
-            {
-              //cout << "qui n=" << n << "r0=" << r0 << "\n";  
-              //cmon.show("prima");
-              SF=scfact;
-              //cout << "22SF=" << SF << "\n";
-              for (i=n-1; i >= 0; i--)
-                {
-                  cmon[i] /= SF;
-                  if (i > 0)
-                    SF *= scfact;
-                } 
-              rescaled=true;
-              r0=0.0;
-              //cmon.show("new coeff");
-              //cout << "n=" << n << "\n";
-              cout << "SF=" << SF << "scfact=" <<scfact <<"\n";
-              continue;
-            }
-#endif
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
@@ -1655,13 +1626,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
         }
       bool copyroot=false;
-#ifdef RESCALE_POLY
-      if (rescaled==true)
-        {
-          for (i=0; i < n; i++)
-           roots[i] *= scfact; 
-        }
-#endif
       if (polish==true)
         {
           for (i=0; i < n; i++)
