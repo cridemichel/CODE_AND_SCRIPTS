@@ -546,7 +546,7 @@ public:
                   J[i][j] = 1.0;
                 else 
                   J[i][j] = 0;
-                if (j==N-1&& i!=j)
+                if (j==n-1&& i!=j)
                   J[i][j] = -((i<n-1)?c[i]:((ntype)1.0));
               }
           //J.show();
@@ -578,7 +578,7 @@ public:
         } 
       for (i=0; i < n-1; i++)
         defc[i] = c[i];
-      r0=cmplx(c[N-1],r0.imag());
+      r0=cmplx(c[n-1],r0.imag());
     }
 
 #else
@@ -761,8 +761,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       } 
     for (i=0; i < n-2; i++)
       bd[i]=c[i];
-    ad[0]=c[N-2];
-    ad[1]=c[N-1];
+    ad[0]=c[n-2];
+    ad[1]=c[n-1];
   }
 
 
@@ -1120,7 +1120,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
      a = new cmplx[n+1];
      if (coeff[n]==0.0)
        {
-         cout << "That's not an " << N << "degree polynomial!\n";
+         cout << "That's not an " << n << "degree polynomial!\n";
          delete [] a;
          delete [] ad;
          return;

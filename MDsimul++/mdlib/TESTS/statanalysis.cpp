@@ -11,15 +11,13 @@
 
 #ifdef MPSOLVE
 extern "C" {
-  void mpsolve_wrap(int N, );
+  void mpsolve_wrap(int N);
   void mpsolve_init();
   void mpsolve_free(); 
 }
 void mpsolve_init_cpp(int n, pvector<double,NDEG+1>& c, double *alpha)
 {
   pdbl ca[NDEG+1];
-
-
 }
 void mpsolve_cpp(int n, pvector<double,NDEG+1>& c, double *alpha)
 {

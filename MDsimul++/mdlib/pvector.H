@@ -75,7 +75,7 @@ struct AnOpV {
 struct vecpars
 {
   // params for my class
-  static const int NMAX = 1000; // if N>NMAX use dynamic allocation of matrices
+  static const int NMAX = 1000; // if N>NMAX use dynamic allocation of vectors
   static const int NSTA = 50;// value below which declares static object in operator funcs (only if m is not dynamically allocated)
   static const int NLAZY = 20;// value below which does not use lazy evaluation for addition
   static const int NMAXMUL = 100; // value above which it uses LAPACK routines for muladd method
@@ -105,7 +105,7 @@ public:
   pvecdyns<ntype,NT>& operator=(const pvecdyns<ntype,NT>& v1)
     {
       int i;
-      for (i=0; i < N; i++)
+      for (i=0; i < NT; i++)
 	  v[i] = v1.v[i];
       return (*this);
     }
