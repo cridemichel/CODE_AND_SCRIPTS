@@ -2,8 +2,8 @@
 #include<stdio.h>
 #include "../rpoly.H"
 #include <complex>
-//#define AURENTZ
-#define MPC_MP
+#define AURENTZ
+//#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -510,7 +510,7 @@ void sort_sol_opt(pvector<pcmplx,NDEG>& sol, pvector<cmplx,NDEG>& exsol, vldbl *
 }
 #endif
 #define MAXSOLV 10
-#define PEPTS 1000
+#define PEPTS 100
 int cmplxreal=0, restart, dojust=-1;
 double cumPEall[MAXSOLV][PEPTS], PEall[MAXSOLV][PEPTS];
 pvector<pcmplx,NDEG> csolall[MAXSOLV];
@@ -615,7 +615,7 @@ int main(int argc, char **argv)
   sig = 1.0;
   sig2= 1.0;
   logdEmax=10.0;
-  logdEmin=-252.0;
+  logdEmin=-22.0;
   numpts = PEPTS; 
   dlogdE = (logdEmax -logdEmin)/numpts;
 
