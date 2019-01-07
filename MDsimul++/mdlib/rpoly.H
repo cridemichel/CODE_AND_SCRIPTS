@@ -31,7 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
-#define RESCALE_POLY
+//#define RESCALE_POLY
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
@@ -1403,11 +1403,11 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       
 #ifdef RESCALE_POLY
       bool rescaled=false;
-#endif
       ntype SF, scfact=pow(maxf,1.0/ntype(n))/(1+2.0*meps);
 
       if (scfact < 1.0)
         scfact=1.0;
+#endif
       //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
       while (!laguer(r0, flag))
         {
@@ -1435,7 +1435,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(ntype(1.0),ntype(2.0*M_PI*(drand48()-0.5)));
             //  r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
 
@@ -1478,7 +1478,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
 #endif
           //cout << "minus one r0=" << r0 << "\n";
-          roots[0] = r0.real();
+          roots[0] = r0;//.real();
           for (i=n; i >=1; i--)
             {
               deflcoeff0[i-1] = cmon[i];

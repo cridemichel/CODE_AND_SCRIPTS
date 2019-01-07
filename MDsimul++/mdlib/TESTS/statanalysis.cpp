@@ -2,7 +2,7 @@
 #include<stdio.h>
 #include "../rpoly.H"
 #include <complex>
-#define AURENTZ
+//#define AURENTZ
 //#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
@@ -341,7 +341,7 @@ using pcmplx=complex<double>;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
-using pdbl=double;
+using pdbl=long double;
 using pcmplx=complex<pdbl>;
 #endif
 #if 0
