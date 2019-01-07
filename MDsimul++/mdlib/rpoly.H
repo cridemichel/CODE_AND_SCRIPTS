@@ -1,4 +1,4 @@
-#include "pvector.H"
+#include "./pvector.H"
 #include "pmatrix.H"
 #include<cstdlib>
 #include<iostream>
@@ -31,6 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
+#define RESCALE_POLY
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
@@ -991,7 +992,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
     }
 
 #else
- bool laguer(cmplx &x)
+ bool laguer(cmplx &x, int &flag)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -1000,6 +1001,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       ntype abx,abp,abm,err, M;
       cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m;
+      flag=0;
       m=n;
       //cout << "r0 ini = "<< x << "\n"; 
       for (iter=1;iter<=MAXIT;iter++) 
@@ -1022,6 +1024,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
               //cout << "x=" << x << "\n";
               //cout << "p(x)=" << evalpoly(x) << "\n";
+              flag=2; // 2=inf or nan => need to rescale
               return false;
             }
           if (abs(b) <= err) 
@@ -1057,6 +1060,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         }
       //refine_root(x);
       //cout << "too many iterations in laguer\n";
+      flag=1; // 1=too many iterations
       return false;
     }
 #endif
@@ -1203,8 +1207,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
          cmplx pc, p1c;
          r0new[0]=r0.real();
          r0new[1]=r0.imag();
-
-         for (iter=0; iter < maxiter_polish; iter++)
+         //cout << "r0new=" << r0new[0] << " " << r0new[1] << "\n";
+         for (iter=0; ;iter++)
            {
              p[0]=cmon[n]*r0new[0]+cmon[n-1];
              p[1]=cmon[n]*r0new[1];    
@@ -1237,13 +1241,22 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                }
              if (p1[0]==0 && p1[1]==0)
                {
+                 // cout << "QUI3 iter=" << iter << " err=" << err << "\n";
                  break;
                }
+             if (iter == maxiter_polish)
+               break;
              r0old[0]=r0new[0];
              r0old[1]=r0new[1];
              invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
              r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
              r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
+             if (isnan(r0new[0]) || isnan(r0new[1]) ||isinf(r0new[0]) || isinf(r0new[1]))
+               {
+                 r0new[0]=r0old[0];
+                 r0new[1]=r0old[1];
+                 break; 
+               }
            }
          r0=cmplx(r0new[0], r0new[1]);
 #else
@@ -1276,8 +1289,15 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                {
                  break;
                }
+             if (iter==maxiter_polish)
+               break;
              r0old=r0;
              r0 -= p/p1;
+             if (isnan(abs(r0)) || isinf(abs(r0)))
+               {
+                 r0=r0old;
+                 break;
+               }
            }
 #endif
        }
@@ -1288,7 +1308,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
          ntype p1;
          ntype r0r = r0.real();
          ntype errold, r0old;
-         for (iter=0; iter < maxiter_polish; iter++)
+         for (iter=0; ;iter++)
            {
              p=cmon[n]*r0.real()+cmon[n-1];
              p1 = cmon[n];
@@ -1309,8 +1329,15 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                }
              if (p1==cmplx(0,0))
                break;
+             if (iter==maxiter_polish)
+               break;
              r0old=r0r;
              r0r -= p/p1;
+             if (isnan(r0r)|| isinf(r0r))
+               {
+                 r0r=r0old;
+                 break;
+               }
            }
 
          r0 = cmplx(r0r,0);
@@ -1329,7 +1356,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
      ntype err0,err1, errA, errB;
      pvector<ntype,3> ad;
      typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
-     int iter, i;
+     int iter, i, flag;
 #if 0
       if constexpr (N < 0)
         {
@@ -1372,8 +1399,34 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       r0=0.0;
       int MAXSTPS=1000, MT=100;
       sigold=0.0;
-      while (!laguer(r0))
+      
+#ifdef RESCALE_POLY
+      bool rescaled=false;
+#endif
+      ntype SF, scfact=pow(maxf,1.0/ntype(n));
+
+      //cout << "scfact=" << scfact << " maxf=" << maxf << " n=" << n << "\n";
+      while (!laguer(r0, flag))
         {
+#ifdef RESCALE_POLY
+          if (flag==2 && iter==0 && !rescaled)
+            {
+              //cout << "qui n=" << n << "r0=" << r0 << "\n";  
+              //cmon.show("prima");
+              SF=scfact;
+              //cout << "22SF=" << SF << "\n";
+              for (i=n-1; i >= 0; i--)
+                {
+                  cmon[i] /= SF;
+                  SF *= scfact;
+                } 
+              rescaled=true;
+              r0=0.0;
+              //cmon.show("new coeff");
+              //cout << "n=" << n << "\n";
+              continue;
+            }
+#endif
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
@@ -1393,17 +1446,21 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               exit(-1); 
             }
         };
+      
       //if (iter > 0)
         //cout << "qui iter=" << iter << "\n";
+
 #ifdef LAGUERRE_POLISH
       refine_root(r0);
 #endif
+
       if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps*abs(r0))
         {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
           pvecNm1<cmplx> qr;
 #if 0
+
           if constexpr (N < 0)
             {
               //qp.allocate(n-1);
@@ -1420,6 +1477,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               if (i <= n-1)
                 deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
             }
+
           if (r0.real()!=0.0)
             {
               //forward deflation
@@ -1439,13 +1497,17 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               for (i=1; i < n-1; i++)
                 {
                   deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
-                }
+                 }
 #endif
               // choose the set which yields smaller error 
               err0=calc_err_q(deflcoeff0,r0.real());
               err1=calc_err_q(deflcoeff1,r0.real());
-              
-              if (err0 < err1)
+
+              if (isnan(err1) || isinf(err1))
+                deflcoeff=deflcoeff0;
+              else if (isnan(err0) || isinf(err0))
+                deflcoeff=deflcoeff1;
+              else if (err0 < err1)
                 {
                   //errA = err0;
                   deflcoeff = deflcoeff0;
@@ -1497,7 +1559,9 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               rp.allocate(n-2);
             }
 #endif
+          //cout << "2) r0=" << r0 << "\n";
           roots[0] = r0;
+
           roots[1] = conj(r0);
           // find coefficients of quadratic polynomial for deflation
 
@@ -1506,16 +1570,18 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           ad[0] = abs(r0)*abs(r0);
           //do forward and backward deflation and then choose the one which provides smaller error
           //backward deflation 
-
           //cout << "minus two r0=" << r0 << "\n";
           for (i=n; i >=2;  i--)
             {
               bd0[i-2] = cmon[i];
+
               if (i <= n-1)
                 bd0[i-2] -= ad[1]*bd0[i-1];
               if (i <= n-2)
                 bd0[i-2] -= ad[0]*bd0[i];
+              
             }
+
           if (ad[0]!=0)
             {
               //forward deflation
@@ -1531,8 +1597,12 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                 }
               err0=calc_err_defl_quad(bd0, ad);
               err1=calc_err_defl_quad(bd1, ad);
-
-              if (err0 < err1)
+           
+              if (isnan(err1) || isinf(err1))
+                bd=bd0;
+              else if (isnan(err0) || isinf(err0))
+                bd=bd1;
+              else if (err0 < err1)
                 {
                   bd = bd0;
                   //errB = err0;
@@ -1548,8 +1618,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               bd = bd0;
             }
           //cout << "N=" << n << "\n";
-          //bd.show("boh3");
-
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP =calc_err_defl_quad(bd, ad);
@@ -1571,7 +1639,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                 roots[i] = ro_quad[i-2];
             }
         }
-#if 1
       if constexpr (N < 0)
         {
           if (backup)
@@ -1580,6 +1647,13 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
         }
       bool copyroot=false;
+#ifdef RESCALE_POLY
+      if (rescaled==true)
+        {
+          for (i=0; i < n; i++)
+           roots[i] *= scfact; 
+        }
+#endif
       if (polish==true)
         {
           for (i=0; i < n; i++)
@@ -1596,7 +1670,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                 }
             }
         }
-#endif
     } 
   void odd_degree(pvector<cmplx,N>& roots)
     {
@@ -2014,7 +2087,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
     {
       return numeric_limits<ntype>::max();
     }
-  rpoly()
+   void init_const(void)
     {
       meps = epsilon();
       eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
@@ -2025,13 +2098,18 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       maxf3 = pow(maxf,1.0/3.0)/10.0;
       scalfact = pow(maxf,1.0/4.0)/1.618034;
       cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
-      //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
+    }
+  rpoly()
+    {
+      init_const();
+     //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
       //printf("%.15G\n", maxf);
       //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
     }
 
   rpoly(int nc): rpolybase<ntype,N>(nc)
     {
+      init_const(); 
     }
   //rpoly() = default;
 #if 0
