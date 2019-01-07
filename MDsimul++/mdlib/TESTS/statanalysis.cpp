@@ -3,7 +3,7 @@
 #include "../rpoly.H"
 #include <complex>
 //#define AURENTZ
-//#define MPC_MP
+#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -336,12 +336,12 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
-using pdbl=double;
-using pcmplx=complex<double>;
+using pdbl=vldbl;
+using pcmplx=cmplx;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
-using pdbl=long double;
+using pdbl=double;
 using pcmplx=complex<pdbl>;
 #endif
 #if 0
@@ -510,7 +510,7 @@ void sort_sol_opt(pvector<pcmplx,NDEG>& sol, pvector<cmplx,NDEG>& exsol, vldbl *
 }
 #endif
 #define MAXSOLV 10
-#define PEPTS 100
+#define PEPTS 1000
 int cmplxreal=0, restart, dojust=-1;
 double cumPEall[MAXSOLV][PEPTS], PEall[MAXSOLV][PEPTS];
 pvector<pcmplx,NDEG> csolall[MAXSOLV];
@@ -603,10 +603,10 @@ int main(int argc, char **argv)
 #else
   pvector<pcmplx,-1> csold(NDEG);
   pvector<pdbl,-1> cod(NDEG+1);
-  rpoly<pdbl,-1> oqs(NDEG);
-  rpoly<pdbl,-1,true> hqr(NDEG);
+  rpoly<pdbl,-1,false,pcmplx> oqs(NDEG);
+  rpoly<pdbl,-1,true,pcmplx> hqr(NDEG);
 #endif
-  srand48(42);
+  srand48(4242);
   
   for (ic=0; ic < 2; ic++)
     for (k=0; k < PEPTS; k++)
@@ -615,7 +615,7 @@ int main(int argc, char **argv)
   sig = 1.0;
   sig2= 1.0;
   logdEmax=10.0;
-  logdEmin=-22.0;
+  logdEmin=-252.0;
   numpts = PEPTS; 
   dlogdE = (logdEmax -logdEmin)/numpts;
 
@@ -800,12 +800,18 @@ int main(int argc, char **argv)
 	  for (k=0; k < NDEG; k++)
 	    {	
 	     dE = allrelerr[ic][k]; 
-               //(exsol[k]!=complex<double>(0,0))?abs((csolall[ic][k] - exsol[k])/exsol[k]):
-	       //abs(csolall[ic][k] - exsol[k]); 
+             //(exsol[k]!=complex<double>(0,0))?abs((csolall[ic][k] - exsol[k])/exsol[k]):
+	     //abs(csolall[ic][k] - exsol[k]); 
              if (dE > 0.0)
 		{
 		  logdE=log10(dE)-logdEmin;
-		  ilogdE=(int)(logdE/dlogdE);
+                  if (log10(dE) >=10)
+                    {
+                      cout << "dE=" << dE << "\n";
+                      exit(1);
+                    }
+                  ilogdE=(int)(logdE/dlogdE);
+                  
 		  if (ilogdE >= 0 && ilogdE < numpts)
 		    {
 		      (PEall[ic][ilogdE])++;
