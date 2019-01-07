@@ -7,6 +7,8 @@
 #ifndef NDEG
 #define NDEG 6
 #endif
+//#define STATIC
+
 #ifdef MPSOLVE
 extern "C" {
   void mpsolve_wrap(int N, );
@@ -597,8 +599,15 @@ int main(int argc, char **argv)
   long long int numtrials, its=0, numout, itsI;
   int numpts, ilogdE;
   int k, ic=0, i;
+#ifdef STATIC
   rpoly<pdbl,NDEG> oqs;
   rpoly<pdbl,NDEG,true> hqr;
+#else
+  pvector<pcmplx,-1> csold(NDEG);
+  pvector<pdbl,-1> cod(NDEG+1);
+  rpoly<pdbl,-1> oqs(NDEG);
+  rpoly<pdbl,-1,true> hqr(NDEG);
+#endif
   srand48(42);
   
   for (ic=0; ic < 2; ic++)
@@ -729,15 +738,34 @@ int main(int argc, char **argv)
       ic = 0;
       if (dojust==-1 || dojust == ic)
 	{
+#ifdef STATIC
           oqs.set_coeff(co);
           oqs.find_roots(csolall[ic]);
-	}
+#else
+          for (i=0; i <= NDEG; i++)
+            cod[i] = co[i];
+          oqs.set_coeff(cod);
+          oqs.find_roots(csold);
+          for (i=0; i < NDEG; i++)
+            csolall[ic][i] = csold[i];
+
+#endif
+        }
 
       ic++;	
       if (dojust==-1 || dojust == ic)
         {
+#ifdef STATIC
           hqr.set_coeff(co);
           hqr.find_roots(csolall[ic]);
+#else
+          for (i=0; i <= NDEG; i++)
+            cod[i] = co[i];
+          hqr.set_coeff(cod);
+          hqr.find_roots(csold);
+          for (i=0; i < NDEG; i++)
+            csolall[ic][i] = csold[i];
+#endif
         }
 #ifdef AURENTZ
       ic++;	

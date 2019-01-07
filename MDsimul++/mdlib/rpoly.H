@@ -97,6 +97,7 @@ public:
         v.show();
 #endif
     }
+
   void use_vec(int nc, ntype* coeffv, ntype* cmonv,
                ntype* bd0v, ntype *bd1v, ntype* bdv, ntype *deflcoeff0v, ntype* deflcoeff1v, ntype* deflcoeffv)
     {
@@ -1351,7 +1352,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
      // find initial guess for x here
      cmplx r0;
      const ntype goldfact=1.618034;
-     ntype sig, sigold;
+     //ntype sig, sigold;
      //bool mulsig=true;
      ntype err0,err1, errA, errB;
      pvector<ntype,3> ad;
@@ -1380,7 +1381,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
 
-      sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
+      //sig=1.0;
       r0=0.0;
       iter = 0;
       // find first zero using laguerre
@@ -1397,15 +1398,17 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         }
 #endif
       r0=0.0;
-      int MAXSTPS=1000, MT=100;
-      sigold=0.0;
+      int MAXSTPS=1000;// MT=100;
+      //sigold=0.0;
       
 #ifdef RESCALE_POLY
       bool rescaled=false;
 #endif
-      ntype SF, scfact=pow(maxf,1.0/ntype(n));
+      ntype SF, scfact=pow(maxf,1.0/ntype(n))/(1+2.0*meps);
 
-      //cout << "scfact=" << scfact << " maxf=" << maxf << " n=" << n << "\n";
+      if (scfact < 1.0)
+        scfact=1.0;
+      //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
       while (!laguer(r0, flag))
         {
 #ifdef RESCALE_POLY
@@ -1418,26 +1421,31 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               for (i=n-1; i >= 0; i--)
                 {
                   cmon[i] /= SF;
-                  SF *= scfact;
+                  if (i > 0)
+                    SF *= scfact;
                 } 
               rescaled=true;
               r0=0.0;
               //cmon.show("new coeff");
               //cout << "n=" << n << "\n";
+              cout << "SF=" << SF << "scfact=" <<scfact <<"\n";
               continue;
             }
 #endif
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
+            //  r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
 
+#if 0
           if (iter%MT==0)
             {
               sigold=sig;
               sig*=goldfact;
             }
+#endif
           if (iter > MAXSTPS)
             {
               cout << "[ERROR] Laguerre method did not converge:\n";
@@ -1447,7 +1455,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
         };
       
-      //if (iter > 0)
+      //if (iter > 15)
         //cout << "qui iter=" << iter << "\n";
 
 #ifdef LAGUERRE_POLISH
