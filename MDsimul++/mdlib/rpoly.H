@@ -862,7 +862,148 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         bd[i]=c[i];
     }
 #endif
- bool laguer_real(cmplx &xc, int& flag)
+bool laguer_real(cmplx &xc)
+  {
+    const int MR=8,MT=10,MAXIT=MT*MR;
+    const ntype EPS=numeric_limits<ntype>::epsilon();
+    static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+    int iter,j;
+    ntype abx,abp,abm,err, phi, rho;
+    //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+    ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
+    ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
+    cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
+    int m=n;
+    //cout << "r0 ini = "<<xc << "\n"; 
+    x[0] = xc.real();
+    x[1] = xc.imag();
+    for (iter=1;iter<=MAXIT;iter++) 
+      {
+        //its=iter;
+        b[0]=real(cmon[m]);
+        b[1]=imag(cmon[m]);
+        err=sqrt(b[0]*b[0]+b[1]*b[1]);
+        d[0]=f[0]=0.0;
+        d[1]=f[1]=0.0;
+        abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+        for (j=m-1;j>=0;j--) {
+          f0 = f[0];
+          f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
+          f[1] = x[0]*f[1] + x[1]*f0 + d[1];
+          d0 = d[0];
+          d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+          d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+          b0 = b[0];
+          b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
+          b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
+          err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
+        }
+        err *= EPS;
+        if (isinf(b[0]) || isnan(b[0]) || 
+            isinf(b[1]) || isnan(b[1]))
+          {
+            //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+            //cout << "x=" << x << "\n";
+            //cout << "p(x)=" << evalpoly(x) << "\n";
+            return false;
+          }
+        
+        //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
+        if (abs(cmplx(b[0],b[1])) <= err)
+          {
+            //if (iter > 15)
+            //cout << "iter=" << iter << "\n";
+            xc = cmplx(x[0],x[1]);
+            return true;
+          }
+        bc=cmplx(b[0],b[1]);
+        dc=cmplx(d[0],d[1]);
+        fc=cmplx(f[0],f[1]);
+        dovb=dc/bc;
+        fovb=fc/bc;
+        g[0]=dovb.real();
+        g[1]=dovb.imag();
+        g2[0] = g[0]*g[0] - g[1]*g[1];
+        g2[1] = 2.0*g[0]*g[1];
+        fb[0] = fovb.real();
+        fb[1] = fovb.imag();
+        h[0] = g2[0] - 2.0*fb[0];
+        h[1] = g2[1] - 2.0*fb[1];
+        sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
+        sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
+        rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
+        if (rho==0)
+          {
+            sq[0] = sq[1] = 0.0;
+          }
+        else
+          {
+            phi = acos(sarg[0]/rho);
+            if (sarg[1] < 0.0)
+              {
+                phi = -phi;
+              }
+            rho = sqrt(rho);
+            sq[0] = rho*cos(phi/2.0);
+            sq[1] = rho*sin(phi/2.0);
+          }
+        gp[0] = g[0] + sq[0];
+        gp[1] = g[1] + sq[1];
+        gm[0] = g[0] - sq[0];
+        gm[1] = g[1] - sq[1]; 
+        abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
+        abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
+        if (abp < abm) 
+          {
+            gp[0]=gm[0];
+            gp[1]=gm[1];
+          }
+        //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
+        invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
+        invgp[0] = gp[0]*invn;
+        invgp[1] = -gp[1]*invn;
+
+        //cout << "abp=" << abp << " abm=" << abm << "\n";
+        //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
+        if (MAX(abp,abm) > 0.0)
+          {
+            dx[0]=((ntype)m)*invgp[0];
+            dx[1]=((ntype)m)*invgp[1];
+          }
+        else
+          {
+            pol[0] = (1.0+abx)*cos((ntype)iter);
+            pol[1] = (1.0+abx)*sin((ntype)iter); 
+            dx[0]=pol[0];
+            dx[1]=pol[1];
+          }
+        //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
+        //x1=x-dx;
+        x1[0] = x[0] - dx[0];
+        x1[1] = x[1] - dx[1];
+        if (x[0] == x1[0] && x[1]==x1[1]) 
+          {
+            xc = cmplx(x[0],x[1]);
+            return true;
+          }
+        if (iter % MT != 0) 
+          {
+            x[0]=x1[0];
+            x[1]=x1[1];
+          }
+        else 
+          {
+            x[0] -= frac[iter/MT]*dx[0];
+            x[1] -= frac[iter/MT]*dx[1];
+          }
+        //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
+      }
+    //cout << "too many iterations in laguer\n";
+    xc = cmplx(x[0],x[1]);
+    return false;
+  }
+#if 0
+ bool laguer_real(cmplx &xc)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -877,7 +1018,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       //cout << "r0 ini = "<<xc << "\n"; 
       x[0] = xc.real();
       x[1] = xc.imag();
-      flag=0;
       for (iter=1;iter<=MAXIT;iter++) 
         {
           //its=iter;
@@ -906,7 +1046,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
               //cout << "x=" << x << "\n";
               //cout << "p(x)=" << evalpoly(x) << "\n";
-              flag=2; // 2=inf or nan => need to rescale
               return false;
             }
           if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
@@ -914,7 +1053,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               //if (iter > 15)
               //cout << "iter=" << iter << "\n";
               xc = cmplx(x[0],x[1]);
-              flag=0;
               return true;
             }
           invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
@@ -984,7 +1122,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (x[0] == x1[0] && x[1]==x1[1]) 
             {
               xc = cmplx(x[0],x[1]);
-              flag=0;
               return true;
             }
           if (iter % MT != 0) 
@@ -1001,11 +1138,11 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         }
       //cout << "too many iterations in laguer\n";
       xc = cmplx(x[0],x[1]);
-      flag=1;
       return false;
     }
+#endif
 
- bool laguer_cmplx(cmplx &x, int &flag)
+ bool laguer_cmplx(cmplx &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -1014,7 +1151,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       ntype abx,abp,abm,err, M;
       cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m;
-      flag=0;
       m=n;
       //cout << "r0 ini = "<< x << "\n"; 
       for (iter=1;iter<=MAXIT;iter++) 
@@ -1037,12 +1173,10 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
               //cout << "x=" << x << "\n";
               //cout << "p(x)=" << evalpoly(x) << "\n";
-              flag=2; // 2=inf or nan => need to rescale
               return false;
             }
           if (abs(b) <= err) 
             {
-              flag=0;
               return true;
             }
 
@@ -1071,7 +1205,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           x1=x-dx;
           if (x == x1) 
             {
-              flag=0;
               return true;
             }
 
@@ -1083,9 +1216,9 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         }
       //refine_root(x);
       //cout << "too many iterations in laguer\n";
-      flag=1; // 1=too many iterations
       return false;
     }
+#if 0
  bool laguer_wrap(cmplx &x, int &flag)
    {
      if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
@@ -1093,6 +1226,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
      else
        return laguer_real(x,flag);
    }
+#endif
  void laguer(cmplx *a, cmplx &x, int m)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
@@ -1226,6 +1360,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
    {
      int iter,i;
      ntype err;
+     cmplx povp1;
      if (r0.imag()!=0)
        {
 #ifdef POLISH_NR_REAL
@@ -1253,7 +1388,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
              }
              if (iter > 0)
                errold=err;
-             err = abs(p[0])+abs(p[1]);
+             err = abs(cmplx(p[0],p[1]));
 
              //cout << "iter=" << iter << " err=" << err << "\n";
              if (err==0)
@@ -1277,9 +1412,15 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
                break;
              r0old[0]=r0new[0];
              r0old[1]=r0new[1];
+#if 0
              invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
              r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
              r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
+#else
+             povp1 = cmplx(p[0],p[1])/cmplx(p1[0],p1[1]);
+             r0new[0] -= povp1.real();
+             r0new[1] -= povp1.imag();
+#endif
              if (isnan(r0new[0]) || isnan(r0new[1]) ||isinf(r0new[0]) || isinf(r0new[1]))
                {
                  r0new[0]=r0old[0];
@@ -1304,7 +1445,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
              if (iter > 0)
                errold=err;
 
-             err = abs(p.real())+abs(p.imag());
+             err = abs(p);//abs(p.real())+abs(p.imag());
              if (err==0)
                break;
 
@@ -1385,7 +1526,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
      ntype err0,err1, errA, errB;
      pvector<ntype,3> ad;
      typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
-     int iter, i, flag;
+     int iter, i;
 #if 0
       if constexpr (N < 0)
         {
@@ -1430,7 +1571,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       //sigold=0.0;
       
       //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
-      while (!laguer_wrap(r0, flag))
+      while (!laguer_real(r0))
         {
           if (iter==0)
             r0=cmplx(0.0,1.0);

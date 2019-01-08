@@ -1,14 +1,14 @@
 #include<stdlib.h>
 #include<stdio.h>
-#define CPOLY
+//#define CPOLY
 #ifdef CPOLY
 #include "../cpoly.H"
 #else
 #include "../rpoly.H"
 #endif
 #include <complex>
-#define AURENTZ
-//#define MPC_MP
+//#define AURENTZ
+#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -339,8 +339,8 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<50>>;
-using cmplx=number<mpc_complex_backend<50>>;
+using vldbl=number<mpfr_float_backend<200>>;
+using cmplx=number<mpc_complex_backend<200>>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #else
