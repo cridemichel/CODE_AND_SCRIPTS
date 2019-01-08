@@ -27,7 +27,7 @@ inline ntype SIGN(ntype a, ntype b)
 }
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
-#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
+//#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 //#define POLISH_NR_REAL 
@@ -407,7 +407,7 @@ bool laguer_real(cmplx &xc)
     //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
     ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
-    cmplx sqrtcmplx;
+    cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
     int m=n;
     //cout << "r0 ini = "<<xc << "\n"; 
     x[0] = xc.real();
@@ -442,27 +442,30 @@ bool laguer_real(cmplx &xc)
             //cout << "p(x)=" << evalpoly(x) << "\n";
             return false;
           }
-        if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
+        
+        //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
+        if (abs(cmplx(b[0],b[1])) <= err)
           {
             //if (iter > 15)
             //cout << "iter=" << iter << "\n";
             xc = cmplx(x[0],x[1]);
             return true;
           }
-        invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
-        g[0] = (d[1]*b[1] + d[0]*b[0])*invn;
-        g[1] = (d[1]*b[0] - d[0]*b[1])*invn; 
+        bc=cmplx(b[0],b[1]);
+        dc=cmplx(d[0],d[1]);
+        fc=cmplx(f[0],f[1]);
+        dovb=dc/bc;
+        fovb=fc/bc;
+        g[0]=dovb.real();
+        g[1]=dovb.imag();
         g2[0] = g[0]*g[0] - g[1]*g[1];
         g2[1] = 2.0*g[0]*g[1];
-        fb[0] = (f[1]*b[1] + f[0]*b[0])*invn;
-        fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
+        fb[0] = fovb.real();
+        fb[1] = fovb.imag();
         h[0] = g2[0] - 2.0*fb[0];
         h[1] = g2[1] - 2.0*fb[1];
         sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
         sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
-        //sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
-        //sq[0]=sqrtcmplx.real();
-        //sq[1]=sqrtcmplx.imag();
         rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
         if (rho==0)
           {
@@ -534,7 +537,6 @@ bool laguer_real(cmplx &xc)
     xc = cmplx(x[0],x[1]);
     return false;
   }
-
 bool laguer_cmplx(cmplx &x)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
@@ -604,16 +606,17 @@ bool laguer_cmplx(cmplx &x)
     //cout << "too many iterations in laguer\n";
     return false;
   }
-  bool laguer_wrap(cmplx &x)
-   {
-     if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
-       return laguer_cmplx(x);
-     else
-       return laguer_real(x);
-   }
- 
- void refine_root(cmplx &r0)
-   {
+#if 0
+bool laguer_wrap(cmplx &x)
+  {
+    if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
+      return laguer_real(x);
+    else
+      return laguer_real(x);
+  }
+#endif
+void refine_root(cmplx &r0)
+  {
      int iter,i;
      ntype err;
      // root polishing by NR
@@ -622,7 +625,7 @@ bool laguer_cmplx(cmplx &x)
      ntype r0old[2], p[2], r0new[2];
      ntype p1[2], p0, p10;
      ntype errold, invnp1;
-     cmplx pc, p1c;
+     cmplx povp1;
      r0new[0]=r0.real();
      r0new[1]=r0.imag();
      //cout << "r0new=" << r0new[0] << " " << r0new[1] << "\n";
@@ -642,7 +645,7 @@ bool laguer_cmplx(cmplx &x)
          }
          if (iter > 0)
            errold=err;
-         err = abs(p[0])+abs(p[1]);
+         err = abs(cmplx(p[0],p[1]));// abs(p[0])+abs(p[1]);
 
          //cout << "iter=" << iter << " err=" << err << "\n";
          if (err==0)
@@ -666,9 +669,15 @@ bool laguer_cmplx(cmplx &x)
            break;
          r0old[0]=r0new[0];
          r0old[1]=r0new[1];
+#if 0
          invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
          r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
          r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
+#else
+         povp1 = cmplx(p[0],p[1])/cmplx(p1[0],p1[1]);
+         r0new[0] -= povp1.real();
+         r0new[1] -= povp1.imag();
+#endif
          if (isnan(r0new[0]) || isnan(r0new[1]) ||isinf(r0new[0]) || isinf(r0new[1]))
            {
              r0new[0]=r0old[0];
@@ -677,6 +686,9 @@ bool laguer_cmplx(cmplx &x)
            }
        }
      r0=cmplx(r0new[0], r0new[1]);
+//if (iter > 2)
+  //   cout << "NR iter=" << iter << " err=" << err << "\n";
+
 #else
      cmplx r0old, p;
      cmplx p1;
@@ -692,7 +704,7 @@ bool laguer_cmplx(cmplx &x)
          if (iter > 0)
            errold=err;
 
-         err = abs(p.real())+abs(p.imag());
+         err = abs(p);//abs(p.real())+abs(p.imag());
          if (err==0)
            break;
 
@@ -706,11 +718,13 @@ bool laguer_cmplx(cmplx &x)
            {
              break;
            }
+     cout << "NR iter=" << iter << " err=" << err << "\n";
          if (iter==maxiter_polish)
            break;
 
          r0old=r0;
          r0 -= p/p1;
+
          if (isnan(abs(r0)) || isinf(abs(r0)))
            {
              r0=r0old;
@@ -775,11 +789,11 @@ bool laguer_cmplx(cmplx &x)
         }
 #endif
       //cout << "r0=" << r0 << "\n";
-      r0=0.0;
+      r0=cmplx(0.0,0.0);
       int MAXSTPS=1000;
-      while (!laguer_wrap(r0))
+      while (!laguer_real(r0))
         {
-          if (iter==1)
+          if (iter==0)
             r0=cmplx(0.0,1.0);
           else
             r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
@@ -821,13 +835,30 @@ bool laguer_cmplx(cmplx &x)
           // pvector<cmplx,N-1> qr;
           pvecNm1<cmplx> qr;
           //cout << "minus one r0=" << r0 << "\n";
+#if 0
+          if (abs(imag(r0)) <= 2.0*meps*abs(real(r0)))
+            {
+              r0=cmplx(real(r0),0.0);
+            }
+#endif
+          //cout << "n=" << n << " r0=" << r0 << "\n";
           roots[0] = r0;
+#if 0
+          cmplx a,b,c;
+          b=cmon[n];
+          for (i=n-1;i>=0;i--) {
+            c=cmon[i];
+            deflcoeff0[i]=b;
+            b=r0*b+c;
+          }
+#else
           for (i=n; i >=1; i--)
             {
               deflcoeff0[i-1] = cmon[i];
               if (i <= n-1)
                 deflcoeff0[i-1] += r0*deflcoeff0[i];
             }
+#endif
 #if 0
           if (r0!=cmplx(0.0,0.0))
             {

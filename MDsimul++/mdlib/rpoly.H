@@ -1293,7 +1293,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
          cmplx r0old, p;
          cmplx p1;
          ntype errold;
-         for (iter=0; iter < maxiter_polish; iter++)
+         for (iter=0; ; iter++)
            {
              p=cmon[n]*r0+cmon[n-1];
              p1=cmon[n];
@@ -1435,7 +1435,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0 = polar(ntype(1.0),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
             //  r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
 
