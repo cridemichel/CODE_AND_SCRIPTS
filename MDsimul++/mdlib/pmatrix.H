@@ -8,7 +8,7 @@
 #include<cstdlib>
 #include<cmath>
 #include<cstring>
-#include "pvector_mp.H"
+#include "pvector.H"
 #define OPT_INV
 #define MAT_USE_LAPACK
 #define MAT_COMMA_INIT

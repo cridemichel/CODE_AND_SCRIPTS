@@ -31,7 +31,6 @@ inline ntype SIGN(ntype a, ntype b)
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
-//#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
 template<class T>
@@ -858,8 +857,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         bd[i]=c[i];
     }
 #endif
-#ifdef USE_LAGUER_REAL
- bool laguer(cmplx &xc)
+ bool laguer_real(cmplx &xc, int& flag)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -874,6 +872,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       //cout << "r0 ini = "<<xc << "\n"; 
       x[0] = xc.real();
       x[1] = xc.imag();
+      flag=0;
       for (iter=1;iter<=MAXIT;iter++) 
         {
           //its=iter;
@@ -896,11 +895,21 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
           }
           err *= EPS;
+          if (isinf(b[0]) || isnan(b[0]) || 
+              isinf(b[1]) || isnan(b[1]))
+            {
+              //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+              //cout << "x=" << x << "\n";
+              //cout << "p(x)=" << evalpoly(x) << "\n";
+              flag=2; // 2=inf or nan => need to rescale
+              return false;
+            }
           if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
             {
               //if (iter > 15)
               //cout << "iter=" << iter << "\n";
               xc = cmplx(x[0],x[1]);
+              flag=0;
               return true;
             }
           invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
@@ -972,6 +981,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
               //if (iter > 15)
                 //cout << "iter=" << iter << "\n";
               xc = cmplx(x[0],x[1]);
+              flag=0;
               return true;
             }
           if (iter % MT != 0) 
@@ -988,11 +998,11 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         }
       //cout << "too many iterations in laguer\n";
       xc = cmplx(x[0],x[1]);
+      flag=1;
       return false;
     }
 
-#else
- bool laguer(cmplx &x, int &flag)
+ bool laguer_cmplx(cmplx &x, int &flag)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=numeric_limits<ntype>::epsilon();
@@ -1029,6 +1039,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
           if (abs(b) <= err) 
             {
+              flag=0;
               return true;
             }
 
@@ -1044,11 +1055,20 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           if (abp < abm) gp=gm;
           //cout << "abp=" << abp << " abm=" << abm << "\n";
           //cout << "1/gp=" << 1.0/gp << "\n";
-          dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+          if (MAX(abp,abm) > 0.0)
+            {
+              dx =  ((cmplx)m)/((cmplx)gp);
+            }
+          else
+            {
+              dx = polar(((ntype)(1+abx)),((ntype)iter));
+            }
+          //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
           //cout << "dx=" << dx << "\n";
           x1=x-dx;
           if (x == x1) 
             {
+              flag=0;
               return true;
             }
 
@@ -1063,7 +1083,13 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       flag=1; // 1=too many iterations
       return false;
     }
-#endif
+ bool laguer_wrap(cmplx &x, int &flag)
+   {
+     if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
+       return laguer_cmplx(x,flag);
+     else
+       return laguer_real(x,flag);
+   }
  void laguer(cmplx *a, cmplx &x, int m)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
@@ -1401,7 +1427,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
       //sigold=0.0;
       
       //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
-      while (!laguer(r0, flag))
+      while (!laguer_wrap(r0, flag))
         {
           if (iter==0)
             r0=cmplx(0.0,1.0);
@@ -1426,11 +1452,11 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
         };
       
-      //if (iter > 15)
-        //cout << "qui iter=" << iter << "\n";
-
 #ifdef LAGUERRE_POLISH
-      refine_root(r0);
+      if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
+        {
+          refine_root(r0);
+        }
 #endif
 
       if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps*abs(r0))
@@ -2802,10 +2828,10 @@ template <class ntype, int N, bool force_hqr, class cmplx> void rpoly<ntype,N,fo
       /* complex coefficients of p1 and p2 */
       if (whichcase==0) // d2!=0
 	{
-	  cdiskr=acx*acx/cmplx(4.0)-bcx;               
+	  cdiskr=acx*acx/((cmplx)4.0)-bcx;               
 	  /* calculate the roots as roots of p1(x) and p2(x) (see end of sec. 2.1) */
-	  zx1=-acx/cmplx(2.0)+sqrt(cdiskr);
-	  zx2=-acx/cmplx(2.0)-sqrt(cdiskr);
+	  zx1=-acx/((cmplx)2.0)+sqrt(cdiskr);
+	  zx2=-acx/((cmplx)2.0)-sqrt(cdiskr);
 	  if(abs(zx1) > abs(zx2))
 	    zxmax=zx1;
 	  else

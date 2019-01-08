@@ -9,10 +9,11 @@
 static int balance=0;
 using namespace std;
 //#define AURENTZ
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
+//using boost::multiprecision::polar;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
@@ -26,7 +27,7 @@ using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<gmp_float<200>>;
-using cmplx=complex<numty>;
+using cmplx=complex<vldbl>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #elif defined(MPC_MP)
@@ -37,8 +38,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
-using pdbl=double;
-using pcmplx=complex<double>;
+using pdbl=vldbl;
+using pcmplx=cmplx;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
@@ -447,7 +448,11 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
   //allreal=true;
   int ii;
   int m=15;
+#ifdef MPC_MP
   vldbl pi = boost::math::constants::pi<vldbl>();//2.0*acos(vldbl(0.0));
+#else
+  vldbl pi=M_PI;
+#endif
   for  (ii=-m+1; ii <= 0; ii++)
     er[m-1+ii]= vldbl(0.9L)*exp(cmplx(0,vldbl(ii)*pi/vldbl(2.0L)/vldbl(m)));
   for  (ii=1; ii <= m; ii++)

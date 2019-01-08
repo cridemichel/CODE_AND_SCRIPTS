@@ -2,7 +2,7 @@
 #include<stdio.h>
 #include "../rpoly.H"
 #include <complex>
-#define AURENTZ
+//#define AURENTZ
 //#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
@@ -309,7 +309,7 @@ int perm[PERMS][NDEG]={{0, 1, 2, 3, 4, 5}, {0, 1, 2, 3, 5, 4}, {0, 1, 2, 4, 3, 5
    1, 0}, {5, 4, 3, 0, 1, 2}, {5, 4, 3, 0, 2, 1}, {5, 4, 3, 1, 0, 
   2}, {5, 4, 3, 1, 2, 0}, {5, 4, 3, 2, 0, 1}, {5, 4, 3, 2, 1, 0}};
 
-#ifdef CPP_MP
+#ifdef MPC_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
 using namespace boost;
@@ -615,7 +615,8 @@ int main(int argc, char **argv)
   sig = 1.0;
   sig2= 1.0;
   logdEmax=10.0;
-  logdEmin=-22.0;
+  logdEmin=((int)log10(numeric_limits<vldbl>::epsilon()))-6;
+  //cout << "logdEmin=" << logdEmin << "\n";
   numpts = PEPTS; 
   dlogdE = (logdEmax -logdEmin)/numpts;
 
