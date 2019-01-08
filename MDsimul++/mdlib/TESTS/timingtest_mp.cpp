@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "pmatrix.H"
+//#include "pmatrix.H"
 #define CPOLY
 #ifdef CPOLY
 #include "./cpoly.H"
@@ -42,7 +42,7 @@ double gauss(void)
 }
 
 using namespace std;
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>

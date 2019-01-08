@@ -185,10 +185,10 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   template <class vtype>
   using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
 	 pvector<vtype, -1>>::type;
-  using cpolyNm1 = typename std::conditional<(N>0),  cpoly<cmplx, N-1>,
-	 cpoly<cmplx, -1>>::type;
-  using cpolyNm2 = typename std::conditional<(N>0),  cpoly<cmplx, N-2>,
-	 cpoly<cmplx, -1>>::type;
+  using cpolyNm1 = typename std::conditional<(N>0),  cpoly<cmplx, N-1,ntype>,
+	 cpoly<cmplx, -1,ntype>>::type;
+  using cpolyNm2 = typename std::conditional<(N>0),  cpoly<cmplx, N-2,ntype>,
+	 cpoly<cmplx, -1,ntype>>::type;
   template <class vtype>
   using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
 	 pmatrixq<vtype, -1>>::type;
@@ -796,7 +796,7 @@ void refine_root(cmplx &r0)
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0=polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
           //if (iter%MT==0)
             //sig*=goldfact;
