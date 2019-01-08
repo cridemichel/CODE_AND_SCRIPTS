@@ -1003,7 +1003,7 @@ bool laguer_real(cmplx &xc)
     return false;
   }
 #if 0
- bool laguer_real(cmplx &xc)
+ bool laguer_real_old(cmplx &xc)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=numeric_limits<ntype>::epsilon();

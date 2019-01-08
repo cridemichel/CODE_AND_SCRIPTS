@@ -8,7 +8,7 @@
 #endif
 #include <complex>
 //#define AURENTZ
-#define MPC_MP
+//#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -320,8 +320,8 @@ int perm[PERMS][NDEG]={{0, 1, 2, 3, 4, 5}, {0, 1, 2, 3, 5, 4}, {0, 1, 2, 4, 3, 5
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl = number<cpp_bin_float<200>>;
-using cmplx = cpp_complex<200>;
+using vldbl = number<cpp_bin_float<500>>;
+using cmplx = cpp_complex<500>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #elif defined(GMP_MP)
@@ -329,7 +329,7 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<gmp_float<200>>;
+using vldbl=number<gmp_float<500>>;
 using cmplx=complex<numty>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
@@ -339,8 +339,8 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<200>>;
-using cmplx=number<mpc_complex_backend<200>>;
+using vldbl=number<mpfr_float_backend<500>>;
+using cmplx=number<mpc_complex_backend<500>>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #else
