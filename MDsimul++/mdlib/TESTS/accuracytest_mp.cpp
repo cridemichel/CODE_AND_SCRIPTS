@@ -868,7 +868,7 @@ int main(int argc, char *argv[])
       rp.set_coeff(c);
       rp.show();
       //rp.zroots(roots,false);
-      rp.find_roots(roots);
+      rp.find_roots(roots,true);
       //roots.show();  
       sprintf(testo2, "OPS");
     }

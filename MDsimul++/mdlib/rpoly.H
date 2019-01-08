@@ -27,7 +27,7 @@ inline ntype SIGN(ntype a, ntype b)
 }
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
-#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
+//#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
@@ -1565,7 +1565,7 @@ bool laguer_real(cmplx &xc)
       if constexpr (N < 0)
         {
           cbak.allocate(n+1);
-          if (backup)
+          if (backup||polish)
             {
               cbak = coeff;
             }
@@ -1607,7 +1607,8 @@ bool laguer_real(cmplx &xc)
           refine_root(r0);
         }
 #endif
-      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag()) < meps*abs(r0))
+      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) 
+          || abs(r0.imag()) <= meps*abs(r0))
         {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
@@ -1630,7 +1631,7 @@ bool laguer_real(cmplx &xc)
               if (i <= n-1)
                 deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
             }
-
+#if 0
           if (r0.real()!=0.0)
             {
               //forward deflation
@@ -1676,6 +1677,9 @@ bool laguer_real(cmplx &xc)
               //errA=calc_err_q(deflcoeff0,r0.real());
               deflcoeff = deflcoeff0;
             }
+#else
+          deflcoeff = deflcoeff0;
+#endif
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
           //errP = calc_err_q(deflcoeff, r0.real());
@@ -1736,7 +1740,7 @@ bool laguer_real(cmplx &xc)
                 bd0[i-2] -= ad[0]*bd0[i];
               
             }
-
+#if 0
           if (ad[0]!=0)
             {
               //forward deflation
@@ -1773,6 +1777,9 @@ bool laguer_real(cmplx &xc)
               //errB=calc_err_defl_quad(bd0, ad);
               bd = bd0;
             }
+#else
+          bd=bd0;
+#endif
           //cout << "N=" << n << "\n";
 #ifdef USE_DEFL_NR
           //ntype errP, errD;
@@ -1797,7 +1804,7 @@ bool laguer_real(cmplx &xc)
         }
       if constexpr (N < 0)
         {
-          if (backup)
+          if (backup||polish)
             {
               coeff = cbak;
             }
@@ -1805,6 +1812,12 @@ bool laguer_real(cmplx &xc)
       bool copyroot=false;
       if (polish==true)
         {
+          if constexpr (N < 0)
+            {
+              cmon[n]=1.0;
+              for (i=n-1; i >=0; i--)
+                cmon[i]=coeff[i]/coeff[n];
+            }
           for (i=0; i < n; i++)
             {
               // refine conjuigate pairs only once!
@@ -1812,7 +1825,7 @@ bool laguer_real(cmplx &xc)
                 copyroot=true;
               else 
                 copyroot=false;
-              refine_root(roots[i]);
+              laguer_real(roots[i]);
               if (copyroot==true)
                 {
                   roots[i+1] = conj(roots[i]);

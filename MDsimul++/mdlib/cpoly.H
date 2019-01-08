@@ -963,7 +963,8 @@ void refine_root(cmplx &r0)
                 copyroot=true;
               else 
                 copyroot=false;
-              refine_root(roots[i]);
+              //refine_root(roots[i]);
+              laguer_real(roots[i]);
               if (copyroot==true)
                 {
                   roots[i+1] = conj(roots[i]);
