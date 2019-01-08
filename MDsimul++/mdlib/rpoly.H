@@ -480,19 +480,24 @@ public:
       ntype sum=0;
       for (i=0; i < n; i++)
         {
-          if (i == 0){
-            if (cmon[i]==0)
-              {
-                sum+=abs(r0*c[i]+cmon[i]);} 
-            else 
-              {
-                sum=+abs((r0*c[i]+cmon[i])/cmon[i]);}
-          }
+          if (i == 0)
+            {
+              if (cmon[i]==0)
+                {
+                  sum+=abs(r0*c[i]+cmon[i]);
+                } 
+              else 
+                {
+                  sum+=abs((r0*c[i]+cmon[i])/cmon[i]);
+                }
+            }
           else 
-            if (cmon[i]==0)
-              sum +=abs(-c[i-1] + r0*c[i] + cmon[i]);
-            else
-              sum +=abs((-c[i-1] + r0*c[i]+cmon[i])/cmon[i]);
+            {
+              if (cmon[i]==0)
+                sum +=abs(-c[i-1] + r0*c[i] + cmon[i]);
+              else
+                sum +=abs((-c[i-1] + r0*c[i] + cmon[i])/cmon[i]);
+            }
         }
       //sum += (cmon[0]==0.0)?abs(r0*c[0]+cmon[0]):abs((r0*c[0]+cmon[0])/cmon[0]);
       return sum;
@@ -978,8 +983,6 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           x1[1] = x[1] - dx[1];
           if (x[0] == x1[0] && x[1]==x1[1]) 
             {
-              //if (iter > 15)
-                //cout << "iter=" << iter << "\n";
               xc = cmplx(x[0],x[1]);
               flag=0;
               return true;
@@ -1458,8 +1461,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
           refine_root(r0);
         }
 #endif
-
-      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag())< meps*abs(r0))
+      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(r0.imag()) < meps*abs(r0))
         {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
@@ -1475,7 +1477,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
 #endif
           //cout << "minus one r0=" << r0 << "\n";
-          roots[0] = r0;//.real();
+          roots[0] = r0.real();
           for (i=n; i >=1; i--)
             {
               deflcoeff0[i-1] = cmon[i];
@@ -1487,8 +1489,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             {
               //forward deflation
 #if 0
-              deflcoeff1[N-1]=1.0;
-              for (i=0; i < N-1; i++)
+              deflcoeff1[n-1]=1.0;
+              for (i=0; i < n-1; i++)
                 {
                   deflcoeff1[i] = cmon[i]; 
                   if (i >= 1)
@@ -1525,6 +1527,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
           else
             {
+              //errA=calc_err_q(deflcoeff0,r0.real());
               deflcoeff = deflcoeff0;
             }
 #ifdef USE_DEFL_NR
@@ -1566,7 +1569,8 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
 #endif
           //cout << "2) r0=" << r0 << "\n";
           roots[0] = r0;
-
+          //cout << "r0=" << r0 << " p(real(r0))=" << evalpoly(r0.real()) << " p(r0)=" << evalpoly(r0)<< "\n";
+          
           roots[1] = conj(r0);
           // find coefficients of quadratic polynomial for deflation
 
@@ -1620,6 +1624,7 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
             }
           else
             {
+              //errB=calc_err_defl_quad(bd0, ad);
               bd = bd0;
             }
           //cout << "N=" << n << "\n";

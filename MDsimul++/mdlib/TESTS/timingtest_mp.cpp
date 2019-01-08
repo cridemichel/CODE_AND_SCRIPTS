@@ -1,8 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
+#define CPOLY
+#ifdef CPOLY
+#include "./cpoly.H"
+#else
 #include "./rpoly.H"
-
+#endif
 //#include<complex>
 #ifndef NDEG
 #define NDEG 6
@@ -38,7 +42,7 @@ double gauss(void)
 }
 
 using namespace std;
-#define MPC_MP
+//#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -75,10 +79,17 @@ int main(int argc, char* argv[])
   pvector<numty,NDEG+1> c;
   pvector<cmplx,NDEG> roots;
 #else
+#ifdef CPOLY
+  cpoly<cmplx,-1,numty> rp(NDEG);
+  cpoly<cmplx,-1,numty> rphqr(NDEG);
+  pvector<cmplx,-1> c(NDEG+1);
+  pvector<cmplx,-1> roots(NDEG);
+#else
   rpoly<numty,-1,false,cmplx> rp(NDEG);
   rpoly<numty,-1,true,cmplx> rphqr(NDEG);
   pvector<numty,-1> c(NDEG+1);
   pvector<cmplx,-1> roots(NDEG);
+#endif
 #endif
   //cmplx x1c, x2c, x3c, x4c, x5c, x6c;
 #if 0
@@ -188,15 +199,19 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
   c[NDEG]=1.0;
   for (int i=0; i < maxiter; i++)
     {
+#ifdef CPOLY
+      for (j=0; j < NDEG; j++)
+        c[j]=cmplx(sig*(drand48()-0.5),0.0);
+#else
       for (j=0; j < NDEG; j++)
         c[j]=sig*(drand48()-0.5);
+#endif
       if (caso==0)
         {
           rp.set_coeff(c);
-          //rp.zroots(roots, true);
+          //rp.zroots(roots, false);
           //rp.show("f(x)=");
           rp.find_roots(roots);
-          
         }
       else
         {

@@ -1,7 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
+#define CPOLY
+#ifdef CPOLY
+#include "./cpoly.H"
+#else
 #include "./rpoly.H"
+#endif
 #include<complex>
 #include<list>
 #include<string>
@@ -38,8 +43,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
-using pdbl=vldbl;
-using pcmplx=cmplx;
+using pdbl=double;
+using pcmplx=complex<double>;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
@@ -816,7 +821,11 @@ int main(int argc, char *argv[])
 #ifdef STATIC
   pvector<pdbl,NDEG+1> c(NDEG+1);
 #else
+#ifdef CPOLY
+  pvector<pcmplx> c(NDEG+1);
+#else
   pvector<pdbl> c(NDEG+1);
+#endif
 #endif 
   int algo, i;
   numty ca[NDEG+1];
@@ -836,16 +845,25 @@ int main(int argc, char *argv[])
       exit(-1);
     }
   calc_coeff_dep_on_case(ca, er);
+#ifdef CPOLY
+  for (i=0; i < NDEG+1; i++)
+    c[i]=pcmplx(pdbl(ca[i]),0.0);
+#else
   for (i=0; i < NDEG+1; i++)
     c[i]=pdbl(ca[i]);
-  c.show("boh");
-  cout << "coeff=" << c[NDEG] << "\n";
+#endif
+  //c.show("boh");
+  //cout << "coeff=" << c[NDEG] << "\n";
   if (algo==0)
     {
 #ifdef STATIC
       rpoly<pdbl,NDEG,false, pcmplx> rp;
 #else
+#ifdef CPOLY
+      cpoly<pcmplx,-1,pdbl> rp(NDEG);
+#else
       rpoly<pdbl,-1,false,pcmplx> rp(NDEG);
+#endif
 #endif
       rp.set_coeff(c);
       rp.show();
@@ -859,7 +877,11 @@ int main(int argc, char *argv[])
 #ifdef STATIC
       rpoly<pdbl,NDEG,true,pcmplx> rphqr;
 #else
-      rpoly<pdbl,-1,true,pcmplx> rphqr(NDEG);
+#ifdef CPOLY
+      cpoly<pcmplx,-1,pdbl> rphqr(NDEG);
+#else
+      rpoly<pdbl,-1,true,pcmplx> rphqr;
+#endif
 #endif
       rphqr.set_coeff(c);
       //rphqr.show("p(x)=");

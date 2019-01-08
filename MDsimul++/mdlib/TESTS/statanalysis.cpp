@@ -1,8 +1,13 @@
 #include<stdlib.h>
 #include<stdio.h>
+#define CPOLY
+#ifdef CPOLY
+#include "../cpoly.H"
+#else
 #include "../rpoly.H"
+#endif
 #include <complex>
-//#define AURENTZ
+#define AURENTZ
 //#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
@@ -309,7 +314,7 @@ int perm[PERMS][NDEG]={{0, 1, 2, 3, 4, 5}, {0, 1, 2, 3, 5, 4}, {0, 1, 2, 4, 3, 5
    1, 0}, {5, 4, 3, 0, 1, 2}, {5, 4, 3, 0, 2, 1}, {5, 4, 3, 1, 0, 
   2}, {5, 4, 3, 1, 2, 0}, {5, 4, 3, 2, 0, 1}, {5, 4, 3, 2, 1, 0}};
 
-#ifdef MPC_MP
+#ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
 using namespace boost;
@@ -334,8 +339,8 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<200>>;
-using cmplx=number<mpc_complex_backend<200>>;
+using vldbl=number<mpfr_float_backend<50>>;
+using cmplx=number<mpc_complex_backend<50>>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #else
@@ -601,10 +606,17 @@ int main(int argc, char **argv)
   rpoly<pdbl,NDEG> oqs;
   rpoly<pdbl,NDEG,true> hqr;
 #else
+#ifdef CPOLY
+  pvector<pcmplx,-1> csold(NDEG);
+  pvector<pcmplx,-1> cod(NDEG+1);
+  cpoly<pcmplx,-1,pdbl> oqs(NDEG);
+  cpoly<pcmplx,-1,pdbl> hqr(NDEG);
+#else
   pvector<pcmplx,-1> csold(NDEG);
   pvector<pdbl,-1> cod(NDEG+1);
   rpoly<pdbl,-1,false,pcmplx> oqs(NDEG);
   rpoly<pdbl,-1,true,pcmplx> hqr(NDEG);
+#endif
 #endif
   srand48(4242);
   
@@ -741,10 +753,16 @@ int main(int argc, char **argv)
           oqs.set_coeff(co);
           oqs.find_roots(csolall[ic]);
 #else
+#ifdef CPOLY
+          for (i=0; i <= NDEG; i++)
+            cod[i] = pcmplx(co[i],0.0);
+#else
           for (i=0; i <= NDEG; i++)
             cod[i] = co[i];
+#endif
           oqs.set_coeff(cod);
           oqs.find_roots(csold);
+          //oqs.zroots(csold,true);
           for (i=0; i < NDEG; i++)
             csolall[ic][i] = csold[i];
 
@@ -758,8 +776,13 @@ int main(int argc, char **argv)
           hqr.set_coeff(co);
           hqr.find_roots(csolall[ic]);
 #else
+#ifdef CPOLY
           for (i=0; i <= NDEG; i++)
+            cod[i] = pcmplx(co[i],0.0);
+#else
+           for (i=0; i <= NDEG; i++)
             cod[i] = co[i];
+#endif
           hqr.set_coeff(cod);
           hqr.find_roots(csold);
           for (i=0; i < NDEG; i++)
