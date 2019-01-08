@@ -868,7 +868,7 @@ bool laguer_real(cmplx &xc)
     const ntype EPS=numeric_limits<ntype>::epsilon();
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
-    ntype abx,abp,abm,err, phi, rho;
+    ntype abx,abp,abm,err, phi, rho, s;
     //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
     ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
@@ -907,9 +907,14 @@ bool laguer_real(cmplx &xc)
             //cout << "p(x)=" << evalpoly(x) << "\n";
             return false;
           }
-        
-        //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
+#if 1
+        s=0.0;
+        for (j=0; j <= n; j ++) 
+          s+=abs(cmon[j])*pow(abs(cmplx(x[0],x[1])),j);
+        if (abs(cmplx(b[0],b[1])) <= EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+#else       
         if (abs(cmplx(b[0],b[1])) <= err)
+#endif
           {
             //if (iter > 15)
             //cout << "iter=" << iter << "\n";

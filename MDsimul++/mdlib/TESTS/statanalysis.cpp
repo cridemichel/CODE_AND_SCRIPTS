@@ -7,8 +7,8 @@
 #include "../rpoly.H"
 #endif
 #include <complex>
-//#define AURENTZ
-#define MPC_MP
+#define AURENTZ
+//#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
