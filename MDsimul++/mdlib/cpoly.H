@@ -403,7 +403,7 @@ bool laguer_real(cmplx &xc)
     const ntype EPS=numeric_limits<ntype>::epsilon();
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
-    ntype abx,abp,abm,err, phi, rho,s;
+    ntype abx,abp,abm,err, phi, rho,s, pr;
     //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
     ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
@@ -445,8 +445,12 @@ bool laguer_real(cmplx &xc)
 
 #if 1
         s=0;
+        pr=1.0;
         for (j=0; j <= n; j ++) 
-          s+=abs(cmon[j])*pow(abs(cmplx(x[0],x[1])),j);
+          {
+            s+=coeff[j]*pr;
+            pr *= abx;
+          }
         if (abs(cmplx(b[0],b[1])) <= EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
 #else
          if (abs(cmplx(b[0],b[1])) <= err)
@@ -547,7 +551,7 @@ bool laguer_cmplx(cmplx &x)
     const ntype EPS=numeric_limits<ntype>::epsilon();
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
-    ntype abx,abp,abm,err, M;
+    ntype abx,abp,abm,err, M, s, pr;
     cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     int m;
     m=n;
@@ -570,7 +574,18 @@ bool laguer_cmplx(cmplx &x)
         if (isinf(b.real()) || isinf(b.imag()) || isnan(b.real()) ||
             isnan(b.imag()))
           return false;
-
+#if 1
+        s=0;
+        pr=1.0;
+        for (j=0; j <= n; j ++) 
+          {
+            s+=coeff[j]*pr;
+            pr *= abx;
+          }
+        if (abs(b) <= EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+          return true;
+#else
+ 
         if (abs(b) <= err) 
           {
             //if (iter > 15)
@@ -578,7 +593,7 @@ bool laguer_cmplx(cmplx &x)
             //cout << "x=" << x << " iter=" << iter << " abs(M-1)=" << abs(M-1) << "\n";
             return true;
           }
-
+#endif
         g=d/b;
         g2=g*g;
         h=g2-((ntype)2.0)*f/b;
@@ -773,8 +788,10 @@ void refine_root(cmplx &r0)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-      //cmon.show("mamah");
-      //r0 = cmplx(0.0,1.0);
+      //absolute value of coefficients are used in Bini's stopping criterion
+      //we use coeff vector to store them since it won't be used anymore from here on
+      for (i=0; i <= n; i++) 
+        coeff[i] = abs(cmon[i]); 
 
       sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
       r0=cmplx(0.0,0.0);

@@ -207,6 +207,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
+ 
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
    {
       const int MAXIT=1000000;
@@ -868,7 +869,7 @@ bool laguer_real(cmplx &xc)
     const ntype EPS=numeric_limits<ntype>::epsilon();
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
-    ntype abx,abp,abm,err, phi, rho, s;
+    ntype abx,abp,abm,err, phi, rho, s, pr;
     //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
     ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
@@ -909,8 +910,12 @@ bool laguer_real(cmplx &xc)
           }
 #if 1
         s=0.0;
+        pr=1.0; 
         for (j=0; j <= n; j ++) 
-          s+=abs(cmon[j])*pow(abs(cmplx(x[0],x[1])),j);
+          {
+            s+=coeff[j]*pr;
+            pr *= abx;
+          }
         if (abs(cmplx(b[0],b[1])) <= EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
 #else       
         if (abs(cmplx(b[0],b[1])) <= err)
@@ -1153,7 +1158,7 @@ bool laguer_real(cmplx &xc)
       const ntype EPS=numeric_limits<ntype>::epsilon();
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
-      ntype abx,abp,abm,err, M;
+      ntype abx,abp,abm,err, M, s, pr;
       cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m;
       m=n;
@@ -1180,11 +1185,22 @@ bool laguer_real(cmplx &xc)
               //cout << "p(x)=" << evalpoly(x) << "\n";
               return false;
             }
+#if 1
+          s=0.0;
+          pr=1.0; 
+          for (j=0; j <= n; j ++) 
+            {
+              s+=coeff[j]*pr;
+              pr *= abx;
+            }
+          if (abs(b) <= EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+            return true;
+#else
           if (abs(b) <= err) 
             {
               return true;
             }
-
+#endif
           g=d/b;
           g2=g*g;
           h=g2-((ntype)2.0)*f/b;
@@ -1554,8 +1570,7 @@ bool laguer_real(cmplx &xc)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-
-      //sig=1.0;
+     //sig=1.0;
       r0=0.0;
       iter = 0;
       // find first zero using laguerre
@@ -1571,6 +1586,11 @@ bool laguer_real(cmplx &xc)
             }
         }
 #endif
+      //absolute value of coefficients are used in Bini's stopping criterion
+      //we use coeff vector to store them since it won't be used anymore from here on
+      for (i=0; i <= n; i++) 
+        coeff[i] = abs(cmon[i]);   
+    
       r0=0.0;
       int MAXSTPS=1000;// MT=100;
       //sigold=0.0;
@@ -1607,7 +1627,7 @@ bool laguer_real(cmplx &xc)
           refine_root(r0);
         }
 #endif
-      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) || abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) //&& abs(r0.imag()) <= meps*abs(r0))
+      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) && abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) //&& abs(r0.imag()) <= meps*abs(r0))
         {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
