@@ -207,7 +207,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
- 
+
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
    {
       const int MAXIT=1000000;
@@ -916,16 +916,20 @@ bool laguer_real(cmplx &xc)
             s+=coeff[j]*pr;
             pr *= abx;
           }
-        if (abs(cmplx(b[0],b[1])) <= EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+        if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+          {
+            xc = cmplx(x[0],x[1]);
+            return true;
+          }
 #else       
         if (abs(cmplx(b[0],b[1])) <= err)
-#endif
           {
             //if (iter > 15)
             //cout << "iter=" << iter << "\n";
             xc = cmplx(x[0],x[1]);
             return true;
           }
+#endif
         bc=cmplx(b[0],b[1]);
         dc=cmplx(d[0],d[1]);
         fc=cmplx(f[0],f[1]);
@@ -1193,7 +1197,7 @@ bool laguer_real(cmplx &xc)
               s+=coeff[j]*pr;
               pr *= abx;
             }
-          if (abs(b) <= EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+          if (abs(b) <= 2.0*EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
             return true;
 #else
           if (abs(b) <= err) 
@@ -1627,7 +1631,8 @@ bool laguer_real(cmplx &xc)
           refine_root(r0);
         }
 #endif
-      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) && abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) //&& abs(r0.imag()) <= meps*abs(r0))
+      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) //&& abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) 
+        && abs(r0.imag()) <= meps*abs(r0))
         {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;

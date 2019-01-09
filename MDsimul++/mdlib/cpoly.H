@@ -448,17 +448,21 @@ bool laguer_real(cmplx &xc)
         pr=1.0;
         for (j=0; j <= n; j ++) 
           {
-            s+=coeff[j]*pr;
+            s+=coeff[j].real()*pr;
             pr *= abx;
           }
-        if (abs(cmplx(b[0],b[1])) <= EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
-#else
-         if (abs(cmplx(b[0],b[1])) <= err)
-#endif          
-           {
+        if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+          {
             xc = cmplx(x[0],x[1]);
             return true;
           }
+#else
+        if (abs(cmplx(b[0],b[1])) <= err)
+          {
+            xc = cmplx(x[0],x[1]);
+            return true;
+          }
+#endif          
         bc=cmplx(b[0],b[1]);
         dc=cmplx(d[0],d[1]);
         fc=cmplx(f[0],f[1]);
@@ -579,10 +583,10 @@ bool laguer_cmplx(cmplx &x)
         pr=1.0;
         for (j=0; j <= n; j ++) 
           {
-            s+=coeff[j]*pr;
+            s+=coeff[j].real()*pr;
             pr *= abx;
           }
-        if (abs(b) <= EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+        if (abs(b) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
           return true;
 #else
  
@@ -791,7 +795,7 @@ void refine_root(cmplx &r0)
       //absolute value of coefficients are used in Bini's stopping criterion
       //we use coeff vector to store them since it won't be used anymore from here on
       for (i=0; i <= n; i++) 
-        coeff[i] = abs(cmon[i]); 
+        coeff[i] = cmplx(abs(cmon[i]),0); 
 
       sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
       r0=cmplx(0.0,0.0);
