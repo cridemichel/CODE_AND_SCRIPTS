@@ -41,8 +41,7 @@ double gauss(void)
 
 }
 
-using namespace std;
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -66,10 +65,19 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using numty=number<mpfr_float_backend<50>>;
 using cmplx=number<mpc_complex_backend<50>>;
+#elif defined(FL128)
+#include <boost/multiprecision/float128.hpp>
+#include <complex>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty=float128;
+using cmplx=complex<numty>;
 #else
 using numty=double;
 using cmplx=complex<numty>;
 #endif
+using namespace std;
 int main(int argc, char* argv[])
 {
   int caso, j, maxiter;

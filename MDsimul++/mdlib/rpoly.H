@@ -31,6 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
+#define BINI_CONV_CRIT
 //#define FAST_MATH
 using namespace std;
 template<class T>
@@ -908,7 +909,7 @@ bool laguer_real(cmplx &xc)
             //cout << "p(x)=" << evalpoly(x) << "\n";
             return false;
           }
-#if 1
+#ifdef BINI_CONV_CRIT
         s=0.0;
         pr=1.0; 
         for (j=0; j <= n; j ++) 
@@ -1189,7 +1190,7 @@ bool laguer_real(cmplx &xc)
               //cout << "p(x)=" << evalpoly(x) << "\n";
               return false;
             }
-#if 1
+#ifdef BINI_CONV_CRIT
           s=0.0;
           pr=1.0; 
           for (j=0; j <= n; j ++) 
@@ -1553,7 +1554,7 @@ bool laguer_real(cmplx &xc)
      // find initial guess for x here
      cmplx r0;
      const ntype goldfact=1.618034;
-     //ntype sig, sigold;
+     ntype sig, sigold;
      //bool mulsig=true;
      ntype err0,err1, errA, errB;
      pvector<ntype,3> ad;
@@ -1581,9 +1582,7 @@ bool laguer_real(cmplx &xc)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-     //sig=1.0;
-      r0=0.0;
-      iter = 0;
+     iter = 0;
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
@@ -1603,20 +1602,22 @@ bool laguer_real(cmplx &xc)
         coeff[i] = abs(cmon[i]);   
     
       r0=0.0;
-      int MAXSTPS=1000;// MT=100;
-      //sigold=0.0;
-      
+      int MAXSTPS=1000, MT=100;
+      sigold=0.0;
+      sig=1.0;
+    
       //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
       while (!laguer_real(r0))
         {
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
-            //  r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+            //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
+            //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
 
-#if 0
+#if 1
           if (iter%MT==0)
             {
               sigold=sig;
