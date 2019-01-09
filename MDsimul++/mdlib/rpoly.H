@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <vector>
 #include <array>
+//#include <boost/multiprecision/mpfr.hpp>
 
 //#include <complex>
 //fix to avoid crash of clang
@@ -870,7 +871,8 @@ bool laguer_real(cmplx &xc)
     const ntype EPS=numeric_limits<ntype>::epsilon();
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
-    ntype abx,abp,abm,err, phi, rho, s, pr;
+    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+    ntype abx,abp,abm,err, phi, rho, s;
     //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
     ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
@@ -910,14 +912,12 @@ bool laguer_real(cmplx &xc)
             return false;
           }
 #ifdef BINI_CONV_CRIT
-        s=0.0;
-        pr=1.0; 
-        for (j=0; j <= n; j ++) 
+        s=coeff[n];
+        for (j=n-1; j >=0; j--) 
           {
-            s+=coeff[j]*pr;
-            pr *= abx;
+            s=abx*s+coeff[j];
           }
-        if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+        if (abs(cmplx(b[0],b[1])) <= K*s) // stopping criterion of bini 
           {
             xc = cmplx(x[0],x[1]);
             return true;
@@ -1579,10 +1579,11 @@ bool laguer_real(cmplx &xc)
           cout << "That's not an " << n << "degree polynomial!\n";
           return;
         }
+
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-     iter = 0;
+      iter = 0;
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
       // and retry (a limited number of times though!)
@@ -1605,7 +1606,6 @@ bool laguer_real(cmplx &xc)
       int MAXSTPS=1000, MT=100;
       sigold=0.0;
       sig=1.0;
-    
       //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
       while (!laguer_real(r0))
         {
