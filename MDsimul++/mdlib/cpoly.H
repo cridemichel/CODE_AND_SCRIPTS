@@ -798,7 +798,6 @@ void refine_root(cmplx &r0)
         coeff[i] = cmplx(abs(cmon[i]),0); 
 
       sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
-      r0=cmplx(0.0,0.0);
       iter = 0;
       // find first zero using laguerre
       // if it does not converge generate a random initial guess
@@ -807,7 +806,7 @@ void refine_root(cmplx &r0)
       if constexpr (N < 0)
         {
           cbak.allocate(n+1);
-          if (backup)
+          if (backup||polish)
             {
               cbak = coeff;
             }
@@ -969,7 +968,7 @@ void refine_root(cmplx &r0)
 #if 1
       if constexpr (N < 0)
         {
-          if (backup)
+          if (backup||polish)
             {
               coeff = cbak;
             }
@@ -977,6 +976,13 @@ void refine_root(cmplx &r0)
       bool copyroot=false;
       if (polish==true)
         {
+          if constexpr (N < 0)
+            {
+              cmon[n]=1.0;
+              for (i=n-1; i >=0; i--)
+                cmon[i]=coeff[i]/coeff[n];
+            }
+
           for (i=0; i < n; i++)
             {
               // refine conjuigate pairs only once!

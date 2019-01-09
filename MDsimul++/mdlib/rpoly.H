@@ -1274,6 +1274,13 @@ bool laguer_real(cmplx &xc)
         err=abs(b)+abx*err;
       }
       err *= EPS;
+#if 0
+      if (isnan(abs(b)) || isinf(abs(b)))
+        {
+          cout << "ecco qua\n";
+          exit(1);
+        }
+#endif
       if (abs(b) <= err) return;
       g=d/b;
       g2=g*g;
