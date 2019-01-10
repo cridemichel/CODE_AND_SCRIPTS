@@ -877,7 +877,7 @@ void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
   } 
 bool laguer_real(cmplx &xc, int& flag)
   {
-    const int MR=8,MT=6,MAXIT=MT*MR;
+    const int MR=8,MT=10,MAXIT=MT*MR;
     const ntype EPS=goaleps;
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j, numimp;
@@ -1058,7 +1058,7 @@ bool laguer_real(cmplx &xc, int& flag)
 
  bool laguer_cmplx(cmplx &x, int& flag)
     {
-      const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
+      const int MR=8,MT=10,MAXIT=MT*MR;
       const ntype EPS=goaleps;
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
