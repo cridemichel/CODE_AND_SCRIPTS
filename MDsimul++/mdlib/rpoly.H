@@ -877,12 +877,12 @@ void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
   } 
 bool laguer_real(cmplx &xc, int& flag)
   {
-    const int MR=8,MT=10,MAXIT=MT*MR;
+    const int MR=8,MT=6,MAXIT=MT*MR;
     const ntype EPS=goaleps;
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-    int iter,j;
+    int iter,j, numimp;
     ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
-    ntype abx,abp,abm, phi, rho, s, absb;
+    ntype abx,abp,abm, phi, rho, s, absb, absbold;
 #ifndef BINI_CONV_CRIT
     ntype err;
 #endif
@@ -894,6 +894,7 @@ bool laguer_real(cmplx &xc, int& flag)
     x[0] = xc.real();
     x[1] = xc.imag();
     flag=0;
+    numimp=0;
     for (iter=1;iter<=MAXIT;iter++) 
       {
         //its=iter;
@@ -932,18 +933,40 @@ bool laguer_real(cmplx &xc, int& flag)
             return false;
           }
 #ifdef BINI_CONV_CRIT
+        //if (iter > 30)
+          //cout << "#" << iter << " p(x)=" << abs(cmplx(b[0],b[1])) << "\n";
         s=coeff[n];
         for (j=n-1; j >=0; j--) 
           {
             s=abx*s+coeff[j];
           }
-        if (abs(cmplx(b[0],b[1])) <= K*s) // stopping criterion of bini 
+        if (iter > 1)
+          absbold=absb;
+        absb=abs(cmplx(b[0],b[1]));
+        if (absb <= K*s) // stopping criterion of bini 
           {
             xc = cmplx(x[0],x[1]);
-            //if (iter > 30)
-              //cout << "lag iter=" << iter << "\n";
+            //if (iter > 20)
+              //cout << "lag iter=" << iter << " numimp=" << numimp << "\n";
             return true;
           }
+#if 0
+       if (iter > 1 && absb > absbold)
+          numimp=0;
+        else 
+          numimp++;
+        if (iter > 30)
+          {
+            //cout << "iter=" << iter << " numimp = " << numimp << " absb=" << absb << " absbold=" << absbold << "\n";
+          }
+#endif
+#if 0
+        if (iter > 30 && numimp < 2)
+         {
+           flag=1;
+           return false;
+         }
+#endif
 #else       
         if (abs(cmplx(b[0],b[1])) <= err)
           {
@@ -1507,17 +1530,26 @@ bool laguer_real(cmplx &xc, int& flag)
      rho=maxai[1];
      //cout << "R= " << R << " rho=" << rho << "\n";
      //cout << "imax0=" << imax[0] << "imax1=" << imax[1] << "\n";
-     CB = R + rho + sqrt(R*R - 2.0*rho*R + 5.0*rho*rho);
+     ntype arg=R*R - 2.0*rho*R + 5.0*rho*rho;
+     CB=R+rho;
+     if (arg>=0)
+       {
+         CB += sqrt(arg);
+       }
      CB /= 2.0;
      if (imax[0] == 1)
       return CB;
      CA=0.0;
      h=imax[0];
+     // calcolare in maniera più efficiente quanto segue
      for (i=h-1; i >= 0; i--)
        { 
          CA +=pow(R,i)*pow(rho,h-1-i);
        } 
      CA=pow(CA,1.0/(h-1.0));
+     //cout << "h=" << h << " CA=" << CA << "\n";
+     if (isinf(CA)||isnan(CA))
+       return CB;
      if (CA > CB)
        return CA;
      else 
@@ -1558,7 +1590,7 @@ bool laguer_real(cmplx &xc, int& flag)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-      if (cmon[0]==0.0)
+      if (cmon[0]==0)
         {
           if constexpr (N < 0)
             {
@@ -1630,14 +1662,20 @@ bool laguer_real(cmplx &xc, int& flag)
           while (!laguer_real(r0,flag))
             {
               // if we got an overflow rescale coefficients
-              // cout << "qui flag=" << flag << "\n";
+              //cout << "qui flag=" << flag << "\n";
               if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
-                  rescaled=true;
                   xi=calc_upper_bound();
+                  rescaled=true;
                   //cout << "xi^n=" << pow(xi,n) << "\n";
                   rescale_coeff(xi);
                   fact=1.0;
+                  if (isinf(xi)||isnan(xi))
+                    {
+                      cout << "I cannot calculate the upper bound...\n";
+                      cmon.show("coeff");     
+                      exit(-1);
+                    }
                 }
               else
                 fact=calc_upper_bound();

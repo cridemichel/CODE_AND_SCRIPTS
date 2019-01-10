@@ -8,7 +8,7 @@
 #endif
 #include <complex>
 //#define AURENTZ
-#define MPC_MP
+//#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -121,10 +121,10 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<32>>;
-using cmplx=number<mpc_complex_backend<32>>;
-using pdbl=long double;
-using pcmplx=complex<pdbl>;
+using vldbl=number<mpfr_float_backend<50>>;
+using cmplx=number<mpc_complex_backend<50>>;
+using pdbl=vldbl;
+using pcmplx=cmplx;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
