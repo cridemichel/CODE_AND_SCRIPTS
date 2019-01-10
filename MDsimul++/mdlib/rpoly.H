@@ -1521,8 +1521,8 @@ bool laguer_real(cmplx &xc)
           refine_root(r0);
         }
 #endif
-      if (abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) //&& abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) 
-        && abs(r0.imag()) <= meps*abs(r0))
+      if (//abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) //&& abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) 
+         abs(r0.imag()) <= meps*abs(r0))
         {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;

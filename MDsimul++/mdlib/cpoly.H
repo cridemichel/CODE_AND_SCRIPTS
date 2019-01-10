@@ -205,7 +205,7 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
-
+  ntype goaleps;
   inline void solve_quadratic(pvector<cmplx,N>& sol);
 #if 0 
   ntype oqs_max2(ntype a, ntype b)
@@ -400,7 +400,7 @@ void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
 bool laguer_real(cmplx &xc)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
-    const ntype EPS=numeric_limits<ntype>::epsilon();
+    const ntype EPS=goaleps;
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
     ntype abx,abp,abm,err, phi, rho,s, pr;
@@ -552,7 +552,7 @@ bool laguer_real(cmplx &xc)
 bool laguer_cmplx(cmplx &x)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
-    const ntype EPS=numeric_limits<ntype>::epsilon();
+    const ntype EPS=goaleps;
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
     ntype abx,abp,abm,err, M, s, pr;
@@ -741,7 +741,7 @@ void refine_root(cmplx &r0)
            {
              break;
            }
-     cout << "NR iter=" << iter << " err=" << err << "\n";
+         //cout << "NR iter=" << iter << " err=" << err << "\n";
          if (iter==maxiter_polish)
            break;
 
@@ -764,7 +764,7 @@ void refine_root(cmplx &r0)
      // find initial guess for x here
      cmplx r0;
      const ntype goldfact=1.618034;
-     ntype sig;// sigold;
+     ntype sig, sigold;
      //bool mulsig=true;
      ntype err0,err1, errA, errB;
      pvector<cmplx,3> ad;
@@ -814,24 +814,36 @@ void refine_root(cmplx &r0)
 #endif
       //cout << "r0=" << r0 << "\n";
       r0=cmplx(0.0,0.0);
-      int MAXSTPS=1000;
+      sigold=0.0;
+      sig=1.0;
+
+      int MAXSTPS=1000,MT=100;
       while (!laguer_real(r0))
         {
           if (iter==0)
             r0=cmplx(0.0,1.0);
           else
-            r0=polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+            //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
+            //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
           iter++;
-          //if (iter%MT==0)
-            //sig*=goldfact;
+
+#if 1
+          if (iter%MT==0)
+            {
+              sigold=sig;
+              sig*=goldfact;
+            }
+#endif
           if (iter > MAXSTPS)
             {
-              cout << "Laguerre can not converge, I am sorry...\n";
-              cmon.show("coeff=");
-              cout << "size=" << cmon.size()<<"\n";
+              cout << "[ERROR] Laguerre method did not converge:\n";
+              cout << "this problem can be fixed by using floating point number\n";
+              cout << "with higher precision (e.g. long double and complex<long double>\n";
               exit(-1); 
             }
         };
+      
       //cout << "p(" << r0 << ")=" << evalpoly(r0) << "\n";
 #if 0
       if (iter > 0)
@@ -954,6 +966,7 @@ void refine_root(cmplx &r0)
 
 
           //refine deflated quartic coefficients thourh Newton-Raphson method
+          qp.set_output_prec(this->get_output_prec());
           qp.set_coeff(deflcoeff);
           //qp.show("mah");
           //cout << "size=" << n << "deflsize=" << deflcoeff.size()<< "\n";
@@ -1081,6 +1094,15 @@ void refine_root(cmplx &r0)
     {
       return numeric_limits<ntype>::max();
     }
+   void set_output_prec(ntype e)
+    {
+      goaleps=e;
+    } 
+   ntype get_output_prec(void)
+    {
+      return goaleps;
+    } 
+
   cpoly()
     {
       meps = epsilon();
@@ -1095,6 +1117,7 @@ void refine_root(cmplx &r0)
       //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
       //printf("%.15G\n", maxf);
       //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
+      goaleps=numeric_limits<ntype>::epsilon();   
     }
 
   cpoly(int nc): cpolybase<cmplx,N>(nc)
@@ -1108,6 +1131,7 @@ void refine_root(cmplx &r0)
       maxf3 = pow(maxf,1.0/3.0)/10.0;
       scalfact = pow(maxf,1.0/4.0)/1.618034;
       cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
+      goaleps=numeric_limits<ntype>::epsilon();   
     }
   //cpoly() = default;
 #if 0
