@@ -1546,8 +1546,9 @@ bool laguer_real(cmplx &xc, int& flag)
        { 
          CA +=pow(R,i)*pow(rho,h-1-i);
        } 
-     CA=pow(CA,1.0/(h-1.0));
-     //cout << "h=" << h << " CA=" << CA << "\n";
+     //cout << "Ph=" << h << " CA=" << CA << "\n";
+     CA=pow(CA,1.0/(h-1));
+     //cout << "h=" << h << " CA=" << CA << " R=" << R << " rho=" << rho << "\n";
      if (isinf(CA)||isnan(CA))
        return CB;
      if (CA > CB)
