@@ -209,7 +209,7 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
-
+  ntype goaleps;
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
    {
       const int MAXIT=1000000;
@@ -865,18 +865,29 @@ void use_NR_defl_quad(pvecNm1<ntype>& bd, pvector<ntype,3>& ad)
         bd[i]=c[i];
     }
 #endif
+void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
+  {
+    cmplx ac,bc, acbc;
+    ac=cmplx(a[0],a[1]);
+    bc=cmplx(b[0],b[1]);
+    acbc=ac/bc;
+    c[0]=(acbc).real();
+    c[1]=(acbc).imag();
+  } 
 bool laguer_real(cmplx &xc)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
-    const ntype EPS=numeric_limits<ntype>::epsilon();
+    const ntype EPS=goaleps;
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
     ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
-    ntype abx,abp,abm,err, phi, rho, s;
+    ntype abx,abp,abm, phi, rho, s, absb;
+#ifndef BINI_CONV_CRIT
+    ntype err;
+#endif
     //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
     ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
     ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
-    cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
     int m=n;
     //cout << "r0 ini = "<<xc << "\n"; 
     x[0] = xc.real();
@@ -884,9 +895,11 @@ bool laguer_real(cmplx &xc)
     for (iter=1;iter<=MAXIT;iter++) 
       {
         //its=iter;
-        b[0]=real(cmon[m]);
-        b[1]=imag(cmon[m]);
+        b[0]=cmon[m];
+        b[1]=0.0;
+#ifndef BINI_CONV_CRIT
         err=sqrt(b[0]*b[0]+b[1]*b[1]);
+#endif
         d[0]=f[0]=0.0;
         d[1]=f[1]=0.0;
         abx=sqrt(x[0]*x[0]+x[1]*x[1]);
@@ -898,11 +911,15 @@ bool laguer_real(cmplx &xc)
           d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
           d[1] = x[0]*d[1] + x[1]*d0 + b[1];
           b0 = b[0];
-          b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
-          b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
+          b[0] = x[0]*b[0] - x[1]*b[1] + cmon[j];
+          b[1] = x[0]*b[1] + x[1]*b0;
+#ifndef BINI_CONV_CRIT
           err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
+#endif
         }
+#ifndef BINI_CONV_CRIT
         err *= EPS;
+#endif
         if (isinf(b[0]) || isnan(b[0]) || 
             isinf(b[1]) || isnan(b[1]))
           {
@@ -931,17 +948,10 @@ bool laguer_real(cmplx &xc)
             return true;
           }
 #endif
-        bc=cmplx(b[0],b[1]);
-        dc=cmplx(d[0],d[1]);
-        fc=cmplx(f[0],f[1]);
-        dovb=dc/bc;
-        fovb=fc/bc;
-        g[0]=dovb.real();
-        g[1]=dovb.imag();
+        cmplx_div(g,d,b);
+        cmplx_div(fb,f,b);
         g2[0] = g[0]*g[0] - g[1]*g[1];
         g2[1] = 2.0*g[0]*g[1];
-        fb[0] = fovb.real();
-        fb[1] = fovb.imag();
         h[0] = g2[0] - 2.0*fb[0];
         h[1] = g2[1] - 2.0*fb[1];
         sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
@@ -977,7 +987,6 @@ bool laguer_real(cmplx &xc)
         invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
         invgp[0] = gp[0]*invn;
         invgp[1] = -gp[1]*invn;
-
         //cout << "abp=" << abp << " abm=" << abm << "\n";
         //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
         if (MAX(abp,abm) > 0.0)
@@ -1017,153 +1026,19 @@ bool laguer_real(cmplx &xc)
     xc = cmplx(x[0],x[1]);
     return false;
   }
-#if 0
- bool laguer_real_old(cmplx &xc)
-    {
-      const int MR=8,MT=10,MAXIT=MT*MR;
-      const ntype EPS=numeric_limits<ntype>::epsilon();
-      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-      int iter,j;
-      ntype abx,abp,abm,err, phi, rho;
-      //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
-      ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
-      cmplx sqrtcmplx;
-      int m=n;
-      //cout << "r0 ini = "<<xc << "\n"; 
-      x[0] = xc.real();
-      x[1] = xc.imag();
-      for (iter=1;iter<=MAXIT;iter++) 
-        {
-          //its=iter;
-          b[0]=cmon[m];
-          b[1]=0.0;
-          err=sqrt(b[0]*b[0]+b[1]*b[1]);
-          d[0]=f[0]=0.0;
-          d[1]=f[1]=0.0;
-          abx=sqrt(x[0]*x[0]+x[1]*x[1]);
-          for (j=m-1;j>=0;j--) {
-            f0 = f[0];
-            f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
-            f[1] = x[0]*f[1] + x[1]*f0 + d[1];
-            d0 = d[0];
-            d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
-            d[1] = x[0]*d[1] + x[1]*d0 + b[1];
-            b0 = b[0];
-            b[0] = x[0]*b[0] - x[1]*b[1] + cmon[j];
-            b[1] = x[0]*b[1] + x[1]*b0;
-            err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
-          }
-          err *= EPS;
-          if (isinf(b[0]) || isnan(b[0]) || 
-              isinf(b[1]) || isnan(b[1]))
-            {
-              //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-              //cout << "x=" << x << "\n";
-              //cout << "p(x)=" << evalpoly(x) << "\n";
-              return false;
-            }
-          if (sqrt(b[0]*b[0]+b[1]*b[1]) <= err) 
-            {
-              //if (iter > 15)
-              //cout << "iter=" << iter << "\n";
-              xc = cmplx(x[0],x[1]);
-              return true;
-            }
-          invn = 1.0/(b[0]*b[0]+b[1]*b[1]);
-          g[0] = (d[1]*b[1] + d[0]*b[0])*invn;
-          g[1] = (d[1]*b[0] - d[0]*b[1])*invn; 
-          g2[0] = g[0]*g[0] - g[1]*g[1];
-          g2[1] = 2.0*g[0]*g[1];
-          fb[0] = (f[1]*b[1] + f[0]*b[0])*invn;
-          fb[1] = (f[1]*b[0] - f[0]*b[1])*invn;
-          h[0] = g2[0] - 2.0*fb[0];
-          h[1] = g2[1] - 2.0*fb[1];
-          sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
-          sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
-          //sqrtcmplx =sqrt(sarg[0]+1i*sarg[1]); 
-          //sq[0]=sqrtcmplx.real();
-          //sq[1]=sqrtcmplx.imag();
-          rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
-          if (rho==0)
-            {
-              sq[0] = sq[1] = 0.0;
-            }
-          else
-            {
-              phi = acos(sarg[0]/rho);
-              if (sarg[1] < 0.0)
-                {
-                  phi = -phi;
-                }
-              rho = sqrt(rho);
-              sq[0] = rho*cos(phi/2.0);
-              sq[1] = rho*sin(phi/2.0);
-            }
-          gp[0] = g[0] + sq[0];
-          gp[1] = g[1] + sq[1];
-          gm[0] = g[0] - sq[0];
-          gm[1] = g[1] - sq[1]; 
-          abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
-          abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
-          if (abp < abm) 
-            {
-              gp[0]=gm[0];
-              gp[1]=gm[1];
-            }
-          //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
-          invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
-          invgp[0] = gp[0]*invn;
-          invgp[1] = -gp[1]*invn;
-
-          //cout << "abp=" << abp << " abm=" << abm << "\n";
-          //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
-          if (MAX(abp,abm) > 0.0)
-            {
-              dx[0]=((ntype)m)*invgp[0];
-              dx[1]=((ntype)m)*invgp[1];
-            }
-          else
-            {
-              pol[0] = (1.0+abx)*cos((ntype)iter);
-              pol[1] = (1.0+abx)*sin((ntype)iter); 
-              dx[0]=pol[0];
-              dx[1]=pol[1];
-            }
-          //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
-          //x1=x-dx;
-          x1[0] = x[0] - dx[0];
-          x1[1] = x[1] - dx[1];
-          if (x[0] == x1[0] && x[1]==x1[1]) 
-            {
-              xc = cmplx(x[0],x[1]);
-              return true;
-            }
-          if (iter % MT != 0) 
-            {
-              x[0]=x1[0];
-              x[1]=x1[1];
-            }
-          else 
-            {
-              x[0] -= frac[iter/MT]*dx[0];
-              x[1] -= frac[iter/MT]*dx[1];
-            }
-          //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
-        }
-      //cout << "too many iterations in laguer\n";
-      xc = cmplx(x[0],x[1]);
-      return false;
-    }
-#endif
 
  bool laguer_cmplx(cmplx &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
-      const ntype EPS=numeric_limits<ntype>::epsilon();
+      const ntype EPS=goaleps;
       static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int iter,j;
-      ntype abx,abp,abm,err, M, s, pr;
+      ntype abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+      ntype err;
+#else
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
       cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
       int m;
       m=n;
@@ -1172,18 +1047,25 @@ bool laguer_real(cmplx &xc)
         {
           //its=iter;
           b=cmon[m];
+#ifndef BINI_CONV_CRIT
           err=abs(b);
+#endif
           d=f=0.0;
           abx=abs(x);
           for (j=m-1;j>=0;j--) {
             f=x*f+d;
             d=x*d+b;
             b=x*b+cmon[j];
+#ifndef BINI_CONV_CRIT
             err=abs(b)+abx*err;
+#endif
           }
+#ifndef BINI_CONV_CRIT
           err *= EPS;
+#endif
           //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-          if (isinf(abs(b)) || isnan(abs(b)))
+          absb=abs(b);
+          if (isinf(absb) || isnan(absb))
             {
               //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
               //cout << "x=" << x << "\n";
@@ -1198,10 +1080,10 @@ bool laguer_real(cmplx &xc)
               s+=coeff[j]*pr;
               pr *= abx;
             }
-          if (abs(b) <= 2.0*EPS*(4.0*ntype(n)+1.0)*s) // stopping criterion of bini 
+          if (absb <= K*s) // stopping criterion of bini 
             return true;
 #else
-          if (abs(b) <= err) 
+          if (absb <= err) 
             {
               return true;
             }
@@ -2292,7 +2174,16 @@ bool laguer_real(cmplx &xc)
       maxf3 = pow(maxf,1.0/3.0)/10.0;
       scalfact = pow(maxf,1.0/4.0)/1.618034;
       cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
+      goaleps=numeric_limits<ntype>::epsilon();   
     }
+  void set_output_prec(ntype e)
+    {
+      goaleps=e;
+    } 
+  ntype get_output_prec(ntype e)
+    {
+      return goaleps;
+    } 
   rpoly()
     {
       init_const();
