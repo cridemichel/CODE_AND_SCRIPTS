@@ -209,6 +209,12 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
   else
     maxiter = 1000000;
   c[NDEG]=1.0;
+
+#if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
+  // set precision equal to precision of input coefficients (i.e. double epsilon)
+  rp.set_output_prec(numeric_limits<double>::epsilon());
+  //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
+#endif
   for (int i=0; i < maxiter; i++)
     {
 #ifdef CPOLY

@@ -1138,7 +1138,7 @@ bool laguer_real(cmplx &xc)
  void laguer(cmplx *a, cmplx &x, int m)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
-    const ntype EPS=numeric_limits<ntype>::epsilon();
+    const ntype EPS=goaleps;//numeric_limits<ntype>::epsilon();
     static const ntype frac[MR+1]=
       {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j;
@@ -1610,6 +1610,7 @@ bool laguer_real(cmplx &xc)
             }
 
           //refine deflated quartic coefficients thourh Newton-Raphson method
+          qp.set_output_prec(this->get_output_prec());
           qp.set_coeff(deflcoeff);
           
           qp.find_roots(qr, false, false);
@@ -1707,6 +1708,7 @@ bool laguer_real(cmplx &xc)
               ro_quad.use_vec(n-2,&(roots[2]));
             }
           // find zeroes of N-2 degree polynomial
+          rp.set_output_prec(this->get_output_prec());
           rp.set_coeff(bd);
           rp.find_roots(ro_quad, false, false);
           //ro_quad.show("quartic roots=");
@@ -2180,7 +2182,7 @@ bool laguer_real(cmplx &xc)
     {
       goaleps=e;
     } 
-  ntype get_output_prec(ntype e)
+  ntype get_output_prec(void)
     {
       return goaleps;
     } 
