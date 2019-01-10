@@ -216,7 +216,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
-  rp.set_output_prec(0.001);
+  //rp.set_output_prec(1E-12);
+  cout << "outputprec=" << rp.get_output_prec() << "\n";
 #endif
   for (int i=0; i < maxiter; i++)
     {
@@ -225,7 +226,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
         c[j]=cmplx(sig*(drand48()-0.5),0.0);
 #else
       for (j=0; j < NDEG; j++)
-        c[j]=sig*(drand48()-0.5);
+        c[j]=2.0*sig*(drand48()-0.5);
 #endif
       if (caso==0)
         {

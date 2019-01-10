@@ -8,7 +8,7 @@
 #endif
 #include <complex>
 //#define AURENTZ
-#define MPC_MP
+//#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -246,6 +246,14 @@ void sort_sol_opt(pvector<pcmplx,NDEG>& csol, pvector<cmplx,NDEG>& exsol, vldbl 
              relerrmin = relerr;
            } 
         }
+#if 0
+      if (k2min==80)
+        {
+          cout << "k1=" << k1 << "\n";
+          cout << "csol=" << csol[k1] << "\n";
+          cout << "exsol="<< exsol[k2min]<< "\n";
+        }
+#endif
       perm[k1] = k2min;
       //cout << "perm[" << k1 << "]=" << k2min << "\n";
       allrelerr[k2min] = relerrmin;
@@ -613,6 +621,8 @@ int main(int argc, char **argv)
 		  logdE=log10(dE)-logdEmin;
                   if (log10(dE) >=10)
                     {
+                      cout << "exsol[" << k << "]=" << exsol[k] << " csol=" << csolall[ic][k] << "\n";
+                      cout << "allrelel=" << allrelerr[ic][k] << "\n";
                       cout << "dE=" << dE << "\n";
                       exit(1);
                     }

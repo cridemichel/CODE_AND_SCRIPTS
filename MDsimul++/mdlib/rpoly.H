@@ -29,6 +29,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
+//#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL 
@@ -874,7 +875,7 @@ void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
     c[0]=(acbc).real();
     c[1]=(acbc).imag();
   } 
-bool laguer_real(cmplx &xc)
+bool laguer_real(cmplx &xc, int& flag)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
     const ntype EPS=goaleps;
@@ -892,6 +893,7 @@ bool laguer_real(cmplx &xc)
     //cout << "r0 ini = "<<xc << "\n"; 
     x[0] = xc.real();
     x[1] = xc.imag();
+    flag=0;
     for (iter=1;iter<=MAXIT;iter++) 
       {
         //its=iter;
@@ -923,9 +925,10 @@ bool laguer_real(cmplx &xc)
         if (isinf(b[0]) || isnan(b[0]) || 
             isinf(b[1]) || isnan(b[1]))
           {
-            //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-            //cout << "x=" << x << "\n";
+            //cout << "f= " << f[0] << " " << f[1]  << "d= " << d[0] << " " << d[1] << "b=" << b[0] << " " << b[1] << "\n";
+            //cout << "x=" << x[0] << " " << x[1] << "\n";
             //cout << "p(x)=" << evalpoly(x) << "\n";
+            flag=2;
             return false;
           }
 #ifdef BINI_CONV_CRIT
@@ -1024,10 +1027,11 @@ bool laguer_real(cmplx &xc)
       }
     //cout << "too many iterations in laguer\n";
     xc = cmplx(x[0],x[1]);
+    flag=1;
     return false;
   }
 
- bool laguer_cmplx(cmplx &x)
+ bool laguer_cmplx(cmplx &x, int& flag)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
       const ntype EPS=goaleps;
@@ -1043,6 +1047,7 @@ bool laguer_real(cmplx &xc)
       int m;
       m=n;
       //cout << "r0 ini = "<< x << "\n"; 
+      flag=0;
       for (iter=1;iter<=MAXIT;iter++) 
         {
           //its=iter;
@@ -1070,6 +1075,7 @@ bool laguer_real(cmplx &xc)
               //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
               //cout << "x=" << x << "\n";
               //cout << "p(x)=" << evalpoly(x) << "\n";
+              flag=2;
               return false;
             }
 #ifdef BINI_CONV_CRIT
@@ -1124,6 +1130,7 @@ bool laguer_real(cmplx &xc)
         }
       //refine_root(x);
       //cout << "too many iterations in laguer\n";
+      flag=1;
       return false;
     }
 #if 0
@@ -1431,17 +1438,101 @@ bool laguer_real(cmplx &xc)
      //if (iter > 0)
        //cout << "NR iter=" << iter << " err=" << err << "\n";
    }
+ void rescale_coeff(ntype xi)
+   {
+     ntype pr=xi;
+     int i;
+     for (i=n-1; i >=0; i--)
+       {
+         cmon[i] /= pr;
+         pr *= xi;
+       }
+   }
+
+ ntype calc_upper_bound(void)
+   {
+#if 0
+     // Kalantari's formula as found in McNamee Pan Vol. 1
+     int k;
+     static const ntype K= 1.0/0.682338;
+     ntype ximax, xi;
+     ntype cnsq, term;
+
+     cnsq=cmon[n-1]*cmon[n-1];
+     for (k=4; k <= n+3; k++)
+       {
+         term=0;
+         if (n-k+3 >= 0)
+           term += cnsq*cmon[n-k+3]-cmon[n-2]*cmon[n-k+3];
+         if (n-k+2 >= 0)
+           term +=-cmon[n-1]*cmon[n-k+2];
+         if (n-k+1 >= 0)
+           term += cmon[n-k+1];
+         xi = pow(abs(term),1.0/(k-1));
+         if (k==4 || xi > ximax)
+           ximax=xi;
+       }
+     return ximax*K;
+#else
+     // Mignotte et al 2017
+     int i, imax[2], h;
+     ntype CA, CB, ai, maxai[2], maxai2, R, rho; 
+     //maxai[0] is the largest and maxai[1] is the second largest
+     maxai[0]=pow(abs(cmon[0]),1.0/n); 
+     imax[0] = n;
+     maxai[1]=pow(abs(cmon[1]),1.0/(n-1));
+     imax[1] = n-1;
+     if (maxai[1] > maxai[0])
+       {
+         swap(maxai[0],maxai[1]);
+         swap(imax[0], imax[1]);
+       }
+     for (i=n-3; i >= 0; i--)
+       {
+         ai=pow(abs(cmon[n-i-1]),1.0/(i+1));
+         if (ai > maxai[0])
+           {
+             maxai[0]=ai;
+             imax[0]=i+1;
+           }
+        else if (ai > maxai[1])
+           {
+             maxai[1]=ai;
+             imax[1]=i+1;
+           }
+       }
+     R=maxai[0];
+     rho=maxai[1];
+     //cout << "R= " << R << " rho=" << rho << "\n";
+     //cout << "imax0=" << imax[0] << "imax1=" << imax[1] << "\n";
+     CB = R + rho + sqrt(R*R - 2.0*rho*R + 5.0*rho*rho);
+     CB /= 2.0;
+     if (imax[0] == 1)
+      return CB;
+     CA=0.0;
+     h=imax[0];
+     for (i=h-1; i >= 0; i--)
+       { 
+         CA +=pow(R,i)*pow(rho,h-1-i);
+       } 
+     CA=pow(CA,1.0/(h-1.0));
+     if (CA > CB)
+       return CA;
+     else 
+       return CB;
+#endif
+   }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
    {
      // find initial guess for x here
      cmplx r0;
      const ntype goldfact=1.618034;
-     ntype sig, sigold;
+     ntype sig, sigold, xi;
      //bool mulsig=true;
-     ntype err0,err1, errA, errB;
+     ntype fact, err0,err1, errA, errB;
      pvector<ntype,3> ad;
      typename std::conditional<(N < 0),pvector<ntype>,bool>::type cbak;
-     int iter, i;
+     int iter, i, flag;
 #if 0
       if constexpr (N < 0)
         {
@@ -1485,21 +1576,41 @@ bool laguer_real(cmplx &xc)
         coeff[i] = abs(cmon[i]);   
     
       r0=0.0;
-      int MAXSTPS=1000, MT=100;
+      int MAXSTPS=1000;// MT=100;
       sigold=0.0;
       sig=1.0;
-      //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
-      while (!laguer_real(r0))
-        {
-          if (iter==0)
-            r0=cmplx(0.0,1.0);
-          else
-            //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
-            //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
-            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
-          iter++;
 
-#if 1
+      //cout << "Upper bound xi=" << xi << "\n";
+      bool rescaled=false;
+      //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
+      while (!laguer_real(r0,flag))
+        {
+          // if we got an overflow rescale coefficients
+          if (iter==0 && flag==2) // flag==2 means inf or nan
+            {
+              rescaled=true;
+              xi=calc_upper_bound();
+              rescale_coeff(xi);
+              fact=1.0;
+            }
+          else
+            fact=calc_upper_bound();
+          if (iter==0)
+            {
+              if (rescaled)
+                r0=0.0;
+              else
+                r0=cmplx(0.0,1.0);
+            }
+          else
+            {
+              r0 = polar(fact*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+            }
+          //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+          //r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+          iter++;
+          //cout << "r0=" << r0 << "xi=" << xi << "\n";
+#if 0
           if (iter%MT==0)
             {
               sigold=sig;
@@ -1511,10 +1622,11 @@ bool laguer_real(cmplx &xc)
               cout << "[ERROR] Laguerre method did not converge:\n";
               cout << "this problem can be fixed by using floating point number\n";
               cout << "with higher precision (e.g. long double and complex<long double>\n";
-              exit(-1); 
+              cout << "or reducing the convergence precision\n";
+              cout << "xi=" << xi << "\n";
+              exit(-1);
             }
         };
-      
 #ifdef LAGUERRE_POLISH
       if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
         {
@@ -1545,8 +1657,8 @@ bool laguer_real(cmplx &xc)
               if (i <= n-1)
                 deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
             }
-#if 0
-          if (r0.real()!=0.0)
+#ifdef ENABLE_FORW_DEFL
+          if (r0.real()!=0)
             {
               //forward deflation
 #if 0
@@ -1655,7 +1767,7 @@ bool laguer_real(cmplx &xc)
                 bd0[i-2] -= ad[0]*bd0[i];
               
             }
-#if 0
+#ifdef ENABLE_FORW_DEFL
           if (ad[0]!=0)
             {
               //forward deflation
@@ -1672,6 +1784,7 @@ bool laguer_real(cmplx &xc)
               err0=calc_err_defl_quad(bd0, ad);
               err1=calc_err_defl_quad(bd1, ad);
            
+              //cout << "AD err0=" << err0 << " err1=" << err1 << "\n";
               if (isnan(err1) || isinf(err1))
                 bd=bd0;
               else if (isnan(err0) || isinf(err0))
@@ -1718,6 +1831,11 @@ bool laguer_real(cmplx &xc)
                 roots[i] = ro_quad[i-2];
             }
         }
+      if (rescaled)
+        {
+          for (i=0; i < n; i++)
+            roots[i] *= xi;
+        }
       if constexpr (N < 0)
         {
           if (backup||polish)
@@ -1741,7 +1859,7 @@ bool laguer_real(cmplx &xc)
                 copyroot=true;
               else 
                 copyroot=false;
-              laguer_real(roots[i]);
+              refine_root(roots[i]);
               if (copyroot==true)
                 {
                   roots[i+1] = conj(roots[i]);
