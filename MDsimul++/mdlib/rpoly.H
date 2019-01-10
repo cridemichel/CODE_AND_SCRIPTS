@@ -940,6 +940,8 @@ bool laguer_real(cmplx &xc, int& flag)
         if (abs(cmplx(b[0],b[1])) <= K*s) // stopping criterion of bini 
           {
             xc = cmplx(x[0],x[1]);
+            //if (iter > 30)
+              //cout << "lag iter=" << iter << "\n";
             return true;
           }
 #else       
@@ -1558,6 +1560,15 @@ bool laguer_real(cmplx &xc, int& flag)
         cmon[i]=coeff[i]/coeff[n];
       if (cmon[0]==0.0)
         {
+          if constexpr (N < 0)
+            {
+              cbak.allocate(n+1);
+              if (backup||polish)
+                {
+                  cbak = coeff;
+                }
+            }
+
           roots[0]=0.0;
           for (i=n; i >=1; i--)
             {
@@ -1619,6 +1630,7 @@ bool laguer_real(cmplx &xc, int& flag)
           while (!laguer_real(r0,flag))
             {
               // if we got an overflow rescale coefficients
+              // cout << "qui flag=" << flag << "\n";
               if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
                   rescaled=true;

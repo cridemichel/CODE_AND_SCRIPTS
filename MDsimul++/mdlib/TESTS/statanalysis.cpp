@@ -8,7 +8,7 @@
 #endif
 #include <complex>
 //#define AURENTZ
-//#define MPC_MP
+#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
