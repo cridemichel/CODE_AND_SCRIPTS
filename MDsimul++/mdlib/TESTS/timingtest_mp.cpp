@@ -41,7 +41,7 @@ double gauss(void)
 
 }
 
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -63,8 +63,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<200>>;
-using cmplx=number<mpc_complex_backend<200>>;
+using numty=number<mpfr_float_backend<32>>;
+using cmplx=number<mpc_complex_backend<32>>;
 #elif defined(FL128)
 #include<complex>
 #include <boost/multiprecision/float128.hpp>

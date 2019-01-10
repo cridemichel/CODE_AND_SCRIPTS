@@ -1556,162 +1556,16 @@ bool laguer_real(cmplx &xc, int& flag)
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         cmon[i]=coeff[i]/coeff[n];
-      iter = 0;
-      // find first zero using laguerre
-      // if it does not converge generate a random initial guess
-      // and retry (a limited number of times though!)
-#if 1
-      if constexpr (N < 0)
+      if (cmon[0]==0.0)
         {
-          cbak.allocate(n+1);
-          if (backup||polish)
+          roots[0]=0.0;
+          for (i=n; i >=1; i--)
             {
-              cbak = coeff;
+              deflcoeff[i-1] = cmon[i];
             }
-        }
-#endif
-      //absolute value of coefficients are used in Bini's stopping criterion
-      //we use coeff vector to store them since it won't be used anymore from here on
-      for (i=0; i <= n; i++) 
-        coeff[i] = abs(cmon[i]);   
-    
-      r0=0.0;
-      int MAXSTPS=1000;// MT=100;
-      sigold=0.0;
-      sig=1.0;
-
-      //cout << "Upper bound xi=" << xi << "\n";
-      bool rescaled=false;
-      //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
-      while (!laguer_real(r0,flag))
-        {
-          // if we got an overflow rescale coefficients
-          if (iter==0 && flag==2) // flag==2 means inf or nan
-            {
-              rescaled=true;
-              xi=calc_upper_bound();
-              rescale_coeff(xi);
-              fact=1.0;
-            }
-          else
-            fact=calc_upper_bound();
-          if (iter==0)
-            {
-              if (rescaled)
-                r0=0.0;
-              else
-                r0=cmplx(0.0,1.0);
-            }
-          else
-            {
-              r0 = polar(fact*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
-            }
-          //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
-          //r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
-          iter++;
-          //cout << "r0=" << r0 << "xi=" << xi << "\n";
-#if 0
-          if (iter%MT==0)
-            {
-              sigold=sig;
-              sig*=goldfact;
-            }
-#endif
-          if (iter > MAXSTPS)
-            {
-              cout << "[ERROR] Laguerre method did not converge:\n";
-              cout << "this problem can be fixed by using floating point number\n";
-              cout << "with higher precision (e.g. long double and complex<long double>\n";
-              cout << "or reducing the convergence precision\n";
-              cout << "xi=" << xi << "\n";
-              exit(-1);
-            }
-        };
-#ifdef LAGUERRE_POLISH
-      if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
-        {
-          refine_root(r0);
-        }
-#endif
-      if (//abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) //&& abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) 
-         abs(r0.imag()) <= meps*abs(r0))
-        {
           rpolyNm1 qp;
           // pvector<cmplx,N-1> qr;
           pvecNm1<cmplx> qr;
-#if 0
-
-          if constexpr (N < 0)
-            {
-              //qp.allocate(n-1);
-              //qr.allocate(n-1);
-              qr.use_vec(n-1,&(roots[1])); 
-              qp.use_vec(n-1,coeff.v, cmon.v, cmonder.v, cmondder.v);
-            }
-#endif
-          //cout << "minus one r0=" << r0 << "\n";
-          roots[0] = r0.real();
-          for (i=n; i >=1; i--)
-            {
-              deflcoeff0[i-1] = cmon[i];
-              if (i <= n-1)
-                deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
-            }
-#ifdef ENABLE_FORW_DEFL
-          if (r0.real()!=0)
-            {
-              //forward deflation
-#if 0
-              deflcoeff1[n-1]=1.0;
-              for (i=0; i < n-1; i++)
-                {
-                  deflcoeff1[i] = cmon[i]; 
-                  if (i >= 1)
-                    deflcoeff1[i] -= deflcoeff1[i-1];
-                  deflcoeff1[i] /= -r0.real();
-                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
-                }
-#else
-              deflcoeff1[0]=-cmon[0]/r0.real();
-              deflcoeff1[n-1] = 1.0;
-              for (i=1; i < n-1; i++)
-                {
-                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
-                 }
-#endif
-              // choose the set which yields smaller error 
-              err0=calc_err_q(deflcoeff0,r0.real());
-              err1=calc_err_q(deflcoeff1,r0.real());
-
-              if (isnan(err1) || isinf(err1))
-                deflcoeff=deflcoeff0;
-              else if (isnan(err0) || isinf(err0))
-                deflcoeff=deflcoeff1;
-              else if (err0 < err1)
-                {
-                  //errA = err0;
-                  deflcoeff = deflcoeff0;
-                }
-              else
-                {
-                  //errA = err1;
-                  deflcoeff = deflcoeff1;
-                }
-            }
-          else
-            {
-              //errA=calc_err_q(deflcoeff0,r0.real());
-              deflcoeff = deflcoeff0;
-            }
-#else
-          deflcoeff = deflcoeff0;
-#endif
-#ifdef USE_DEFL_NR
-          //ntype errP, errD;
-          //errP = calc_err_q(deflcoeff, r0.real());
-          use_NR_defl_lin(deflcoeff,r0);
-          //errD = calc_err_q(deflcoeff, r0.real());
-#endif
 
           if constexpr (N < 0)
             {
@@ -1724,7 +1578,7 @@ bool laguer_real(cmplx &xc, int& flag)
           //refine deflated quartic coefficients thourh Newton-Raphson method
           qp.set_output_prec(this->get_output_prec());
           qp.set_coeff(deflcoeff);
-          
+
           qp.find_roots(qr, false, false);
           if constexpr (N > 0)
             {
@@ -1732,109 +1586,296 @@ bool laguer_real(cmplx &xc, int& flag)
                 roots[i] = qr[i-1];
             }
         }
-      else
+      else 
         {
-          rpolyNm2 rp;
-          //pvector<cmplx,N-2> ro_quad;
-          pvecNm2<cmplx> ro_quad;
-#if 0
+          iter = 0;
+          // find first zero using laguerre
+          // if it does not converge generate a random initial guess
+          // and retry (a limited number of times though!)
+          //ntype ub = calc_upper_bound();
+#if 1
           if constexpr (N < 0)
             {
-              ro_quad.allocate(n-2);
-              rp.allocate(n-2);
+              cbak.allocate(n+1);
+              if (backup||polish)
+                {
+                  cbak = coeff;
+                }
             }
 #endif
-          //cout << "2) r0=" << r0 << "\n";
-          roots[0] = r0;
-          //cout << "r0=" << r0 << " p(real(r0))=" << evalpoly(r0.real()) << " p(r0)=" << evalpoly(r0)<< "\n";
-          
-          roots[1] = conj(r0);
-          // find coefficients of quadratic polynomial for deflation
+          //absolute value of coefficients are used in Bini's stopping criterion
+          //we use coeff vector to store them since it won't be used anymore from here on
+          for (i=0; i <= n; i++) 
+            coeff[i] = abs(cmon[i]);   
 
-          ad[2] = 1.0;
-          ad[1] = -2*r0.real();
-          ad[0] = abs(r0)*abs(r0);
-          //do forward and backward deflation and then choose the one which provides smaller error
-          //backward deflation 
-          //cout << "minus two r0=" << r0 << "\n";
-          for (i=n; i >=2;  i--)
-            {
-              bd0[i-2] = cmon[i];
+          r0=0.0;
+          int MAXSTPS=1000;// MT=100;
+          sigold=0.0;
+          sig=1.0;
 
-              if (i <= n-1)
-                bd0[i-2] -= ad[1]*bd0[i-1];
-              if (i <= n-2)
-                bd0[i-2] -= ad[0]*bd0[i];
-              
-            }
-#ifdef ENABLE_FORW_DEFL
-          if (ad[0]!=0)
+          //cout << "Upper bound xi=" << xi << "\n";
+          bool rescaled=false;
+          //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";
+          while (!laguer_real(r0,flag))
             {
-              //forward deflation
-              bd1[n-2]=1.0;
-              for (i=0; i < n-2; i++)
+              // if we got an overflow rescale coefficients
+              if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
-                  bd1[i] = cmon[i];
-                  if (i >= 1)
-                    bd1[i] -= bd1[i-1]*ad[1];
-                  if (i >= 2)
-                    bd1[i] -= bd1[i-2];
-                  bd1[i] /= ad[0];
+                  rescaled=true;
+                  xi=calc_upper_bound();
+                  //cout << "xi^n=" << pow(xi,n) << "\n";
+                  rescale_coeff(xi);
+                  fact=1.0;
                 }
-              err0=calc_err_defl_quad(bd0, ad);
-              err1=calc_err_defl_quad(bd1, ad);
-           
-              //cout << "AD err0=" << err0 << " err1=" << err1 << "\n";
-              if (isnan(err1) || isinf(err1))
-                bd=bd0;
-              else if (isnan(err0) || isinf(err0))
-                bd=bd1;
-              else if (err0 < err1)
+              else
+                fact=calc_upper_bound();
+              if (iter==0)
                 {
-                  bd = bd0;
-                  //errB = err0;
+                  if (rescaled)
+                    r0=0.0;
+                  else
+                    r0=cmplx(0.0,1.0);
                 }
               else
                 {
-                  bd = bd1;
-                  //errB = err1;
+                  r0 = polar(fact*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
                 }
+              //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+              //r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+              iter++;
+              //cout << "r0=" << r0 << "xi=" << xi << "\n";
+#if 0
+              if (iter%MT==0)
+                {
+                  sigold=sig;
+                  sig*=goldfact;
+                }
+#endif
+              if (iter > MAXSTPS)
+                {
+                  cout << "[ERROR] Laguerre method did not converge:\n";
+                  cout << "this problem can be fixed by using floating point number\n";
+                  cout << "with higher precision (e.g. long double and complex<long double>\n";
+                  cout << "or reducing the convergence precision\n";
+                  cout << "xi=" << xi << "\n";
+                  exit(-1);
+                }
+            };
+#ifdef LAGUERRE_POLISH
+          if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
+            {
+              refine_root(r0);
             }
+#endif
+          if (//abs(evalpoly(r0.real())) <= abs(evalpoly(r0)) //&& abs(evalpoly(r0.real())) <= abs(evalpoly(conj(r0)))) 
+            abs(r0.imag()) <= meps*abs(r0))
+              {
+                rpolyNm1 qp;
+                // pvector<cmplx,N-1> qr;
+                pvecNm1<cmplx> qr;
+#if 0
+
+                if constexpr (N < 0)
+                  {
+                    //qp.allocate(n-1);
+                    //qr.allocate(n-1);
+                    qr.use_vec(n-1,&(roots[1])); 
+                    qp.use_vec(n-1,coeff.v, cmon.v, cmonder.v, cmondder.v);
+                  }
+#endif
+                //cout << "minus one r0=" << r0 << "\n";
+                roots[0] = r0.real();
+                for (i=n; i >=1; i--)
+                  {
+                    deflcoeff0[i-1] = cmon[i];
+                    if (i <= n-1)
+                      deflcoeff0[i-1] += r0.real()*deflcoeff0[i];
+                  }
+#ifdef ENABLE_FORW_DEFL
+                if (r0.real()!=0)
+                  {
+                    //forward deflation
+#if 0
+                    deflcoeff1[n-1]=1.0;
+                    for (i=0; i < n-1; i++)
+                      {
+                        deflcoeff1[i] = cmon[i]; 
+                        if (i >= 1)
+                          deflcoeff1[i] -= deflcoeff1[i-1];
+                        deflcoeff1[i] /= -r0.real();
+                        //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+                      }
+#else
+                    deflcoeff1[0]=-cmon[0]/r0.real();
+                    deflcoeff1[n-1] = 1.0;
+                    for (i=1; i < n-1; i++)
+                      {
+                        deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0.real();
+                      }
+#endif
+                    // choose the set which yields smaller error 
+                    err0=calc_err_q(deflcoeff0,r0.real());
+                    err1=calc_err_q(deflcoeff1,r0.real());
+
+                    if (isnan(err1) || isinf(err1))
+                      deflcoeff=deflcoeff0;
+                    else if (isnan(err0) || isinf(err0))
+                      deflcoeff=deflcoeff1;
+                    else if (err0 < err1)
+                      {
+                        //errA = err0;
+                        deflcoeff = deflcoeff0;
+                      }
+                    else
+                      {
+                        //errA = err1;
+                        deflcoeff = deflcoeff1;
+                      }
+                  }
+                else
+                  {
+                    //errA=calc_err_q(deflcoeff0,r0.real());
+                    deflcoeff = deflcoeff0;
+                  }
+#else
+                deflcoeff = deflcoeff0;
+#endif
+#ifdef USE_DEFL_NR
+                //ntype errP, errD;
+                //errP = calc_err_q(deflcoeff, r0.real());
+                use_NR_defl_lin(deflcoeff,r0);
+                //errD = calc_err_q(deflcoeff, r0.real());
+#endif
+
+                if constexpr (N < 0)
+                  {
+                    //qp.allocate(n-1);
+                    //qr.allocate(n-1);
+                    qr.use_vec(n-1,&(roots[1])); 
+                    qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+                  }
+
+                //refine deflated quartic coefficients thourh Newton-Raphson method
+                qp.set_output_prec(this->get_output_prec());
+                qp.set_coeff(deflcoeff);
+
+                qp.find_roots(qr, false, false);
+                if constexpr (N > 0)
+                  {
+                    for (i=1; i < n; i++)
+                      roots[i] = qr[i-1];
+                  }
+              }
           else
             {
-              //errB=calc_err_defl_quad(bd0, ad);
-              bd = bd0;
-            }
+              rpolyNm2 rp;
+              //pvector<cmplx,N-2> ro_quad;
+              pvecNm2<cmplx> ro_quad;
+#if 0
+              if constexpr (N < 0)
+                {
+                  ro_quad.allocate(n-2);
+                  rp.allocate(n-2);
+                }
+#endif
+              //cout << "2) r0=" << r0 << "\n";
+              roots[0] = r0;
+              //cout << "r0=" << r0 << " p(real(r0))=" << evalpoly(r0.real()) << " p(r0)=" << evalpoly(r0)<< "\n";
+
+              roots[1] = conj(r0);
+              // find coefficients of quadratic polynomial for deflation
+
+              ad[2] = 1.0;
+              ad[1] = -2*r0.real();
+              ad[0] = abs(r0)*abs(r0);
+              //do forward and backward deflation and then choose the one which provides smaller error
+              //backward deflation 
+              //cout << "minus two r0=" << r0 << "\n";
+              for (i=n; i >=2;  i--)
+                {
+                  bd0[i-2] = cmon[i];
+
+                  if (i <= n-1)
+                    bd0[i-2] -= ad[1]*bd0[i-1];
+                  if (i <= n-2)
+                    bd0[i-2] -= ad[0]*bd0[i];
+
+                }
+#ifdef ENABLE_FORW_DEFL
+              if (ad[0]!=0)
+                {
+                  //forward deflation
+                  bd1[n-2]=1.0;
+                  for (i=0; i < n-2; i++)
+                    {
+                      bd1[i] = cmon[i];
+                      if (i >= 1)
+                        bd1[i] -= bd1[i-1]*ad[1];
+                      if (i >= 2)
+                        bd1[i] -= bd1[i-2];
+                      bd1[i] /= ad[0];
+                    }
+                  err0=calc_err_defl_quad(bd0, ad);
+                  err1=calc_err_defl_quad(bd1, ad);
+
+                  //cout << "AD err0=" << err0 << " err1=" << err1 << "\n";
+                  if (isnan(err1) || isinf(err1))
+                    bd=bd0;
+                  else if (isnan(err0) || isinf(err0))
+                    bd=bd1;
+                  else if (err0 < err1)
+                    {
+                      bd = bd0;
+                      //errB = err0;
+                    }
+                  else
+                    {
+                      bd = bd1;
+                      //errB = err1;
+                    }
+                }
+              else
+                {
+                  //errB=calc_err_defl_quad(bd0, ad);
+                  bd = bd0;
+                }
 #else
-          bd=bd0;
+              bd=bd0;
 #endif
-          //cout << "N=" << n << "\n";
+              //cout << "N=" << n << "\n";
 #ifdef USE_DEFL_NR
-          //ntype errP, errD;
-          //errP =calc_err_defl_quad(bd, ad);
-          use_NR_defl_quad(bd,ad);
+              //ntype errP, errD;
+              //errP =calc_err_defl_quad(bd, ad);
+              use_NR_defl_quad(bd,ad);
 #endif
-          if constexpr (N < 0)
-            {
-              // reuse already allocated vectors
-              rp.use_vec(n-2,coeff.v,cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
-              ro_quad.use_vec(n-2,&(roots[2]));
+              if constexpr (N < 0)
+                {
+                  // reuse already allocated vectors
+                  rp.use_vec(n-2,coeff.v,cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+                  ro_quad.use_vec(n-2,&(roots[2]));
+                }
+              // find zeroes of N-2 degree polynomial
+              rp.set_output_prec(this->get_output_prec());
+              rp.set_coeff(bd);
+              rp.find_roots(ro_quad, false, false);
+              //ro_quad.show("quartic roots=");
+              if constexpr (N > 0)
+                {
+                  for (i=2; i < n; i++)
+                    roots[i] = ro_quad[i-2];
+                }
             }
-          // find zeroes of N-2 degree polynomial
-          rp.set_output_prec(this->get_output_prec());
-          rp.set_coeff(bd);
-          rp.find_roots(ro_quad, false, false);
-          //ro_quad.show("quartic roots=");
-          if constexpr (N > 0)
+          if (rescaled)
             {
-              for (i=2; i < n; i++)
-                roots[i] = ro_quad[i-2];
+              for (i=0; i < n; i++)
+                roots[i] *= xi;
+#if 0
+              for (i=0; i < n; i++)
+                {
+                  cout << "ratio=" <<  abs(ub/roots[i]) << "\n"; 
+                } 
+#endif
             }
-        }
-      if (rescaled)
-        {
-          for (i=0; i < n; i++)
-            roots[i] *= xi;
         }
       if constexpr (N < 0)
         {
