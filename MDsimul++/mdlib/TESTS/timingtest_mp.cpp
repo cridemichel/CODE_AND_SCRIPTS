@@ -63,8 +63,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<32>>;
-using cmplx=number<mpc_complex_backend<32>>;
+using numty=number<mpfr_float_backend<64>>;
+using cmplx=number<mpc_complex_backend<64>>;
 #elif defined(FL128)
 #include<complex>
 #include <boost/multiprecision/float128.hpp>
@@ -212,7 +212,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 
 #if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
   // set precision equal to precision of input coefficients (i.e. double epsilon)
-  rp.set_output_prec(numeric_limits<double>::epsilon());
+  //rp.set_output_prec(numeric_limits<double>::epsilon());
+  rp.set_output_prec(1E-60);
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
@@ -233,7 +234,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           rp.set_coeff(c);
           //rp.zroots(roots, false);
           //rp.show("f(x)=");
-          rp.find_roots(roots);
+          rp.find_roots(roots, true);
           roots.set_show_digits(50);
           //roots.show("roots=");
           //rp.show("poly=");
@@ -241,7 +242,6 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       else
         {
           rphqr.set_coeff(c);
-
           rphqr.find_roots(roots);
         }
     }

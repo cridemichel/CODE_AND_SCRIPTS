@@ -7,7 +7,7 @@
 #include "../rpoly.H"
 #endif
 #include <complex>
-//#define AURENTZ
+#define AURENTZ
 //#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
@@ -551,7 +551,7 @@ int main(int argc, char **argv)
             cod[i] = co[i];
 #endif
           oqs.set_coeff(cod);
-          oqs.find_roots(csold);
+          oqs.find_roots(csold, true);
           //oqs.zroots(csold,true);
           for (i=0; i < NDEG; i++)
             csolall[ic][i] = csold[i];

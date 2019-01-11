@@ -916,6 +916,7 @@ bool laguer_real(cmplx &xc, int& flag)
           b0 = b[0];
           b[0] = x[0]*b[0] - x[1]*b[1] + cmon[j];
           b[1] = x[0]*b[1] + x[1]*b0;
+          // note that f is P''/2
 #ifndef BINI_CONV_CRIT
           err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
 #endif
@@ -1055,7 +1056,115 @@ bool laguer_real(cmplx &xc, int& flag)
     flag=1;
     return false;
   }
+bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
+  {
+    const int MR=8,MT=10,MAXIT=MT*MR;
+    const ntype EPS=goaleps;
+    static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+    int iter,j, flag;
+    ntype abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+    ntype err;
+#else
+    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
+    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+    int m;
+    m=n;
+    //cout << "r0 ini = "<< x << "\n"; 
+    flag=0;
+    for (iter=1;iter<=MAXIT;iter++) 
+      {
+        //its=iter;
+        b=cmon[m];
+#ifndef BINI_CONV_CRIT
+        err=abs(b);
+#endif
+        d=f=0.0;
+        abx=abs(x);
+        for (j=m-1;j>=0;j--) {
+          f=x*f+d;
+          d=x*d+b;
+          b=x*b+cmon[j];
+#ifndef BINI_CONV_CRIT
+          err=abs(b)+abx*err;
+#endif
+        }
+#ifndef BINI_CONV_CRIT
+        err *= EPS;
+#endif
+        //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+        absb=abs(b);
+        if (isinf(absb) || isnan(absb))
+          {
+            //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+            //cout << "x=" << x << "\n";
+            //cout << "p(x)=" << evalpoly(x) << "\n";
+            flag=2;
+            return false;
+          }
+#ifdef BINI_CONV_CRIT
+        s=0.0;
+        pr=1.0; 
+        for (j=0; j <= n; j ++) 
+          {
+            s+=coeff[j]*pr;
+            pr *= abx;
+          }
+        if (absb <= K*s) // stopping criterion of bini 
+          return true;
+#else
+        if (absb <= err) 
+          {
+            return true;
+          }
+#endif
+        cmplx gc=0.0, hc=0.0, term;
+        for (j=0; j < iac; j++)
+          {
+            term=1.0/(x-roots[j]);
+            gc += term;
+            hc += term*term; 
+          }
+        g=d/b-gc;
+        g2=g*g;
+        h=g2-((ntype)2.0)*f/b-hc;
+        sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+        gp=g+sq;
+        gm=g-sq;
+        abp=abs(gp);
+        abm=abs(gm);
 
+        if (abp < abm) gp=gm;
+        //cout << "abp=" << abp << " abm=" << abm << "\n";
+        //cout << "1/gp=" << 1.0/gp << "\n";
+        if (MAX(abp,abm) > 0.0)
+          {
+            dx =  ((cmplx)m)/((cmplx)gp);
+          }
+        else
+          {
+            dx = polar(((ntype)(1+abx)),((ntype)iter));
+          }
+        //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+        //cout << "dx=" << dx << "\n";
+        x1=x-dx;
+        if (x == x1) 
+          {
+            return true;
+          }
+
+        if (iter % MT != 0) 
+          x=x1;
+        else 
+          x -= frac[iter/MT]*dx;
+        //cout << "iter=" << iter << " x=" << x << "\n";        
+      }
+    //refine_root(x);
+    //cout << "too many iterations in laguer\n";
+    flag=1;
+    return false;
+  }
  bool laguer_cmplx(cmplx &x, int& flag)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -1182,6 +1291,7 @@ bool laguer_real(cmplx &xc, int& flag)
       err=abs(b);
       d=f=0.0;
       abx=abs(x);
+      // note that f is P''/2 b is p(x) and d is p'(x)
       for (j=m-1;j>=0;j--) {
         f=x*f+d;
         d=x*d+b;
@@ -1303,6 +1413,60 @@ bool laguer_real(cmplx &xc, int& flag)
         }
       return sum;
     }
+ void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+   {
+     int iter,i;
+     ntype err;
+     cmplx povp1, denom;
+     // root polishing by NR
+     cmplx r0old, p, sum;
+     cmplx p1, p1c;
+     ntype errold;
+     for (iter=0; ; iter++)
+       {
+         p=cmon[n]*r0+cmon[n-1];
+         p1=cmon[n];
+         for(i=n-2;i>=0;i--) {
+           p1=p+p1*r0;
+           p=cmon[i]+p*r0;
+         }
+
+         if (iter > 0)
+           errold=err;
+
+         err = abs(p);//abs(p.real())+abs(p.imag());
+         if (err==0)
+           break;
+
+         if (iter > 0 && err >= errold)
+           {
+             r0=r0old;
+             break;
+           }
+
+         if (p1==cmplx(0,0))
+           {
+             break;
+           }
+         if (iter==maxiter_polish)
+           break;
+         r0old=r0;
+         sum=0;
+         for (i=0; i < iac; i++)
+           sum += 1.0/(r0-roots[i]);
+         sum *= p;
+         p1c = p1 - sum;
+         r0 -= p/p1c;
+         if (isnan(abs(r0)) || isinf(abs(r0)))
+           {
+             r0=r0old;
+             break;
+           }
+       }
+
+     //if (iter > 0)
+       //cout << "NR iter=" << iter << " err=" << err << "\n";
+   }
  void refine_root(cmplx &r0)
    {
      int iter,i;
@@ -1747,6 +1911,12 @@ bool laguer_real(cmplx &xc, int& flag)
                   exit(-1);
                 }
             };
+#if 0
+        if (iter>0)
+          {
+            cout << "flag=" << flag << " iter=" << iter << "\n";
+          }
+#endif
 #ifdef LAGUERRE_POLISH
           if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
             {
@@ -1986,10 +2156,12 @@ bool laguer_real(cmplx &xc, int& flag)
                 copyroot=true;
               else 
                 copyroot=false;
-              refine_root(roots[i]);
+              refine_root_maehly(roots[i], roots, i);
+              //laguer_cmplx_mod(roots[i], roots, i);
               if (copyroot==true)
                 {
                   roots[i+1] = conj(roots[i]);
+                  i++;
                 }
             }
         }

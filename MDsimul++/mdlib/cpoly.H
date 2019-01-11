@@ -638,6 +638,60 @@ bool laguer_wrap(cmplx &x)
       return laguer_real(x);
   }
 #endif
+void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+   {
+     int iter,i;
+     ntype err;
+     cmplx povp1, denom;
+     // root polishing by NR
+     cmplx r0old, p, sum;
+     cmplx p1, p1c;
+     ntype errold;
+     for (iter=0; ; iter++)
+       {
+         p=cmon[n]*r0+cmon[n-1];
+         p1=cmon[n];
+         for(i=n-2;i>=0;i--) {
+           p1=p+p1*r0;
+           p=cmon[i]+p*r0;
+         }
+
+         if (iter > 0)
+           errold=err;
+
+         err = abs(p);//abs(p.real())+abs(p.imag());
+         if (err==0)
+           break;
+
+         if (iter > 0 && err >= errold)
+           {
+             r0=r0old;
+             break;
+           }
+
+         if (p1==cmplx(0,0))
+           {
+             break;
+           }
+         if (iter==maxiter_polish)
+           break;
+         r0old=r0;
+         sum=0;
+         for (i=0; i < iac; i++)
+           sum += 1.0/(r0-roots[i]);
+         sum *= p;
+         p1c = p1 - sum;
+         r0 -= p/p1c;
+         if (isnan(abs(r0)) || isinf(abs(r0)))
+           {
+             r0=r0old;
+             break;
+           }
+       }
+
+//     if (iter > 0)
+//       cout << "NR iter=" << iter << " err=" << err << "\n";
+   }
 void refine_root(cmplx &r0)
   {
      int iter,i;
@@ -1003,11 +1057,11 @@ void refine_root(cmplx &r0)
                 copyroot=true;
               else 
                 copyroot=false;
-              //refine_root(roots[i]);
-              laguer_real(roots[i]);
+              refine_root_maehly(roots[i], roots,  (i==0)?0:i-1);
               if (copyroot==true)
                 {
                   roots[i+1] = conj(roots[i]);
+                  i++;
                 }
             }
         }
