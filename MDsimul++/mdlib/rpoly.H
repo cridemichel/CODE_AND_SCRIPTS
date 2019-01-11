@@ -1495,9 +1495,18 @@ bool laguer_real(cmplx &xc, int& flag)
          if (k==4 || xi > ximax)
            ximax=xi;
        }
-     return ximax*K;
+     ximax=K*ximax;
+     if (isinf(ximax)||isnan(ximax))
+       {
+         //cout << "I cannot calculate the upper bound...\n";
+         //cmon.show("coeff");     
+         //exit(-1);
+         return pow(maxf/1.618034,1.0/n);
+       }
+           
+     return ximax;
    }
- ntype calc_upper_bound(void)
+ ntype calc_upper_bound_mig(void)
    {
      // Mignotte et al 2017
      int i, imax[2], h;
@@ -1526,7 +1535,7 @@ bool laguer_real(cmplx &xc, int& flag)
              imax[1]=i+1;
            }
        }
-     if (imax[0]==imax[1])
+     if (imax[0]==imax[1] || imax[0]==0 || imax[1]==0)
        {
          cout << "non puo' essere!\n!";
          exit(-1);
@@ -1569,12 +1578,15 @@ bool laguer_real(cmplx &xc, int& flag)
          CA +=pow(R,i)*pow(rho,h-1-i);
        }
 #endif
+     if (isinf(CA)||isnan(CA))
+       {
+         // close to our actual infinite...
+         CA=maxf/1.618034;
+       }
      //cout << "Ph=" << h << " CA=" << CA << "\n";
      CA=pow(CA,1.0/(h-1));
      //cout << "h=" << h << " CA=" << CA << " R=" << R << " rho=" << rho << "\n";
-     if (isinf(CA)||isnan(CA))
-       return CB;
-     if (CA > CB)
+    if (CA > CB)
        return CA;
      else 
        return CB;
@@ -1685,38 +1697,23 @@ bool laguer_real(cmplx &xc, int& flag)
           while (!laguer_real(r0,flag))
             {
               // if we got an overflow rescale coefficients
-              //cout << "qui flag=" << flag << "\n";
               if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
-                  xi=calc_upper_bound();
+                  xi=calc_upper_bound_kal();
                   //cout << "xi^n=" << pow(xi,n) << "\n";
-                  if (isinf(xi)||isnan(xi))
-                    {
-                      //cout << "I cannot calculate the upper bound...\n";
-                      //cmon.show("coeff");     
-                      //exit(-1);
-                      xi = pow(maxf,1.0/n)/1.618034;
-                    }
                   if (xi > 1.0)
                     {
+                      //cout << "qui rescaling" << "n=" << n << "\n";
                       rescaled=true;
                       rescale_coeff(xi);
                       fact=1.0;
                     }
                   else 
                     fact=xi;
-                  
                 }
               else
                 {
-                  fact=calc_upper_bound();
-                  if (isinf(xi)||isnan(xi))
-                    {
-                      //cout << "I cannot calculate the upper bound...\n";
-                      //cmon.show("coeff");     
-                      //exit(-1);
-                      fact = pow(maxf,1.0/n)/1.618034;
-                    }
+                  fact=calc_upper_bound_kal();
                 }
               if (iter==0)
                 {
