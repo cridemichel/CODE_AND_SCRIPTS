@@ -875,6 +875,254 @@ void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
     c[0]=(acbc).real();
     c[1]=(acbc).imag();
   } 
+void cmplx_mul(ntype c[2], ntype a[2], ntype b[2])
+  {
+    c[0] = a[0]*b[0]-a[1]*b[1];
+    c[1] = a[0]*b[1]+a[1]*b[0];
+  } 
+#if 1
+bool laguer_real(cmplx &xc, int& flag)
+  {
+    const int MR=8,MT=10,MAXIT=MT*MR;
+    const ntype EPS=goaleps;
+    static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+    int iter,j, numimp,jrev;
+    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+    ntype abx,abp,abm, phi, rho, s, absb, absbold, xbak[2];
+    cmplx rhoc;
+    bool rev;
+#ifndef BINI_CONV_CRIT
+    ntype err;
+#endif
+    //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+    ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
+    ntype baux[2], x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2], xg[2], xsq[2], xsqh[2];
+    int m=n;
+    //cout << "r0 ini = "<<xc << "\n"; 
+    x[0] = xc.real();
+    x[1] = xc.imag();
+    flag=0;
+    numimp=0;
+    for (iter=1;iter<=MAXIT;iter++) 
+      {
+        //its=iter;
+        abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+        xbak[0]=x[0];
+        xbak[1]=x[1];
+        if (abx > 1)
+          {
+            rev=true;
+            rhoc=1.0/cmplx(x[0],x[1]);
+            x[0]=real(rhoc);
+            x[1]=imag(rhoc);
+          }
+        else
+          {
+            rev=false;
+          }
+        if (rev)
+          b[0]=cmon[0];  
+        else
+          b[0]=cmon[m];
+        b[1]=0.0;
+#ifndef BINI_CONV_CRIT
+        err=sqrt(b[0]*b[0]+b[1]*b[1]);
+#endif
+        d[0]=f[0]=0.0;
+        d[1]=f[1]=0.0;
+        for (j=m-1;j>=0;j--) {
+          f0 = f[0];
+          f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
+          f[1] = x[0]*f[1] + x[1]*f0 + d[1];
+          d0 = d[0];
+          d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+          d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+          b0 = b[0];
+          if (rev)
+            jrev=m-j;
+          else
+            jrev=j;
+          b[0] = x[0]*b[0] - x[1]*b[1] + cmon[jrev];
+          b[1] = x[0]*b[1] + x[1]*b0;
+          // note that f is P''/2
+#ifndef BINI_CONV_CRIT
+          err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
+#endif
+        }
+#ifndef BINI_CONV_CRIT
+        err *= EPS;
+#endif
+       if (isinf(b[0]) || isnan(b[0]) || 
+            isinf(b[1]) || isnan(b[1]))
+          {
+            //cout << "f= " << f[0] << " " << f[1]  << "d= " << d[0] << " " << d[1] << "b=" << b[0] << " " << b[1] << "\n";
+            //cout << "x=" << x[0] << " " << x[1] << "\n";
+            //cout << "p(x)=" << evalpoly(x) << "\n";
+            flag=2;
+            return false;
+          }
+#ifdef BINI_CONV_CRIT
+        //if (iter > 30)
+          //cout << "#" << iter << " p(x)=" << abs(cmplx(b[0],b[1])) << "\n";
+        s=coeff[n];
+        for (j=n-1; j >=0; j--) 
+          {
+            s=abx*s+coeff[j];
+          }
+        if (iter > 1)
+          absbold=absb;
+        if (rev)
+          {
+            baux[0]=cmon[m];
+            baux[1]=0.0;
+            for (j=m-1;j>=0;j--)
+              {
+                b0 = baux[0];
+                baux[0] = xbak[0]*baux[0] - xbak[1]*baux[1] + cmon[j];
+                baux[1] = xbak[0]*baux[1] + xbak[1]*b0;
+              }
+            absb=abs(cmplx(baux[0],baux[1]));
+          }
+        else
+          absb=abs(cmplx(b[0],b[1]));
+        if (absb <= K*s) // stopping criterion of bini 
+          {
+            xc = cmplx(x[0],x[1]);
+            //if (iter > 20)
+              //cout << "lag iter=" << iter << " numimp=" << numimp << "\n";
+            return true;
+          }
+#if 0
+       if (iter > 1 && absb > absbold)
+          numimp=0;
+        else 
+          numimp++;
+        if (iter > 30)
+          {
+            //cout << "iter=" << iter << " numimp = " << numimp << " absb=" << absb << " absbold=" << absbold << "\n";
+          }
+#endif
+#if 0
+        if (iter > 30 && numimp < 2)
+         {
+           flag=1;
+           return false;
+         }
+#endif
+#else       
+        if (abs(cmplx(b[0],b[1])) <= err)
+          {
+            //if (iter > 15)
+            //cout << "iter=" << iter << "\n";
+            xc = cmplx(x[0],x[1]);
+            return true;
+          }
+#endif
+        if (rev)
+          {
+            cmplx_div(g,d,b);
+            cmplx_mul(xg,x,g); 
+            xg[0] = ntype(m)-xg[0];
+            xg[1] = -xg[1];
+            cmplx_mul(g,x,xg);
+            cmplx_div(fb,f,b);
+            g2[0] = g[0]*g[0] - g[1]*g[1];
+            g2[1] = 2.0*g[0]*g[1];
+            h[0] = g2[0] - 2.0*fb[0];
+            h[1] = g2[1] - 2.0*fb[1];
+            cmplx_mul(xsq,x,x);
+            cmplx_mul(xsqh,xsq,h);
+            xsqh[0]+=2.0*xg[0];
+            xsqh[1]+=2.0*xg[1];
+            xsqh[0]+=ntype(m);
+            cmplx_mul(h,xsq,xsqh);
+          }
+        else
+          {
+            cmplx_div(g,d,b);
+            cmplx_div(fb,f,b);
+            g2[0] = g[0]*g[0] - g[1]*g[1];
+            g2[1] = 2.0*g[0]*g[1];
+            h[0] = g2[0] - 2.0*fb[0];
+            h[1] = g2[1] - 2.0*fb[1];
+          }
+        x[0] = xbak[0];
+        x[1] = xbak[1];
+       
+        sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
+        sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
+        rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
+        if (rho==0)
+          {
+            sq[0] = sq[1] = 0.0;
+          }
+        else
+          {
+            phi = acos(sarg[0]/rho);
+            if (sarg[1] < 0.0)
+              {
+                phi = -phi;
+              }
+            rho = sqrt(rho);
+            sq[0] = rho*cos(phi/2.0);
+            sq[1] = rho*sin(phi/2.0);
+          }
+        gp[0] = g[0] + sq[0];
+        gp[1] = g[1] + sq[1];
+        gm[0] = g[0] - sq[0];
+        gm[1] = g[1] - sq[1]; 
+        abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
+        abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
+        if (abp < abm) 
+          {
+            gp[0]=gm[0];
+            gp[1]=gm[1];
+          }
+        //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
+        invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
+        invgp[0] = gp[0]*invn;
+        invgp[1] = -gp[1]*invn;
+        //cout << "abp=" << abp << " abm=" << abm << "\n";
+        //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
+        if (MAX(abp,abm) > 0.0)
+          {
+            dx[0]=((ntype)m)*invgp[0];
+            dx[1]=((ntype)m)*invgp[1];
+          }
+        else
+          {
+            pol[0] = (1.0+abx)*cos((ntype)iter);
+            pol[1] = (1.0+abx)*sin((ntype)iter); 
+            dx[0]=pol[0];
+            dx[1]=pol[1];
+          }
+        //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
+        //x1=x-dx;
+        x1[0] = x[0] - dx[0];
+        x1[1] = x[1] - dx[1];
+        if (x[0] == x1[0] && x[1]==x1[1]) 
+          {
+            xc = cmplx(x[0],x[1]);
+            return true;
+          }
+        if (iter % MT != 0) 
+          {
+            x[0]=x1[0];
+            x[1]=x1[1];
+          }
+        else 
+          {
+            x[0] -= frac[iter/MT]*dx[0];
+            x[1] -= frac[iter/MT]*dx[1];
+          }
+        //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
+      }
+    //cout << "too many iterations in laguer\n";
+    xc = cmplx(x[0],x[1]);
+    flag=1;
+    return false;
+  }
+#else
 bool laguer_real(cmplx &xc, int& flag)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
@@ -1056,6 +1304,7 @@ bool laguer_real(cmplx &xc, int& flag)
     flag=1;
     return false;
   }
+#endif
 bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
