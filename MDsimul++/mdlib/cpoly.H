@@ -812,7 +812,149 @@ void refine_root(cmplx &r0)
      //cout << "NR iter=" << iter << " err=" << err << "\n";
 #endif
    }
+bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
+  {
+    const int MR=8,MT=10,MAXIT=MT*MR;
+    const ntype EPS=goaleps;
+    //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+    int iter,j, flag;
+    ntype abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+    ntype err;
+#else
+    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
+    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+    int m;
+    m=n;
+    //cout << "r0 ini = "<< x << "\n"; 
+    flag=0;
+    for (iter=1;iter<=MAXIT;iter++) 
+      {
+        //its=iter;
+        b=cmon[m];
+#ifndef BINI_CONV_CRIT
+        err=abs(b);
+#endif
+        d=f=0.0;
+        abx=abs(x);
+        for (j=m-1;j>=0;j--) {
+          f=x*f+d;
+          d=x*d+b;
+          b=x*b+cmon[j];
+#ifndef BINI_CONV_CRIT
+          err=abs(b)+abx*err;
+#endif
+        }
+#ifndef BINI_CONV_CRIT
+        err *= EPS;
+#endif
+        //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+        absb=abs(b);
+        if (isinf(absb) || isnan(absb))
+          {
+            //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+            //cout << "x=" << x << "\n";
+            //cout << "p(x)=" << evalpoly(x) << "\n";
+            flag=2;
+            return false;
+          }
+#ifdef BINI_CONV_CRIT
+        s=0.0;
+        pr=1.0; 
+        for (j=0; j <= n; j ++) 
+          {
+            s+=coeff[j]*pr;
+            pr *= abx;
+          }
+        if (absb <= K*s) // stopping criterion of bini 
+          return true;
+#else
+        if (absb <= err) 
+          {
+            return true;
+          }
+#endif
+        cmplx gc=0.0, hc=0.0, term;
+        for (j=0; j < n; j++)
+          {
+            if (j==iac)
+              continue;
+            term=1.0/(x-roots[j]);
+            gc += term;
+            hc += term*term; 
+          }
+        g=d/b-gc;
+        g2=g*g;
+        h=g2-((ntype)2.0)*f/b-hc;
+        sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+        gp=g+sq;
+        gm=g-sq;
+        abp=abs(gp);
+        abm=abs(gm);
 
+        if (abp < abm) gp=gm;
+        //cout << "abp=" << abp << " abm=" << abm << "\n";
+        //cout << "1/gp=" << 1.0/gp << "\n";
+        if (MAX(abp,abm) > 0.0)
+          {
+            dx =  ((cmplx)m)/((cmplx)gp);
+          }
+        else
+          {
+            dx = polar(((ntype)(1+abx)),((ntype)iter));
+          }
+        //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+        //cout << "dx=" << dx << "\n";
+        x1=x-dx;
+        if (x == x1) 
+          {
+            return true;
+          }
+
+        //if (1||iter % MT != 0) 
+          x=x1;
+        //else 
+          //x -= frac[iter/MT]*dx;
+        //cout << "iter=" << iter << " x=" << x << "\n";        
+      }
+    //refine_root(x);
+    //cout << "too many iterations in laguer\n";
+    flag=1;
+    return false;
+  }
+void initial_guess(pvector<cmplx,N>& roots)
+  {
+    roots[0]=1;
+
+  }
+void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
+   {
+     bool *found = new bool[n];
+     int i,  nf=0, iter;
+     int itmax=10000;
+     for (i=0;i < n; i++)
+       found[i]=false;
+     initial_guess(roots);
+     for (iter=0; iter < itmax; iter++)
+       {
+         for (i=0; i < n; i++)
+           {
+             // refine conjuigate pairs only once!
+             if (found[i]) 
+               continue;
+             if (laguer_cmplx_mod(roots[i], roots, i))
+               {
+                 found[i]=true;
+                 nf++;
+                 if (nf==n)
+                   break;
+               }
+           }
+       }
+     cout << "# found=" << nf << "\n";
+     delete []found;
+   }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
    {
      // find initial guess for x here

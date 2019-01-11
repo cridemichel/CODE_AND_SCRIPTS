@@ -1414,7 +1414,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
             return true;
           }
 
-        if (1||iter % MT != 0) 
+        if (iter % MT != 0) 
           x=x1;
         else 
           x -= frac[iter/MT]*dx;
