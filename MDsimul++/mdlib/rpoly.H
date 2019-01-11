@@ -1120,8 +1120,10 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           }
 #endif
         cmplx gc=0.0, hc=0.0, term;
-        for (j=0; j < iac; j++)
+        for (j=0; j < n; j++)
           {
+            if (j==iac)
+              continue;
             term=1.0/(x-roots[j]);
             gc += term;
             hc += term*term; 
@@ -1154,7 +1156,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
             return true;
           }
 
-        if (iter % MT != 0) 
+        if (1||iter % MT != 0) 
           x=x1;
         else 
           x -= frac[iter/MT]*dx;
@@ -2157,7 +2159,6 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               else 
                 copyroot=false;
               refine_root_maehly(roots[i], roots, i);
-              //laguer_cmplx_mod(roots[i], roots, i);
               if (copyroot==true)
                 {
                   roots[i+1] = conj(roots[i]);
@@ -2165,7 +2166,45 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 }
             }
         }
-    } 
+   } 
+#if 0
+ void laguerre_defl_lag_parall()
+   {
+     bool *found = new bool[n];
+     for (i=0;i < n; i++)
+       found[i]=false;
+     int nf=0;
+     for (iter=0; iter < 1000; iter++)
+       {
+         for (i=0; i < n; i++)
+           {
+             // refine conjuigate pairs only once!
+             //if (i < n-1 && roots[i] == conj(roots[i+1]))
+             //copyroot=true;
+             //else 
+             //copyroot=false;
+             //refine_root_maehly(roots[i], roots, i);
+             if (found[i]) 
+               continue;
+             if (laguer_cmplx_mod(roots[i], roots, i))
+               {
+                 found[i]=true;
+                 nf++;
+                 if (nf==n)
+                   break;
+               }
+             if (copyroot==true)
+               {
+                 //roots[i+1] = conj(roots[i]);
+                 //i++;
+               }
+           }
+       }
+     cout << "# found=" << nf << "\n";
+     delete []found;
+
+   }
+#endif
   void odd_degree(pvector<cmplx,N>& roots)
     {
       ntype *coeffder;
