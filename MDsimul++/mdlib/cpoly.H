@@ -28,6 +28,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
+#define BINI_CONV_CRIT
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 //#define POLISH_NR_REAL 
@@ -814,7 +815,7 @@ void refine_root(cmplx &r0)
    }
 bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
   {
-    const int MR=8,MT=10,MAXIT=MT*MR;
+    const int MR=8,MT=10,MAXIT=2*MT*MR;
     const ntype EPS=goaleps;
     //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j, flag;
@@ -864,11 +865,15 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         pr=1.0; 
         for (j=0; j <= n; j ++) 
           {
-            s+=coeff[j]*pr;
+            s+=coeff[j].real()*pr;
             pr *= abx;
           }
+        
         if (absb <= K*s) // stopping criterion of bini 
-          return true;
+          {
+            //cout << "absb=" << absb << " K=" << K << " s=" << s << "\n";
+            return true;
+          }
 #else
         if (absb <= err) 
           {
@@ -923,20 +928,78 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     flag=1;
     return false;
   }
+ntype calc_upper_bound_kal(void)
+   {
+     // Kalantari's formula as found in McNamee Pan Vol. 1
+     int k;
+     static const ntype K= 1.0/0.682338;
+     ntype ximax, xi;
+     cmplx cnsq, term;
+
+     cnsq=cmon[n-1]*cmon[n-1];
+     for (k=4; k <= n+3; k++)
+       {
+         term=0;
+         if (n-k+3 >= 0)
+           term += cnsq*cmon[n-k+3]-cmon[n-2]*cmon[n-k+3];
+         if (n-k+2 >= 0)
+           term +=-cmon[n-1]*cmon[n-k+2];
+         if (n-k+1 >= 0)
+           term += cmon[n-k+1];
+         xi = pow(abs(term),1.0/(k-1));
+         if (k==4 || xi > ximax)
+           ximax=xi;
+       }
+     ximax=K*ximax;
+     if (isinf(ximax)||isnan(ximax))
+       {
+         //cout << "I cannot calculate the upper bound...\n";
+         //cmon.show("coeff");     
+         //exit(-1);
+         return pow(maxf/1.618034,1.0/n);
+       }
+           
+     return ximax;
+   }
 void initial_guess(pvector<cmplx,N>& roots)
   {
-    roots[0]=1;
-
+    // aberth initial guess
+    int i;
+    ntype r, dth, th;
+    r=calc_upper_bound_kal();
+    //cout << "upper bound=" << r << "\n";
+    dth=2.0*M_PI/n;
+    th=0.0;
+    for (i=0; i < n; i++)
+      {
+        roots[i]=polar(r/(i+2),th);
+        th+=dth;
+      }
+      //roots[i]=(1.0+1E-22*drand48())*pow(10.0,-(i+1));
   }
 void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
    {
-     bool *found = new bool[n];
+     bool *found = new bool[n], fine=false;
      int i,  nf=0, iter;
-     int itmax=10000;
+     int itmax=1000000;
+     if (coeff[n]==cmplx(0.0,0.0))
+        {
+          cout << "That's not an " << n << "degree polynomial!\n";
+          return;
+        }
+      cmon[n]=1.0;
+      for (i=n-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[n];
+      //absolute value of coefficients are used in Bini's stopping criterion
+      //we use coeff vector to store them since it won't be used anymore from here on
+      for (i=0; i <= n; i++) 
+        coeff[i] = cmplx(abs(cmon[i]),0); 
+
+
      for (i=0;i < n; i++)
        found[i]=false;
      initial_guess(roots);
-     for (iter=0; iter < itmax; iter++)
+     for (iter=0; iter < itmax && !fine; iter++)
        {
          for (i=0; i < n; i++)
            {
@@ -948,11 +1011,14 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
                  found[i]=true;
                  nf++;
                  if (nf==n)
-                   break;
+                   {
+                     fine=true;
+                     break;
+                   }
                }
            }
        }
-     cout << "# found=" << nf << "\n";
+     cout << "iter=" << iter << " # found=" << nf << "\n";
      delete []found;
    }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
@@ -1245,6 +1311,7 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
 #endif
           else
             {
+              //laguerre_defl_lag_parall(roots);
               laguerre_defl(roots, polish, backup);
             }
         }
@@ -1271,6 +1338,7 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
 #endif
           else 
             {
+              //laguerre_defl_lag_parall(roots);
               laguerre_defl(roots, polish);
             }
         }

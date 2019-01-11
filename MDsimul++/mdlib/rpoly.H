@@ -32,7 +32,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
-#define POLISH_NR_REAL 
+#define POLISH_NR_REAL
 #define BINI_CONV_CRIT
 //#define FAST_MATH
 using namespace std;
@@ -211,6 +211,10 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
   int maxdigits;
   ntype goaleps;
+  bool deflated;
+#ifdef BINI_INIGUESS
+  cmplx *iniguess;
+#endif
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
    {
       const int MAXIT=1000000;
@@ -1138,7 +1142,7 @@ bool laguer_real(cmplx &xc, int& flag)
     const ntype EPS=goaleps;
     static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int iter,j, numimp;
-    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+    ntype K=EPS*(4.0*ntype(n)+1.0);
     ntype abx,abp,abm, phi, rho, s, absb, absbold;
 #ifndef BINI_CONV_CRIT
     ntype err;
@@ -2015,6 +2019,270 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
      else 
        return CB;
    }
+#ifdef BINI_INIGUESS
+#include<vector>
+#include<set>
+#include<utility>
+
+ // A divide and conquer program to find convex 
+ // hull of a given set of points. 
+ // stores the centre of polygon (It is made 
+ // global because it is used in compare function) 
+ using point=pair<int,ntype>; 
+ point<ntype> mid; 
+ // determines the quadrant of a point 
+ // (used in compare()) 
+ int quad(point p) 
+   { 
+     if (p.first >= 0 && p.second >= 0) 
+       return 1; 
+     if (p.first <= 0 && p.second >= 0) 
+       return 2; 
+     if (p.first <= 0 && p.second <= 0) 
+       return 3; 
+     return 4; 
+   } 
+
+ // Checks whether the line is crossing the polygon 
+ int orientation(point a, point b, 
+                 point c) 
+   { 
+     int res = (b.second-a.second)*(c.first-b.first) - 
+       (c.second-b.second)*(b.first-a.first); 
+
+     if (res == 0) 
+       return 0; 
+     if (res > 0) 
+       return 1; 
+     return -1; 
+   } 
+
+ // compare function for sorting 
+ bool compare(point p1, point q1) 
+   { 
+     point p = make_pair(p1.first - mid.first, 
+                         p1.second - mid.second); 
+     point q = make_pair(q1.first - mid.first, 
+                         q1.second - mid.second); 
+
+     int one = quad(p); 
+     int two = quad(q); 
+
+     if (one != two) 
+       return (one < two); 
+     return (p.second*q.first < q.second*p.first); 
+   } 
+
+ // Finds upper tangent of two polygons 'a' and 'b' 
+ // represented as two vectors. 
+ vector<point> merger(vector<point > a, vector<point > b) 
+   { 
+     // n1 -> number of points in polygon a 
+     // n2 -> number of points in polygon b 
+     int n1 = a.size(), n2 = b.size(); 
+
+     int ia = 0, ib = 0; 
+     for (int i=1; i<n1; i++) 
+       if (a[i].first > a[ia].first) 
+         ia = i; 
+
+     // ib -> leftmost point of b 
+     for (int i=1; i<n2; i++) 
+       if (b[i].first < b[ib].first) 
+         ib=i; 
+
+     // finding the upper tangent 
+     int inda = ia, indb = ib; 
+     bool done = 0; 
+     while (!done) 
+       { 
+         done = 1; 
+         while (orientation(b[indb], a[inda], a[(inda+1)%n1]) >=0) 
+           inda = (inda + 1) % n1; 
+
+         while (orientation(a[inda], b[indb], b[(n2+indb-1)%n2]) <=0) 
+           { 
+             indb = (n2+indb-1)%n2; 
+             done = 0; 
+           } 
+       } 
+
+     int uppera = inda, upperb = indb; 
+     inda = ia, indb=ib; 
+     done = 0; 
+     int g = 0; 
+     while (!done)//finding the lower tangent 
+       { 
+         done = 1; 
+         while (orientation(a[inda], b[indb], b[(indb+1)%n2])>=0) 
+           indb=(indb+1)%n2; 
+
+         while (orientation(b[indb], a[inda], a[(n1+inda-1)%n1])<=0) 
+           { 
+             inda=(n1+inda-1)%n1; 
+             done=0; 
+           } 
+       } 
+
+     int lowera = inda, lowerb = indb; 
+     vector<point> ret; 
+
+     //ret contains the convex hull after merging the two convex hulls 
+     //with the points sorted in anti-clockwise order 
+     int ind = uppera; 
+     ret.push_back(a[uppera]); 
+     while (ind != lowera) 
+       { 
+         ind = (ind+1)%n1; 
+         ret.push_back(a[ind]); 
+       } 
+
+     ind = lowerb; 
+     ret.push_back(b[lowerb]); 
+     while (ind != upperb) 
+       { 
+         ind = (ind+1)%n2; 
+         ret.push_back(b[ind]); 
+       } 
+     return ret; 
+
+   } 
+
+ // Brute force algorithm to find convex hull for a set 
+ // of less than 6 points 
+ vector<point> bruteHull(vector<point> a) 
+   { 
+     // Take any pair of points from the set and check 
+     // whether it is the edge of the convex hull or not. 
+     // if all the remaining points are on the same side 
+     // of the line then the line is the edge of convex 
+     // hull otherwise not 
+     set <point >s; 
+
+     for (int i=0; i<a.size(); i++) 
+       { 
+         for (int j=i+1; j<a.size(); j++) 
+           { 
+             int x1 = a[i].first, x2 = a[j].first; 
+             int y1 = a[i].second, y2 = a[j].second; 
+
+             int a1 = y1-y2; 
+             int b1 = x2-x1; 
+             int c1 = x1*y2-y1*x2; 
+             int pos = 0, neg = 0; 
+             for (int k=0; k<a.size(); k++) 
+               { 
+                 if (a1*a[k].first+b1*a[k].second+c1 <= 0) 
+                   neg++; 
+                 if (a1*a[k].first+b1*a[k].second+c1 >= 0) 
+                   pos++; 
+               } 
+             if (pos == a.size() || neg == a.size()) 
+               { 
+                 s.insert(a[i]); 
+                 s.insert(a[j]); 
+               } 
+           } 
+       } 
+
+     vector<point>ret; 
+     for (auto e:s) 
+       ret.push_back(e); 
+
+     // Sorting the points in the anti-clockwise order 
+     mid = {0, 0}; 
+     int n = ret.size(); 
+     for (int i=0; i<n; i++) 
+       { 
+         mid.first += ret[i].first; 
+         mid.second += ret[i].second; 
+         ret[i].first *= n; 
+         ret[i].second *= n; 
+       } 
+     sort(ret.begin(), ret.end(), compare); 
+     for (int i=0; i<n; i++) 
+       ret[i] = make_pair(ret[i].first/n, ret[i].second/n); 
+
+     return ret; 
+   } 
+
+ // Returns the convex hull for the given set of points 
+ vector<point> divide(vector<point> a) 
+   { 
+     // If the number of points is less than 6 then the 
+     // function uses the brute algorithm to find the 
+     // convex hull 
+     if (a.size() <= 5) 
+       return bruteHull(a); 
+
+     // left contains the left half points 
+     // right contains the right half points 
+     vector<point>left, right; 
+     for (int i=0; i<a.size()/2; i++) 
+       left.push_back(a[i]); 
+     for (int i=a.size()/2; i<a.size(); i++) 
+       right.push_back(a[i]); 
+
+     // convex hull for the left and right sets 
+     vector<point>left_hull = divide(left); 
+     vector<point>right_hull = divide(right); 
+
+     // merging the convex hulls 
+     return merger(left_hull, right_hull); 
+   } 
+ void calc_upper_convex_hull(pvector <ntype,-1> pts, int& q, pvector<int,-1>& k)
+   {
+     vector<point > a; 
+     int i;
+     for (i=0; i < n; i++) 
+       a.push_back(make_pair(int(pts[0]), pts[1])); 
+     q = a.size(); 
+     k.allocate(q);
+     // sorting the set of points according 
+     // to the x-coordinate 
+     sort(a.begin(), a.end()); 
+     vector<point >ans = divide(a); 
+
+#if 1
+    // cout << "convex hull:\n"; 
+     i=0;
+     for (auto e:ans) 
+       {
+         k[i]=e.first;
+         i++;
+       }
+       //cout << e.first << " "
+         //<< e.second << endl; 
+#endif
+   }
+ void initial_guess(vector<cmplx>& rg)
+   {
+     pvector<ntype,-1> pts;
+     pvector<int,-1> k;
+     pts.allocate(n);
+     k.allocate(n+1);//#verts will be < n
+     int q, i, j;
+     for (i = 0; i < n; i++)
+       {
+         pts[i][0] = i;
+         pts[i][1] = log(abs(cmon[i]));
+       }
+     calc_upper_convex_hull(pts, q, k);
+     pvector<ntype,-1> uk(q-1);
+     for (i=1; i <= q-1; i++) 
+       uk[i] = pow(cmon[k[i]]/cmon[k[i-1]],1.0/(k[i+1]-k[i]));
+
+     for (i=1; i <= q-1; i++)
+       {
+         for (j=0; j < k[i+1]-k[i]; j++)
+           {
+             rg[k[i]+j] = polar(uk[i+1],j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+2.0*M_PI*(drand48()-0.5));
+           }
+       }
+     // sort in descending order
+     std::sort(rg.begin(),rg.end(), [&] (ntype a, ntype b)-> bool {return abs(a) > abs(b);});
+   }
+#endif
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
    {
      // find initial guess for x here
@@ -2105,12 +2373,24 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 }
             }
 #endif
+#ifdef BINI_INIGUESS
+          if (!deflated)
+            {
+              vector<cmplx> rg;
+              rg.resize(n);
+              initial_guess(rg);
+              for (i=0; i < n; i++)
+                iniguess=rg[i];
+            }
+          r0 = rg[n-1];//guess with smallest magnitude 
+#else
+          r0=0.0;
+#endif
           //absolute value of coefficients are used in Bini's stopping criterion
           //we use coeff vector to store them since it won't be used anymore from here on
           for (i=0; i <= n; i++) 
             coeff[i] = abs(cmon[i]);   
 
-          r0=0.0;
           int MAXSTPS=1000;// MT=100;
           sigold=0.0;
           sig=1.0;
@@ -2270,7 +2550,10 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                     qr.use_vec(n-1,&(roots[1])); 
                     qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
                   }
-
+#ifdef BINI_INIGUESS
+                qp.set_iniguess(iniguess);
+                qp.set_deflated();
+#endif
                 //refine deflated quartic coefficients thourh Newton-Raphson method
                 qp.set_output_prec(this->get_output_prec());
                 qp.set_coeff(deflcoeff);
@@ -2371,6 +2654,10 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                   ro_quad.use_vec(n-2,&(roots[2]));
                 }
               // find zeroes of N-2 degree polynomial
+#ifdef BINI_INIGUESS
+              rp.set_iniguess(iniguess);
+              rp.set_deflated();
+#endif
               rp.set_output_prec(this->get_output_prec());
               rp.set_coeff(bd);
               rp.find_roots(ro_quad, false, false);
@@ -2891,7 +3178,22 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       scalfact = pow(maxf,1.0/4.0)/1.618034;
       cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
       goaleps=numeric_limits<ntype>::epsilon();   
+      deflated=false;
+#ifdef BINI_INIGUESS
+      iniguess = new cmplx[n];
+#endif
     }
+   void set_deflated(void)
+     {
+       deflated=true;
+     }
+#ifdef BINI_INIGUESS
+   void set_iniguess(cmplx *ig)
+     {
+       iniguess=ig;
+     }
+#endif
+
   void set_output_prec(ntype e)
     {
       goaleps=e;
@@ -2900,7 +3202,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       return goaleps;
     } 
-  rpoly()
+  rpoly(): rpoly_base<type,N>()
     {
       init_const();
      //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
@@ -2919,9 +3221,12 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       //rpoly();
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
+#endif
+#ifdef BINI_INIGUESS
   ~rpoly()
     {
-
+      if (!deflated)
+        delete [] iniguess;
     }
 #endif
 };
