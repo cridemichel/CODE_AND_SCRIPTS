@@ -880,7 +880,7 @@ void cmplx_mul(ntype c[2], ntype a[2], ntype b[2])
     c[0] = a[0]*b[0]-a[1]*b[1];
     c[1] = a[0]*b[1]+a[1]*b[0];
   } 
-#if 1
+#if 0
 bool laguer_real(cmplx &xc, int& flag)
   {
     const int MR=8,MT=10,MAXIT=MT*MR;
@@ -952,8 +952,8 @@ bool laguer_real(cmplx &xc, int& flag)
 #ifndef BINI_CONV_CRIT
         err *= EPS;
 #endif
-       if (isinf(b[0]) || isnan(b[0]) || 
-            isinf(b[1]) || isnan(b[1]))
+       if (!rev && (isinf(b[0]) || isnan(b[0]) || 
+            isinf(b[1]) || isnan(b[1])))
           {
             //cout << "f= " << f[0] << " " << f[1]  << "d= " << d[0] << " " << d[1] << "b=" << b[0] << " " << b[1] << "\n";
             //cout << "x=" << x[0] << " " << x[1] << "\n";
@@ -985,6 +985,15 @@ bool laguer_real(cmplx &xc, int& flag)
           }
         else
           absb=abs(cmplx(b[0],b[1]));
+        if (rev && (isinf(b[0]) || isnan(b[0]) || 
+            isinf(b[1]) || isnan(b[1])))
+          {
+            //cout << "f= " << f[0] << " " << f[1]  << "d= " << d[0] << " " << d[1] << "b=" << b[0] << " " << b[1] << "\n";
+            //cout << "x=" << x[0] << " " << x[1] << "\n";
+            //cout << "p(x)=" << evalpoly(x) << "\n";
+            flag=2;
+            return false;
+          }
         if (absb <= K*s) // stopping criterion of bini 
           {
             xc = cmplx(x[0],x[1]);
