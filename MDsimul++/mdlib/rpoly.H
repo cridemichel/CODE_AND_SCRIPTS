@@ -1473,10 +1473,8 @@ bool laguer_real(cmplx &xc, int& flag)
          pr *= xi;
        }
    }
-
- ntype calc_upper_bound(void)
+ ntype calc_upper_bound_kal(void)
    {
-#if 0
      // Kalantari's formula as found in McNamee Pan Vol. 1
      int k;
      static const ntype K= 1.0/0.682338;
@@ -1498,7 +1496,9 @@ bool laguer_real(cmplx &xc, int& flag)
            ximax=xi;
        }
      return ximax*K;
-#else
+   }
+ ntype calc_upper_bound(void)
+   {
      // Mignotte et al 2017
      int i, imax[2], h;
      ntype CA, CB, ai, maxai[2], maxai2, R, rho; 
@@ -1526,6 +1526,11 @@ bool laguer_real(cmplx &xc, int& flag)
              imax[1]=i+1;
            }
        }
+     if (imax[0]==imax[1])
+       {
+         cout << "non puo' essere!\n!";
+         exit(-1);
+       }
      R=maxai[0];
      rho=maxai[1];
      //cout << "R= " << R << " rho=" << rho << "\n";
@@ -1542,10 +1547,28 @@ bool laguer_real(cmplx &xc, int& flag)
      CA=0.0;
      h=imax[0];
      // calcolare in maniera più efficiente quanto segue
+#if 0
+     ntype *rhoarr = new ntype[h];
+     ntype pr;
+     pr=1.0;
+     for (i=h-1; i >= 0; i--)
+       {
+         rhoarr[i] = pr;
+         pr *= rho;
+       }
+      CA=0;
+      for (i=h-1; i >= 0; i--)
+        {
+          CA = rhoarr[i] + CA*R;
+        }
+ 
+    delete [] rhoarr; 
+#else
      for (i=h-1; i >= 0; i--)
        { 
          CA +=pow(R,i)*pow(rho,h-1-i);
-       } 
+       }
+#endif
      //cout << "Ph=" << h << " CA=" << CA << "\n";
      CA=pow(CA,1.0/(h-1));
      //cout << "h=" << h << " CA=" << CA << " R=" << R << " rho=" << rho << "\n";
@@ -1555,7 +1578,6 @@ bool laguer_real(cmplx &xc, int& flag)
        return CA;
      else 
        return CB;
-#endif
    }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
    {
@@ -1636,7 +1658,7 @@ bool laguer_real(cmplx &xc, int& flag)
           // find first zero using laguerre
           // if it does not converge generate a random initial guess
           // and retry (a limited number of times though!)
-          //ntype ub = calc_upper_bound();
+          //cout << "mig=" << calc_upper_bound() << " kal=" << calc_upper_bound_kal() << "\n";
 #if 1
           if constexpr (N < 0)
             {
@@ -1667,19 +1689,35 @@ bool laguer_real(cmplx &xc, int& flag)
               if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
                   xi=calc_upper_bound();
-                  rescaled=true;
                   //cout << "xi^n=" << pow(xi,n) << "\n";
-                  rescale_coeff(xi);
-                  fact=1.0;
                   if (isinf(xi)||isnan(xi))
                     {
-                      cout << "I cannot calculate the upper bound...\n";
-                      cmon.show("coeff");     
-                      exit(-1);
+                      //cout << "I cannot calculate the upper bound...\n";
+                      //cmon.show("coeff");     
+                      //exit(-1);
+                      xi = pow(maxf,1.0/n)/1.618034;
                     }
+                  if (xi > 1.0)
+                    {
+                      rescaled=true;
+                      rescale_coeff(xi);
+                      fact=1.0;
+                    }
+                  else 
+                    fact=xi;
+                  
                 }
               else
-                fact=calc_upper_bound();
+                {
+                  fact=calc_upper_bound();
+                  if (isinf(xi)||isnan(xi))
+                    {
+                      //cout << "I cannot calculate the upper bound...\n";
+                      //cmon.show("coeff");     
+                      //exit(-1);
+                      fact = pow(maxf,1.0/n)/1.618034;
+                    }
+                }
               if (iter==0)
                 {
                   if (rescaled)
