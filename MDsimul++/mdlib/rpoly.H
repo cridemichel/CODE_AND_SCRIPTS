@@ -12,6 +12,7 @@
 #include <array>
 //#include <boost/multiprecision/mpfr.hpp>
 
+
 //#include <complex>
 //fix to avoid crash of clang
 #define Sqr(x) ((x)*(x))
@@ -30,10 +31,17 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 //#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
+#define BINI_INIGUESS
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL
 #define BINI_CONV_CRIT
+#ifdef BINI_INIGUESS
+#include<vector>
+#include<set>
+#include<utility>
+#endif
+
 //#define FAST_MATH
 using namespace std;
 template<class T>
@@ -2020,16 +2028,29 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
        return CB;
    }
 #ifdef BINI_INIGUESS
-#include<vector>
-#include<set>
-#include<utility>
-
  // A divide and conquer program to find convex 
  // hull of a given set of points. 
  // stores the centre of polygon (It is made 
  // global because it is used in compare function) 
- using point=pair<int,ntype>; 
- point<ntype> mid; 
+#ifdef BINI_INIGUESS 
+using point=pair<int,ntype>; 
+bool compare(point p1, point q1) 
+   { 
+     point p = make_pair(p1.first - mid.first, 
+                         p1.second - mid.second); 
+     point q = make_pair(q1.first - mid.first, 
+                         q1.second - mid.second); 
+
+     int one = quad(p); 
+     int two = quad(q); 
+
+     if (one != two) 
+       return (one < two); 
+     return (p.second*q.first < q.second*p.first); 
+   } 
+#endif
+
+ point mid; 
  // determines the quadrant of a point 
  // (used in compare()) 
  int quad(point p) 
@@ -2058,22 +2079,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
    } 
 
  // compare function for sorting 
- bool compare(point p1, point q1) 
-   { 
-     point p = make_pair(p1.first - mid.first, 
-                         p1.second - mid.second); 
-     point q = make_pair(q1.first - mid.first, 
-                         q1.second - mid.second); 
-
-     int one = quad(p); 
-     int two = quad(q); 
-
-     if (one != two) 
-       return (one < two); 
-     return (p.second*q.first < q.second*p.first); 
-   } 
-
- // Finds upper tangent of two polygons 'a' and 'b' 
+  // Finds upper tangent of two polygons 'a' and 'b' 
  // represented as two vectors. 
  vector<point> merger(vector<point > a, vector<point > b) 
    { 
@@ -2199,7 +2205,20 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
          ret[i].first *= n; 
          ret[i].second *= n; 
        } 
-     sort(ret.begin(), ret.end(), compare); 
+     sort(ret.begin(), ret.end(), 
+          [&](point p1, point q1)->bool {point p = make_pair(p1.first - mid.first, 
+                                         p1.second - mid.second); 
+          point q = make_pair(q1.first - mid.first, 
+                              q1.second - mid.second); 
+
+          int one = quad(p); 
+          int two = quad(q); 
+
+          if (one != two) 
+          return (one < two); 
+          return (p.second*q.first < q.second*p.first); 
+          }
+         ); 
      for (int i=0; i<n; i++) 
        ret[i] = make_pair(ret[i].first/n, ret[i].second/n); 
 
@@ -2230,18 +2249,18 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
      // merging the convex hulls 
      return merger(left_hull, right_hull); 
    } 
- void calc_upper_convex_hull(pvector <ntype,-1> pts, int& q, pvector<int,-1>& k)
+ void calc_upper_convex_hull(point* pts, int& q, pvector<int,-1>& k)
    {
      vector<point > a; 
      int i;
      for (i=0; i < n; i++) 
-       a.push_back(make_pair(int(pts[0]), pts[1])); 
+       a.push_back(make_pair(pts[i].first, pts[i].second)); 
      q = a.size(); 
      k.allocate(q);
      // sorting the set of points according 
      // to the x-coordinate 
-     sort(a.begin(), a.end()); 
-     vector<point >ans = divide(a); 
+     //sort(a.begin(), a.end()); // non credo sia necessario poiché sono già ordinati!
+     vector<point> ans = divide(a); 
 
 #if 1
     // cout << "convex hull:\n"; 
@@ -2250,24 +2269,26 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
        {
          k[i]=e.first;
          i++;
+         cout << "k[" << i << "]=" << k[i] << "\n";
        }
+     exit(-1);
        //cout << e.first << " "
          //<< e.second << endl; 
 #endif
    }
  void initial_guess(vector<cmplx>& rg)
    {
-     pvector<ntype,-1> pts;
+     point *pts=new point[n];
      pvector<int,-1> k;
-     pts.allocate(n);
      k.allocate(n+1);//#verts will be < n
      int q, i, j;
      for (i = 0; i < n; i++)
        {
-         pts[i][0] = i;
-         pts[i][1] = log(abs(cmon[i]));
+         pts[i]=make_pair(i,log(abs(cmon[i])));
        }
+     cout << "qui\n";
      calc_upper_convex_hull(pts, q, k);
+        cout << "dopo\n";
      pvector<ntype,-1> uk(q-1);
      for (i=1; i <= q-1; i++) 
        uk[i] = pow(cmon[k[i]]/cmon[k[i-1]],1.0/(k[i+1]-k[i]));
@@ -2280,7 +2301,8 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
            }
        }
      // sort in descending order
-     std::sort(rg.begin(),rg.end(), [&] (ntype a, ntype b)-> bool {return abs(a) > abs(b);});
+     std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
+     delete [] pts;
    }
 #endif
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
@@ -2380,9 +2402,9 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               rg.resize(n);
               initial_guess(rg);
               for (i=0; i < n; i++)
-                iniguess=rg[i];
+                iniguess[i]=rg[i];
             }
-          r0 = rg[n-1];//guess with smallest magnitude 
+          r0 = iniguess[n-1];//guess with smallest magnitude 
 #else
           r0=0.0;
 #endif
@@ -3202,7 +3224,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       return goaleps;
     } 
-  rpoly(): rpoly_base<type,N>()
+  rpoly(): rpolybase<ntype,N>()
     {
       init_const();
      //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
