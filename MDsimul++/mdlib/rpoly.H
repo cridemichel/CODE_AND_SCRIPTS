@@ -2065,11 +2065,11 @@ bool compare(point p1, point q1)
    } 
 
  // Checks whether the line is crossing the polygon 
- int orientation(point a, point b, 
+ ntype orientation(point a, point b, 
                  point c) 
    { 
-     ntype res = (b.second-a.second)*(c.first-b.first) - 
-       (c.second-b.second)*(b.first-a.first); 
+     ntype res = (b.second-a.second)*ntype(c.first-b.first) - 
+       (c.second-b.second)*ntype(b.first-a.first); 
 
      if (res == 0) 
        return 0; 
@@ -2249,28 +2249,29 @@ bool compare(point p1, point q1)
      // merging the convex hulls 
      return merger(left_hull, right_hull); 
    } 
- void calc_upper_convex_hull(point* pts, int& q, pvector<int,-1>& k)
+ void calc_upper_convex_hull(point* pts, int& q,  vector<int>& k)
    {
      vector<point > a; 
      int i;
      for (i=0; i < n; i++) 
        a.push_back(make_pair(pts[i].first, pts[i].second)); 
-     q = a.size(); 
-     k.allocate(q);
      // sorting the set of points according 
      // to the x-coordinate 
      //sort(a.begin(), a.end()); // non credo sia necessario poiché sono già ordinati!
      vector<point> ans = divide(a); 
 #if 1
     // cout << "convex hull:\n"; 
+     q=ans.size();
+     k.resize(q);
+     cout << "q=" << q << "\n";
      i=0;
      for (auto e:ans) 
        {
-         k[i]=e.first;
-         i++;
+         k[i] =e.first;
+         cout << "e=" << e.first << "\n";
          cout << "k[" << i << "]=" << k[i] << "\n";
+         i++;
        }
-     exit(-1);
        //cout << e.first << " "
          //<< e.second << endl; 
 #endif
@@ -2278,25 +2279,70 @@ bool compare(point p1, point q1)
  void initial_guess(vector<cmplx>& rg)
    {
      point *pts=new point[n];
-     pvector<int,-1> k;
-     k.allocate(n+1);//#verts will be < n
-     int q, i, j;
+     ntype sigma, ukc, vkc, maxt, t;
+     vector<int> k;
+     int q, i, j, kk;
      for (i = 0; i < n; i++)
        {
          pts[i]=make_pair(i,log(abs(cmon[i])));
        }
      calc_upper_convex_hull(pts, q, k);
-     pvector<ntype,-1> uk(q-1);
-     for (i=1; i <= q-1; i++) 
-       uk[i] = pow(cmon[k[i]]/cmon[k[i-1]],1.0/(k[i+1]-k[i]));
+     std::sort(k.begin(), k.end());
+     vector<ntype> uk, vk;
+     uk.resize(q);
+     vk.resize(q);
 
-     for (i=1; i <= q-1; i++)
+     for (i=1; i < n; i++) 
        {
-         for (j=0; j < k[i+1]-k[i]; j++)
+         t=abs(cmon[i]/cmon[0]);
+         if (i==0 || t > maxt)
+           maxt=ukc;
+       }
+     uk[0] = 1.0/(1.0+maxt);   
+
+     for (i=0; i < n; i++) 
+       {
+         t=abs(cmon[i]/cmon[n]);
+         if (i==0 || t > maxt)
+           maxt=ukc;
+       }
+     vk[0] = 1 + maxt;
+     for (kk=1; kk <= n; kk++)
+       {
+         for (i=0; i < kk; i++) 
            {
-             rg[k[i]+j] = polar(uk[i+1],j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+2.0*M_PI*(drand48()-0.5));
+             ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+             if (i==0 || uk[kk] > ukc)
+               uk[kk]=ukc;
            }
        }
+     for (kk=0; kk < n; kk++)
+       {
+         for (i=0; i < n; i++) 
+           {
+             vkc=pow(abs(cmon[i]/cmon[n]),1.0/(kk-i));
+             if (i==0 || uk[kk] > ukc)
+               vk[kk]=vkc;
+           }
+       } 
+     sigma=2.0*M_PI*(drand48()-0.5);
+     for (i=1; i < q; i++)
+       {
+         for (j=0; j <= k[i+1]-k[i]; j++)
+           {
+#if 0
+             if (k[i]+j >= n)
+               {
+                 cout << "we have a problem\n";
+                 exit(-1);
+               }
+#endif
+             rg[k[i]+j] = polar(uk[i+1],j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+             cout << "i=" << i << " j=" << j << " guess[" << k[i]+j << "]" << rg[k[i]+j] << "\n";
+           }
+       }
+     
+     //exit(-1);
      // sort in descending order
      std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
      delete [] pts;
@@ -2395,13 +2441,15 @@ bool compare(point p1, point q1)
 #ifdef BINI_INIGUESS
           if (!deflated)
             {
+              iniguess=new cmplx[n];
               vector<cmplx> rg;
               rg.resize(n);
               initial_guess(rg);
               for (i=0; i < n; i++)
                 iniguess[i]=rg[i];
             }
-          r0 = iniguess[n-1];//guess with smallest magnitude 
+          //r0 = iniguess[n-1];//guess with smallest magnitude 
+          r0=0.0;
 #else
           r0=0.0;
 #endif
@@ -2730,6 +2778,8 @@ bool compare(point p1, point q1)
                 }
             }
         }
+      if (!deflated)
+        delete [] iniguess;
    } 
 #if 0
  void laguerre_defl_lag_parall()
@@ -3198,10 +3248,7 @@ bool compare(point p1, point q1)
       cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
       goaleps=numeric_limits<ntype>::epsilon();   
       deflated=false;
-#ifdef BINI_INIGUESS
-      iniguess = new cmplx[n];
-#endif
-    }
+   }
    void set_deflated(void)
      {
        deflated=true;
@@ -3241,7 +3288,7 @@ bool compare(point p1, point q1)
       //cout << "macheps= " << setprecision(35) << eps << "\n";
     }
 #endif
-#ifdef BINI_INIGUESS
+#if 0
   ~rpoly()
     {
       if (!deflated)
