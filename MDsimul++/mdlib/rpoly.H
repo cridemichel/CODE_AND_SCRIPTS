@@ -2068,7 +2068,7 @@ bool compare(point p1, point q1)
  int orientation(point a, point b, 
                  point c) 
    { 
-     int res = (b.second-a.second)*(c.first-b.first) - 
+     ntype res = (b.second-a.second)*(c.first-b.first) - 
        (c.second-b.second)*(b.first-a.first); 
 
      if (res == 0) 
@@ -2104,8 +2104,9 @@ bool compare(point p1, point q1)
        { 
          done = 1; 
          while (orientation(b[indb], a[inda], a[(inda+1)%n1]) >=0) 
-           inda = (inda + 1) % n1; 
-
+           {
+             inda = (inda + 1) % n1; 
+           }
          while (orientation(a[inda], b[indb], b[(n2+indb-1)%n2]) <=0) 
            { 
              indb = (n2+indb-1)%n2; 
@@ -2116,7 +2117,7 @@ bool compare(point p1, point q1)
      int uppera = inda, upperb = indb; 
      inda = ia, indb=ib; 
      done = 0; 
-     int g = 0; 
+     //int g = 0; 
      while (!done)//finding the lower tangent 
        { 
          done = 1; 
@@ -2233,7 +2234,6 @@ bool compare(point p1, point q1)
      // convex hull 
      if (a.size() <= 5) 
        return bruteHull(a); 
-
      // left contains the left half points 
      // right contains the right half points 
      vector<point>left, right; 
@@ -2261,7 +2261,6 @@ bool compare(point p1, point q1)
      // to the x-coordinate 
      //sort(a.begin(), a.end()); // non credo sia necessario poiché sono già ordinati!
      vector<point> ans = divide(a); 
-
 #if 1
     // cout << "convex hull:\n"; 
      i=0;
@@ -2286,9 +2285,7 @@ bool compare(point p1, point q1)
        {
          pts[i]=make_pair(i,log(abs(cmon[i])));
        }
-     cout << "qui\n";
      calc_upper_convex_hull(pts, q, k);
-        cout << "dopo\n";
      pvector<ntype,-1> uk(q-1);
      for (i=1; i <= q-1; i++) 
        uk[i] = pow(cmon[k[i]]/cmon[k[i-1]],1.0/(k[i+1]-k[i]));
