@@ -83,8 +83,8 @@ using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 #ifdef BACKSTAB
-using bsdbl=number<mpfr_float_backend<64>>;
-using bscmplx=number<mpc_complex_backend<64>>;using numty=double;
+using bsdbl=number<mpfr_float_backend<200>>;
+using bscmplx=number<mpc_complex_backend<200>>;
 #endif
 using numty=double;
 using cmplx=complex<numty>;
