@@ -1616,8 +1616,8 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
 #endif
           else
             {
-              laguerre_defl_lag_parall(roots);
-              //laguerre_defl(roots, polish, backup);
+              //laguerre_defl_lag_parall(roots);
+              laguerre_defl(roots, polish, backup);
             }
         }
       else
@@ -1643,8 +1643,8 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
 #endif
           else 
             {
-              laguerre_defl_lag_parall(roots);
-              //laguerre_defl(roots, polish);
+              //laguerre_defl_lag_parall(roots);
+              laguerre_defl(roots, polish);
             }
         }
     }
