@@ -1119,7 +1119,8 @@ void initial_guess(pvector<cmplx,N>& roots)
  vector<Point> upper_convex_hull(vector<Point> P)
    {
      size_t n = P.size(), k = 0;
-     if (n <= 3) return P;
+     if (n <= 3) 
+       return P;
      vector<Point> H(2*n);
 
      // Sort points lexicographically
@@ -1135,7 +1136,7 @@ void initial_guess(pvector<cmplx,N>& roots)
 #endif
      // Build upper hull
      for (size_t i = n-1, t = k+1; i > 0; --i) {
-       while (k >= t && cross(H[k-2], H[k-1], P[i-1]) <= meps) k--;
+       while (k >= t && cross(H[k-2], H[k-1], P[i-1]) <= 0) k--;
        H[k++] = P[i-1];
      }
 
@@ -1163,9 +1164,11 @@ void initial_guess(pvector<cmplx,N>& roots)
            }
          pts.push_back(p);
        }
+   
+     //cout << "size=" << pts.size() << "\n";
      convh=upper_convex_hull(pts);
      q=convh.size();
-     cout << "q=" << q << "\n";
+     //cout << "q=" << q << "\n";
      i=2;
      //we have to add 0 and n which are in the lower hull
      q+=1;
