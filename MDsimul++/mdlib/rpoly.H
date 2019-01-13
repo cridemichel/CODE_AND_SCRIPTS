@@ -31,7 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 //#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
-#define BINI_INIGUESS
+//#define BINI_INIGUESS
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL
@@ -2074,7 +2074,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
      return H;
    }
 
- ntype upper_bound_bini(void)
+ ntype calc_upper_bound(void)
    {
      vector<Point> pts(n+1), convh;
      vector<int> k, kt;
@@ -2238,7 +2238,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
 #ifdef BINI_INIGUESS
-                  xi = upper_bound_bini();
+                  xi = calc_upper_bound();
 #else
                   xi=calc_upper_bound_kal();
 #endif             
@@ -2256,7 +2256,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               else
                 {
 #ifdef BINI_INIGUESS
-                  fact=upper_bound_bini();
+                  fact=calc_upper_bound();
 #else
                   fact=calc_upper_bound_kal();
 #endif
