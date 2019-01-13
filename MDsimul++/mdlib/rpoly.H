@@ -31,7 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 //#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
-//#define BINI_INIGUESS
+#define BINI_INIGUESS
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL
@@ -220,9 +220,6 @@ class rpoly: public numeric_limits<ntype>, public rpolybase<ntype,N> {
   int maxdigits;
   ntype goaleps;
   bool deflated;
-#ifdef BINI_INIGUESS
-  cmplx *iniguess;
-#endif
   ntype rtsafe(const ntype x1, const ntype x2, const ntype xacc)
    {
       const int MAXIT=1000000;
@@ -2049,7 +2046,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
  // negative for counter-clockwise turn, and zero if the points are collinear.
  coord2_t cross(const Point &O, const Point &A, const Point &B)
    {
-     return ((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
+     return -((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
    }
 
  // Returns a list of points on the convex hull in counter-clockwise order.
@@ -2057,30 +2054,27 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
  vector<Point> upper_convex_hull(vector<Point> P)
    {
      size_t n = P.size(), k = 0;
-     if (n <= 3) return P;
+     if (n <= 3) 
+       return P;
      vector<Point> H(2*n);
-
      // Sort points lexicographically
      // points are already ordered in the present case!
      //sort(P.begin(), P.end());
      // we need just upper hull for Bini's algorithm
-#if 0
-     // Build lower hull
-     for (size_t i = 0; i < n; ++i) {
-       while (k >= 2 && cross(H[k-2], H[k-1], P[i]) <= 0) k--;
-       H[k++] = P[i];
-     }
-#endif
      // Build upper hull
-     for (size_t i = n-1, t = k+1; i > 0; --i) {
-       while (k >= t && cross(H[k-2], H[k-1], P[i-1]) <= 0) k--;
-       H[k++] = P[i-1];
+     for (int i = n-1; i >= 0; i--) {
+       while (k >= 1 && cross(H[k-1], H[k], P[i]) < 0) 
+         {
+           k--;
+         }
+       H[k] = P[i];
+       k++;
      }
-
-     H.resize(k-1);
+     H.resize(k);
      return H;
    }
- void initial_guess(vector<cmplx>& rg)
+
+ ntype upper_bound_bini(void)
    {
      vector<Point> pts(n+1), convh;
      vector<int> k, kt;
@@ -2098,115 +2092,41 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
            {
              p.y=-maxf/1.618034;
            }
-         pts.push_back(p);
+         pts[i]=p;
        }
      convh=upper_convex_hull(pts);
      q=convh.size();
-     cout << "q=" << q << "\n";
-     i=2;
-     //we have to add 0 and n which are in the lower hull
-     q+=1;
-     k.resize(q+1);
-     //FILE *f=fopen("chull.dat", "w+");
+     if (q<=2)
+       {
+         q=2;
+         k.resize(q+1);
+         k[2]=n;
+         k[1]=0;
+       }
+     else
+       k.resize(q+1);
+     i=1;
      for (auto e:convh)
        {
          k[i] = ((int)e.x);
-         //cout << "x=" << e.x << " y=" << e.y << "\n";
          i++;
-         //fprintf(f,"%d %.15G\n", int(e.x), e.y);
        }
-#if 1
-     k[1]=n;
-     if (q==1)
+     if (k[2] > n)
        {
-         q++;
-         k.resize(q+1);
-         k[2]=0;
+         cout << "k1=" << k[1] << " k2=" << k[2] << "\n";
+         cout << "q=" << q << " n=" << n << "\n";
+         exit(-1);
        }
-
-     //k[q]=0;
-     kt.resize(q+1);
-     for (i=1; i <= q; i++)
-       {
-         kt[i] = k[q+1-i];
-       }
-     k=kt;
-     std::sort(k.begin()++,k.end(),[&](int a, int b)->bool {return a < b;}); 
-#endif
-#if 0
-     for (i=1; i <= q; i++)
-       {
-         cout << "k[" << i << "]=" << k[i] << "\n";
-       } 
-     //fprintf(f,"%d %.15G\n", 0, pts[0].y);
-     //fprintf(f,"%d %.15G\n", q, pts[q].y);
-     fclose(f); 
-     //exit(-1);
-#endif
-     vector<ntype> uk;
-     uk.resize(q+1);
-#if 0
-     vector<ntype> vk;
-     vk.resize(q);
-
-     for (i=1; i < n; i++) 
-       {
-         t=abs(cmon[i]/cmon[0]);
-         if (i==0 || t > maxt)
-           maxt=ukc;
-       }
-     uk[0] = 1.0/(1.0+maxt);   
-
-     for (i=0; i < n; i++) 
-       {
-         t=abs(cmon[i]/cmon[n]);
-         if (i==0 || t > maxt)
-           maxt=ukc;
-       }
-     vk[0] = 1 + maxt;
-     for (kk=1; kk <= n; kk++)
-       {
-         for (i=0; i < kk; i++) 
-           {
-             ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
-             if (i==0 || uk[kk] > ukc)
-               uk[kk]=ukc;
-           }
-       }
-     for (kk=0; kk < n; kk++)
-       {
-         for (i=0; i < n; i++) 
-           {
-             vkc=pow(abs(cmon[i]/cmon[n]),1.0/(kk-i));
-             if (i==0 || uk[kk] > ukc)
-               vk[kk]=vkc;
-           }
-       } 
-#endif
-     sigma=2.0*M_PI*(drand48()-0.5);
-     
-     for (i=1; i < q; i++)
-       {
-         uk[i+1] = pow(abs(cmon[k[i]]/cmon[k[i+1]]),1.0/(k[i+1]-k[i]));
-         cout << "uk[" << i+1 << "]=" << uk[i+1] << "\n";
-         for (j=1; j <= k[i+1]-k[i]; j++)
-           {
-#if 0
-             if (k[i]+j >= n)
-               {
-                 cout << "we have a problem\n";
-                 exit(-1);
-               }
-#endif
-             rg[k[i]+j-1] = polar(uk[i+1],j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-             cout << "i=" << i << " j=" << j << " guess[" << k[i]+j-1 << "]" << rg[k[i]+j-1] << "\n";
-             cout << "abs(guess)=" << abs(rg[k[i]+j-1]) << "\n";
-           }
-       }
-     
-     //exit(-1);
-     // sort in descending order
-     std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
+     ntype xi1, xi2;
+     xi1 = pow(abs(cmon[k[2]]/cmon[k[1]]),1.0/(k[1]-k[2]));
+     xi2 = calc_upper_bound_kal(); 
+     if (xi2 < xi1)
+      {
+        //cout << "xibini=" << xi1 << " xikal=" << xi2 << " q=" << q << "\n";
+        return xi2;
+      }
+     else
+       return xi1;
    }
 #endif
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
@@ -2299,24 +2219,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 }
             }
 #endif
-#ifdef BINI_INIGUESS
-          if (!deflated)
-            {
-              iniguess=new cmplx[n];
-              vector<cmplx> rg;
-              rg.resize(n);
-              initial_guess(rg);
-              for (i=0; i < n; i++)
-                {
-                  iniguess[i]=rg[i];
-                }
-            }
-          r0 = iniguess[n-1];//guess with smallest magnitude 
-          //cout << "n=" << n  << "using as initial guess=" << r0 << "\n";
-          //r0=0.0;
-#else
           r0=0.0;
-#endif
           //absolute value of coefficients are used in Bini's stopping criterion
           //we use coeff vector to store them since it won't be used anymore from here on
           for (i=0; i <= n; i++) 
@@ -2334,8 +2237,12 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               // if we got an overflow rescale coefficients
               if (iter==0 && flag==2) // flag==2 means inf or nan
                 {
+#ifdef BINI_INIGUESS
+                  xi = upper_bound_bini();
+#else
                   xi=calc_upper_bound_kal();
-                  //cout << "xi^n=" << pow(xi,n) << "\n";
+#endif             
+                  //cout << "xi=" << xi << "\n";
                   if (xi > 1.0)
                     {
                       //cout << "qui rescaling" << "n=" << n << "\n";
@@ -2348,7 +2255,11 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 }
               else
                 {
+#ifdef BINI_INIGUESS
+                  fact=upper_bound_bini();
+#else
                   fact=calc_upper_bound_kal();
+#endif
                 }
               if (iter==0)
                 {
@@ -2481,10 +2392,6 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                     qr.use_vec(n-1,&(roots[1])); 
                     qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
                   }
-#ifdef BINI_INIGUESS
-                qp.set_iniguess(iniguess);
-                qp.set_deflated();
-#endif
                 //refine deflated quartic coefficients thourh Newton-Raphson method
                 qp.set_output_prec(this->get_output_prec());
                 qp.set_coeff(deflcoeff);
@@ -2585,10 +2492,6 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                   ro_quad.use_vec(n-2,&(roots[2]));
                 }
               // find zeroes of N-2 degree polynomial
-#ifdef BINI_INIGUESS
-              rp.set_iniguess(iniguess);
-              rp.set_deflated();
-#endif
               rp.set_output_prec(this->get_output_prec());
               rp.set_coeff(bd);
               rp.find_roots(ro_quad, false, false);
@@ -2642,10 +2545,6 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 }
             }
         }
-#ifdef BINI_INIGUESS
-      if (!deflated)
-        delete [] iniguess;
-#endif
    } 
 #if 0
  void laguerre_defl_lag_parall()
@@ -3119,13 +3018,6 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
      {
        deflated=true;
      }
-#ifdef BINI_INIGUESS
-   void set_iniguess(cmplx *ig)
-     {
-       iniguess=ig;
-     }
-#endif
-
   void set_output_prec(ntype e)
     {
       goaleps=e;

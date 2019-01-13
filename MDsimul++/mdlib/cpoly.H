@@ -1122,25 +1122,17 @@ void initial_guess(pvector<cmplx,N>& roots)
      if (n <= 3) 
        return P;
      vector<Point> H(2*n);
-
      // Sort points lexicographically
      // points are already ordered in the present case!
      //sort(P.begin(), P.end());
      // we need just upper hull for Bini's algorithm
-#if 0
-     // Build lower hull
-     for (size_t i = 0; i < n; ++i) {
-       while (k >= 2 && cross(H[k-2], H[k-1], P[i]) <= 0) k--;
-       H[k++] = P[i];
-     }
-#endif
      // Build upper hull
-     for (size_t i = n-1, t = k+1; i > 0; --i) {
-       while (k >= t && cross(H[k-2], H[k-1], P[i-1]) <= 0) k--;
-       H[k++] = P[i-1];
+     for (size_t i = n-1; i >= 0; i--) {
+       while (k >= 2 && cross(H[k-1], H[k], P[i]) < meps) k--;
+       H[k] = P[i];
+       k++;
      }
-
-     H.resize(k-1);
+     H.resize(k);
      return H;
    }
  void initial_guess(pvector<cmplx,N>& roots)
@@ -1168,20 +1160,18 @@ void initial_guess(pvector<cmplx,N>& roots)
      //cout << "size=" << pts.size() << "\n";
      convh=upper_convex_hull(pts);
      q=convh.size();
-     //cout << "q=" << q << "\n";
-     i=2;
-     //we have to add 0 and n which are in the lower hull
-     q+=1;
+     
      k.resize(q+1);
      //FILE *f=fopen("chull.dat", "w+");
      for (auto e:convh)
        {
          k[i] = ((int)e.x);
-         //cout << "x=" << e.x << " y=" << e.y << "\n";
+         cout << "x=" << e.x << " y=" << e.y << "\n";
          i++;
          //fprintf(f,"%d %.15G\n", int(e.x), e.y);
        }
-#if 1
+    // exit(-1);
+#if 0
      k[1]=n;
      
      if (q==1)
