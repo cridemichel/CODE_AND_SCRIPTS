@@ -1111,14 +1111,14 @@ void initial_guess(pvector<cmplx,N>& roots)
  // negative for counter-clockwise turn, and zero if the points are collinear.
  coord2_t cross(const Point &O, const Point &A, const Point &B)
    {
-     return ((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
+     return -((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
    }
 
  // Returns a list of points on the convex hull in counter-clockwise order.
  // Note: the last point in the returned list is the same as the first one.
  vector<Point> upper_convex_hull(vector<Point> P)
    {
-     size_t n = P.size(), k = 0;
+     int n = P.size(), k = 0;
      if (n <= 3) 
        return P;
      vector<Point> H(2*n);
@@ -1127,22 +1127,27 @@ void initial_guess(pvector<cmplx,N>& roots)
      //sort(P.begin(), P.end());
      // we need just upper hull for Bini's algorithm
      // Build upper hull
-     for (size_t i = n-1; i >= 0; i--) {
-       while (k >= 2 && cross(H[k-1], H[k], P[i]) < meps) k--;
+     for (int i = n-1; i >= 0; i--) {
+       while (k >= 1 && cross(H[k-1], H[k], P[i]) < 0) 
+         {
+           k--;
+         }
        H[k] = P[i];
        k++;
      }
      H.resize(k);
      return H;
    }
+
  void initial_guess(pvector<cmplx,N>& roots)
    {
-     vector<Point> pts(n+1), convh;
+     vector<Point> pts, convh;
      vector<cmplx> rg;
      vector<int> k, kt;
      ntype sigma, ukc, vkc, maxt, t;
      Point p;
      int q, i, j;
+     pts.resize(n+1);
      for (i = 0; i <= n; i++)
        {
          p.x=ntype(i);
@@ -1154,19 +1159,20 @@ void initial_guess(pvector<cmplx,N>& roots)
            {
              p.y=-maxf/1.618034;
            }
-         pts.push_back(p);
+         //pts.push_back(p);
+         pts[i] = p;
        }
    
      //cout << "size=" << pts.size() << "\n";
      convh=upper_convex_hull(pts);
      q=convh.size();
-     
+     i=1; 
      k.resize(q+1);
      //FILE *f=fopen("chull.dat", "w+");
      for (auto e:convh)
        {
          k[i] = ((int)e.x);
-         cout << "x=" << e.x << " y=" << e.y << "\n";
+         //cout << "x=" << e.x << " y=" << e.y << "\n";
          i++;
          //fprintf(f,"%d %.15G\n", int(e.x), e.y);
        }
@@ -1240,13 +1246,13 @@ void initial_guess(pvector<cmplx,N>& roots)
            }
        } 
 #endif
-     sigma=2.0*M_PI*(drand48()-0.5);
+    sigma=2.0*M_PI*(drand48()-0.5);
      rg.resize(n); 
      for (i=1; i < q; i++)
        {
-         ukip1 = pow(abs(cmon[k[i]]/cmon[k[i+1]]),1.0/(k[i+1]-k[i]));
+         ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
          //cout << "uk[" << i+1 << "]=" << ukip1 << "\n";
-         for (j=1; j <= k[i+1]-k[i]; j++)
+         for (j=1; j <= k[i]-k[i+1]; j++)
            {
 #if 0
              if (k[i]+j >= n)
@@ -1255,9 +1261,9 @@ void initial_guess(pvector<cmplx,N>& roots)
                  exit(-1);
                }
 #endif
-             rg[k[i]+j-1] = polar(ukip1,j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-             //cout << "i=" << i << " j=" << j << " guess[" << k[i]+j-1 << "]" << rg[k[i]+j-1] << "\n";
-             //cout << "abs(guess)=" << abs(rg[k[i]+j-1]) << "\n";
+             rg[k[i]+j-2] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+             //cout << "i=" << i << " j=" << j << " guess[" << k[i]+j-2 << "]" << rg[k[i]+j-2] << "\n";
+             //cout << "abs(guess)=" << abs(rg[k[i]+j-2]) << "\n";
            }
        }
      
@@ -1265,7 +1271,10 @@ void initial_guess(pvector<cmplx,N>& roots)
      // sort in descending order
      std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
      for (i=0; i < n; i++)
-       roots[i]=rg[i];
+       {
+         roots[i]=rg[i];
+         //cout << "roots[" << i << "]=" << roots[i] << "\n";
+       }
    }
 
 void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-//#define CPOLY
+#define CPOLY
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
