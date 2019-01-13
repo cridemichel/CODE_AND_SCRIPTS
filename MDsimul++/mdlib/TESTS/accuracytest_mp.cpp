@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-//#define CPOLY
+#define CPOLY
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -108,6 +108,7 @@ void calc_coeff_dep_on_case(vldbl c[], cmplx er[])
       er[i] = i+1;
     }
   calc_coeff(c, er);
+
 #elif CASO==3
 #define NDEG 20
   //static cmplx er[NDEG];

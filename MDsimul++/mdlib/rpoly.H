@@ -31,7 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 //#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
-#define BINI_INIGUESS
+//#define BINI_INIGUESS
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL
@@ -2001,13 +2001,13 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
          rhoarr[i] = pr;
          pr *= rho;
        }
-      CA=0;
-      for (i=h-1; i >= 0; i--)
-        {
-          CA = rhoarr[i] + CA*R;
-        }
- 
-    delete [] rhoarr; 
+     CA=0;
+     for (i=h-1; i >= 0; i--)
+       {
+         CA = rhoarr[i] + CA*R;
+       }
+
+     delete [] rhoarr; 
 #else
      for (i=h-1; i >= 0; i--)
        { 
@@ -2022,7 +2022,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
      //cout << "Ph=" << h << " CA=" << CA << "\n";
      CA=pow(CA,1.0/(h-1));
      //cout << "h=" << h << " CA=" << CA << " R=" << R << " rho=" << rho << "\n";
-    if (CA > CB)
+     if (CA > CB)
        return CA;
      else 
        return CB;
@@ -2032,264 +2032,121 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
  // hull of a given set of points. 
  // stores the centre of polygon (It is made 
  // global because it is used in compare function) 
-#ifdef BINI_INIGUESS 
-using point=pair<int,ntype>; 
-bool compare(point p1, point q1) 
-   { 
-     point p = make_pair(p1.first - mid.first, 
-                         p1.second - mid.second); 
-     point q = make_pair(q1.first - mid.first, 
-                         q1.second - mid.second); 
+ using point=pair<ntype,ntype>; 
 
-     int one = quad(p); 
-     int two = quad(q); 
+ typedef ntype coord_t;         // coordinate type
+ typedef ntype coord2_t;  // must be big enough to hold 2*max(|coordinate|)^2
 
-     if (one != two) 
-       return (one < two); 
-     return (p.second*q.first < q.second*p.first); 
-   } 
-#endif
-
- point mid; 
- // determines the quadrant of a point 
- // (used in compare()) 
- int quad(point p) 
-   { 
-     if (p.first >= 0 && p.second >= 0) 
-       return 1; 
-     if (p.first <= 0 && p.second >= 0) 
-       return 2; 
-     if (p.first <= 0 && p.second <= 0) 
-       return 3; 
-     return 4; 
-   } 
-
- // Checks whether the line is crossing the polygon 
- ntype orientation(point a, point b, 
-                 point c) 
-   { 
-     ntype res = (b.second-a.second)*ntype(c.first-b.first) - 
-       (c.second-b.second)*ntype(b.first-a.first); 
-
-     if (res == 0) 
-       return 0; 
-     if (res > 0) 
-       return 1; 
-     return -1; 
-   } 
-
- // compare function for sorting 
-  // Finds upper tangent of two polygons 'a' and 'b' 
- // represented as two vectors. 
- vector<point> merger(vector<point > a, vector<point > b) 
-   { 
-     // n1 -> number of points in polygon a 
-     // n2 -> number of points in polygon b 
-     int n1 = a.size(), n2 = b.size(); 
-
-     int ia = 0, ib = 0; 
-     for (int i=1; i<n1; i++) 
-       if (a[i].first > a[ia].first) 
-         ia = i; 
-
-     // ib -> leftmost point of b 
-     for (int i=1; i<n2; i++) 
-       if (b[i].first < b[ib].first) 
-         ib=i; 
-
-     // finding the upper tangent 
-     int inda = ia, indb = ib; 
-     bool done = 0; 
-     while (!done) 
-       { 
-         done = 1; 
-         while (orientation(b[indb], a[inda], a[(inda+1)%n1]) >=0) 
-           {
-             inda = (inda + 1) % n1; 
-           }
-         while (orientation(a[inda], b[indb], b[(n2+indb-1)%n2]) <=0) 
-           { 
-             indb = (n2+indb-1)%n2; 
-             done = 0; 
-           } 
-       } 
-
-     int uppera = inda, upperb = indb; 
-     inda = ia, indb=ib; 
-     done = 0; 
-     //int g = 0; 
-     while (!done)//finding the lower tangent 
-       { 
-         done = 1; 
-         while (orientation(a[inda], b[indb], b[(indb+1)%n2])>=0) 
-           indb=(indb+1)%n2; 
-
-         while (orientation(b[indb], a[inda], a[(n1+inda-1)%n1])<=0) 
-           { 
-             inda=(n1+inda-1)%n1; 
-             done=0; 
-           } 
-       } 
-
-     int lowera = inda, lowerb = indb; 
-     vector<point> ret; 
-
-     //ret contains the convex hull after merging the two convex hulls 
-     //with the points sorted in anti-clockwise order 
-     int ind = uppera; 
-     ret.push_back(a[uppera]); 
-     while (ind != lowera) 
-       { 
-         ind = (ind+1)%n1; 
-         ret.push_back(a[ind]); 
-       } 
-
-     ind = lowerb; 
-     ret.push_back(b[lowerb]); 
-     while (ind != upperb) 
-       { 
-         ind = (ind+1)%n2; 
-         ret.push_back(b[ind]); 
-       } 
-     return ret; 
-
-   } 
-
- // Brute force algorithm to find convex hull for a set 
- // of less than 6 points 
- vector<point> bruteHull(vector<point> a) 
-   { 
-     // Take any pair of points from the set and check 
-     // whether it is the edge of the convex hull or not. 
-     // if all the remaining points are on the same side 
-     // of the line then the line is the edge of convex 
-     // hull otherwise not 
-     set <point >s; 
-
-     for (int i=0; i<a.size(); i++) 
-       { 
-         for (int j=i+1; j<a.size(); j++) 
-           { 
-             int x1 = a[i].first, x2 = a[j].first; 
-             int y1 = a[i].second, y2 = a[j].second; 
-
-             int a1 = y1-y2; 
-             int b1 = x2-x1; 
-             int c1 = x1*y2-y1*x2; 
-             int pos = 0, neg = 0; 
-             for (int k=0; k<a.size(); k++) 
-               { 
-                 if (a1*a[k].first+b1*a[k].second+c1 <= 0) 
-                   neg++; 
-                 if (a1*a[k].first+b1*a[k].second+c1 >= 0) 
-                   pos++; 
-               } 
-             if (pos == a.size() || neg == a.size()) 
-               { 
-                 s.insert(a[i]); 
-                 s.insert(a[j]); 
-               } 
-           } 
-       } 
-
-     vector<point>ret; 
-     for (auto e:s) 
-       ret.push_back(e); 
-
-     // Sorting the points in the anti-clockwise order 
-     mid = {0, 0}; 
-     int n = ret.size(); 
-     for (int i=0; i<n; i++) 
-       { 
-         mid.first += ret[i].first; 
-         mid.second += ret[i].second; 
-         ret[i].first *= n; 
-         ret[i].second *= n; 
-       } 
-     sort(ret.begin(), ret.end(), 
-          [&](point p1, point q1)->bool {point p = make_pair(p1.first - mid.first, 
-                                         p1.second - mid.second); 
-          point q = make_pair(q1.first - mid.first, 
-                              q1.second - mid.second); 
-
-          int one = quad(p); 
-          int two = quad(q); 
-
-          if (one != two) 
-          return (one < two); 
-          return (p.second*q.first < q.second*p.first); 
-          }
-         ); 
-     for (int i=0; i<n; i++) 
-       ret[i] = make_pair(ret[i].first/n, ret[i].second/n); 
-
-     return ret; 
-   } 
-
- // Returns the convex hull for the given set of points 
- vector<point> divide(vector<point> a) 
-   { 
-     // If the number of points is less than 6 then the 
-     // function uses the brute algorithm to find the 
-     // convex hull 
-     if (a.size() <= 5) 
-       return bruteHull(a); 
-     // left contains the left half points 
-     // right contains the right half points 
-     vector<point>left, right; 
-     for (int i=0; i<a.size()/2; i++) 
-       left.push_back(a[i]); 
-     for (int i=a.size()/2; i<a.size(); i++) 
-       right.push_back(a[i]); 
-
-     // convex hull for the left and right sets 
-     vector<point>left_hull = divide(left); 
-     vector<point>right_hull = divide(right); 
-
-     // merging the convex hulls 
-     return merger(left_hull, right_hull); 
-   } 
- void calc_upper_convex_hull(point* pts, int& q,  vector<int>& k)
+ struct Point {
+   coord_t x;
+   coord_t y;
+   bool operator <(const Point &p) const {
+     return x < p.x || (x == p.x && y < p.y);
+   }
+ };
+ // 2D cross product of OA and OB vectors, i.e. z-component of their 3D cross product.
+ // Returns a positive value, if OAB makes a clockwise turn,
+ // negative for counter-clockwise turn, and zero if the points are collinear.
+ coord2_t cross(const Point &O, const Point &A, const Point &B)
    {
-     vector<point > a; 
-     int i;
-     for (i=0; i < n; i++) 
-       a.push_back(make_pair(pts[i].first, pts[i].second)); 
-     // sorting the set of points according 
-     // to the x-coordinate 
-     //sort(a.begin(), a.end()); // non credo sia necessario poiché sono già ordinati!
-     vector<point> ans = divide(a); 
-#if 1
-    // cout << "convex hull:\n"; 
-     q=ans.size();
-     k.resize(q);
-     cout << "q=" << q << "\n";
-     i=0;
-     for (auto e:ans) 
-       {
-         k[i] =e.first;
-         cout << "e=" << e.first << "\n";
-         cout << "k[" << i << "]=" << k[i] << "\n";
-         i++;
-       }
-       //cout << e.first << " "
-         //<< e.second << endl; 
+     return ((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
+   }
+
+ // Returns a list of points on the convex hull in counter-clockwise order.
+ // Note: the last point in the returned list is the same as the first one.
+ vector<Point> upper_convex_hull(vector<Point> P)
+   {
+     size_t n = P.size(), k = 0;
+     if (n <= 3) return P;
+     vector<Point> H(2*n);
+
+     // Sort points lexicographically
+     // points are already ordered in the present case!
+     //sort(P.begin(), P.end());
+     // we need just upper hull for Bini's algorithm
+#if 0
+     // Build lower hull
+     for (size_t i = 0; i < n; ++i) {
+       while (k >= 2 && cross(H[k-2], H[k-1], P[i]) <= 0) k--;
+       H[k++] = P[i];
+     }
 #endif
+     // Build upper hull
+     for (size_t i = n-1, t = k+1; i > 0; --i) {
+       while (k >= t && cross(H[k-2], H[k-1], P[i-1]) <= 0) k--;
+       H[k++] = P[i-1];
+     }
+
+     H.resize(k-1);
+     return H;
    }
  void initial_guess(vector<cmplx>& rg)
    {
-     point *pts=new point[n];
+     vector<Point> pts(n+1), convh;
+     vector<int> k, kt;
      ntype sigma, ukc, vkc, maxt, t;
-     vector<int> k;
-     int q, i, j, kk;
-     for (i = 0; i < n; i++)
+     Point p;
+     int q, i, j;
+     for (i = 0; i <= n; i++)
        {
-         pts[i]=make_pair(i,log(abs(cmon[i])));
+         p.x=ntype(i);
+         if (cmon[i]!=0)
+           {
+             p.y=log(abs(cmon[i]));
+           }
+         else
+           {
+             p.y=-maxf/1.618034;
+           }
+         pts.push_back(p);
        }
-     calc_upper_convex_hull(pts, q, k);
-     std::sort(k.begin(), k.end());
-     vector<ntype> uk, vk;
-     uk.resize(q);
+     convh=upper_convex_hull(pts);
+     q=convh.size();
+     cout << "q=" << q << "\n";
+     i=2;
+     //we have to add 0 and n which are in the lower hull
+     q+=1;
+     k.resize(q+1);
+     //FILE *f=fopen("chull.dat", "w+");
+     for (auto e:convh)
+       {
+         k[i] = ((int)e.x);
+         //cout << "x=" << e.x << " y=" << e.y << "\n";
+         i++;
+         //fprintf(f,"%d %.15G\n", int(e.x), e.y);
+       }
+#if 1
+     k[1]=n;
+     if (q==1)
+       {
+         q++;
+         k.resize(q+1);
+         k[2]=0;
+       }
+
+     //k[q]=0;
+     kt.resize(q+1);
+     for (i=1; i <= q; i++)
+       {
+         kt[i] = k[q+1-i];
+       }
+     k=kt;
+     std::sort(k.begin()++,k.end(),[&](int a, int b)->bool {return a < b;}); 
+#endif
+#if 0
+     for (i=1; i <= q; i++)
+       {
+         cout << "k[" << i << "]=" << k[i] << "\n";
+       } 
+     //fprintf(f,"%d %.15G\n", 0, pts[0].y);
+     //fprintf(f,"%d %.15G\n", q, pts[q].y);
+     fclose(f); 
+     //exit(-1);
+#endif
+     vector<ntype> uk;
+     uk.resize(q+1);
+#if 0
+     vector<ntype> vk;
      vk.resize(q);
 
      for (i=1; i < n; i++) 
@@ -2325,10 +2182,14 @@ bool compare(point p1, point q1)
                vk[kk]=vkc;
            }
        } 
+#endif
      sigma=2.0*M_PI*(drand48()-0.5);
+     
      for (i=1; i < q; i++)
        {
-         for (j=0; j <= k[i+1]-k[i]; j++)
+         uk[i+1] = pow(abs(cmon[k[i]]/cmon[k[i+1]]),1.0/(k[i+1]-k[i]));
+         cout << "uk[" << i+1 << "]=" << uk[i+1] << "\n";
+         for (j=1; j <= k[i+1]-k[i]; j++)
            {
 #if 0
              if (k[i]+j >= n)
@@ -2337,15 +2198,15 @@ bool compare(point p1, point q1)
                  exit(-1);
                }
 #endif
-             rg[k[i]+j] = polar(uk[i+1],j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-             cout << "i=" << i << " j=" << j << " guess[" << k[i]+j << "]" << rg[k[i]+j] << "\n";
+             rg[k[i]+j-1] = polar(uk[i+1],j*2.0*M_PI/(k[i+1]-k[i])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+             cout << "i=" << i << " j=" << j << " guess[" << k[i]+j-1 << "]" << rg[k[i]+j-1] << "\n";
+             cout << "abs(guess)=" << abs(rg[k[i]+j-1]) << "\n";
            }
        }
      
      //exit(-1);
      // sort in descending order
      std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
-     delete [] pts;
    }
 #endif
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
@@ -2446,10 +2307,13 @@ bool compare(point p1, point q1)
               rg.resize(n);
               initial_guess(rg);
               for (i=0; i < n; i++)
-                iniguess[i]=rg[i];
+                {
+                  iniguess[i]=rg[i];
+                }
             }
-          //r0 = iniguess[n-1];//guess with smallest magnitude 
-          r0=0.0;
+          r0 = iniguess[n-1];//guess with smallest magnitude 
+          //cout << "n=" << n  << "using as initial guess=" << r0 << "\n";
+          //r0=0.0;
 #else
           r0=0.0;
 #endif
@@ -2778,8 +2642,10 @@ bool compare(point p1, point q1)
                 }
             }
         }
+#ifdef BINI_INIGUESS
       if (!deflated)
         delete [] iniguess;
+#endif
    } 
 #if 0
  void laguerre_defl_lag_parall()
