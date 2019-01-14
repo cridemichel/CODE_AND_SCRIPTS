@@ -867,6 +867,7 @@ int main(int argc, char *argv[])
 #endif
 #endif
       rp.set_coeff(c);
+      c.show("coeff");
       rp.show();
       //rp.zroots(roots,false);
       rp.find_roots(roots,false);
