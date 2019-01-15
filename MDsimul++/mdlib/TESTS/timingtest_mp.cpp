@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 //#include "pmatrix.H"
-//#define CPOLY
+#define CPOLY
 #define AURENTZ
 #define BACKSTAB
 #ifdef CPOLY
@@ -128,8 +128,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<18>>;
-using cmplx=number<mpc_complex_backend<18>>;
+using numty=number<mpfr_float_backend<200>>;
+using cmplx=number<mpc_complex_backend<200>>;
 #ifdef BACKSTAB
 using bsdbl=number<mpfr_float_backend<500>>;
 using bscmplx=number<mpc_complex_backend<500>>;
@@ -295,7 +295,8 @@ bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
     {
       rv[i] = cmplx(roots[i]);
     }
-  std::sort(rv.begin(),rv.end(),[&](cmplx a, cmplx b)->bool {return real(a) < real(b);}); 
+  // sort is needed to obtain the right backward error
+  std::sort(rv.begin(),rv.end(),[&](cmplx a, cmplx b)->bool {return abs(a) < abs(b);}); 
 
   for (i=0; i < NDEG; i++)
     {
@@ -340,7 +341,7 @@ bsdbl calc_backward_err(pvector<cmplx,NN> roots,  pvector<numty,NN> c)
     {
       rv[i] = cmplx(roots[i]);
     }
-  std::sort(rv.begin(),rv.end(),[&](cmplx a, cmplx b)->bool {return real(a) < real(b);}); 
+  std::sort(rv.begin(),rv.end(),[&](cmplx a, cmplx b)->bool {return abs(a) < abs(b);}); 
   for (i=0; i < NDEG; i++)
     {
       //cout << setprecision(16) <<"roots #" << i << " =" << rv[i]<< "\n";
@@ -515,7 +516,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
   // set precision equal to precision of input coefficients (i.e. double epsilon)
   //rp.set_output_prec(numeric_limits<double>::epsilon());
-  rp.set_output_prec(1E-16);
+  //rp.set_output_prec(1E-16);
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
@@ -531,7 +532,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #ifdef BACKSTAB
 #ifdef CPOLY
       for (j=0; j < NDEG; j++)
-        c[j]=cmplx(2.0*sig*(drand48()-0.5),2.0*sig*(drand48()-0.5));
+        c[j]=cmplx(2.0*sig*(drand48()-0.5),0.0);
+        //c[j]=cmplx(2.0*sig*(drand48()-0.5),2.0*sig*(drand48()-0.5));
 #else
       if (poltype==0)
         {
@@ -615,8 +617,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           //rp.zroots(roots, false);
           //rp.show("f(x)=");
           //c.show("coeff=");
-          rp.find_roots(roots, false);
-          //rp.find_roots_cam(roots);
+          rp.find_roots(roots);
+          //rp.find_roots_defl(roots);
           roots.set_show_digits(50);
           //roots.show("roots");
           //for (i=0; i < NDEG; i++)
