@@ -123,7 +123,8 @@ typename std::conditional<(N>0), cpoly_base_static <cmplx, ntype, N>,
          cpoly_base_dynamic <cmplx, ntype, N>>::type;
 
 template <class cmplx, int N=-1, class ntype=double> 
-class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N> {
+class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N> 
+{
   using cpolybase<cmplx,ntype,N>::n;
   using cpolybase<cmplx,ntype,N>::coeff;
   using cpolybase<cmplx,ntype,N>::cmon;
@@ -216,7 +217,7 @@ public:
         }
       return bn;
     }
-  
+
   bool laguer_real(cmplx &xc)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -590,19 +591,19 @@ public:
 #endif
     }
   void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
-  {
-    cmplx ac,bc, acbc;
-    ac=cmplx(a[0],a[1]);
-    bc=cmplx(b[0],b[1]);
-    acbc=ac/bc;
-    c[0]=(acbc).real();
-    c[1]=(acbc).imag();
-  } 
+    {
+      cmplx ac,bc, acbc;
+      ac=cmplx(a[0],a[1]);
+      bc=cmplx(b[0],b[1]);
+      acbc=ac/bc;
+      c[0]=(acbc).real();
+      c[1]=(acbc).imag();
+    } 
   void cmplx_mul(ntype c[2], ntype a[2], ntype b[2])
-  {
-    c[0] = a[0]*b[0]-a[1]*b[1];
-    c[1] = a[0]*b[1]+a[1]*b[0];
-  }
+    {
+      c[0] = a[0]*b[0]-a[1]*b[1];
+      c[1] = a[0]*b[1]+a[1]*b[0];
+    }
   bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
     {
       const ntype EPS=goaleps;
@@ -633,7 +634,7 @@ public:
       abx=abs(xini);
       for (j=0; j <= n; j ++) 
         {
-          s+=coeff[j].real()*pr;
+          s+=acmon[j]*pr;
           pr *= abx;
         }
       ba=cmon[m];
@@ -646,10 +647,10 @@ public:
           return true;
         }
 #else
-      err=abs(cmon[0])*(Kconv*m+1);
+      err=alpha[0];//abs(cmon[0])*(Kconv*m+1);
       abx=1.0/abs(xini);
       for (j=1;j<=m;j++) {
-        err=abx*err+abs(cmon[j])*(Kconv*j+1);
+        err=abx*err+alpha[j];//abs(cmon[j])*(Kconv*j+1);
       }
       if (abs(b) <= EPS*err) 
         {
@@ -661,7 +662,7 @@ public:
       g=x*(ntype(m)-x*db);
       xsq=x*x;
       h=xsq*(ntype(m)-ntype(2.0)*x*db+xsq*ddb);
-    
+
       for (j=0; j < n; j++)
         {
           if (j==iac)
@@ -706,7 +707,7 @@ public:
       m=n;
       b=cmon[m];
 #ifndef BINI_CONV_CRIT
-      err=abs(cmon[m])*(Kconv*m+1);
+      err=alpha[m];//abs(cmon[m])*(Kconv*m+1);
 #endif
       d=f=0.0;
       abx=abs(x);
@@ -715,7 +716,7 @@ public:
         d=x*d+b;
         b=x*b+cmon[j];
 #ifndef BINI_CONV_CRIT
-        err=abx*err + abs(cmon[j])*(Kconv*ntype(j)+1.0);
+        err=abx*err + alpha[j];//abs(cmon[j])*(Kconv*ntype(j)+1.0);
 #endif
       }
       absb=abs(b);
@@ -724,7 +725,7 @@ public:
       pr=1.0; 
       for (j=0; j <= n; j ++) 
         {
-          s+=coeff[j].real()*pr;
+          s+=acmon[i]*pr;
           pr *= abx;
         }
 
@@ -748,7 +749,7 @@ public:
           g -= term;
           h -= term*term; 
         }
-      
+
       g2=g*g;
       sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
       gp=g+sq;
@@ -800,459 +801,460 @@ public:
 
       return ximax;
     }
-using point=pair<ntype,ntype>; 
+  using point=pair<ntype,ntype>; 
 
-typedef ntype coord_t;         // coordinate type
-typedef ntype coord2_t;  // must be big enough to hold 2*max(|coordinate|)^2
+  typedef ntype coord_t;         // coordinate type
+  typedef ntype coord2_t;  // must be big enough to hold 2*max(|coordinate|)^2
 
-struct Point {
-  coord_t x;
-  coord_t y;
-  bool operator <(const Point &p) const {
-    return x < p.x || (x == p.x && y < p.y);
-  }
-};
-// 2D cross product of OA and OB vectors, i.e. z-component of their 3D cross product.
-// Returns a positive value, if OAB makes a clockwise turn,
-// negative for counter-clockwise turn, and zero if the points are collinear.
-coord2_t cross(const Point &O, const Point &A, const Point &B)
-{
-  return ((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
-}
-
-// Returns a list of points on the convex hull in counter-clockwise order.
-// Note: the last point in the returned list is the same as the first one.
-vector<Point> upper_convex_hull(vector<Point> P)
-{
-  int n = P.size(), k = 0;
-  if (n <= 3) 
-    return P;
-  vector<Point> H(n+1);
-  // Sort points lexicographically
-  // points are already ordered in the present case!
-  //sort(P.begin(), P.end());
-  // we need just upper hull for Bini's algorithm
-  // Build upper hull
-  for (int i = n-1; i >= 0; i--) {
-    while (k >= 2 && cross(H[k-1], H[k], P[i]) < 0) 
-      {
-        k--;
-      }
-    k++;
-    H[k] = P[i];
-  }
-  H.resize(k+1);
-  return H;
-}
-//#define USE_CONVEX_HULL 
-void initial_guess(pvector<cmplx,N>& roots)
-{
-#ifdef USE_CONVEX_HULL
-  vector<Point> pts, convh;
-#endif
-  vector<cmplx> rg;
-  vector<int> k;
-  ntype sigma, ukc, vkc, maxt, t;
-  Point p;
-  int q, i, j;
-#ifdef USE_CONVEX_HULL
-  pts.resize(n+1);
-  for (i = 0; i <= n; i++)
+  struct Point {
+    coord_t x;
+    coord_t y;
+    bool operator <(const Point &p) const {
+      return x < p.x || (x == p.x && y < p.y);
+    }
+  };
+  // 2D cross product of OA and OB vectors, i.e. z-component of their 3D cross product.
+  // Returns a positive value, if OAB makes a clockwise turn,
+  // negative for counter-clockwise turn, and zero if the points are collinear.
+  coord2_t cross(const Point &O, const Point &A, const Point &B)
     {
-      p.x=ntype(i);
-      if (abs(cmon[i])!=0)
+      return ((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
+    }
+
+  // Returns a list of points on the convex hull in counter-clockwise order.
+  // Note: the last point in the returned list is the same as the first one.
+  vector<Point> upper_convex_hull(vector<Point> P)
+    {
+      int n = P.size(), k = 0;
+      if (n <= 3) 
+        return P;
+      vector<Point> H(n+1);
+      // Sort points lexicographically
+      // points are already ordered in the present case!
+      //sort(P.begin(), P.end());
+      // we need just upper hull for Bini's algorithm
+      // Build upper hull
+      for (int i = n-1; i >= 0; i--) {
+        while (k >= 2 && cross(H[k-1], H[k], P[i]) < 0) 
+          {
+            k--;
+          }
+        k++;
+        H[k] = P[i];
+      }
+      H.resize(k+1);
+      return H;
+    }
+#define USE_CONVEX_HULL 
+  void initial_guess(pvector<cmplx,N>& roots)
+    {
+#ifdef USE_CONVEX_HULL
+      vector<Point> pts, convh;
+#endif
+      vector<cmplx> rg;
+      vector<int> k;
+      ntype sigma, ukc, vkc, maxt, t;
+      Point p;
+      int q, i, j;
+#ifdef USE_CONVEX_HULL
+      pts.resize(n+1);
+      for (i = 0; i <= n; i++)
         {
-          p.y=log(abs(cmon[i]));
+          p.x=ntype(i);
+          if (abs(cmon[i])!=0)
+            {
+              p.y=log(abs(cmon[i]));
+            }
+          else
+            {
+              p.y=-maxf/1.618034;
+            }
+          pts[i] = p;
+        }
+      convh=upper_convex_hull(pts);
+      q=convh.size()-1;
+      if (q<=2)
+        {
+          q=2;
+          k.resize(q+1);
+          k[1]=n;
+          k[2]=0;
         }
       else
         {
-          p.y=-maxf/1.618034;
+          k.resize(q+1);
         }
-      pts[i] = p;
-    }
-  convh=upper_convex_hull(pts);
-  q=convh.size()-1;
-  if (q<=2)
-    {
-      q=2;
-      k.resize(q+1);
-      k[1]=n;
-      k[2]=0;
-    }
-  else
-    {
-      k.resize(q+1);
-    }
-  i=1; 
-  for (i=1; i <= q; i++)
-    {
-      k[i] = ((int)convh[i].x);
-    }
+      i=1; 
+      for (i=1; i <= q; i++)
+        {
+          k[i] = ((int)convh[i].x);
+        }
 #endif
-  ntype ukip1;
+      ntype ukip1;
 #ifndef USE_CONVEX_HULL
-  vector<ntype> vk, uk;
-  int kk;
-  vk.resize(n+1);
-  uk.resize(n+1);
-  for (i=1; i <= n; i++) 
-    {
-      t=abs(cmon[i]/cmon[0]);
-      if (i==1 || t > maxt)
-        maxt=t;
-    }
-  uk[0] = 1.0/(1.0+maxt);   
-
-  for (i=0; i < n; i++) 
-    {
-      t=abs(cmon[i]/cmon[n]);
-      if (i==0 || t > maxt)
-        maxt=t;
-    }
-  vk[n] = 1.0 + maxt;
- 
-  for (kk=1; kk <= n; kk++)
-    {
-      for (i=0; i < kk; i++) 
+      vector<ntype> vk, uk;
+      int kk;
+      vk.resize(n+1);
+      uk.resize(n+1);
+      for (i=1; i <= n; i++) 
         {
-          ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
-          if (i==0 || ukc > uk[kk])
-            uk[kk]=ukc;
+          t=abs(cmon[i]/cmon[0]);
+          if (i==1 || t > maxt)
+            maxt=t;
         }
-    }
-  for (kk=0; kk < n; kk++)
-    {
-      bool first=true;
-      for (i=kk+1; i <= n; i++) 
+      uk[0] = 1.0/(1.0+maxt);   
+
+      for (i=0; i < n; i++) 
         {
-          if (cmon[i]==cmplx(0.0,0.0)) 
-            continue;
-          vkc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
-          if (first || vkc < vk[kk])
+          t=abs(cmon[i]/cmon[n]);
+          if (i==0 || t > maxt)
+            maxt=t;
+        }
+      vk[n] = 1.0 + maxt;
+
+      for (kk=1; kk <= n; kk++)
+        {
+          for (i=0; i < kk; i++) 
             {
-              first=false;
-              vk[kk]=vkc;
+              ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+              if (i==0 || ukc > uk[kk])
+                uk[kk]=ukc;
             }
         }
-    } 
-  k.resize(n+2); 
-  q=1;
-  for (kk=0; kk <= n; kk++)
-    {
-      if (uk[kk] <= vk[kk])
+      for (kk=0; kk < n; kk++)
         {
-          k[q] = kk; 
-          q++;
-        }
-    }  
-  q--;
-  sigma=2.0*M_PI*(drand48()-0.5);
-  rg.resize(n); 
-  int cc=0, dk;
-  for (i=1; i < q; i++)
-    {
-      dk = k[i+1]-k[i];
-      for (j=1; j <= dk; j++)
+          bool first=true;
+          for (i=kk+1; i <= n; i++) 
+            {
+              if (cmon[i]==cmplx(0.0,0.0)) 
+                continue;
+              vkc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+              if (first || vkc < vk[kk])
+                {
+                  first=false;
+                  vk[kk]=vkc;
+                }
+            }
+        } 
+      k.resize(n+2); 
+      q=1;
+      for (kk=0; kk <= n; kk++)
         {
-          rg[(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-          cc++;
+          if (uk[kk] <= vk[kk])
+            {
+              k[q] = kk; 
+              q++;
+            }
+        }  
+      q--;
+      sigma=2.0*M_PI*(drand48()-0.5);
+      rg.resize(n); 
+      int cc=0, dk;
+      for (i=1; i < q; i++)
+        {
+          dk = k[i+1]-k[i];
+          for (j=1; j <= dk; j++)
+            {
+              rg[(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+              cc++;
+            }
         }
-    }
 #else
-  sigma=2.0*M_PI*(drand48()-0.5);
-  rg.resize(n); 
-  int cc=0;
+      sigma=2.0*M_PI*(drand48()-0.5);
+      rg.resize(n); 
+      int cc=0;
 
-  for (i=q-1; i >= 1; i--)
-    {
-      ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
-      for (j=1; j <= k[i]-k[i+1]; j++)
+      for (i=q-1; i >= 1; i--)
         {
-          rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-          cc++;
+          ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
+          for (j=1; j <= k[i]-k[i+1]; j++)
+            {
+              rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+              cc++;
+            }
         }
-    }
 #endif
-  //std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
-  for (i=0; i < n; i++)
-    {
-      roots[i]=rg[i]; //dal più piccolo al più grande
-    }
-}
-
-void laguerre_aberth(pvector<cmplx,N>& roots)
-{
-  bool *found = new bool[n], fine=false, ret;
-  int i,  nf=0, iter;
-  int itmax=100;
-  ntype r;
-  if (coeff[n]==cmplx(0.0,0.0))
-    {
-      cout << "That's not an " << n << "degree polynomial!\n";
-      return;
-    }
-  cmon[n]=1.0;
-  for (i=n-1; i >=0; i--)
-    {
-      cmon[i]=coeff[i]/coeff[n];
-    }
-  for (i=0; i <=n; i++)
-    {
-      acmon[i] = abs(cmon[i]);
-      alpha[i] = acmon[i]*Kconv*(ntype(i)+ntype(1.0));
-    }
-  //absolute value of coefficients are used in Bini's stopping criterion
-  //we use coeff vector to store them since it won't be used anymore from here on
-
-  for (i=0;i < n; i++)
-    found[i]=false;
-  initial_guess(roots);
-  for (iter=0; iter < itmax && !fine; iter++)
-    {
+      //std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
       for (i=0; i < n; i++)
         {
-          // refine conjuigate pairs only once!
-          if (found[i]) 
-            continue;
-          r=abs(roots[i]);
-          if (r > 1)
-            ret = laguer_cmplx_mod_rev(roots[i], roots, i);
-          else
-            ret = laguer_cmplx_mod(roots[i], roots, i);
-          if (ret)
+          roots[i]=rg[i]; //dal più piccolo al più grande
+        }
+    }
+
+  void laguerre_aberth(pvector<cmplx,N>& roots)
+    {
+      bool *found = new bool[n], fine=false, ret;
+      int i,  nf=0, iter;
+      int itmax=100;
+      ntype r;
+      if (coeff[n]==cmplx(0.0,0.0))
+        {
+          cout << "That's not an " << n << "degree polynomial!\n";
+          return;
+        }
+      cmon[n]=1.0;
+      for (i=n-1; i >=0; i--)
+        {
+          cmon[i]=coeff[i]/coeff[n];
+        }
+      for (i=0; i <=n; i++)
+        {
+          acmon[i] = abs(cmon[i]);
+          alpha[i] = acmon[i]*Kconv*(ntype(i)+ntype(1.0));
+        }
+      //absolute value of coefficients are used in Bini's stopping criterion
+      //we use coeff vector to store them since it won't be used anymore from here on
+
+      for (i=0;i < n; i++)
+        found[i]=false;
+      initial_guess(roots);
+      for (iter=0; iter < itmax && !fine; iter++)
+        {
+          for (i=0; i < n; i++)
             {
-              found[i]=true;
-              nf++;
-              if (nf==n)
+              // refine conjuigate pairs only once!
+              if (found[i]) 
+                continue;
+              r=abs(roots[i]);
+              if (r > 1)
+                ret = laguer_cmplx_mod_rev(roots[i], roots, i);
+              else
+                ret = laguer_cmplx_mod(roots[i], roots, i);
+              if (ret)
                 {
-                  fine=true;
-                  break;
+                  found[i]=true;
+                  nf++;
+                  if (nf==n)
+                    {
+                      fine=true;
+                      break;
+                    }
                 }
             }
         }
-    }
-  if (nf < n)
-    {
-      cout << "we had a problem\n";
-      exit(1);
-    }
-  //cout << "iter=" << iter << " # found=" << nf << "\n";
-  delete []found;
-}
-void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
-{
-  // find initial guess for x here
-  cmplx r0;
-  const ntype goldfact=1.618034;
-  ntype sig, sigold;
-  //bool mulsig=true;
-  ntype err0,err1, errA, errB;
-  pvector<cmplx,3> ad;
-  typename std::conditional<(N < 0),pvector<cmplx>,bool>::type cbak;
-  int iter, i;
-  if (coeff[n]==cmplx(0.0,0.0))
-    {
-      cout << "That's not an " << n << "degree polynomial!\n";
-      return;
-    }
-  cmon[n]=1.0;
-  for (i=n-1; i >=0; i--)
-    cmon[i]=coeff[i]/coeff[n];
-  //absolute value of coefficients are used in Bini's stopping criterion
-  //we use coeff vector to store them since it won't be used anymore from here on
-  for (i=0; i <= n; i++) 
-    coeff[i] = cmplx(abs(cmon[i]),0); 
-
-  sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
-  iter = 0;
-  // find first zero using laguerre
-  // if it does not converge generate a random initial guess
-  // and retry (a limited number of times though!)
-  if constexpr (N < 0)
-    {
-      cbak.allocate(n+1);
-      if (backup||polish)
+      if (nf < n)
         {
-          cbak = coeff;
+          cout << "we had a problem\n";
+          exit(1);
         }
+      //cout << "iter=" << iter << " # found=" << nf << "\n";
+      delete []found;
     }
-  r0=cmplx(0.0,0.0);
-  sigold=0.0;
-  sig=1.0;
-
-  int MAXSTPS=1000,MT=100;
-  while (!laguer_real(r0))
+  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
     {
-      if (iter==0)
-        r0=cmplx(0.0,1.0);
-      else
-        //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
-        //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
-        r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
-      iter++;
-
-      if (iter%MT==0)
+      // find initial guess for x here
+      cmplx r0;
+      const ntype goldfact=1.618034;
+      ntype sig, sigold;
+      //bool mulsig=true;
+      ntype err0,err1, errA, errB;
+      pvector<cmplx,3> ad;
+      typename std::conditional<(N < 0),pvector<cmplx>,bool>::type cbak;
+      int iter, i;
+      if (coeff[n]==cmplx(0.0,0.0))
         {
-          sigold=sig;
-          sig*=goldfact;
+          cout << "That's not an " << n << "degree polynomial!\n";
+          return;
         }
-      if (iter > MAXSTPS)
-        {
-          cout << "[ERROR] Laguerre method did not converge:\n";
-          cout << "this problem can be fixed by using floating point number\n";
-          cout << "with higher precision (e.g. long double and complex<long double>\n";
-          exit(-1); 
-        }
-    };
+      cmon[n]=1.0;
+      for (i=n-1; i >=0; i--)
+        cmon[i]=coeff[i]/coeff[n];
+      //absolute value of coefficients are used in Bini's stopping criterion
+      //we use coeff vector to store them since it won't be used anymore from here on
+      for (i=0; i <= n; i++) 
+        coeff[i] = cmplx(abs(cmon[i]),0); 
 
-#ifdef LAGUERRE_POLISH
-  if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
-    {
-      refine_root(r0);
-    }
-#endif
-  cpolyNm1 qp;
-  // pvector<cmplx,N-1> qr;
-  pvecNm1<cmplx> qr;
-  //cout << "minus one r0=" << r0 << "\n";
-  roots[0] = r0;
-  for (i=n; i >=1; i--)
-    {
-      deflcoeff0[i-1] = cmon[i];
-      if (i <= n-1)
-        deflcoeff0[i-1] += r0*deflcoeff0[i];
-    }
-  deflcoeff = deflcoeff0;
-  if constexpr (N < 0)
-    {
-      //qp.allocate(n-1);
-      //qr.allocate(n-1);
-      qr.use_vec(n-1,&(roots[1])); 
-      qp.use_vec(n-1,coeff.v, cmon.v, acmon.v, alpha.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
-    }
-
-  qp.set_output_prec(this->get_output_prec());
-  qp.set_coeff(deflcoeff);
-
-  qp.find_roots(qr, false, false);
-  if constexpr (N > 0)
-    {
-      for (i=1; i < n; i++)
-        roots[i] = qr[i-1];
-    }
-  if constexpr (N < 0)
-    {
-      if (backup||polish)
-        {
-          coeff = cbak;
-        }
-    }
-  if (polish==true)
-    {
+      sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
+      iter = 0;
+      // find first zero using laguerre
+      // if it does not converge generate a random initial guess
+      // and retry (a limited number of times though!)
       if constexpr (N < 0)
         {
-          cmon[n]=1.0;
-          for (i=n-1; i >=0; i--)
-            cmon[i]=coeff[i]/coeff[n];
+          cbak.allocate(n+1);
+          if (backup||polish)
+            {
+              cbak = coeff;
+            }
         }
+      r0=cmplx(0.0,0.0);
+      sigold=0.0;
+      sig=1.0;
 
-      for (i=0; i < n; i++)
+      int MAXSTPS=1000,MT=100;
+      while (!laguer_real(r0))
         {
-          refine_root_maehly(roots[i], roots,  (i==0)?0:i-1);
-        }
-    }
-} 
+          if (iter==0)
+            r0=cmplx(0.0,1.0);
+          else
+            //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
+            //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+          iter++;
 
-pvecNp1<ntype> get_coeff()
-{
-  return coeff;
-}
-int degree()
-{
-  return n; 
-}
-inline void find_roots(pvector<cmplx,N>& roots)
-{
-  laguerre_aberth(roots);
-}
-inline void find_roots_defl(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
-{
-  // if backup is true the dynamic version preserve the coefficients after calling this method
-  // solve by deflation as zroots routine of Numerical Recipe
-  // This algorithm is not backward stable hence not usable for n > 50-60
-  if constexpr (N < 0)
+          if (iter%MT==0)
+            {
+              sigold=sig;
+              sig*=goldfact;
+            }
+          if (iter > MAXSTPS)
+            {
+              cout << "[ERROR] Laguerre method did not converge:\n";
+              cout << "this problem can be fixed by using floating point number\n";
+              cout << "with higher precision (e.g. long double and complex<long double>\n";
+              exit(-1); 
+            }
+        };
+
+#ifdef LAGUERRE_POLISH
+      if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
+        {
+          refine_root(r0);
+        }
+#endif
+      cpolyNm1 qp;
+      // pvector<cmplx,N-1> qr;
+      pvecNm1<cmplx> qr;
+      //cout << "minus one r0=" << r0 << "\n";
+      roots[0] = r0;
+      for (i=n; i >=1; i--)
+        {
+          deflcoeff0[i-1] = cmon[i];
+          if (i <= n-1)
+            deflcoeff0[i-1] += r0*deflcoeff0[i];
+        }
+      deflcoeff = deflcoeff0;
+      if constexpr (N < 0)
+        {
+          //qp.allocate(n-1);
+          //qr.allocate(n-1);
+          qr.use_vec(n-1,&(roots[1])); 
+          qp.use_vec(n-1,coeff.v, cmon.v, acmon.v, alpha.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+        }
+
+      qp.set_output_prec(this->get_output_prec());
+      qp.set_coeff(deflcoeff);
+
+      qp.find_roots(qr, false, false);
+      if constexpr (N > 0)
+        {
+          for (i=1; i < n; i++)
+            roots[i] = qr[i-1];
+        }
+      if constexpr (N < 0)
+        {
+          if (backup||polish)
+            {
+              coeff = cbak;
+            }
+        }
+      if (polish==true)
+        {
+          if constexpr (N < 0)
+            {
+              cmon[n]=1.0;
+              for (i=n-1; i >=0; i--)
+                cmon[i]=coeff[i]/coeff[n];
+            }
+
+          for (i=0; i < n; i++)
+            {
+              refine_root_maehly(roots[i], roots,  (i==0)?0:i-1);
+            }
+        }
+    } 
+
+  pvecNp1<ntype> get_coeff()
     {
-      if (n==1)
+      return coeff;
+    }
+  int degree()
+    {
+      return n; 
+    }
+  inline void find_roots(pvector<cmplx,N>& roots)
+    {
+      laguerre_aberth(roots);
+    }
+  inline void find_roots_defl(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
+    {
+      // if backup is true the dynamic version preserve the coefficients after calling this method
+      // solve by deflation as zroots routine of Numerical Recipe
+      // This algorithm is not backward stable hence not usable for n > 50-60
+      if constexpr (N < 0)
         {
-          cout << "What?!? You are not able to solve a linear equation come-on!";
-          exit(-1);
-        }
-      else if (n==2)
-        {
-          solve_quadratic(roots);
+          if (n==1)
+            {
+              cout << "What?!? You are not able to solve a linear equation come-on!";
+              exit(-1);
+            }
+          else if (n==2)
+            {
+              solve_quadratic(roots);
+            }
+          else
+            {
+              laguerre_defl(roots, polish, backup);
+            }
         }
       else
         {
-          laguerre_defl(roots, polish, backup);
+          if constexpr (N==1)
+            {
+              cout << "What?!? You are not able to solve a linear equation come-on!";
+              exit(-1);
+            }
+          else if constexpr (N==2)
+            {
+              solve_quadratic(roots);
+            }
+          else 
+            {
+              laguerre_defl(roots, polish);
+            }
         }
     }
-  else
+  // get machine precision for "ntype" type (ntype can float, double, long double)
+  ntype epsilon()
     {
-      if constexpr (N==1)
-        {
-          cout << "What?!? You are not able to solve a linear equation come-on!";
-          exit(-1);
-        }
-      else if constexpr (N==2)
-        {
-          solve_quadratic(roots);
-        }
-      else 
-        {
-          laguerre_defl(roots, polish);
-        }
+      return numeric_limits<ntype>::epsilon(); 
     }
-}
-// get machine precision for "ntype" type (ntype can float, double, long double)
-ntype epsilon()
-{
-  return numeric_limits<ntype>::epsilon(); 
-}
-ntype getmax()
-{
-  return numeric_limits<ntype>::max();
-}
-void set_output_prec(ntype e)
-{
-  goaleps=e;
-} 
-ntype get_output_prec(void)
-{
-  return goaleps;
-} 
+  ntype getmax()
+    {
+      return numeric_limits<ntype>::max();
+    }
+  void set_output_prec(ntype e)
+    {
+      goaleps=e;
+    } 
+  ntype get_output_prec(void)
+    {
+      return goaleps;
+    } 
 
-void init_const(void)
-{
-  meps = epsilon();
-  eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
-  maxf= getmax();
-  maxdigits = numeric_limits<ntype>::digits10-1;
-  maxf2 = pow(maxf,0.5)/10.0;
-  maxf3 = pow(maxf,1.0/3.0)/10.0;
-  scalfact = pow(maxf,1.0/4.0)/1.618034;
-  cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
-  goaleps=numeric_limits<ntype>::epsilon(); 
-  Kconv=sqrt(ntype(2.0))*ntype(2.0)+ntype(1.0);  
-}
-cpoly()
-{
-  init_const();  
-}
+  void init_const(void)
+    {
+      meps = epsilon();
+      eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
+      maxf= getmax();
+      maxdigits = numeric_limits<ntype>::digits10-1;
+      maxf2 = pow(maxf,0.5)/10.0;
+      maxf3 = pow(maxf,1.0/3.0)/10.0;
+      scalfact = pow(maxf,1.0/4.0)/1.618034;
+      cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
+      goaleps=numeric_limits<ntype>::epsilon(); 
+      //Kconv=sqrt(ntype(2.0))*ntype(2.0)+ntype(1.0);  
+      Kconv=3.8;
+    }
+  cpoly()
+    {
+      init_const();  
+    }
 
-cpoly(int nc): cpolybase<cmplx,ntype,N>(nc)
-{
-  init_const();
-}
+  cpoly(int nc): cpolybase<cmplx,ntype,N>(nc)
+  {
+    init_const();
+  }
 };
 // quadratic equation
 template<class cmplx, int N, class ntype> void cpoly<cmplx,N,ntype>::solve_quadratic(pvector<cmplx,N>&sol)
