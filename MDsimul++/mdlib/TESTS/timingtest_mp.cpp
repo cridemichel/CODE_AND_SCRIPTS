@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 //#include "pmatrix.H"
-#define CPOLY
+//#define CPOLY
 #define AURENTZ
 #define BACKSTAB
 #ifdef CPOLY
@@ -306,10 +306,10 @@ bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
   bsdbl err, errmax;
   for (i=0; i < NDEG+1; i++)
     {
-      if (abs(real(c[i]))==0)
+      if (c[i]==cmplx(0.0))
         err=abs(cbs[i] - bscmplx(c[i]));
       else
-        err=abs((cbs[i] - bsdbl(real(c[i])))/bsdbl(real(c[i])));
+        err=abs((cbs[i] - bscmplx(c[i]))/bscmplx(c[i]));
       if (err > 100)
         cout << "i=" << i << " cbs=" << cbs[i] << " c=" << c[i] << "\n";
       if (i==0 || err > errmax)
@@ -531,7 +531,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #ifdef BACKSTAB
 #ifdef CPOLY
       for (j=0; j < NDEG; j++)
-        c[j]=cmplx(2.0*sig*(drand48()-0.5),0.0);
+        c[j]=cmplx(2.0*sig*(drand48()-0.5),2.0*sig*(drand48()-0.5));
 #else
       if (poltype==0)
         {
@@ -615,8 +615,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           //rp.zroots(roots, false);
           //rp.show("f(x)=");
           //c.show("coeff=");
-          //rp.find_roots(roots, true);
-          rp.find_roots_cam(roots);
+          rp.find_roots(roots, false);
+          //rp.find_roots_cam(roots);
           roots.set_show_digits(50);
           //roots.show("roots");
           //for (i=0; i < NDEG; i++)
@@ -670,7 +670,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #if 1
           for (i=0; i < NDEG+1; i++)
             {
-              cout << setprecision(6) << roots[i] << "\n";
+              //cout << setprecision(6) << roots[i] << "\n";
               //cout << setprecision(80) << real(c[i]) << "\n";
             }
 #endif

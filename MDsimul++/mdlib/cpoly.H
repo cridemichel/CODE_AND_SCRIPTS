@@ -889,9 +889,10 @@ public:
       for (j=1;j<=m;j++) {
         err=abx*err+abs(cmon[j])*(3.8*j+1);
       }
-      err *= EPS;
-      if (abs(b) <= err) 
+      //err *= EPS;
+      if (abs(b) <= EPS*err) 
         {
+          //cout << "iac=" << iac << "rev err=" << abs(b)/err << "\n";
           return true;
         }
 #endif
@@ -981,11 +982,9 @@ public:
         err=abx*err + abs(cmon[j])*(3.8*ntype(j)+1.0);
 #endif
       }
-#ifndef BINI_CONV_CRIT
-      err *= EPS;
-#endif
-      //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+
       absb=abs(b);
+      //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
 #if 0
       if (isinf(absb) || isnan(absb))
         {
@@ -1010,8 +1009,9 @@ public:
           return true;
         }
 #else
-      if (absb <= err) 
+      if (absb <= err*EPS) 
         {
+          //cout << "iac=" << iac << " backerr=" << abs(b)/err << "\n";
           return true;
         }
 #endif
