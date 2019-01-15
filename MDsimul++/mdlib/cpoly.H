@@ -32,7 +32,7 @@ using namespace std;
 inline const T MAX(const T &a, const T &b)
 {return b > a ? (b) : (a);}
 
-template <class cmplx, int N> 
+template <class cmplx, class ntype, int N> 
 class cpoly_base_static 
 {
 public:
@@ -58,7 +58,7 @@ public:
     n=nc;
   }
 };
-template <class cmplx, int N> 
+template <class cmplx, class ntype, int N> 
 class cpoly_base_dynamic 
 {
 public:
@@ -66,8 +66,8 @@ public:
   constexpr static int dynamic = true;
   pvector<cmplx> coeff;
   pvector<cmplx> cmon;
-  pvector<cmplx> acmon;
-  pvector<cmplx> alpha;
+  pvector<ntype> acmon;
+  pvector<ntype> alpha;
   pvector<cmplx> deflcoeff0;
   pvector<cmplx> deflcoeff1;
   pvector<cmplx> deflcoeff;
@@ -118,43 +118,28 @@ public:
     }
 };
 
-template <class cmplx, int N> using cpolybase = 
-typename std::conditional<(N>0), cpoly_base_static <cmplx, N>,
-         cpoly_base_dynamic <cmplx, N>>::type;
+template <class cmplx, class ntype, int N> using cpolybase = 
+typename std::conditional<(N>0), cpoly_base_static <cmplx, ntype, N>,
+         cpoly_base_dynamic <cmplx, ntype, N>>::type;
 
 template <class cmplx, int N=-1, class ntype=double> 
-class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
-  using cpolybase<cmplx,N>::n;
-  using cpolybase<cmplx,N>::coeff;
-  using cpolybase<cmplx,N>::cmon;
-  using cpolybase<cmplx,N>::acmon;
-  using cpolybase<cmplx,N>::alpha;
-  using cpolybase<cmplx,N>::deflcoeff0;
-  using cpolybase<cmplx,N>::deflcoeff1;
-  using cpolybase<cmplx,N>::deflcoeff;
+class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N> {
+  using cpolybase<cmplx,ntype,N>::n;
+  using cpolybase<cmplx,ntype,N>::coeff;
+  using cpolybase<cmplx,ntype,N>::cmon;
+  using cpolybase<cmplx,ntype,N>::acmon;
+  using cpolybase<cmplx,ntype,N>::alpha;
+  using cpolybase<cmplx,ntype,N>::deflcoeff0;
+  using cpolybase<cmplx,ntype,N>::deflcoeff1;
+  using cpolybase<cmplx,ntype,N>::deflcoeff;
   template <class vtype>
     using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
           pvector<vtype, -1>>::type;
   template <class vtype>
     using pvecNp1 = typename std::conditional<(N>0),  pvector<vtype, N+1>,
           pvector<vtype, -1>>::type;
-  template <class vtype>
-    using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
-          pvector<vtype, -1>>::type;
   using cpolyNm1 = typename std::conditional<(N>0),  cpoly<cmplx, N-1,ntype>,
         cpoly<cmplx, -1,ntype>>::type;
-  using cpolyNm2 = typename std::conditional<(N>0),  cpoly<cmplx, N-2,ntype>,
-        cpoly<cmplx, -1,ntype>>::type;
-  template <class vtype>
-    using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
-          pmatrixq<vtype, -1>>::type;
-  template <class vtype>
-    using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
-          pmatrixq<vtype, -1>>::type;
-  template <class vtype, int NT>
-    using stlarr = typename std::conditional<(NT>0), std::array<vtype,NT-1>, std::vector<vtype>>::type;
-
-  ntype px, dpx; 
 
   const int maxiter_polish=8;
   int imaxarg1,imaxarg2;
@@ -1008,11 +993,16 @@ void laguerre_aberth(pvector<cmplx,N>& roots)
     }
   cmon[n]=1.0;
   for (i=n-1; i >=0; i--)
-    cmon[i]=coeff[i]/coeff[n];
+    {
+      cmon[i]=coeff[i]/coeff[n];
+    }
+  for (i=0; i <=n; i++)
+    {
+      acmon[i] = abs(cmon[i]);
+      alpha[i] = acmon[i]*Kconv*(ntype(i)+ntype(1.0));
+    }
   //absolute value of coefficients are used in Bini's stopping criterion
   //we use coeff vector to store them since it won't be used anymore from here on
-  for (i=0; i <= n; i++) 
-    coeff[i] = cmplx(abs(cmon[i]),0); 
 
   for (i=0;i < n; i++)
     found[i]=false;
@@ -1259,7 +1249,7 @@ cpoly()
   init_const();  
 }
 
-cpoly(int nc): cpolybase<cmplx,N>(nc)
+cpoly(int nc): cpolybase<cmplx,ntype,N>(nc)
 {
   init_const();
 }
