@@ -15,9 +15,9 @@
 //fix to avoid crash of clang
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
-        (imaxarg1) : (imaxarg2))
+                   (imaxarg1) : (imaxarg2))
 //#define SIGN(a,b) ((b) >= 0.0 ? abs(a) : -abs(a))
-template <class ntype>
+  template <class ntype>
 inline ntype SIGN(ntype a, ntype b)
 {
   if ((b) > 0)
@@ -35,9 +35,9 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_LAGUER_REAL
 //#define FAST_MATH
 using namespace std;
-template<class T>
+  template<class T>
 inline const T MAX(const T &a, const T &b)
-        {return b > a ? (b) : (a);}
+{return b > a ? (b) : (a);}
 
 template <class cmplx, int N> 
 class cpoly_base_static 
@@ -47,8 +47,8 @@ public:
   constexpr static int dynamic = false;
   pvector<cmplx, N+1> coeff;
   pvector<cmplx, N+1> cmon;
- // pvector<ntype, N> cmonder;
- // pvector<ntype, N-1> cmondder;
+  // pvector<ntype, N> cmonder;
+  // pvector<ntype, N-1> cmondder;
   pvector<cmplx, N-1> bd;
   pvector<cmplx, N-1> bd0;
   pvector<cmplx, N-1> bd1;
@@ -94,7 +94,7 @@ public:
       coeff.show();
       cout << "n=" << n << "\n";
       cout << "v=" << v[n]<< "\n";
-        v.show();
+      v.show();
 #endif
     }
   void use_vec(int nc, cmplx* coeffv, cmplx* cmonv,
@@ -112,12 +112,12 @@ public:
       deflcoeff.use_vec(nc,deflcoeffv);
       n=nc;
     }
- 
+
   cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), bd0(nc-1), bd1(nc-1), bd(nc-1),
   deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
-    {
-      n=nc;
-    }
+  {
+    n=nc;
+  }
   ~cpoly_base_dynamic() = default;
   void deallocate(void)
     {
@@ -150,8 +150,8 @@ public:
 
 template <class cmplx, int N> using cpolybase = 
 typename std::conditional<(N>0), cpoly_base_static <cmplx, N>,
-	 cpoly_base_dynamic <cmplx, N>>::type;
- 
+         cpoly_base_dynamic <cmplx, N>>::type;
+
 template <class cmplx, int N=-1, class ntype=double> 
 class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   using cpolybase<cmplx,N>::n;
@@ -170,34 +170,34 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   static const int numlin=std::numeric_limits<ntype>::digits10;
 #ifdef MP1
   using cmplx=typename std::conditional<boost::is_same<ntype,number<mpfr_float_backend<numlin>>>::value,
-    number<mpc_complex_backend<std::numeric_limits<ntype>::digits10>>,complex<ntype>>::type;
+        number<mpc_complex_backend<std::numeric_limits<ntype>::digits10>>,complex<ntype>>::type;
 #else
   using cmplx=typename std::conditional<boost::is_same<ntype,number<cpp_bin_float<numlin>>>::value,
-    cpp_complex<std::numeric_limits<ntype>::digits10>,complex<ntype>>::type;
+        cpp_complex<std::numeric_limits<ntype>::digits10>,complex<ntype>>::type;
 #endif
 #endif
 #endif
   template <class vtype>
-  using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
-	 pvector<vtype, -1>>::type;
+    using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
+          pvector<vtype, -1>>::type;
   template <class vtype>
-  using pvecNp1 = typename std::conditional<(N>0),  pvector<vtype, N+1>,
-	 pvector<vtype, -1>>::type;
+    using pvecNp1 = typename std::conditional<(N>0),  pvector<vtype, N+1>,
+          pvector<vtype, -1>>::type;
   template <class vtype>
-  using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
-	 pvector<vtype, -1>>::type;
+    using pvecNm2 = typename std::conditional<(N>0),  pvector<vtype, N-2>,
+          pvector<vtype, -1>>::type;
   using cpolyNm1 = typename std::conditional<(N>0),  cpoly<cmplx, N-1,ntype>,
-	 cpoly<cmplx, -1,ntype>>::type;
+        cpoly<cmplx, -1,ntype>>::type;
   using cpolyNm2 = typename std::conditional<(N>0),  cpoly<cmplx, N-2,ntype>,
-	 cpoly<cmplx, -1,ntype>>::type;
+        cpoly<cmplx, -1,ntype>>::type;
   template <class vtype>
-  using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
-	 pmatrixq<vtype, -1>>::type;
+    using pmatNm1 = typename std::conditional<(N>0),  pmatrixq<vtype, N-1>,
+          pmatrixq<vtype, -1>>::type;
   template <class vtype>
-  using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
-	 pmatrixq<vtype, -1>>::type;
- template <class vtype, int NT>
-  using stlarr = typename std::conditional<(NT>0), std::array<vtype,NT-1>, std::vector<vtype>>::type;
+    using pmatNm2 = typename std::conditional<(N>0),  pmatrixq<vtype, N-2>,
+          pmatrixq<vtype, -1>>::type;
+  template <class vtype, int NT>
+    using stlarr = typename std::conditional<(NT>0), std::array<vtype,NT-1>, std::vector<vtype>>::type;
 
   ntype px, dpx; 
 
@@ -212,9 +212,9 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   ntype oqs_max2(ntype a, ntype b)
     {
       if (a >= b)
-	return a;
+        return a;
       else
-	return b;
+        return b;
     }
   ntype oqs_max3(ntype a, ntype b, ntype c)
     {
@@ -230,7 +230,7 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   inline void oqs_calc_phi0(ntype a, ntype b, ntype c, ntype d, ntype& phi0, int scaled);
   inline ntype oqs_calc_err_ldlt(ntype b, ntype c, ntype d, ntype d2, ntype l1, ntype l2, ntype l3);
   inline ntype oqs_calc_err_abcd_cmplx(ntype a, ntype b, ntype c, ntype d, 
-	    			       cmplx aq, cmplx bq, cmplx cq, cmplx dq);
+                                       cmplx aq, cmplx bq, cmplx cq, cmplx dq);
   inline ntype oqs_calc_err_abcd(ntype a, ntype b, ntype c, ntype d, ntype aq, ntype bq, ntype cq, ntype dq);
   inline ntype oqs_calc_err_abc(ntype a, ntype b, ntype c, ntype aq, ntype bq, ntype cq, ntype dq); 
   inline void oqs_NRabcd(ntype a, ntype b, ntype c, ntype d, ntype& AQ, ntype& BQ, ntype& CQ, ntype& DQ);
@@ -249,33 +249,33 @@ public:
     {
       int i;
       if (str!=NULL)
-	cout <<  str;
+        cout <<  str;
       for (i=n; i >= 0; i--)
-	{
-	  if (abs(coeff[i]) > 0.0)
-    	    {
-	      if (i < n)
-		cout << "+";
-	    }
-	  else
-	    { 
-	      cout << "-";
-	    }
-	  if (i==0)
-	    cout << setprecision(maxdigits) << abs(coeff[i]);
-	  else if (i > 0 && abs(coeff[i]) != 1.0)
-	    cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
-	 
-	  if ( i > 1)
-	    {
-	      cout << "x^" << i;
-	    }
-	  else if (i==1)
-	    cout << "x";
-	}
+        {
+          if (abs(coeff[i]) > 0.0)
+            {
+              if (i < n)
+                cout << "+";
+            }
+          else
+            { 
+              cout << "-";
+            }
+          if (i==0)
+            cout << setprecision(maxdigits) << abs(coeff[i]);
+          else if (i > 0 && abs(coeff[i]) != 1.0)
+            cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
+
+          if ( i > 1)
+            {
+              cout << "x^" << i;
+            }
+          else if (i==1)
+            cout << "x";
+        }
       cout << "\n";
     }
-   cmplx evalpoly(cmplx x)
+  cmplx evalpoly(cmplx x)
     {
       // evaluate polynomail via Horner's formula 
       cmplx bn=cmplx(0.0);
@@ -285,7 +285,7 @@ public:
         }
       return bn;
     }
-   cmplx evaldpoly(cmplx x)
+  cmplx evaldpoly(cmplx x)
     {
       // evaluate polynomail via Horner's formula 
       cmplx bn=0.0;
@@ -332,1414 +332,1442 @@ public:
       return sum;
     }
 #if 0
-void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
-  {
-    ntype errf, errfold, det;
-    pvecNm1<ntype> c, cold;
-    pvecNm1<ntype> fvec;
-    pmatNm1<ntype> Jinv;
-    int i, j, iter;
-    if constexpr (N < 0)
-      {
-        c.allocate(n-1);
-        cold.allocate(n-1);
-        fvec.allocate(n-1);
-        Jinv.allocate(n-1);
-      }
-    for (i=n-2; i >= 0; i--)
-      {
-        c[i]=defc[i];
-        fvec[i] = defc[i]-r0.real()*((i==n-2)?1:defc[i+1])-cmon[i+1];
-      } 
-    //cmon.show("monic coeff=");
-    //defc.show("deflcoeff");
-    //fvec.show("errori=");
-    errf = 0;
-    for (i=0; i < n-1; i++)
-      {
-        errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
-      }
-    //cout << "errf inizio=" << errf << "\n";
-    for (i=0; i < n-1; i++)
-      for (j=0; j < n-1; j++)
-        Jinv[i][j] = (i==j)?1.0:0.0;
-    for (j=0; j < n-2; j++)
-      for (i=j+1; i < n-1; i++)
+  void use_NR_defl_lin(pvector<ntype,N>& defc, cmplx r0)
+    {
+      ntype errf, errfold, det;
+      pvecNm1<ntype> c, cold;
+      pvecNm1<ntype> fvec;
+      pmatNm1<ntype> Jinv;
+      int i, j, iter;
+      if constexpr (N < 0)
         {
-          Jinv[i][j]=r0.real()*Jinv[i-1][j];
+          c.allocate(n-1);
+          cold.allocate(n-1);
+          fvec.allocate(n-1);
+          Jinv.allocate(n-1);
         }
-    // Jinv.show();
-    for (iter = 0; iter < 8; iter++)
-      {
-        cold = c;
-        c = c - Jinv*fvec;
-        for (i=n-2; i >= 0; i--)
+      for (i=n-2; i >= 0; i--)
+        {
+          c[i]=defc[i];
+          fvec[i] = defc[i]-r0.real()*((i==n-2)?1:defc[i+1])-cmon[i+1];
+        } 
+      //cmon.show("monic coeff=");
+      //defc.show("deflcoeff");
+      //fvec.show("errori=");
+      errf = 0;
+      for (i=0; i < n-1; i++)
+        {
+          errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
+        }
+      //cout << "errf inizio=" << errf << "\n";
+      for (i=0; i < n-1; i++)
+        for (j=0; j < n-1; j++)
+          Jinv[i][j] = (i==j)?1.0:0.0;
+      for (j=0; j < n-2; j++)
+        for (i=j+1; i < n-1; i++)
           {
-            fvec[i] = c[i]-r0.real()*((i==n-2)?1:c[i+1])-cmon[i+1];
-          } 
-        errfold = errf;
-        errf = 0;
-        for (i=0; i < n-1; i++)
-          {
-            errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
+            Jinv[i][j]=r0.real()*Jinv[i-1][j];
           }
-        //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
-        if (errf==0)
-          break;
-        if (errf > errfold)
-          {
-            //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
-            c = cold;
+      // Jinv.show();
+      for (iter = 0; iter < 8; iter++)
+        {
+          cold = c;
+          c = c - Jinv*fvec;
+          for (i=n-2; i >= 0; i--)
+            {
+              fvec[i] = c[i]-r0.real()*((i==n-2)?1:c[i+1])-cmon[i+1];
+            } 
+          errfold = errf;
+          errf = 0;
+          for (i=0; i < n-1; i++)
+            {
+              errf += abs((cmon[i+1]==0)?fvec[i]:(fvec[i]/cmon[i+1]));
+            }
+          //cout << "errf iter=" <<iter << " :"<< errf << " errfold=" << errfold << "\n";
+          if (errf==0)
             break;
-          }
+          if (errf > errfold)
+            {
+              //cout << "iter=" << iter << "errf=" << errf << " errfold=" << errfold << "\n";
+              c = cold;
+              break;
+            }
 
-      } 
-    for (i=0; i < n-1; i++)
-      defc[i] = c[i];
-  }
+        } 
+      for (i=0; i < n-1; i++)
+        defc[i] = c[i];
+    }
 #endif
-bool laguer_real(cmplx &xc)
-  {
-    const int MR=8,MT=10,MAXIT=MT*MR;
-    const ntype EPS=goaleps;
-    static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-    int iter,j;
-    ntype abx,abp,abm,err, phi, rho,s, pr;
-    //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-    ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
-    ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
-    cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
-    int m=n;
-    //cout << "r0 ini = "<<xc << "\n"; 
-    x[0] = xc.real();
-    x[1] = xc.imag();
-    for (iter=1;iter<=MAXIT;iter++) 
-      {
-        //its=iter;
-        b[0]=real(cmon[m]);
-        b[1]=imag(cmon[m]);
-        err=sqrt(b[0]*b[0]+b[1]*b[1]);
-        d[0]=f[0]=0.0;
-        d[1]=f[1]=0.0;
-        abx=sqrt(x[0]*x[0]+x[1]*x[1]);
-        for (j=m-1;j>=0;j--) {
-          f0 = f[0];
-          f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
-          f[1] = x[0]*f[1] + x[1]*f0 + d[1];
-          d0 = d[0];
-          d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
-          d[1] = x[0]*d[1] + x[1]*d0 + b[1];
-          b0 = b[0];
-          b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
-          b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
-          err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
-        }
-        err *= EPS;
-        if (isinf(b[0]) || isnan(b[0]) || 
-            isinf(b[1]) || isnan(b[1]))
-          {
-            //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-            //cout << "x=" << x << "\n";
-            //cout << "p(x)=" << evalpoly(x) << "\n";
-            return false;
+  bool laguer_real(cmplx &xc)
+    {
+      const int MR=8,MT=10,MAXIT=MT*MR;
+      const ntype EPS=goaleps;
+      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int iter,j;
+      ntype abx,abp,abm,err, phi, rho,s, pr;
+      //cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
+      ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
+      cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
+      int m=n;
+      //cout << "r0 ini = "<<xc << "\n"; 
+      x[0] = xc.real();
+      x[1] = xc.imag();
+      for (iter=1;iter<=MAXIT;iter++) 
+        {
+          //its=iter;
+          b[0]=real(cmon[m]);
+          b[1]=imag(cmon[m]);
+          err=sqrt(b[0]*b[0]+b[1]*b[1]);
+          d[0]=f[0]=0.0;
+          d[1]=f[1]=0.0;
+          abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+          for (j=m-1;j>=0;j--) {
+            f0 = f[0];
+            f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
+            f[1] = x[0]*f[1] + x[1]*f0 + d[1];
+            d0 = d[0];
+            d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+            d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+            b0 = b[0];
+            b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
+            b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
+            err=sqrt(b[0]*b[0]+b[1]*b[1])+abx*err;
           }
+          err *= EPS;
+          if (isinf(b[0]) || isnan(b[0]) || 
+              isinf(b[1]) || isnan(b[1]))
+            {
+              //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+              //cout << "x=" << x << "\n";
+              //cout << "p(x)=" << evalpoly(x) << "\n";
+              return false;
+            }
 
 #if 1
-        s=0;
-        pr=1.0;
-        for (j=0; j <= n; j ++) 
-          {
-            s+=coeff[j].real()*pr;
-            pr *= abx;
-          }
-        if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
-          {
-            xc = cmplx(x[0],x[1]);
-            return true;
-          }
+          s=0;
+          pr=1.0;
+          for (j=0; j <= n; j ++) 
+            {
+              s+=coeff[j].real()*pr;
+              pr *= abx;
+            }
+          if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+            {
+              xc = cmplx(x[0],x[1]);
+              return true;
+            }
 #else
-        if (abs(cmplx(b[0],b[1])) <= err)
-          {
-            xc = cmplx(x[0],x[1]);
-            return true;
-          }
+          if (abs(cmplx(b[0],b[1])) <= err)
+            {
+              xc = cmplx(x[0],x[1]);
+              return true;
+            }
 #endif          
-        bc=cmplx(b[0],b[1]);
-        dc=cmplx(d[0],d[1]);
-        fc=cmplx(f[0],f[1]);
-        dovb=dc/bc;
-        fovb=fc/bc;
-        g[0]=dovb.real();
-        g[1]=dovb.imag();
-        g2[0] = g[0]*g[0] - g[1]*g[1];
-        g2[1] = 2.0*g[0]*g[1];
-        fb[0] = fovb.real();
-        fb[1] = fovb.imag();
-        h[0] = g2[0] - 2.0*fb[0];
-        h[1] = g2[1] - 2.0*fb[1];
-        sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
-        sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
-        rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
-        if (rho==0)
-          {
-            sq[0] = sq[1] = 0.0;
-          }
-        else
-          {
-            phi = acos(sarg[0]/rho);
-            if (sarg[1] < 0.0)
-              {
-                phi = -phi;
-              }
-            rho = sqrt(rho);
-            sq[0] = rho*cos(phi/2.0);
-            sq[1] = rho*sin(phi/2.0);
-          }
-        gp[0] = g[0] + sq[0];
-        gp[1] = g[1] + sq[1];
-        gm[0] = g[0] - sq[0];
-        gm[1] = g[1] - sq[1]; 
-        abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
-        abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
-        if (abp < abm) 
-          {
-            gp[0]=gm[0];
-            gp[1]=gm[1];
-          }
-        //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
-        invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
-        invgp[0] = gp[0]*invn;
-        invgp[1] = -gp[1]*invn;
-
-        //cout << "abp=" << abp << " abm=" << abm << "\n";
-        //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
-        if (MAX(abp,abm) > 0.0)
-          {
-            dx[0]=((ntype)m)*invgp[0];
-            dx[1]=((ntype)m)*invgp[1];
-          }
-        else
-          {
-            pol[0] = (1.0+abx)*cos((ntype)iter);
-            pol[1] = (1.0+abx)*sin((ntype)iter); 
-            dx[0]=pol[0];
-            dx[1]=pol[1];
-          }
-        //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
-        //x1=x-dx;
-        x1[0] = x[0] - dx[0];
-        x1[1] = x[1] - dx[1];
-        if (x[0] == x1[0] && x[1]==x1[1]) 
-          {
-            xc = cmplx(x[0],x[1]);
-            return true;
-          }
-        if (iter % MT != 0) 
-          {
-            x[0]=x1[0];
-            x[1]=x1[1];
-          }
-        else 
-          {
-            x[0] -= frac[iter/MT]*dx[0];
-            x[1] -= frac[iter/MT]*dx[1];
-          }
-        //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
-      }
-    //cout << "too many iterations in laguer\n";
-    xc = cmplx(x[0],x[1]);
-    return false;
-  }
-bool laguer_cmplx(cmplx &x)
-  {
-    const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
-    const ntype EPS=goaleps;
-    static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-    int iter,j;
-    ntype abx,abp,abm,err, M, s, pr;
-    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-    int m;
-    m=n;
-    //cout << "r0 ini = "<< x << "\n"; 
-    for (iter=1;iter<=MAXIT;iter++) 
-      {
-        //its=iter;
-        b=cmon[m];
-        err=abs(b);
-        d=f=0.0;
-        abx=abs(x);
-        for (j=m-1;j>=0;j--) {
-          f=x*f+d;
-          d=x*d+b;
-          b=x*b+cmon[j];
-          err=abs(b)+abx*err;
-        }
-        err *= EPS;
-        //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-        if (isinf(b.real()) || isinf(b.imag()) || isnan(b.real()) ||
-            isnan(b.imag()))
-          return false;
-#if 1
-        s=0;
-        pr=1.0;
-        for (j=0; j <= n; j ++) 
-          {
-            s+=coeff[j].real()*pr;
-            pr *= abx;
-          }
-        if (abs(b) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
-          return true;
-#else
- 
-        if (abs(b) <= err) 
-          {
-            //if (iter > 15)
-            //cout << "iter=" << iter << "\n";
-            //cout << "x=" << x << " iter=" << iter << " abs(M-1)=" << abs(M-1) << "\n";
-            return true;
-          }
-#endif
-        g=d/b;
-        g2=g*g;
-        h=g2-((ntype)2.0)*f/b;
-        // SONO ARRIVATO QUI CON IL CASTING
-        sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
-        gp=g+sq;
-        gm=g-sq;
-        abp=abs(gp);
-        abm=abs(gm);
-
-        if (abp < abm) gp=gm;
-        //cout << "abp=" << abp << " abm=" << abm << "\n";
-        //cout << "1/gp=" << 1.0/gp << "\n";
-        dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
-        //cout << "dx=" << dx << "\n";
-        x1=x-dx;
-        if (x == x1) 
-          {
-            return true;
-          }
-
-        if (iter % MT != 0) 
-          x=x1;
-        else 
-          x -= frac[iter/MT]*dx;
-        //cout << "iter=" << iter << " x=" << x << "\n";        
-      }
-    //refine_root(x);
-    //cout << "too many iterations in laguer\n";
-    return false;
-  }
-#if 0
-bool laguer_wrap(cmplx &x)
-  {
-    if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
-      return laguer_real(x);
-    else
-      return laguer_real(x);
-  }
-#endif
-void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
-   {
-     int iter,i;
-     ntype err;
-     cmplx povp1, denom;
-     // root polishing by NR
-     cmplx r0old, p, sum;
-     cmplx p1, p1c;
-     ntype errold;
-     for (iter=0; ; iter++)
-       {
-         p=cmon[n]*r0+cmon[n-1];
-         p1=cmon[n];
-         for(i=n-2;i>=0;i--) {
-           p1=p+p1*r0;
-           p=cmon[i]+p*r0;
-         }
-
-         if (iter > 0)
-           errold=err;
-
-         err = abs(p);//abs(p.real())+abs(p.imag());
-         if (err==0)
-           break;
-
-         if (iter > 0 && err >= errold)
-           {
-             r0=r0old;
-             break;
-           }
-
-         if (p1==cmplx(0,0))
-           {
-             break;
-           }
-         if (iter==maxiter_polish)
-           break;
-         r0old=r0;
-         sum=0;
-         for (i=0; i < iac; i++)
-           sum += 1.0/(r0-roots[i]);
-         sum *= p;
-         p1c = p1 - sum;
-         r0 -= p/p1c;
-         if (isnan(abs(r0)) || isinf(abs(r0)))
-           {
-             r0=r0old;
-             break;
-           }
-       }
-
-//     if (iter > 0)
-//       cout << "NR iter=" << iter << " err=" << err << "\n";
-   }
-void refine_root(cmplx &r0)
-  {
-     int iter,i;
-     ntype err;
-     // root polishing by NR
-#ifdef POLISH_NR_REAL
-     // root polishing by NR
-     ntype r0old[2], p[2], r0new[2];
-     ntype p1[2], p0, p10;
-     ntype errold, invnp1;
-     cmplx povp1;
-     r0new[0]=r0.real();
-     r0new[1]=r0.imag();
-     //cout << "r0new=" << r0new[0] << " " << r0new[1] << "\n";
-     for (iter=0; ;iter++)
-       {
-         p[0]=real(cmon[n])*r0new[0]-imag(cmon[n])*r0new[1] + real(cmon[n-1]);
-         p[1]=real(cmon[n])*r0new[1]+imag(cmon[n])*r0new[0] + imag(cmon[n-1]);    
-         p1[0]=real(cmon[n]);
-         p1[1]=imag(cmon[n]);
-         for(i=n-2;i>=0;i--) {
-           p10=p1[0];
-           p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
-           p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
-           p0=p[0];
-           p[0]=real(cmon[i])+p[0]*r0new[0]-p[1]*r0new[1];
-           p[1]=imag(cmon[i])+p0*r0new[1]+p[1]*r0new[0];
-         }
-         if (iter > 0)
-           errold=err;
-         err = abs(cmplx(p[0],p[1]));// abs(p[0])+abs(p[1]);
-
-         //cout << "iter=" << iter << " err=" << err << "\n";
-         if (err==0)
-           {
-             //cout << "QUI1 iter=" << iter << " err=" << err << "\n";
-             break;
-           }
-         if (iter > 0 && err >= errold)
-           {
-             //cout << "QUI2 iter=" << iter << " err=" << err << "\n";
-             r0new[0]=r0old[0];
-             r0new[1]=r0old[1];
-             break;
-           }
-         if (p1[0]==0 && p1[1]==0)
-           {
-             // cout << "QUI3 iter=" << iter << " err=" << err << "\n";
-             break;
-           }
-         if (iter == maxiter_polish)
-           break;
-         r0old[0]=r0new[0];
-         r0old[1]=r0new[1];
-#if 0
-         invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
-         r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
-         r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
-#else
-         povp1 = cmplx(p[0],p[1])/cmplx(p1[0],p1[1]);
-         r0new[0] -= povp1.real();
-         r0new[1] -= povp1.imag();
-#endif
-         if (isnan(r0new[0]) || isnan(r0new[1]) ||isinf(r0new[0]) || isinf(r0new[1]))
-           {
-             r0new[0]=r0old[0];
-             r0new[1]=r0old[1];
-             break; 
-           }
-       }
-     r0=cmplx(r0new[0], r0new[1]);
-//if (iter > 2)
-  //   cout << "NR iter=" << iter << " err=" << err << "\n";
-
-#else
-     cmplx r0old, p;
-     cmplx p1;
-     ntype errold;
-     for (iter=0; ; iter++)
-       {
-         p=cmon[n]*r0+cmon[n-1];
-         p1=cmon[n];
-         for(i=n-2;i>=0;i--) {
-           p1=p+p1*r0;
-           p=cmon[i]+p*r0;
-         }
-         if (iter > 0)
-           errold=err;
-
-         err = abs(p);//abs(p.real())+abs(p.imag());
-         if (err==0)
-           break;
-
-         if (iter > 0 && err >= errold)
-           {
-             r0=r0old;
-             break;
-           }
-
-         if (p1==cmplx(0,0))
-           {
-             break;
-           }
-         //cout << "NR iter=" << iter << " err=" << err << "\n";
-         if (iter==maxiter_polish)
-           break;
-
-         r0old=r0;
-         r0 -= p/p1;
-
-         if (isnan(abs(r0)) || isinf(abs(r0)))
-           {
-             r0=r0old;
-             break;
-           }
-       }
-     //if (iter > 2)
-     //cout << "NR iter=" << iter << " err=" << err << "\n";
-#endif
-   }
-bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
-  {
-    const ntype EPS=goaleps;
-    int j;
-    ntype abx,abp,abm, M, s, pr, absb;
-#ifndef BINI_CONV_CRIT
-    ntype err;
-#else
-    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
-#endif
-    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2, ba, xsq, x, ddb, db;
-    int m;
-    m=n;
-    //cout << "r0 ini = "<< x << "\n"; 
-    //its=iter;
-    b=cmon[0];
-    d=f=0.0;
-    x=1.0/xini;
-    abx=abs(x);
-    for (j=m-1;j>=0;j--) {
-      f=x*f+d;
-      d=x*d+b;
-      b=x*b+cmon[m-j];
-    }
-    
-#ifdef BINI_CONV_CRIT
-    s=0.0;
-    pr=1.0; 
-    abx=abs(xini);
-    for (j=0; j <= n; j ++) 
-      {
-        s+=coeff[j].real()*pr;
-        pr *= abx;
-      }
-    ba=cmon[m];
-    for (j=m-1;j>=0;j--) {
-      ba=xini*ba+cmon[j];
-    }
-    absb=abs(ba);
-    //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-    //absb=abs(b);
-#if 0
-    if (isinf(absb) || isnan(absb))
-      {
-        //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-        //cout << "x=" << x << "\n";
-        //cout << "p(x)=" << evalpoly(x) << "\n";
-        return false;
-      }
-#endif
-    if (absb <= K*s) // stopping criterion of bini 
-      {
-        //cout << "absb=" << absb << " K=" << K << " s=" << s << "\n";
-        return true;
-      }
-#else
-    err=abs(cmon[m])*(3.8*m+1);
-    ba=cmon[m];
-    abx=abs(xini);
-    for (j=m-1;j>=0;j--) {
-      ba=xini*ba+cmon[j];
-      err=abx*err+abs(cmon[j])*(3.8*j+1);
-    }
-    err *= EPS;
-    absb=abs(ba);
-    if (absb <= err) 
-      {
-        return true;
-      }
-#endif
-    cmplx gc=0.0, hc=0.0, term;
-    for (j=0; j < n; j++)
-      {
-        if (j==iac)
-          continue;
-        term=1.0/(xini-roots[j]);
-        gc += term;
-        hc += term*term; 
-      }
-    db=d/b;
-    ddb=db*db-((ntype)2.0)*f/b;
-    g=x*(ntype(m)-x*db);
-    g -= gc;
-    g2=g*g;
-    xsq=x*x;
-    h=xsq*(ntype(m)-2.0*x*db+xsq*ddb)-hc;
-    sq=sqrt( ((ntype)(m-1))*(((ntype)m)*h-g2));
-    gp=g+sq;
-    gm=g-sq;
-    abp=abs(gp);
-    abm=abs(gm);
-
-    if (abp < abm) gp=gm;
-    //cout << "abp=" << abp << " abm=" << abm << "\n";
-    //cout << "1/gp=" << 1.0/gp << "\n";
-    if (MAX(abp,abm) > 0.0)
-      {
-        dx =  ((cmplx)m)/((cmplx)gp);
-      }
-    else
-      {
-        dx = polar(((ntype)(1+abx)),ntype(1.0));
-      }
-    //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
-    //cout << "dx=" << dx << "\n";
-    x1=xini-dx;
-    if (x1 == xini) 
-      {
-        return true;
-      }
-    xini=x1;
-    //else 
-    //x -= frac[iter/MT]*dx;
-    //cout << "iter=" << iter << " x=" << x << "\n";        
-    //refine_root(x);
-    //cout << "too many iterations in laguer\n";
-    return false;
-  }
-bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
-  {
-    const int MR=8,MT=10,MAXIT=2*MT*MR;
-    const ntype EPS=goaleps;
-    //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
-    int j;
-    ntype be,abx,abp,abm, M, s, pr, absb;
-#ifndef BINI_CONV_CRIT
-    ntype err;
-#else
-    ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
-#endif
-    cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
-    int m;
-    m=n;
-    //cout << "r0 ini = "<< x << "\n"; 
-    //its=iter;
-    b=cmon[m];
-#ifndef BINI_CONV_CRIT
-    err=abs(cmon[m])*(3.8*m+1);
-#endif
-    d=f=0.0;
-    abx=abs(x);
-    for (j=m-1;j>=0;j--) {
-      f=x*f+d;
-      d=x*d+b;
-      b=x*b+cmon[j];
-#ifndef BINI_CONV_CRIT
-      err=abx*err + abs(cmon[j])*(3.8*ntype(j)+1.0);
-#endif
-    }
-#ifndef BINI_CONV_CRIT
-    err *= EPS;
-#endif
-    //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-    absb=abs(b);
-#if 0
-    if (isinf(absb) || isnan(absb))
-      {
-        //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
-        //cout << "x=" << x << "\n";
-        //cout << "p(x)=" << evalpoly(x) << "\n";
-        return false;
-      }
-#endif
-#ifdef BINI_CONV_CRIT
-    s=0.0;
-    pr=1.0; 
-    for (j=0; j <= n; j ++) 
-      {
-        s+=coeff[j].real()*pr;
-        pr *= abx;
-      }
-
-    if (absb <= K*s) // stopping criterion of bini 
-      {
-        //cout << "absb=" << absb << " K=" << K << " s=" << s << "\n";
-        return true;
-      }
-#else
-    if (absb <= err) 
-      {
-        return true;
-      }
-#endif
-    cmplx gc=0.0, hc=0.0, term;
-    for (j=0; j < n; j++)
-      {
-        if (j==iac)
-          continue;
-        term=1.0/(x-roots[j]);
-        gc += term;
-        hc += term*term; 
-      }
-    //cout << "K=" << K << " s=" << s << " gc=" << gc << " hc=" << hc << "\n"; 
-    g=d/b;
-    h=g*g-((ntype)2.0)*f/b-hc;
-    g-=gc;
-    g2=g*g;
-    sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
-    gp=g+sq;
-    gm=g-sq;
-    abp=abs(gp);
-    abm=abs(gm);
-
-    if (abp < abm) gp=gm;
-    //cout << "abp=" << abp << " abm=" << abm << "\n";
-    //cout << "1/gp=" << 1.0/gp << "\n";
-    if (MAX(abp,abm) > 0.0)
-      {
-        dx =  ((cmplx)m)/((cmplx)gp);
-      }
-    else
-      {
-        dx = polar(((ntype)(1+abx)),ntype(1));
-      }
-    //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
-    //cout << "dx=" << dx << "\n";
-    x1=x-dx;
-    if (x == x1) 
-      {
-        return true;
-      }
-
-    //if (1||iter % MT != 0) 
-    x=x1;
-    //else 
-    //x -= frac[iter/MT]*dx;
-    //cout << "iter=" << iter << " x=" << x << "\n";        
-    //refine_root(x);
-    //cout << "too many iterations in laguer\n";
-    return false;
-  }
-ntype calc_upper_bound_kal(void)
-   {
-     // Kalantari's formula as found in McNamee Pan Vol. 1
-     int k;
-     static const ntype K= 1.0/0.682338;
-     ntype ximax, xi;
-     cmplx cnsq, term;
-
-     cnsq=cmon[n-1]*cmon[n-1];
-     for (k=4; k <= n+3; k++)
-       {
-         term=0;
-         if (n-k+3 >= 0)
-           term += cnsq*cmon[n-k+3]-cmon[n-2]*cmon[n-k+3];
-         if (n-k+2 >= 0)
-           term +=-cmon[n-1]*cmon[n-k+2];
-         if (n-k+1 >= 0)
-           term += cmon[n-k+1];
-         xi = pow(abs(term),1.0/(k-1));
-         if (k==4 || xi > ximax)
-           ximax=xi;
-       }
-     ximax=K*ximax;
-     if (isinf(ximax)||isnan(ximax))
-       {
-         //cout << "I cannot calculate the upper bound...\n";
-         //cmon.show("coeff");     
-         //exit(-1);
-         return pow(maxf/1.618034,1.0/n);
-       }
-           
-     return ximax;
-   }
-#if 0
-void initial_guess(pvector<cmplx,N>& roots)
-  {
-    // aberth initial guess
-    int i;
-    ntype r, dth, th;
-    r=calc_upper_bound_kal();
-    //cout << "upper bound=" << r << "\n";
-    dth=2.0*M_PI/n;
-    th=0.0;
-    for (i=0; i < n; i++)
-      {
-        roots[i]=polar(r/(i+2),th);
-        th+=dth;
-      }
-      //roots[i]=(1.0+1E-22*drand48())*pow(10.0,-(i+1));
-  }
-}
-#endif
-// A divide and conquer program to find convex 
- // hull of a given set of points. 
- // stores the centre of polygon (It is made 
- // global because it is used in compare function) 
- using point=pair<ntype,ntype>; 
-
- typedef ntype coord_t;         // coordinate type
- typedef ntype coord2_t;  // must be big enough to hold 2*max(|coordinate|)^2
-
- struct Point {
-   coord_t x;
-   coord_t y;
-   bool operator <(const Point &p) const {
-     return x < p.x || (x == p.x && y < p.y);
-   }
- };
- // 2D cross product of OA and OB vectors, i.e. z-component of their 3D cross product.
- // Returns a positive value, if OAB makes a clockwise turn,
- // negative for counter-clockwise turn, and zero if the points are collinear.
- coord2_t cross(const Point &O, const Point &A, const Point &B)
-   {
-     return -((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
-   }
-
- // Returns a list of points on the convex hull in counter-clockwise order.
- // Note: the last point in the returned list is the same as the first one.
- vector<Point> upper_convex_hull(vector<Point> P)
-   {
-     int n = P.size(), k = 0;
-     if (n <= 3) 
-       return P;
-     vector<Point> H(2*n);
-     // Sort points lexicographically
-     // points are already ordered in the present case!
-     //sort(P.begin(), P.end());
-     // we need just upper hull for Bini's algorithm
-     // Build upper hull
-     for (int i = n-1; i >= 0; i--) {
-       while (k >= 2 && cross(H[k-1], H[k], P[i]) < 0) 
-         {
-           k--;
-         }
-       H[k] = P[i];
-       k++;
-     }
-     H.resize(k);
-     return H;
-   }
-
- void initial_guess(pvector<cmplx,N>& roots)
-   {
-     vector<Point> pts, convh;
-     vector<cmplx> rg;
-     vector<int> k, kt;
-     ntype sigma, ukc, vkc, maxt, t;
-     Point p;
-     int q, i, j;
-     pts.resize(n+1);
-     for (i = 0; i <= n; i++)
-       {
-         p.x=ntype(i);
-         if (abs(cmon[i])!=0)
-           {
-             p.y=log(abs(cmon[i]));
-           }
-         else
-           {
-             p.y=-maxf/1.618034;
-           }
-         //pts.push_back(p);
-         pts[i] = p;
-       }
-   
-     //cout << "size=" << pts.size() << "\n";
-     convh=upper_convex_hull(pts);
-     q=convh.size();
-     if (q<=2)
-       {
-         q=2;
-         k.resize(q+1);
-         k[1]=n;
-         k[2]=0;
-       }
-     else
-       {
-         k.resize(q+1);
-       }
-     i=1; 
-     //FILE *f=fopen("chull.dat", "w+");
-     for (auto e:convh)
-       {
-         k[i] = ((int)e.x);
-         //cout << "x=" << e.x << " y=" << e.y << "\n";
-         i++;
-         //fprintf(f,"%d %.15G\n", int(e.x), e.y);
-       }
-    // exit(-1);
-#if 0
-     k[1]=n;
-     
-     if (q==1)
-       {
-         q++;
-         k.resize(q+1);
-         k[2]=0;
-       }
-     //k[q]=0;
-     kt.resize(q+1);
-     for (i=1; i <= q; i++)
-       {
-         kt[i] = k[q+1-i];
-       }
-     k=kt;
-     std::sort(k.begin()++,k.end(),[&](int a, int b)->bool {return a < b;}); 
-#endif
-#if 0
-     for (i=1; i <= q; i++)
-       {
-         cout << "k[" << i << "]=" << k[i] << "\n";
-       } 
-     //fprintf(f,"%d %.15G\n", 0, pts[0].y);
-     //fprintf(f,"%d %.15G\n", q, pts[q].y);
-     fclose(f); 
-     //exit(-1);
-#endif
-     ntype ukip1;
-     //vector<ntype> uk;
-     //uk.resize(q+1);
-#if 0
-     vector<ntype> vk;
-     vk.resize(q);
-
-     for (i=1; i < n; i++) 
-       {
-         t=abs(cmon[i]/cmon[0]);
-         if (i==0 || t > maxt)
-           maxt=ukc;
-       }
-     uk[0] = 1.0/(1.0+maxt);   
-
-     for (i=0; i < n; i++) 
-       {
-         t=abs(cmon[i]/cmon[n]);
-         if (i==0 || t > maxt)
-           maxt=ukc;
-       }
-     vk[0] = 1 + maxt;
-     for (kk=1; kk <= n; kk++)
-       {
-         for (i=0; i < kk; i++) 
-           {
-             ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
-             if (i==0 || uk[kk] > ukc)
-               uk[kk]=ukc;
-           }
-       }
-     for (kk=0; kk < n; kk++)
-       {
-         for (i=0; i < n; i++) 
-           {
-             vkc=pow(abs(cmon[i]/cmon[n]),1.0/(kk-i));
-             if (i==0 || uk[kk] > ukc)
-               vk[kk]=vkc;
-           }
-       } 
-#endif
-     sigma=2.0*M_PI*(drand48()-0.5);
-     rg.resize(n); 
-     //cout << "q=" << q << "\n";
-     int cc=0;
-     for (i=1; i < q; i++)
-       {
-         ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
-         //cout << "uk[" << i+1 << "]=" << ukip1 << "\n";
-         //cout << "k[i]-k[i+1]=" << k[i]-k[i+1] << "\n"; 
-         for (j=1; j <= k[i]-k[i+1]; j++)
-           {
-#if 0
-             if (k[i]+j >= n)
-               {
-                 cout << "we have a problem\n";
-                 exit(-1);
-               }
-#endif
-             rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-             //cout << "i=" << i << " j=" << j << " guess[" << cc << "]" << rg[cc] << "\n";
-             //cout << "abs(guess)=" << abs(rg[cc]) << "\n";
-             cc++;
-           }
-       }
-     
-     //exit(-1);
-     // sort in descending order
-#if 1
-     std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
-     for (i=0; i < n; i++)
-       {
-         roots[i]=rg[i];
-         //cout << "roots[" << i << "]=" << roots[i] << "\n";
-       }
-#endif
-   }
-
-void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
-   {
-     bool *found = new bool[n], fine=false, ret;
-     int i,  nf=0, iter;
-     int itmax=100;
-     ntype r;
-     if (coeff[n]==cmplx(0.0,0.0))
-        {
-          cout << "That's not an " << n << "degree polynomial!\n";
-          return;
-        }
-      cmon[n]=1.0;
-      for (i=n-1; i >=0; i--)
-        cmon[i]=coeff[i]/coeff[n];
-      //absolute value of coefficients are used in Bini's stopping criterion
-      //we use coeff vector to store them since it won't be used anymore from here on
-      for (i=0; i <= n; i++) 
-        coeff[i] = cmplx(abs(cmon[i]),0); 
-
-     for (i=0;i < n; i++)
-       found[i]=false;
-     initial_guess(roots);
-     for (iter=0; iter < itmax && !fine; iter++)
-       {
-         for (i=0; i < n; i++)
-           {
-             // refine conjuigate pairs only once!
-             if (found[i]) 
-               continue;
-             r=abs(roots[i]);
-             if (r > 1)
-               ret = laguer_cmplx_mod_rev(roots[i], roots, i);
-             else
-               ret = laguer_cmplx_mod(roots[i], roots, i);
-             if (ret)
-               {
-                 found[i]=true;
-                 nf++;
-                 if (nf==n)
-                   {
-                     fine=true;
-                     break;
-                   }
-               }
-           }
-       }
-     if (nf < n)
-       {
-         cout << "we had a problem\n";
-         exit(1);
-       }
-     //cout << "iter=" << iter << " # found=" << nf << "\n";
-     delete []found;
-   }
- void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
-   {
-     // find initial guess for x here
-     cmplx r0;
-     const ntype goldfact=1.618034;
-     ntype sig, sigold;
-     //bool mulsig=true;
-     ntype err0,err1, errA, errB;
-     pvector<cmplx,3> ad;
-     typename std::conditional<(N < 0),pvector<cmplx>,bool>::type cbak;
-     int iter, i;
-#if 0
-      if constexpr (N < 0)
-        {
-          bd.allocate(n-1);
-          bd0.allocate(n-1);
-          bd1.allocate(n-1);
-          // ro.allocate(n-1);
-          deflcoeff0.allocate(n);
-          deflcoeff1.allocate(n);
-          deflcoeff.allocate(n);
-        }
-#endif
-
-      //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
-      if (coeff[n]==cmplx(0.0,0.0))
-        {
-          cout << "That's not an " << n << "degree polynomial!\n";
-          return;
-        }
-      cmon[n]=1.0;
-      for (i=n-1; i >=0; i--)
-        cmon[i]=coeff[i]/coeff[n];
-      //absolute value of coefficients are used in Bini's stopping criterion
-      //we use coeff vector to store them since it won't be used anymore from here on
-      for (i=0; i <= n; i++) 
-        coeff[i] = cmplx(abs(cmon[i]),0); 
-
-      sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
-      iter = 0;
-      // find first zero using laguerre
-      // if it does not converge generate a random initial guess
-      // and retry (a limited number of times though!)
-#if 1
-      if constexpr (N < 0)
-        {
-          cbak.allocate(n+1);
-          if (backup||polish)
+          bc=cmplx(b[0],b[1]);
+          dc=cmplx(d[0],d[1]);
+          fc=cmplx(f[0],f[1]);
+          dovb=dc/bc;
+          fovb=fc/bc;
+          g[0]=dovb.real();
+          g[1]=dovb.imag();
+          g2[0] = g[0]*g[0] - g[1]*g[1];
+          g2[1] = 2.0*g[0]*g[1];
+          fb[0] = fovb.real();
+          fb[1] = fovb.imag();
+          h[0] = g2[0] - 2.0*fb[0];
+          h[1] = g2[1] - 2.0*fb[1];
+          sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
+          sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
+          rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
+          if (rho==0)
             {
-              cbak = coeff;
+              sq[0] = sq[1] = 0.0;
             }
-        }
-#endif
-      //cout << "r0=" << r0 << "\n";
-      r0=cmplx(0.0,0.0);
-      sigold=0.0;
-      sig=1.0;
-
-      int MAXSTPS=1000,MT=100;
-      while (!laguer_real(r0))
-        {
-          if (iter==0)
-            r0=cmplx(0.0,1.0);
           else
-            //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
-            //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
-            r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
-          iter++;
+            {
+              phi = acos(sarg[0]/rho);
+              if (sarg[1] < 0.0)
+                {
+                  phi = -phi;
+                }
+              rho = sqrt(rho);
+              sq[0] = rho*cos(phi/2.0);
+              sq[1] = rho*sin(phi/2.0);
+            }
+          gp[0] = g[0] + sq[0];
+          gp[1] = g[1] + sq[1];
+          gm[0] = g[0] - sq[0];
+          gm[1] = g[1] - sq[1]; 
+          abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
+          abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
+          if (abp < abm) 
+            {
+              gp[0]=gm[0];
+              gp[1]=gm[1];
+            }
+          //cout << "gp = " << gp[0] << " " << gp[1]  << " gm=" << gm[0] << " " << gm[1] << "\n";
+          invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
+          invgp[0] = gp[0]*invn;
+          invgp[1] = -gp[1]*invn;
 
-#if 1
-          if (iter%MT==0)
+          //cout << "abp=" << abp << " abm=" << abm << "\n";
+          //cout << "1/gp = " << invgp[0] << " " << invgp[1] << "\n";
+          if (MAX(abp,abm) > 0.0)
             {
-              sigold=sig;
-              sig*=goldfact;
+              dx[0]=((ntype)m)*invgp[0];
+              dx[1]=((ntype)m)*invgp[1];
             }
-#endif
-          if (iter > MAXSTPS)
+          else
             {
-              cout << "[ERROR] Laguerre method did not converge:\n";
-              cout << "this problem can be fixed by using floating point number\n";
-              cout << "with higher precision (e.g. long double and complex<long double>\n";
-              exit(-1); 
+              pol[0] = (1.0+abx)*cos((ntype)iter);
+              pol[1] = (1.0+abx)*sin((ntype)iter); 
+              dx[0]=pol[0];
+              dx[1]=pol[1];
             }
-        };
-      
-      //cout << "p(" << r0 << ")=" << evalpoly(r0) << "\n";
-#if 0
-      if (iter > 0)
-        cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
-      if (isnan(r0.real())|| isinf(r0.real()))
-        {
-          cout << "bah\n";
-          exit(-1);
+          //cout << "dx=" << dx[0] << " " << dx[1] << "\n";
+          //x1=x-dx;
+          x1[0] = x[0] - dx[0];
+          x1[1] = x[1] - dx[1];
+          if (x[0] == x1[0] && x[1]==x1[1]) 
+            {
+              xc = cmplx(x[0],x[1]);
+              return true;
+            }
+          if (iter % MT != 0) 
+            {
+              x[0]=x1[0];
+              x[1]=x1[1];
+            }
+          else 
+            {
+              x[0] -= frac[iter/MT]*dx[0];
+              x[1] -= frac[iter/MT]*dx[1];
+            }
+          //cout << "x=" << x[0] << "I*" << x[1] << " iter=" << iter << "\n";
         }
+      //cout << "too many iterations in laguer\n";
+      xc = cmplx(x[0],x[1]);
+      return false;
+    }
+  bool laguer_cmplx(cmplx &x)
+    {
+      const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
+      const ntype EPS=goaleps;
+      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int iter,j;
+      ntype abx,abp,abm,err, M, s, pr;
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      int m;
+      m=n;
+      //cout << "r0 ini = "<< x << "\n"; 
+      for (iter=1;iter<=MAXIT;iter++) 
+        {
+          //its=iter;
+          b=cmon[m];
+          err=abs(b);
+          d=f=0.0;
+          abx=abs(x);
+          for (j=m-1;j>=0;j--) {
+            f=x*f+d;
+            d=x*d+b;
+            b=x*b+cmon[j];
+            err=abs(b)+abx*err;
+          }
+          err *= EPS;
+          //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+          if (isinf(b.real()) || isinf(b.imag()) || isnan(b.real()) ||
+              isnan(b.imag()))
+            return false;
+#if 1
+          s=0;
+          pr=1.0;
+          for (j=0; j <= n; j ++) 
+            {
+              s+=coeff[j].real()*pr;
+              pr *= abx;
+            }
+          if (abs(b) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+            return true;
+#else
+
+          if (abs(b) <= err) 
+            {
+              //if (iter > 15)
+              //cout << "iter=" << iter << "\n";
+              //cout << "x=" << x << " iter=" << iter << " abs(M-1)=" << abs(M-1) << "\n";
+              return true;
+            }
 #endif
-#ifdef LAGUERRE_POLISH
+          g=d/b;
+          g2=g*g;
+          h=g2-((ntype)2.0)*f/b;
+          // SONO ARRIVATO QUI CON IL CASTING
+          sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+          gp=g+sq;
+          gm=g-sq;
+          abp=abs(gp);
+          abm=abs(gm);
+
+          if (abp < abm) gp=gm;
+          //cout << "abp=" << abp << " abm=" << abm << "\n";
+          //cout << "1/gp=" << 1.0/gp << "\n";
+          dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+          //cout << "dx=" << dx << "\n";
+          x1=x-dx;
+          if (x == x1) 
+            {
+              return true;
+            }
+
+          if (iter % MT != 0) 
+            x=x1;
+          else 
+            x -= frac[iter/MT]*dx;
+          //cout << "iter=" << iter << " x=" << x << "\n";        
+        }
+      //refine_root(x);
+      //cout << "too many iterations in laguer\n";
+      return false;
+    }
+#if 0
+  bool laguer_wrap(cmplx &x)
+    {
       if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
+        return laguer_real(x);
+      else
+        return laguer_real(x);
+    }
+#endif
+  void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+    {
+      int iter,i;
+      ntype err;
+      cmplx povp1, denom;
+      // root polishing by NR
+      cmplx r0old, p, sum;
+      cmplx p1, p1c;
+      ntype errold;
+      for (iter=0; ; iter++)
         {
-          refine_root(r0);
-        }
-#endif
-#if 0
-      if (isnan(r0.real()||isinf(r0.real())))
-        {
-          cout << "mah...\n"; 
-          exit(1);
-        }
-#endif
-          cpolyNm1 qp;
-          // pvector<cmplx,N-1> qr;
-          pvecNm1<cmplx> qr;
-          //cout << "minus one r0=" << r0 << "\n";
-#if 0
-          if (abs(imag(r0)) <= 2.0*meps*abs(real(r0)))
-            {
-              r0=cmplx(real(r0),0.0);
-            }
-#endif
-          //cout << "n=" << n << " r0=" << r0 << "\n";
-          roots[0] = r0;
-#if 0
-          cmplx a,b,c;
-          b=cmon[n];
-          for (i=n-1;i>=0;i--) {
-            c=cmon[i];
-            deflcoeff0[i]=b;
-            b=r0*b+c;
+          p=cmon[n]*r0+cmon[n-1];
+          p1=cmon[n];
+          for(i=n-2;i>=0;i--) {
+            p1=p+p1*r0;
+            p=cmon[i]+p*r0;
           }
-#else
-          for (i=n; i >=1; i--)
-            {
-              deflcoeff0[i-1] = cmon[i];
-              if (i <= n-1)
-                deflcoeff0[i-1] += r0*deflcoeff0[i];
-            }
-#endif
-#if 0
-          if (r0!=cmplx(0.0,0.0))
-            {
-              //forward deflation
-#if 0
-              deflcoeff1[N-1]=1.0;
-              for (i=0; i < N-1; i++)
-                {
-                  deflcoeff1[i] = cmon[i]; 
-                  if (i >= 1)
-                    deflcoeff1[i] -= deflcoeff1[i-1];
-                  deflcoeff1[i] /= -r0.real();
-                  //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
-                }
-#else
-              deflcoeff1[0]=-cmon[0]/r0;
-              deflcoeff1[n-1] = 1.0;
-              for (i=1; i < n-1; i++)
-                {
-                  deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0;
-                }
-#endif
-              // choose the set which yields smaller error 
-              err0=calc_err_q(deflcoeff0,r0);
-              err1=calc_err_q(deflcoeff1,r0);
-              
-              if (err0 < err1)
-                {
-                  //errA = err0;
-                  deflcoeff = deflcoeff0;
-                }
-              else
-                {
-                  //errA = err1;
-                  deflcoeff = deflcoeff1;
-                }
-            }
-          else
-            {
-              deflcoeff = deflcoeff0;
-            }
-#else
-          deflcoeff = deflcoeff0;
-#endif
-          //cout << "N=" << n << " r0=" << r0<< "\n";
-          //deflcoeff0.show("boh2A");
-          //deflcoeff1.show("boh2B");
-#ifdef USE_DEFL_NR
-          //ntype errP, errD;
-          //errP = calc_err_q(deflcoeff, r0.real());
-          use_NR_defl_lin(deflcoeff,r0);
-          //errD = calc_err_q(deflcoeff, r0.real());
-#if 0
-          if (errD < errP)
-            {
-              cout << "errP=" << errP << " errD=" << errD << "\n";
 
-            }
-#endif
-#endif
+          if (iter > 0)
+            errold=err;
 
-          if constexpr (N < 0)
+          err = abs(p);//abs(p.real())+abs(p.imag());
+          if (err==0)
+            break;
+
+          if (iter > 0 && err >= errold)
             {
-              //qp.allocate(n-1);
-              //qr.allocate(n-1);
-              qr.use_vec(n-1,&(roots[1])); 
-              qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+              r0=r0old;
+              break;
             }
 
-
-          //refine deflated quartic coefficients thourh Newton-Raphson method
-          qp.set_output_prec(this->get_output_prec());
-          qp.set_coeff(deflcoeff);
-          //qp.show("mah");
-          //cout << "size=" << n << "deflsize=" << deflcoeff.size()<< "\n";
-          //deflcoeff.show("arimah");
-          
-          qp.find_roots(qr, false, false);
-          if constexpr (N > 0)
+          if (p1==cmplx(0,0))
             {
-              for (i=1; i < n; i++)
-                roots[i] = qr[i-1];
+              break;
             }
-#if 1
-      if constexpr (N < 0)
-        {
-          if (backup||polish)
+          if (iter==maxiter_polish)
+            break;
+          r0old=r0;
+          sum=0;
+          for (i=0; i < iac; i++)
+            sum += 1.0/(r0-roots[i]);
+          sum *= p;
+          p1c = p1 - sum;
+          r0 -= p/p1c;
+          if (isnan(abs(r0)) || isinf(abs(r0)))
             {
-              coeff = cbak;
+              r0=r0old;
+              break;
             }
         }
-      bool copyroot=false;
-      if (polish==true)
-        {
-          if constexpr (N < 0)
-            {
-              cmon[n]=1.0;
-              for (i=n-1; i >=0; i--)
-                cmon[i]=coeff[i]/coeff[n];
-            }
 
-          for (i=0; i < n; i++)
+      //     if (iter > 0)
+      //       cout << "NR iter=" << iter << " err=" << err << "\n";
+    }
+  void refine_root(cmplx &r0)
+    {
+      int iter,i;
+      ntype err;
+      // root polishing by NR
+#ifdef POLISH_NR_REAL
+      // root polishing by NR
+      ntype r0old[2], p[2], r0new[2];
+      ntype p1[2], p0, p10;
+      ntype errold, invnp1;
+      cmplx povp1;
+      r0new[0]=r0.real();
+      r0new[1]=r0.imag();
+      //cout << "r0new=" << r0new[0] << " " << r0new[1] << "\n";
+      for (iter=0; ;iter++)
+        {
+          p[0]=real(cmon[n])*r0new[0]-imag(cmon[n])*r0new[1] + real(cmon[n-1]);
+          p[1]=real(cmon[n])*r0new[1]+imag(cmon[n])*r0new[0] + imag(cmon[n-1]);    
+          p1[0]=real(cmon[n]);
+          p1[1]=imag(cmon[n]);
+          for(i=n-2;i>=0;i--) {
+            p10=p1[0];
+            p1[0]=p[0]+p1[0]*r0new[0]-p1[1]*r0new[1];
+            p1[1]=p[1]+p10*r0new[1]+p1[1]*r0new[0];
+            p0=p[0];
+            p[0]=real(cmon[i])+p[0]*r0new[0]-p[1]*r0new[1];
+            p[1]=imag(cmon[i])+p0*r0new[1]+p[1]*r0new[0];
+          }
+          if (iter > 0)
+            errold=err;
+          err = abs(cmplx(p[0],p[1]));// abs(p[0])+abs(p[1]);
+
+          //cout << "iter=" << iter << " err=" << err << "\n";
+          if (err==0)
             {
-              // refine conjuigate pairs only once!
-              if (i < n-1 && roots[i] == conj(roots[i+1]))
-                copyroot=true;
-              else 
-                copyroot=false;
-              refine_root_maehly(roots[i], roots,  (i==0)?0:i-1);
-              if (copyroot==true)
-                {
-                  roots[i+1] = conj(roots[i]);
-                  i++;
-                }
+              //cout << "QUI1 iter=" << iter << " err=" << err << "\n";
+              break;
+            }
+          if (iter > 0 && err >= errold)
+            {
+              //cout << "QUI2 iter=" << iter << " err=" << err << "\n";
+              r0new[0]=r0old[0];
+              r0new[1]=r0old[1];
+              break;
+            }
+          if (p1[0]==0 && p1[1]==0)
+            {
+              // cout << "QUI3 iter=" << iter << " err=" << err << "\n";
+              break;
+            }
+          if (iter == maxiter_polish)
+            break;
+          r0old[0]=r0new[0];
+          r0old[1]=r0new[1];
+#if 0
+          invnp1 = 1.0/(p1[0]*p1[0]+p1[1]*p1[1]); 
+          r0new[0] -= (p[1]*p1[1] + p[0]*p1[0])*invnp1;
+          r0new[1] -= (p[1]*p1[0] - p[0]*p1[1])*invnp1;
+#else
+          povp1 = cmplx(p[0],p[1])/cmplx(p1[0],p1[1]);
+          r0new[0] -= povp1.real();
+          r0new[1] -= povp1.imag();
+#endif
+          if (isnan(r0new[0]) || isnan(r0new[1]) ||isinf(r0new[0]) || isinf(r0new[1]))
+            {
+              r0new[0]=r0old[0];
+              r0new[1]=r0old[1];
+              break; 
             }
         }
-#endif
-    } 
-  
-  pvecNp1<ntype> get_coeff()
-    {
-      return coeff;
-    }
-  int degree()
-    {
-      return n; 
-    }
-  inline void find_roots(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
-    {
-      // if backup is true the dynamic version preserve the coefficients after calling this method
+      r0=cmplx(r0new[0], r0new[1]);
+      //if (iter > 2)
+      //   cout << "NR iter=" << iter << " err=" << err << "\n";
 
-      if constexpr (N < 0)
+#else
+      cmplx r0old, p;
+      cmplx p1;
+      ntype errold;
+      for (iter=0; ; iter++)
         {
-          if (n==1)
+          p=cmon[n]*r0+cmon[n-1];
+          p1=cmon[n];
+          for(i=n-2;i>=0;i--) {
+            p1=p+p1*r0;
+            p=cmon[i]+p*r0;
+          }
+          if (iter > 0)
+            errold=err;
+
+          err = abs(p);//abs(p.real())+abs(p.imag());
+          if (err==0)
+            break;
+
+          if (iter > 0 && err >= errold)
             {
-              cout << "What?!? You are not able to solve a linear equation come-on!";
-              exit(-1);
+              r0=r0old;
+              break;
             }
-          else if (n==2)
+
+          if (p1==cmplx(0,0))
             {
-              solve_quadratic(roots);
+              break;
             }
-#if 0
-          else if (n==3) 
+          //cout << "NR iter=" << iter << " err=" << err << "\n";
+          if (iter==maxiter_polish)
+            break;
+
+          r0old=r0;
+          r0 -= p/p1;
+
+          if (isnan(abs(r0)) || isinf(abs(r0)))
             {
-              solve_cubic_analytic(roots);
+              r0=r0old;
+              break;
             }
-          else if (n==4)
-            {
-              oqs_quartic_solver(roots);
-            }
+        }
+      //if (iter > 2)
+      //cout << "NR iter=" << iter << " err=" << err << "\n";
 #endif
-          else
-            {
-              laguerre_defl_lag_parall(roots);
-              //laguerre_defl(roots, polish, backup);
-            }
+    }
+  bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
+    {
+      const ntype EPS=goaleps;
+      int j;
+      ntype abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+      ntype err;
+#else
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2, ba, xsq, x, ddb, db;
+      int m;
+      m=n;
+      //cout << "r0 ini = "<< x << "\n"; 
+      //its=iter;
+      b=cmon[0];
+      d=f=0.0;
+      x=1.0/xini;
+      abx=abs(x);
+      for (j=m-1;j>=0;j--) {
+        f=x*f+d;
+        d=x*d+b;
+        b=x*b+cmon[m-j];
+      }
+
+#ifdef BINI_CONV_CRIT
+      s=0.0;
+      pr=1.0; 
+      abx=abs(xini);
+      for (j=0; j <= n; j ++) 
+        {
+          s+=coeff[j].real()*pr;
+          pr *= abx;
+        }
+      ba=cmon[m];
+      for (j=m-1;j>=0;j--) {
+        ba=xini*ba+cmon[j];
+      }
+      absb=abs(ba);
+      //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+      //absb=abs(b);
+#if 0
+      if (isinf(absb) || isnan(absb))
+        {
+          //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+          //cout << "x=" << x << "\n";
+          //cout << "p(x)=" << evalpoly(x) << "\n";
+          return false;
+        }
+#endif
+      if (absb <= K*s) // stopping criterion of bini 
+        {
+          //cout << "absb=" << absb << " K=" << K << " s=" << s << "\n";
+          return true;
+        }
+#else
+      err=abs(cmon[m])*(3.8*m+1);
+      ba=cmon[m];
+      abx=abs(xini);
+      for (j=m-1;j>=0;j--) {
+        ba=xini*ba+cmon[j];
+        err=abx*err+abs(cmon[j])*(3.8*j+1);
+      }
+      err *= EPS;
+      absb=abs(ba);
+      if (absb <= err) 
+        {
+          return true;
+        }
+#endif
+      cmplx gc=0.0, hc=0.0, term;
+      for (j=0; j < n; j++)
+        {
+          if (j==iac)
+            continue;
+          term=1.0/(xini-roots[j]);
+          gc += term;
+          hc += term*term; 
+        }
+      db=d/b;
+      ddb=db*db-((ntype)2.0)*f/b;
+      g=x*(ntype(m)-x*db);
+      g -= gc;
+      g2=g*g;
+      xsq=x*x;
+      h=xsq*(ntype(m)-2.0*x*db+xsq*ddb)-hc;
+      sq=sqrt( ((ntype)(m-1))*(((ntype)m)*h-g2));
+      gp=g+sq;
+      gm=g-sq;
+      abp=abs(gp);
+      abm=abs(gm);
+
+      if (abp < abm) gp=gm;
+      //cout << "abp=" << abp << " abm=" << abm << "\n";
+      //cout << "1/gp=" << 1.0/gp << "\n";
+      if (MAX(abp,abm) > 0.0)
+        {
+          dx =  ((cmplx)m)/((cmplx)gp);
         }
       else
         {
-          if constexpr (N==1)
-            {
-              cout << "What?!? You are not able to solve a linear equation come-on!";
-              exit(-1);
-            }
-          else if constexpr (N==2)
-            {
-              solve_quadratic(roots);
-            }
-#if 0
-          else if constexpr (N==3) 
-            {
-              solve_cubic_analytic(roots);
-            }
-          else if constexpr (N==4)
-            {
-              oqs_quartic_solver(roots);
-            }
+          dx = polar(((ntype)(1+abx)),ntype(1.0));
+        }
+      //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+      //cout << "dx=" << dx << "\n";
+      x1=xini-dx;
+      if (x1 == xini) 
+        {
+          return true;
+        }
+      xini=x1;
+      //else 
+      //x -= frac[iter/MT]*dx;
+      //cout << "iter=" << iter << " x=" << x << "\n";        
+      //refine_root(x);
+      //cout << "too many iterations in laguer\n";
+      return false;
+    }
+  bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
+    {
+      const int MR=8,MT=10,MAXIT=2*MT*MR;
+      const ntype EPS=goaleps;
+      //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int j;
+      ntype be,abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+      ntype err;
+#else
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
 #endif
-          else 
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      int m;
+      m=n;
+      //cout << "r0 ini = "<< x << "\n"; 
+      //its=iter;
+      b=cmon[m];
+#ifndef BINI_CONV_CRIT
+      err=abs(cmon[m])*(3.8*m+1);
+#endif
+      d=f=0.0;
+      abx=abs(x);
+      for (j=m-1;j>=0;j--) {
+        f=x*f+d;
+        d=x*d+b;
+        b=x*b+cmon[j];
+#ifndef BINI_CONV_CRIT
+        err=abx*err + abs(cmon[j])*(3.8*ntype(j)+1.0);
+#endif
+      }
+#ifndef BINI_CONV_CRIT
+      err *= EPS;
+#endif
+      //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+      absb=abs(b);
+#if 0
+      if (isinf(absb) || isnan(absb))
+        {
+          //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
+          //cout << "x=" << x << "\n";
+          //cout << "p(x)=" << evalpoly(x) << "\n";
+          return false;
+        }
+#endif
+#ifdef BINI_CONV_CRIT
+      s=0.0;
+      pr=1.0; 
+      for (j=0; j <= n; j ++) 
+        {
+          s+=coeff[j].real()*pr;
+          pr *= abx;
+        }
+
+      if (absb <= K*s) // stopping criterion of bini 
+        {
+          //cout << "absb=" << absb << " K=" << K << " s=" << s << "\n";
+          return true;
+        }
+#else
+      if (absb <= err) 
+        {
+          return true;
+        }
+#endif
+      cmplx gc=0.0, hc=0.0, term;
+      for (j=0; j < n; j++)
+        {
+          if (j==iac)
+            continue;
+          term=1.0/(x-roots[j]);
+          gc += term;
+          hc += term*term; 
+        }
+      //cout << "K=" << K << " s=" << s << " gc=" << gc << " hc=" << hc << "\n"; 
+      g=d/b;
+      h=g*g-((ntype)2.0)*f/b-hc;
+      g-=gc;
+      g2=g*g;
+      sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+      gp=g+sq;
+      gm=g-sq;
+      abp=abs(gp);
+      abm=abs(gm);
+
+      if (abp < abm) gp=gm;
+      //cout << "abp=" << abp << " abm=" << abm << "\n";
+      //cout << "1/gp=" << 1.0/gp << "\n";
+      if (MAX(abp,abm) > 0.0)
+        {
+          dx =  ((cmplx)m)/((cmplx)gp);
+        }
+      else
+        {
+          dx = polar(((ntype)(1+abx)),ntype(1));
+        }
+      //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+      //cout << "dx=" << dx << "\n";
+      x1=x-dx;
+      if (x == x1) 
+        {
+          return true;
+        }
+
+      //if (1||iter % MT != 0) 
+      x=x1;
+      //else 
+      //x -= frac[iter/MT]*dx;
+      //cout << "iter=" << iter << " x=" << x << "\n";        
+      //refine_root(x);
+      //cout << "too many iterations in laguer\n";
+      return false;
+    }
+  ntype calc_upper_bound_kal(void)
+    {
+      // Kalantari's formula as found in McNamee Pan Vol. 1
+      int k;
+      static const ntype K= 1.0/0.682338;
+      ntype ximax, xi;
+      cmplx cnsq, term;
+
+      cnsq=cmon[n-1]*cmon[n-1];
+      for (k=4; k <= n+3; k++)
+        {
+          term=0;
+          if (n-k+3 >= 0)
+            term += cnsq*cmon[n-k+3]-cmon[n-2]*cmon[n-k+3];
+          if (n-k+2 >= 0)
+            term +=-cmon[n-1]*cmon[n-k+2];
+          if (n-k+1 >= 0)
+            term += cmon[n-k+1];
+          xi = pow(abs(term),1.0/(k-1));
+          if (k==4 || xi > ximax)
+            ximax=xi;
+        }
+      ximax=K*ximax;
+      if (isinf(ximax)||isnan(ximax))
+        {
+          //cout << "I cannot calculate the upper bound...\n";
+          //cmon.show("coeff");     
+          //exit(-1);
+          return pow(maxf/1.618034,1.0/n);
+        }
+
+      return ximax;
+    }
+#if 0
+  void initial_guess(pvector<cmplx,N>& roots)
+    {
+      // aberth initial guess
+      int i;
+      ntype r, dth, th;
+      r=calc_upper_bound_kal();
+      //cout << "upper bound=" << r << "\n";
+      dth=2.0*M_PI/n;
+      th=0.0;
+      for (i=0; i < n; i++)
+        {
+          roots[i]=polar(r/(i+2),th);
+          th+=dth;
+        }
+      //roots[i]=(1.0+1E-22*drand48())*pow(10.0,-(i+1));
+    }
+}
+#endif
+// A divide and conquer program to find convex 
+// hull of a given set of points. 
+// stores the centre of polygon (It is made 
+// global because it is used in compare function) 
+using point=pair<ntype,ntype>; 
+
+typedef ntype coord_t;         // coordinate type
+typedef ntype coord2_t;  // must be big enough to hold 2*max(|coordinate|)^2
+
+struct Point {
+  coord_t x;
+  coord_t y;
+  bool operator <(const Point &p) const {
+    return x < p.x || (x == p.x && y < p.y);
+  }
+};
+// 2D cross product of OA and OB vectors, i.e. z-component of their 3D cross product.
+// Returns a positive value, if OAB makes a clockwise turn,
+// negative for counter-clockwise turn, and zero if the points are collinear.
+coord2_t cross(const Point &O, const Point &A, const Point &B)
+{
+  return -((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
+}
+
+// Returns a list of points on the convex hull in counter-clockwise order.
+// Note: the last point in the returned list is the same as the first one.
+vector<Point> upper_convex_hull(vector<Point> P)
+{
+  int n = P.size(), k = 0;
+  if (n <= 3) 
+    return P;
+  vector<Point> H(2*n);
+  // Sort points lexicographically
+  // points are already ordered in the present case!
+  //sort(P.begin(), P.end());
+  // we need just upper hull for Bini's algorithm
+  // Build upper hull
+  for (int i = n-1; i >= 0; i--) {
+    while (k >= 2 && cross(H[k-1], H[k], P[i]) < 0) 
+      {
+        k--;
+      }
+    H[k] = P[i];
+    k++;
+  }
+  H.resize(k);
+  return H;
+}
+//#define BINI_CHEAP
+void initial_guess(pvector<cmplx,N>& roots)
+{
+#ifdef BINI_CHEAP
+  vector<Point> pts, convh;
+#endif
+  vector<cmplx> rg;
+  vector<int> k;
+  ntype sigma, ukc, vkc, maxt, t;
+  Point p;
+  int q, i, j;
+#ifdef BINI_CHEAP
+  pts.resize(n+1);
+  for (i = 0; i <= n; i++)
+    {
+      p.x=ntype(i);
+      if (abs(cmon[i])!=0)
+        {
+          p.y=log(abs(cmon[i]));
+        }
+      else
+        {
+          p.y=-maxf/1.618034;
+        }
+      //pts.push_back(p);
+      pts[i] = p;
+    }
+  //cout << "size=" << pts.size() << "\n";
+  convh=upper_convex_hull(pts);
+  q=convh.size();
+  if (q<=2)
+    {
+      q=2;
+      k.resize(q+1);
+      k[1]=n;
+      k[2]=0;
+    }
+  else
+    {
+      k.resize(q+1);
+    }
+  i=1; 
+  //FILE *f=fopen("chull.dat", "w+");
+  for (auto e:convh)
+    {
+      k[i] = ((int)e.x);
+      //cout << "x=" << e.x << " y=" << e.y << "\n";
+      i++;
+      //fprintf(f,"%d %.15G\n", int(e.x), e.y);
+    }
+  // exit(-1);
+#if 0
+  k[1]=n;
+
+  if (q==1)
+    {
+      q++;
+      k.resize(q+1);
+      k[2]=0;
+    }
+  //k[q]=0;
+  kt.resize(q+1);
+  for (i=1; i <= q; i++)
+    {
+      kt[i] = k[q+1-i];
+    }
+  k=kt;
+  std::sort(k.begin()++,k.end(),[&](int a, int b)->bool {return a < b;}); 
+#endif
+
+#endif
+  ntype ukip1;
+  //vector<ntype> uk;
+  //uk.resize(q+1);
+#ifndef BINI_CHEAP
+  vector<ntype> vk, uk;
+  int kk;
+  vk.resize(n+1);
+  uk.resize(n+1);
+  for (i=1; i <= n; i++) 
+    {
+      t=abs(cmon[i]/cmon[0]);
+      if (i==1 || t > maxt)
+        maxt=t;
+    }
+  uk[0] = 1.0/(1.0+maxt);   
+
+  for (i=0; i < n; i++) 
+    {
+      t=abs(cmon[i]/cmon[n]);
+      if (i==0 || t > maxt)
+        maxt=t;
+    }
+  vk[n] = 1.0 + maxt;
+ 
+  for (kk=1; kk <= n; kk++)
+    {
+      for (i=0; i < kk; i++) 
+        {
+          ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+          if (i==0 || ukc > uk[kk])
+            uk[kk]=ukc;
+        }
+    }
+  for (kk=0; kk < n; kk++)
+    {
+      bool first=true;
+      for (i=kk+1; i <= n; i++) 
+        {
+          if (cmon[i]==cmplx(0.0,0.0)) 
+            continue;
+          vkc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+          if (first || vkc < vk[kk])
             {
-              laguerre_defl_lag_parall(roots);
-              //laguerre_defl(roots, polish);
+              first=false;
+              vk[kk]=vkc;
+              //cout << "v[" << kk << "]=" << vkc << "\n";
+            }
+        }
+    } 
+  k.resize(n+1); 
+  q=1;
+  for (kk=0; kk <= n; kk++)
+    {
+      //cout <<  "kk=" << kk << "uk=" << uk[kk] << " vk=" << vk[kk] << "\n";
+      if (uk[kk] <= vk[kk])
+        {
+          k[q] = kk; 
+          //cout << "k[" << q << "]=" << k[q] << "\n";
+          q++;
+        }
+    }  
+  //k.resize(q+1);
+  q--;
+  sigma=2.0*M_PI*(drand48()-0.5);
+  rg.resize(n); 
+  //cout << "q=" << q << "\n";
+  int cc=0, dk;
+  for (i=1; i < q; i++)
+    {
+      dk = k[i+1]-k[i];
+      //cout << "uk[" << i+1 << "]=" << ukip1 << "\n";
+      //cout << "dk=" << dk << "\n"; 
+      for (j=1; j <= dk; j++)
+        {
+          // using n-1-(k[i]+j-1) instead of (k[i]+j-1) guessed roots will be sorted from largest to smallest in magnitude 
+          rg[n-1-(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+          //cout << "u[" << k[i+1] << "]=" << uk[k[i+1]] << "\n";
+          cc++;
+        }
+    }
+#else
+  sigma=2.0*M_PI*(drand48()-0.5);
+  rg.resize(n); 
+  //cout << "q=" << q << "\n";
+  int cc=0;
+  for (i=1; i < q; i++)
+    {
+      ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
+      //cout << "uk[" << i+1 << "]=" << ukip1 << "\n";
+      //cout << "k[i]-k[i+1]=" << k[i]-k[i+1] << "\n"; 
+      for (j=1; j <= k[i]-k[i+1]; j++)
+        {
+          rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+          //cout << "i=" << i << " j=" << j << " guess[" << cc << "]" << rg[cc] << "\n";
+          //cout << "abs(guess)=" << abs(rg[cc]) << "\n";
+          cc++;
+        }
+    }
+#endif
+  // il sorting non è necessario
+  //std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
+  for (i=0; i < n; i++)
+    {
+      roots[i]=rg[i];
+      //cout << "roots[" << i << "]=" << roots[i] << "\n";
+    }
+}
+
+void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
+{
+  bool *found = new bool[n], fine=false, ret;
+  int i,  nf=0, iter;
+  int itmax=100;
+  ntype r;
+  if (coeff[n]==cmplx(0.0,0.0))
+    {
+      cout << "That's not an " << n << "degree polynomial!\n";
+      return;
+    }
+  cmon[n]=1.0;
+  for (i=n-1; i >=0; i--)
+    cmon[i]=coeff[i]/coeff[n];
+  //absolute value of coefficients are used in Bini's stopping criterion
+  //we use coeff vector to store them since it won't be used anymore from here on
+  for (i=0; i <= n; i++) 
+    coeff[i] = cmplx(abs(cmon[i]),0); 
+
+  for (i=0;i < n; i++)
+    found[i]=false;
+  initial_guess(roots);
+  for (iter=0; iter < itmax && !fine; iter++)
+    {
+      for (i=0; i < n; i++)
+        {
+          // refine conjuigate pairs only once!
+          if (found[i]) 
+            continue;
+          r=abs(roots[i]);
+          if (r > 1)
+            ret = laguer_cmplx_mod_rev(roots[i], roots, i);
+          else
+            ret = laguer_cmplx_mod(roots[i], roots, i);
+          if (ret)
+            {
+              found[i]=true;
+              nf++;
+              if (nf==n)
+                {
+                  fine=true;
+                  break;
+                }
             }
         }
     }
-#if 0
-  void forcehqr()
+  if (nf < n)
     {
-      force_hqr=1;
+      cout << "we had a problem\n";
+      exit(1);
+    }
+  //cout << "iter=" << iter << " # found=" << nf << "\n";
+  delete []found;
+}
+void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
+{
+  // find initial guess for x here
+  cmplx r0;
+  const ntype goldfact=1.618034;
+  ntype sig, sigold;
+  //bool mulsig=true;
+  ntype err0,err1, errA, errB;
+  pvector<cmplx,3> ad;
+  typename std::conditional<(N < 0),pvector<cmplx>,bool>::type cbak;
+  int iter, i;
+#if 0
+  if constexpr (N < 0)
+    {
+      bd.allocate(n-1);
+      bd0.allocate(n-1);
+      bd1.allocate(n-1);
+      // ro.allocate(n-1);
+      deflcoeff0.allocate(n);
+      deflcoeff1.allocate(n);
+      deflcoeff.allocate(n);
     }
 #endif
-  // get machine precision for "ntype" type (ntype can float, double, long double)
-  ntype epsilon()
-    {
-      return numeric_limits<ntype>::epsilon(); 
-    }
-  ntype getmax()
-    {
-      return numeric_limits<ntype>::max();
-    }
-   void set_output_prec(ntype e)
-    {
-      goaleps=e;
-    } 
-   ntype get_output_prec(void)
-    {
-      return goaleps;
-    } 
 
-  cpoly()
+  //cout << "coeff[" << n << "]=" << coeff[n] << "\n"; 
+  if (coeff[n]==cmplx(0.0,0.0))
     {
-      meps = epsilon();
-      eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
-      maxf= getmax();
-      maxdigits = numeric_limits<ntype>::digits10-1;
-      //force_hqr=0;
-      maxf2 = pow(maxf,0.5)/10.0;
-      maxf3 = pow(maxf,1.0/3.0)/10.0;
-      scalfact = pow(maxf,1.0/4.0)/1.618034;
-      cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
-      //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
-      //printf("%.15G\n", maxf);
-      //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
-      goaleps=numeric_limits<ntype>::epsilon();   
+      cout << "That's not an " << n << "degree polynomial!\n";
+      return;
     }
+  cmon[n]=1.0;
+  for (i=n-1; i >=0; i--)
+    cmon[i]=coeff[i]/coeff[n];
+  //absolute value of coefficients are used in Bini's stopping criterion
+  //we use coeff vector to store them since it won't be used anymore from here on
+  for (i=0; i <= n; i++) 
+    coeff[i] = cmplx(abs(cmon[i]),0); 
 
-  cpoly(int nc): cpolybase<cmplx,N>(nc)
+  sig=1.0;//pow(std::numeric_limits<ntype>::max(),0.1)/goldfact;
+  iter = 0;
+  // find first zero using laguerre
+  // if it does not converge generate a random initial guess
+  // and retry (a limited number of times though!)
+#if 1
+  if constexpr (N < 0)
     {
-      meps = epsilon();
-      eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
-      maxf= getmax();
-      maxdigits = numeric_limits<ntype>::digits10-1;
-      //force_hqr=0;
-      maxf2 = pow(maxf,0.5)/10.0;
-      maxf3 = pow(maxf,1.0/3.0)/10.0;
-      scalfact = pow(maxf,1.0/4.0)/1.618034;
-      cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
-      goaleps=numeric_limits<ntype>::epsilon();   
+      cbak.allocate(n+1);
+      if (backup||polish)
+        {
+          cbak = coeff;
+        }
     }
-  //cpoly() = default;
+#endif
+  //cout << "r0=" << r0 << "\n";
+  r0=cmplx(0.0,0.0);
+  sigold=0.0;
+  sig=1.0;
+
+  int MAXSTPS=1000,MT=100;
+  while (!laguer_real(r0))
+    {
+      if (iter==0)
+        r0=cmplx(0.0,1.0);
+      else
+        //r0 = polar(1.0,ntype(2.0*M_PI*(drand48()-0.5)));
+        //r0 = polar(ntype(drand48()),ntype(2.0*M_PI*(drand48()-0.5)));
+        r0 = polar(sigold+(sig-sigold)*drand48(),ntype(2.0*M_PI*(drand48()-0.5)));
+      iter++;
+
+#if 1
+      if (iter%MT==0)
+        {
+          sigold=sig;
+          sig*=goldfact;
+        }
+#endif
+      if (iter > MAXSTPS)
+        {
+          cout << "[ERROR] Laguerre method did not converge:\n";
+          cout << "this problem can be fixed by using floating point number\n";
+          cout << "with higher precision (e.g. long double and complex<long double>\n";
+          exit(-1); 
+        }
+    };
+
+  //cout << "p(" << r0 << ")=" << evalpoly(r0) << "\n";
 #if 0
+  if (iter > 0)
+    cout << "N=" << n << "iter=" << iter << "sig=" << sig << "\n";
+  if (isnan(r0.real())|| isinf(r0.real()))
     {
-      //coeff=v;
-      //cpoly();
-      //cout << "macheps= " << setprecision(35) << eps << "\n";
+      cout << "bah\n";
+      exit(-1);
     }
-  ~cpoly()
+#endif
+#ifdef LAGUERRE_POLISH
+  if (is_same<ntype,double>::value || is_same<ntype,long double>::value)
     {
+      refine_root(r0);
+    }
+#endif
+#if 0
+  if (isnan(r0.real()||isinf(r0.real())))
+    {
+      cout << "mah...\n"; 
+      exit(1);
+    }
+#endif
+  cpolyNm1 qp;
+  // pvector<cmplx,N-1> qr;
+  pvecNm1<cmplx> qr;
+  //cout << "minus one r0=" << r0 << "\n";
+#if 0
+  if (abs(imag(r0)) <= 2.0*meps*abs(real(r0)))
+    {
+      r0=cmplx(real(r0),0.0);
+    }
+#endif
+  //cout << "n=" << n << " r0=" << r0 << "\n";
+  roots[0] = r0;
+#if 0
+  cmplx a,b,c;
+  b=cmon[n];
+  for (i=n-1;i>=0;i--) {
+    c=cmon[i];
+    deflcoeff0[i]=b;
+    b=r0*b+c;
+  }
+#else
+  for (i=n; i >=1; i--)
+    {
+      deflcoeff0[i-1] = cmon[i];
+      if (i <= n-1)
+        deflcoeff0[i-1] += r0*deflcoeff0[i];
+    }
+#endif
+#if 0
+  if (r0!=cmplx(0.0,0.0))
+    {
+      //forward deflation
+#if 0
+      deflcoeff1[N-1]=1.0;
+      for (i=0; i < N-1; i++)
+        {
+          deflcoeff1[i] = cmon[i]; 
+          if (i >= 1)
+            deflcoeff1[i] -= deflcoeff1[i-1];
+          deflcoeff1[i] /= -r0.real();
+          //cout << "cmon[" << i << "]=" << cmon[i] << " deflcoeff1[" << i << "]=" << deflcoeff1[i]<< "\n";
+        }
+#else
+      deflcoeff1[0]=-cmon[0]/r0;
+      deflcoeff1[n-1] = 1.0;
+      for (i=1; i < n-1; i++)
+        {
+          deflcoeff1[i] = (deflcoeff1[i-1] - cmon[i])/r0;
+        }
+#endif
+      // choose the set which yields smaller error 
+      err0=calc_err_q(deflcoeff0,r0);
+      err1=calc_err_q(deflcoeff1,r0);
+
+      if (err0 < err1)
+        {
+          //errA = err0;
+          deflcoeff = deflcoeff0;
+        }
+      else
+        {
+          //errA = err1;
+          deflcoeff = deflcoeff1;
+        }
+    }
+  else
+    {
+      deflcoeff = deflcoeff0;
+    }
+#else
+  deflcoeff = deflcoeff0;
+#endif
+  //cout << "N=" << n << " r0=" << r0<< "\n";
+  //deflcoeff0.show("boh2A");
+  //deflcoeff1.show("boh2B");
+#ifdef USE_DEFL_NR
+  //ntype errP, errD;
+  //errP = calc_err_q(deflcoeff, r0.real());
+  use_NR_defl_lin(deflcoeff,r0);
+  //errD = calc_err_q(deflcoeff, r0.real());
+#if 0
+  if (errD < errP)
+    {
+      cout << "errP=" << errP << " errD=" << errD << "\n";
 
     }
+#endif
+#endif
+
+  if constexpr (N < 0)
+    {
+      //qp.allocate(n-1);
+      //qr.allocate(n-1);
+      qr.use_vec(n-1,&(roots[1])); 
+      qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+    }
+
+
+  //refine deflated quartic coefficients thourh Newton-Raphson method
+  qp.set_output_prec(this->get_output_prec());
+  qp.set_coeff(deflcoeff);
+  //qp.show("mah");
+  //cout << "size=" << n << "deflsize=" << deflcoeff.size()<< "\n";
+  //deflcoeff.show("arimah");
+
+  qp.find_roots(qr, false, false);
+  if constexpr (N > 0)
+    {
+      for (i=1; i < n; i++)
+        roots[i] = qr[i-1];
+    }
+#if 1
+  if constexpr (N < 0)
+    {
+      if (backup||polish)
+        {
+          coeff = cbak;
+        }
+    }
+  bool copyroot=false;
+  if (polish==true)
+    {
+      if constexpr (N < 0)
+        {
+          cmon[n]=1.0;
+          for (i=n-1; i >=0; i--)
+            cmon[i]=coeff[i]/coeff[n];
+        }
+
+      for (i=0; i < n; i++)
+        {
+          // refine conjuigate pairs only once!
+          if (i < n-1 && roots[i] == conj(roots[i+1]))
+            copyroot=true;
+          else 
+            copyroot=false;
+          refine_root_maehly(roots[i], roots,  (i==0)?0:i-1);
+          if (copyroot==true)
+            {
+              roots[i+1] = conj(roots[i]);
+              i++;
+            }
+        }
+    }
+#endif
+} 
+
+pvecNp1<ntype> get_coeff()
+{
+  return coeff;
+}
+int degree()
+{
+  return n; 
+}
+inline void find_roots_cam(pvector<cmplx,N>& roots)
+{
+  laguerre_defl_lag_parall(roots);
+}
+inline void find_roots(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
+{
+  // if backup is true the dynamic version preserve the coefficients after calling this method
+
+  if constexpr (N < 0)
+    {
+      if (n==1)
+        {
+          cout << "What?!? You are not able to solve a linear equation come-on!";
+          exit(-1);
+        }
+      else if (n==2)
+        {
+          solve_quadratic(roots);
+        }
+#if 0
+      else if (n==3) 
+        {
+          solve_cubic_analytic(roots);
+        }
+      else if (n==4)
+        {
+          oqs_quartic_solver(roots);
+        }
+#endif
+      else
+        {
+          //laguerre_defl_lag_parall(roots);
+          laguerre_defl(roots, polish, backup);
+        }
+    }
+  else
+    {
+      if constexpr (N==1)
+        {
+          cout << "What?!? You are not able to solve a linear equation come-on!";
+          exit(-1);
+        }
+      else if constexpr (N==2)
+        {
+          solve_quadratic(roots);
+        }
+#if 0
+      else if constexpr (N==3) 
+        {
+          solve_cubic_analytic(roots);
+        }
+      else if constexpr (N==4)
+        {
+          oqs_quartic_solver(roots);
+        }
+#endif
+      else 
+        {
+          //laguerre_defl_lag_parall(roots);
+          laguerre_defl(roots, polish);
+        }
+    }
+}
+#if 0
+void forcehqr()
+{
+  force_hqr=1;
+}
+#endif
+// get machine precision for "ntype" type (ntype can float, double, long double)
+ntype epsilon()
+{
+  return numeric_limits<ntype>::epsilon(); 
+}
+ntype getmax()
+{
+  return numeric_limits<ntype>::max();
+}
+void set_output_prec(ntype e)
+{
+  goaleps=e;
+} 
+ntype get_output_prec(void)
+{
+  return goaleps;
+} 
+
+cpoly()
+{
+  meps = epsilon();
+  eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
+  maxf= getmax();
+  maxdigits = numeric_limits<ntype>::digits10-1;
+  //force_hqr=0;
+  maxf2 = pow(maxf,0.5)/10.0;
+  maxf3 = pow(maxf,1.0/3.0)/10.0;
+  scalfact = pow(maxf,1.0/4.0)/1.618034;
+  cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
+  //std::cout << "max2= " << maxf2<< " max3=" << maxf3 << "\n";
+  //printf("%.15G\n", maxf);
+  //std::cout << "macheps= " << std::setprecision(35) << meps << "\n";
+  goaleps=numeric_limits<ntype>::epsilon();   
+}
+
+cpoly(int nc): cpolybase<cmplx,N>(nc)
+{
+  meps = epsilon();
+  eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
+  maxf= getmax();
+  maxdigits = numeric_limits<ntype>::digits10-1;
+  //force_hqr=0;
+  maxf2 = pow(maxf,0.5)/10.0;
+  maxf3 = pow(maxf,1.0/3.0)/10.0;
+  scalfact = pow(maxf,1.0/4.0)/1.618034;
+  cubic_rescal_fact = pow(maxf, 1.0/3.0)/1.618034;
+  goaleps=numeric_limits<ntype>::epsilon();   
+}
+//cpoly() = default;
+#if 0
+{
+  //coeff=v;
+  //cpoly();
+  //cout << "macheps= " << setprecision(35) << eps << "\n";
+}
+~cpoly()
+{
+
+}
 #endif
 };
 // quadratic equation
@@ -1789,9 +1817,9 @@ template <class ntype, int N> void cpoly<ntype,N>::solve_cubic_analytic(pvector<
     {
       A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
       if (A==0.0)
-	B=0.0;
+        B=0.0;
       else
-	B = Q/A;
+        B = Q/A;
       sol[0] = (A+B) - a/3.0;
       sol[1] = cmplx(-0.5*(A+B)-a/3.0,sqrt32*(A-B));
       sol[2] = conj(sol[1]);
@@ -1803,29 +1831,29 @@ template <class ntype, int N> void cpoly<ntype,N>::solve_cubic_analytic(pvector<
 // quartics with OQS
 template <class ntype, int N> void cpoly<ntype,N>::oqs_solve_cubic_analytic_depressed_handle_inf(ntype b, ntype c, ntype& sol)
 {
- /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
-  * where coefficients b and c are large (see sec. 2.2 in the manuscript) */ 
+  /* find analytically the dominant root of a depressed cubic x^3+b*x+c 
+   * where coefficients b and c are large (see sec. 2.2 in the manuscript) */ 
   ntype Q, R, theta, A, B, QR, QRSQ, KK, sqrtQ, RQ;;
   const ntype PI2=M_PI/2.0, TWOPI=2.0*M_PI;
 #ifdef FAST_MATH
   ntype rq3;
 #endif
- 
+
   Q = -b/3.0;
   R = 0.5*c;
   if (R==0)
     {
       if (b <= 0)
-	{
-	  sol=sqrt(-b);
-	}
+        {
+          sol=sqrt(-b);
+        }
       else
-	{
-	  sol=0;
-	}
+        {
+          sol=0;
+        }
       return;
     }
-  
+
   if (abs(Q) < abs(R))
     {
       QR=Q/R;
@@ -1855,22 +1883,22 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_solve_cubic_analytic_depr
       theta = acos((R/abs(Q))/sqrtQ);
 #endif
       if (theta < PI2) 
-	sol = -2.0*sqrtQ*cos(theta/3.0);
+        sol = -2.0*sqrtQ*cos(theta/3.0);
       else 
-	sol = -2.0*sqrtQ*cos((theta+TWOPI)/3.0);
+        sol = -2.0*sqrtQ*cos((theta+TWOPI)/3.0);
     }
   else
     {
       if (abs(Q) < abs(R))
-	A = -copysign((ntype)1.0,R)*cbrt(abs(R)*(1.0+sqrt(KK)));
+        A = -copysign((ntype)1.0,R)*cbrt(abs(R)*(1.0+sqrt(KK)));
       else
-	{
-	  A = -copysign((ntype)1.0,R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
-	}
+        {
+          A = -copysign((ntype)1.0,R)*cbrt(abs(R)+sqrt(abs(Q))*abs(Q)*sqrt(KK));
+        }
       if (A==0.0)
-	B=0.0;
+        B=0.0;
       else
-	B = Q/A;
+        B = Q/A;
       sol = A+B;
     }
 }
@@ -1910,17 +1938,17 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_solve_cubic_analytic_depr
 #endif
       sqrtQ=-2.0*sqrt(Q);
       if (theta < M_PI/2) 
-	sol = sqrtQ*cos(theta/3.0);
+        sol = sqrtQ*cos(theta/3.0);
       else 
-	sol = sqrtQ*cos((theta+2.0*M_PI)/3.0);
+        sol = sqrtQ*cos((theta+2.0*M_PI)/3.0);
     }
   else
     {
       A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
-       if (A==0.0)
-	B=0.0;
+      if (A==0.0)
+        B=0.0;
       else
-	B = Q/A;
+        B = Q/A;
       sol = A+B; /* this is always largest root even if A=B */
     }
 }
@@ -1939,9 +1967,9 @@ template <class ntype, int N> void  cpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
     { 
       diskr=sqrt(diskr);
       if(a > 0.0)
-	s=-2*b/(3*a+diskr);                     
+        s=-2*b/(3*a+diskr);                     
       else
-	s=-2*b/(3*a-diskr);                      
+        s=-2*b/(3*a-diskr);                      
     }
   else
     {      
@@ -1954,7 +1982,7 @@ template <class ntype, int N> void  cpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
   dq=d+s*(c+s*(b+s*(a+s)));                      
   gg=bq*bq/9;
   hh=aq*cq;     
-  
+
   g=hh-4*dq-3*gg;                       /* eq. (60) */  
   h=(8*dq+hh-2*gg)*bq/3-cq*cq-dq*aq*aq; /* eq. (61) */          
   oqs_solve_cubic_analytic_depressed(g, h, rmax);
@@ -1962,27 +1990,27 @@ template <class ntype, int N> void  cpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
     {
       oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
       if ((isnan(rmax) || isinf(rmax)) && scaled)
-	{
-	  // try harder: rescale also the depressed cubic if quartic has been already rescaled
-	  rfact = cubic_rescal_fact; 
-	  rfactsq = rfact*rfact;
-	  ggss = gg/rfactsq;
-	  hhss = hh/rfactsq;
-	  dqss = dq/rfactsq;
-	  aqs = aq/rfact;
-	  bqs = bq/rfact;
-	  cqs = cq/rfact;
-	  ggss=bqs*bqs/9.0;
-	  hhss=aqs*cqs;   
-	  g=hhss-4.0*dqss-3.0*ggss;                       
-	  h=(8.0*dqss+hhss-2.0*ggss)*bqs/3-cqs*(cqs/rfact)-(dq/rfact)*aqs*aqs; 
-	  oqs_solve_cubic_analytic_depressed(g, h, rmax);
-	  if (isnan(rmax) || isinf(rmax))
-	    {
-	      oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
-	    }
-	  rmax *= rfact;
-	}
+        {
+          // try harder: rescale also the depressed cubic if quartic has been already rescaled
+          rfact = cubic_rescal_fact; 
+          rfactsq = rfact*rfact;
+          ggss = gg/rfactsq;
+          hhss = hh/rfactsq;
+          dqss = dq/rfactsq;
+          aqs = aq/rfact;
+          bqs = bq/rfact;
+          cqs = cq/rfact;
+          ggss=bqs*bqs/9.0;
+          hhss=aqs*cqs;   
+          g=hhss-4.0*dqss-3.0*ggss;                       
+          h=(8.0*dqss+hhss-2.0*ggss)*bqs/3-cqs*(cqs/rfact)-(dq/rfact)*aqs*aqs; 
+          oqs_solve_cubic_analytic_depressed(g, h, rmax);
+          if (isnan(rmax) || isinf(rmax))
+            {
+              oqs_solve_cubic_analytic_depressed_handle_inf(g, h, rmax);
+            }
+          rmax *= rfact;
+        }
     }
   /* Newton-Raphson used to refine phi0 (see end of sec. 2.2 in the manuscript) */
   x = rmax;
@@ -2000,28 +2028,28 @@ template <class ntype, int N> void  cpoly<ntype,N>::oqs_calc_phi0(ntype a, ntype
   if (abs(f) > maxtt)
     {
       for (iter=0; iter < 8; iter++)
-	{   
-	  df =  3.0*xsq + g;
-	  if (df==0)
-	    {
-	      break;
-	    }
-	  xold = x;
-	  x += -f/df;
-	  fold = f;
-	  xsq = x*x;
-	  f = x*(xsq + g) + h;
-	  if (f==0)
-	    {
-	      break;
-	    } 
+        {   
+          df =  3.0*xsq + g;
+          if (df==0)
+            {
+              break;
+            }
+          xold = x;
+          x += -f/df;
+          fold = f;
+          xsq = x*x;
+          f = x*(xsq + g) + h;
+          if (f==0)
+            {
+              break;
+            } 
 
-	  if (abs(f) >= abs(fold))
-	    {
-	      x = xold;
-	      break;
-	    }
-    	}
+          if (abs(f) >= abs(fold))
+            {
+              x = xold;
+              break;
+            }
+        }
     }
   phi0 = x;
 }
@@ -2043,9 +2071,9 @@ template <class ntype, int N> ntype  cpoly<ntype,N>::oqs_calc_err_ldlt(ntype b, 
     sum += abs(((d2*l2*l2 + l3*l3)-d)/d);
   return sum;
 }
-template <class ntype, int N> 
+  template <class ntype, int N> 
 ntype cpoly<ntype,N>::oqs_calc_err_abcd_cmplx(ntype a, ntype b,  ntype c, ntype d, cmplx aq, 
-                                                         cmplx bq, cmplx cq, cmplx dq)
+                                              cmplx bq, cmplx cq, cmplx dq)
 {
   /* Eq. (53) in the manuscript for complex alpha1 (aq), beta1 (bq), alpha2 (cq) and beta2 (dq) */
   ntype sum;
@@ -2089,9 +2117,9 @@ template <class ntype, int N> ntype  cpoly<ntype,N>::oqs_calc_err_abc(ntype a, n
   else
     sum = abs(((bq*cq + aq*dq) - c)/c);
   if (b==0.0)
-  sum +=abs(bq + aq*cq + dq);
+    sum +=abs(bq + aq*cq + dq);
   else 
-  sum +=abs(((bq + aq*cq + dq) - b)/b);
+    sum +=abs(((bq + aq*cq + dq) - b)/b);
   if (a==0.0)
     sum +=abs(aq + cq);
   else 
@@ -2129,7 +2157,7 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
       x02 = x[0]-x[2];
       det = x[1]*x[1] + x[1]*(-x[2]*x02 - 2.0*x[3]) + x[3]*(x[0]*x02 + x[3]);
       if (det==0.0)
-	break;
+        break;
       Jinv[0][0] = x02;
       Jinv[0][1] = x[3] - x[1];
       Jinv[0][2] = x[1]*x[2] - x[0]*x[3];
@@ -2147,18 +2175,18 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
       Jinv[3][2] = x[3]*Jinv[0][1];
       Jinv[3][3] = x[3]*Jinv[0][2];
       for (k1=0; k1 < 4; k1++)
-	{
-	  dx[k1] = 0;
-	  for (k2=0; k2 < 4; k2++)
-	    dx[k1] += Jinv[k1][k2]*fvec[k2];
-	}
+        {
+          dx[k1] = 0;
+          for (k2=0; k2 < 4; k2++)
+            dx[k1] += Jinv[k1][k2]*fvec[k2];
+        }
       for (k1=0; k1 < 4; k1++)
-      	xold[k1] = x[k1];
+        xold[k1] = x[k1];
 
       for (k1=0; k1 < 4; k1++)
-	{
-	  x[k1] += -dx[k1]/det;
-	}
+        {
+          x[k1] += -dx[k1]/det;
+        }
       fvec[0] = x[1]*x[3] - d;
       fvec[1] = x[1]*x[2] + x[0]*x[3] - c;
       fvec[2] = x[1] + x[0]*x[2] + x[3] - b;
@@ -2166,20 +2194,20 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_NRabcd(ntype a, ntype b, 
       errfold = errf;
       errf=0;
       for (k1=0; k1 < 4; k1++)
-	{
-        if (vr[k1]==0)
-	  errf += abs(fvec[k1]);
-        else
-	  errf += abs(fvec[k1]/vr[k1]);
-	}
+        {
+          if (vr[k1]==0)
+            errf += abs(fvec[k1]);
+          else
+            errf += abs(fvec[k1]/vr[k1]);
+        }
       if (errf==0)
-	break;
+        break;
       if (errf >= errfold)
-	{
-	  for (k1=0; k1 < 4; k1++)
-	    x[k1] = xold[k1];
-	  break;
-	}
+        {
+          for (k1=0; k1 < 4; k1++)
+            x[k1] = xold[k1];
+          break;
+        }
     }
   AQ=x[0];
   BQ=x[1];
@@ -2193,16 +2221,16 @@ template <class ntype, int N> void  cpoly<ntype,N>::oqs_solve_quadratic(ntype a,
   if(diskr>=0.0)
     {
       if(a>=0.0)
-	div=-a-sqrt(diskr);
+        div=-a-sqrt(diskr);
       else
-	div=-a+sqrt(diskr);
+        div=-a+sqrt(diskr);
 
       zmax=div/2;
 
       if(zmax==0.0)
-	zmin=0.0;
+        zmin=0.0;
       else
-	zmin=b/zmax;
+        zmin=b/zmax;
       roots[0]=cmplx(zmax,0.0);
       roots[1]=cmplx(zmin,0.0);
     } 
@@ -2263,7 +2291,7 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cm
   nsol=0;
   bl311 =2.*b/3.-phi0-l1*l1;   /* This is d2 as defined in eq. (18)*/ 
   dml3l3 = d-l3*l3;            /* dml3l3 is d3 as defined in eq. (9) with d2=0 */ 
-  
+
   /* Three possible solutions for d2 and l2 (see eqs. (18)-(20) and discussion which follows) */
   if (bl311!=0.0)
     {
@@ -2276,11 +2304,11 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cm
     {
       l2m[nsol]=2*dml3l3/del2;
       if (l2m[nsol]!=0)
-	{
-  	  d2m[nsol]=del2/(2*l2m[nsol]);
-	  res[nsol] = oqs_calc_err_ldlt(b,c,d,d2m[nsol], l1, l2m[nsol], l3);
-	  nsol++;
-	}
+        {
+          d2m[nsol]=del2/(2*l2m[nsol]);
+          res[nsol] = oqs_calc_err_ldlt(b,c,d,d2m[nsol], l1, l2m[nsol], l3);
+          nsol++;
+        }
 
       d2m[nsol] = bl311;
       l2m[nsol] = 2.0*dml3l3/del2;
@@ -2296,13 +2324,13 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cm
     {
       /* we select the (d2,l2) pair which minimizes errors */
       for (k1=0; k1 < nsol; k1++)
-	{
-	  if (k1==0 || res[k1] < resmin)
-	    {
-	      resmin = res[k1];
-	      kmin = k1;	
-	    }
-	}
+        {
+          if (k1==0 || res[k1] < resmin)
+            {
+              resmin = res[k1];
+              kmin = k1;	
+            }
+        }
       d2 = d2m[kmin];
       l2 = l2m[kmin];
     }
@@ -2317,70 +2345,70 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cm
       cq=l1-gamma;                                
       dq=l3-gamma*l2;                            
       if(abs(dq) < abs(bq))
-	dq=d/bq;                                
+        dq=d/bq;                                
       else if(abs(dq) > abs(bq))
-	bq=d/dq;                               
+        bq=d/dq;                               
       if (abs(aq) < abs(cq))
-	{
-	  nsol=0;
-	  if (dq !=0)
-	    {
-	      aqv[nsol] = (c - bq*cq)/dq;    /* eq. (37) */
-	      errv[nsol]=oqs_calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
-	      nsol++;
-	    }
-	  if (cq != 0) 
-	    {
-	      aqv[nsol] = (b - dq - bq)/cq;  /* eq. (38) */
-	      errv[nsol] = oqs_calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
-	      nsol++;
-	    }
-	  aqv[nsol] = a - cq;                /* eq. (39) */
-	  errv[nsol] = oqs_calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
-	  nsol++;
-	  /* we select the value of aq (i.e. alpha1 in the manuscript) which minimizes errors */
-	  for (k=0; k < nsol; k++)
-	    {
-	      if (k==0 || errv[k] < errmin)
-		{
-		  kmin = k;
-		  errmin = errv[k];
-		}
-	    }
-	  aq = aqv[kmin];
-	}
+        {
+          nsol=0;
+          if (dq !=0)
+            {
+              aqv[nsol] = (c - bq*cq)/dq;    /* eq. (37) */
+              errv[nsol]=oqs_calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
+              nsol++;
+            }
+          if (cq != 0) 
+            {
+              aqv[nsol] = (b - dq - bq)/cq;  /* eq. (38) */
+              errv[nsol] = oqs_calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
+              nsol++;
+            }
+          aqv[nsol] = a - cq;                /* eq. (39) */
+          errv[nsol] = oqs_calc_err_abc(a, b, c, aqv[nsol], bq, cq, dq);
+          nsol++;
+          /* we select the value of aq (i.e. alpha1 in the manuscript) which minimizes errors */
+          for (k=0; k < nsol; k++)
+            {
+              if (k==0 || errv[k] < errmin)
+                {
+                  kmin = k;
+                  errmin = errv[k];
+                }
+            }
+          aq = aqv[kmin];
+        }
       else 
-	{
-	  nsol = 0;
-	  if (bq != 0)
-	    { 
-	      cqv[nsol] = (c - aq*dq)/bq;              /* eq. (44) */
-	      errv[nsol] = oqs_calc_err_abc(a, b, c, aq, bq, cqv[nsol], dq);
-	      nsol++;
-	    }
-	  if (aq != 0)
-	    {
-	      cqv[nsol] = (b - bq - dq)/aq;            /* eq. (45) */
-	      errv[nsol] = oqs_calc_err_abc(a, b, c, aq, bq, cqv[nsol], dq);
-	      nsol++;
-	    }
-	  cqv[nsol] = a - aq;                          /*  eq. (46) */
-	  errv[nsol] = oqs_calc_err_abc(a, b, c, aq, bq, cqv[nsol], dq);
-	  nsol++;	  
-	  /* we select the value of cq (i.e. alpha2 in the manuscript) which minimizes errors */
-	  for (k=0; k < nsol; k++)
-	    {
-	      if (k==0 || errv[k] < errmin)
-		{
-		  kmin = k;
-		  errmin = errv[k];
-		}
-	    }
-	  cq = cqv[kmin];
-	}
+        {
+          nsol = 0;
+          if (bq != 0)
+            { 
+              cqv[nsol] = (c - aq*dq)/bq;              /* eq. (44) */
+              errv[nsol] = oqs_calc_err_abc(a, b, c, aq, bq, cqv[nsol], dq);
+              nsol++;
+            }
+          if (aq != 0)
+            {
+              cqv[nsol] = (b - bq - dq)/aq;            /* eq. (45) */
+              errv[nsol] = oqs_calc_err_abc(a, b, c, aq, bq, cqv[nsol], dq);
+              nsol++;
+            }
+          cqv[nsol] = a - aq;                          /*  eq. (46) */
+          errv[nsol] = oqs_calc_err_abc(a, b, c, aq, bq, cqv[nsol], dq);
+          nsol++;	  
+          /* we select the value of cq (i.e. alpha2 in the manuscript) which minimizes errors */
+          for (k=0; k < nsol; k++)
+            {
+              if (k==0 || errv[k] < errmin)
+                {
+                  kmin = k;
+                  errmin = errv[k];
+                }
+            }
+          cq = cqv[kmin];
+        }
       realcase[0]=1;
     }
-   else if (d2 > 0)   
+  else if (d2 > 0)   
     {
       /* Case II eqs. (47)-(50) */
       gamma=sqrt(d2); 
@@ -2397,49 +2425,49 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cm
     {
       d3 = d - l3*l3;
       if (realcase[0]==1)
-	err0 = oqs_calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
+        err0 = oqs_calc_err_abcd(a, b, c, d, aq, bq, cq, dq);
       else if (realcase[0]==0)
-	err0 = oqs_calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
+        err0 = oqs_calc_err_abcd_cmplx(a, b, c, d, acx, bcx, ccx, dcx);
       if (d3 <= 0)
-	{
-	  realcase[1] = 1;
-	  aq1 = l1;   
-	  bq1 = l3 + sqrt(-d3);
-	  cq1 = l1;
-	  dq1 = l3 - sqrt(-d3);
-	  if(abs(dq1) < abs(bq1))  
-	    dq1=d/bq1;                                        
-	  else if(abs(dq1) > abs(bq1))
-	    bq1=d/dq1;                                       
-	  err1 = oqs_calc_err_abcd(a, b, c, d, aq1, bq1, cq1, dq1); /* eq. (53) */
-	}
+        {
+          realcase[1] = 1;
+          aq1 = l1;   
+          bq1 = l3 + sqrt(-d3);
+          cq1 = l1;
+          dq1 = l3 - sqrt(-d3);
+          if(abs(dq1) < abs(bq1))  
+            dq1=d/bq1;                                        
+          else if(abs(dq1) > abs(bq1))
+            bq1=d/dq1;                                       
+          err1 = oqs_calc_err_abcd(a, b, c, d, aq1, bq1, cq1, dq1); /* eq. (53) */
+        }
       else /* complex */
-	{
-	  realcase[1] = 0;
-	  acx1 = l1;
-	  bcx1 = cmplx(l3,sqrt(d3));
-	  ccx1 = l1;
-	  dcx1 = conj(bcx1);
-	  err1 = oqs_calc_err_abcd_cmplx(a, b, c, d, acx1, bcx1, ccx1, dcx1); 
-	}
+        {
+          realcase[1] = 0;
+          acx1 = l1;
+          bcx1 = cmplx(l3,sqrt(d3));
+          ccx1 = l1;
+          dcx1 = conj(bcx1);
+          err1 = oqs_calc_err_abcd_cmplx(a, b, c, d, acx1, bcx1, ccx1, dcx1); 
+        }
       if (realcase[0]==-1 || err1 < err0)
-	{
+        {
           whichcase=1; // d2 = 0
-	  if (realcase[1]==1)
-	    {
-	      aq = aq1;
-	      bq = bq1;
-	      cq = cq1;
-	      dq = dq1;
-	    }
-	  else
-	    {
-	      acx = acx1;
-	      bcx = bcx1;
-	      ccx = ccx1;
-	      dcx = dcx1;
-	    }
-	}
+          if (realcase[1]==1)
+            {
+              aq = aq1;
+              bq = bq1;
+              cq = cq1;
+              dq = dq1;
+            }
+          else
+            {
+              acx = acx1;
+              bcx = bcx1;
+              ccx = ccx1;
+              dcx = dcx1;
+            }
+        }
     }
   if (realcase[whichcase]==1)
     {
@@ -2458,45 +2486,45 @@ template <class ntype, int N> void cpoly<ntype,N>::oqs_quartic_solver(pvector<cm
     {
       /* complex coefficients of p1 and p2 */
       if (whichcase==0) // d2!=0
-	{
-	  cdiskr=acx*acx/cmplx(4.0)-bcx;               
-	  /* calculate the roots as roots of p1(x) and p2(x) (see end of sec. 2.1) */
-	  zx1=-acx/cmplx(2.0)+sqrt(cdiskr);
-	  zx2=-acx/cmplx(2.0)-sqrt(cdiskr);
-	  if(abs(zx1) > abs(zx2))
-	    zxmax=zx1;
-	  else
-	    zxmax=zx2;
-	  zxmin=bcx/zxmax;        
-	  roots[0]=zxmin;
-	  roots[1]=conj(zxmin);
-	  roots[2]=zxmax;
-	  roots[3]=conj(zxmax);
-	}
+        {
+          cdiskr=acx*acx/cmplx(4.0)-bcx;               
+          /* calculate the roots as roots of p1(x) and p2(x) (see end of sec. 2.1) */
+          zx1=-acx/cmplx(2.0)+sqrt(cdiskr);
+          zx2=-acx/cmplx(2.0)-sqrt(cdiskr);
+          if(abs(zx1) > abs(zx2))
+            zxmax=zx1;
+          else
+            zxmax=zx2;
+          zxmin=bcx/zxmax;        
+          roots[0]=zxmin;
+          roots[1]=conj(zxmin);
+          roots[2]=zxmax;
+          roots[3]=conj(zxmax);
+        }
       else // d2 ~ 0
-	{
-	  /* never gets here! */
-	  cdiskr=sqrt(acx*acx-cmplx(4.0)*bcx);
-	  zx1 = -cmplx(0.5)*(acx+cdiskr);
-	  zx2 = -cmplx(0.5)*(acx-cdiskr);
-	  if (abs(zx1) > abs(zx2))
-	    zxmax = zx1;
-	  else
-	    zxmax = zx2;
-	  zxmin = bcx/zxmax;
-	  roots[0] = zxmax;
-	  roots[1] = zxmin;
-	  cdiskr=sqrt(ccx*ccx-cmplx(4.0)*dcx);
-	  zx1 = -cmplx(0.5)*(ccx+cdiskr);
-	  zx2 = -cmplx(0.5)*(ccx-cdiskr);
-	  if (abs(zx1) > abs(zx2))
-	    zxmax = zx1;
-	  else
-	    zxmax = zx2;
-	  zxmin = dcx/zxmax;
-	  roots[2]= zxmax;
-	  roots[3]= zxmin;
-	}
+        {
+          /* never gets here! */
+          cdiskr=sqrt(acx*acx-cmplx(4.0)*bcx);
+          zx1 = -cmplx(0.5)*(acx+cdiskr);
+          zx2 = -cmplx(0.5)*(acx-cdiskr);
+          if (abs(zx1) > abs(zx2))
+            zxmax = zx1;
+          else
+            zxmax = zx2;
+          zxmin = bcx/zxmax;
+          roots[0] = zxmax;
+          roots[1] = zxmin;
+          cdiskr=sqrt(ccx*ccx-cmplx(4.0)*dcx);
+          zx1 = -cmplx(0.5)*(ccx+cdiskr);
+          zx2 = -cmplx(0.5)*(ccx-cdiskr);
+          if (abs(zx1) > abs(zx2))
+            zxmax = zx1;
+          else
+            zxmax = zx2;
+          zxmin = dcx/zxmax;
+          roots[2]= zxmax;
+          roots[3]= zxmin;
+        }
     }
   if (rfact!=1.0)
     {

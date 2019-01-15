@@ -31,7 +31,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 da tenere!
 //#define ENABLE_FORW_DEFL // non usando la forward deflation è più accurato!
-//#define BINI_INIGUESS
+#define BINI_INIGUESS
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 #define POLISH_NR_REAL
