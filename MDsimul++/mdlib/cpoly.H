@@ -40,9 +40,8 @@ public:
   constexpr static int dynamic = false;
   pvector<cmplx, N+1> coeff;
   pvector<cmplx, N+1> cmon;
-  pvector<cmplx, N-1> bd;
-  pvector<cmplx, N-1> bd0;
-  pvector<cmplx, N-1> bd1;
+  pvector<cmplx, N-1> abscmon;
+  pvector<cmplx, N-1> alpha;
   pvector<cmplx, N> deflcoeff0;
   pvector<cmplx, N> deflcoeff1;
   pvector<cmplx, N> deflcoeff;
@@ -67,9 +66,8 @@ public:
   constexpr static int dynamic = true;
   pvector<cmplx> coeff;
   pvector<cmplx> cmon;
-  pvector<cmplx> bd0;
-  pvector<cmplx> bd1;
-  pvector<cmplx> bd;
+  pvector<cmplx> acmon;
+  pvector<cmplx> alpha;
   pvector<cmplx> deflcoeff0;
   pvector<cmplx> deflcoeff1;
   pvector<cmplx> deflcoeff;
@@ -79,20 +77,19 @@ public:
       coeff = v;
     }
   void use_vec(int nc, cmplx* coeffv, cmplx* cmonv,
-               cmplx* bd0v, cmplx *bd1v, cmplx* bdv, cmplx *deflcoeff0v, cmplx* deflcoeff1v, cmplx* deflcoeffv)
+               cmplx* acmonv, cmplx *alphav, cmplx *deflcoeff0v, cmplx* deflcoeff1v, cmplx* deflcoeffv)
     {
       coeff.use_vec(nc+1,coeffv);
       cmon.use_vec(nc+1,cmonv);
-      bd0.use_vec(nc-1,bd0v);
-      bd1.use_vec(nc-1,bd1v);
-      bd.use_vec(nc-1,bdv);
+      acmon.use_vec(nc+1,acmonv);
+      alpha.use_vec(nc+1,alphav);
       deflcoeff0.use_vec(nc,deflcoeff0v);
       deflcoeff1.use_vec(nc,deflcoeff1v);
       deflcoeff.use_vec(nc,deflcoeffv);
       n=nc;
     }
 
-  cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), bd0(nc-1), bd1(nc-1), bd(nc-1),
+  cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), acmon(nc+1), alpha(nc+1),
   deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
   {
     n=nc;
@@ -102,9 +99,8 @@ public:
     {
       coeff.deallocate();
       cmon.deallocate();
-      bd0.deallocate();
-      bd1.deallocate();
-      bd.deallocate();
+      acmon.deallocate();
+      alpha.deallocate();
       deflcoeff0.deallocate();
       deflcoeff1.deallocate();
       deflcoeff.deallocate();
@@ -114,9 +110,8 @@ public:
       n=nc;
       coeff.allocate(n+1);
       cmon.allocate(n+1);
-      bd0.allocate(n-1);
-      bd1.allocate(n-1);
-      bd.allocate(n-1);
+      acmon.allocate(n+1);
+      alpha.allocate(n+1);
       deflcoeff0.allocate(n);
       deflcoeff1.allocate(n);
       deflcoeff.allocate(n);
@@ -132,9 +127,8 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,N> {
   using cpolybase<cmplx,N>::n;
   using cpolybase<cmplx,N>::coeff;
   using cpolybase<cmplx,N>::cmon;
-  using cpolybase<cmplx,N>::bd0;
-  using cpolybase<cmplx,N>::bd1;
-  using cpolybase<cmplx,N>::bd;
+  using cpolybase<cmplx,N>::acmon;
+  using cpolybase<cmplx,N>::alpha;
   using cpolybase<cmplx,N>::deflcoeff0;
   using cpolybase<cmplx,N>::deflcoeff1;
   using cpolybase<cmplx,N>::deflcoeff;
@@ -1144,7 +1138,7 @@ void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
       //qp.allocate(n-1);
       //qr.allocate(n-1);
       qr.use_vec(n-1,&(roots[1])); 
-      qp.use_vec(n-1,coeff.v, cmon.v, bd0.v, bd1.v, bd.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
+      qp.use_vec(n-1,coeff.v, cmon.v, acmon.v, alpha.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
     }
 
   qp.set_output_prec(this->get_output_prec());
