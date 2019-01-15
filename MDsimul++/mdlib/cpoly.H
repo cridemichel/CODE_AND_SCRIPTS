@@ -28,7 +28,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-#define BINI_CONV_CRIT
+//#define BINI_CONV_CRIT
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 //#define POLISH_NR_REAL 
@@ -846,10 +846,10 @@ public:
       d=f=0.0;
       x=ntype(1.0)/xini;
       abx=abs(x);
-      for (j=m-1;j>=0;j--) {
+      for (j=1;j<=m;j++) {
         f=x*f+d;
         d=x*d+b;
-        b=x*b+cmon[m-j];
+        b=x*b+cmon[j];
       }
 
 #ifdef BINI_CONV_CRIT
@@ -883,16 +883,13 @@ public:
           return true;
         }
 #else
-      err=abs(cmon[m])*(3.8*m+1);
-      ba=cmon[m];
-      abx=abs(xini);
-      for (j=m-1;j>=0;j--) {
-        ba=xini*ba+cmon[j];
+      err=abs(cmon[0])*(3.8*m+1);
+      abx=abs(x);
+      for (j=1;j<=m;j++) {
         err=abx*err+abs(cmon[j])*(3.8*j+1);
       }
       err *= EPS;
-      absb=abs(ba);
-      if (absb <= err) 
+      if (abs(b) <= err) 
         {
           return true;
         }
@@ -913,6 +910,8 @@ public:
       g2=g*g;
       xsq=x*x;
       h=xsq*(ntype(m)-ntype(2.0)*x*db+xsq*ddb)-hc;
+
+
       sq=sqrt( ((ntype)(m-1))*(((ntype)m)*h-g2));
       gp=g+sq;
       gm=g-sq;
@@ -1169,7 +1168,7 @@ vector<Point> upper_convex_hull(vector<Point> P)
   H.resize(k+1);
   return H;
 }
-#define BINI_CHEAP 
+//#define BINI_CHEAP 
 //// BINI_CHEAP risulta più lenta poiché il guess è meno preciso
 void initial_guess(pvector<cmplx,N>& roots)
 {

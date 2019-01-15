@@ -153,7 +153,7 @@ using namespace boost::multiprecision::backends;
 using bsdbl=number<mpfr_float_backend<200>>;
 using bscmplx=number<mpc_complex_backend<200>>;
 #endif
-using numty=long double;
+using numty=double;
 using cmplx=complex<numty>;
 #endif
 #ifdef BACKSTAB
@@ -667,7 +667,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           //rp.show("poly=");
           //for (i=0; i < NDEG; i++)
            // cout << c[i] << ",";
-#if 0
+#if 1
           for (i=0; i < NDEG+1; i++)
             {
               cout << setprecision(6) << roots[i] << "\n";
