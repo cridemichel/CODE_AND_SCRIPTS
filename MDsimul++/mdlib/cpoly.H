@@ -1142,7 +1142,7 @@ struct Point {
 // negative for counter-clockwise turn, and zero if the points are collinear.
 coord2_t cross(const Point &O, const Point &A, const Point &B)
 {
-  return -((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
+  return ((A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x));
 }
 
 // Returns a list of points on the convex hull in counter-clockwise order.
@@ -1152,7 +1152,7 @@ vector<Point> upper_convex_hull(vector<Point> P)
   int n = P.size(), k = 0;
   if (n <= 3) 
     return P;
-  vector<Point> H(2*n);
+  vector<Point> H(n+1);
   // Sort points lexicographically
   // points are already ordered in the present case!
   //sort(P.begin(), P.end());
@@ -1163,13 +1163,13 @@ vector<Point> upper_convex_hull(vector<Point> P)
       {
         k--;
       }
-    H[k] = P[i];
     k++;
+    H[k] = P[i];
   }
-  H.resize(k);
+  H.resize(k+1);
   return H;
 }
-//#define BINI_CHEAP 
+#define BINI_CHEAP 
 //// BINI_CHEAP risulta più lenta poiché il guess è meno preciso
 void initial_guess(pvector<cmplx,N>& roots)
 {
@@ -1194,12 +1194,13 @@ void initial_guess(pvector<cmplx,N>& roots)
         {
           p.y=-maxf/1.618034;
         }
+      //cout << p.x << " " << p.y << "\n";
       //pts.push_back(p);
       pts[i] = p;
     }
   //cout << "size=" << pts.size() << "\n";
   convh=upper_convex_hull(pts);
-  q=convh.size();
+  q=convh.size()-1;
   if (q<=2)
     {
       q=2;
@@ -1212,12 +1213,12 @@ void initial_guess(pvector<cmplx,N>& roots)
       k.resize(q+1);
     }
   i=1; 
+  //cout << "q=" << q << "\n";
   //FILE *f=fopen("chull.dat", "w+");
-  for (auto e:convh)
+  for (i=1; i <= q; i++)
     {
-      k[i] = ((int)e.x);
+      k[i] = ((int)convh[i].x);
       //cout << "x=" << e.x << " y=" << e.y << "\n";
-      i++;
       //fprintf(f,"%d %.15G\n", int(e.x), e.y);
     }
   // exit(-1);
@@ -1316,7 +1317,7 @@ void initial_guess(pvector<cmplx,N>& roots)
       for (j=1; j <= dk; j++)
         {
           // using n-1-(k[i]+j-1) instead of (k[i]+j-1) guessed roots will be sorted from largest to smallest in magnitude 
-          rg[n-1-(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+          rg[(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
           //cout << "u[" << k[i+1] << "]=" << uk[k[i+1]] << "\n";
           cc++;
         }
@@ -1326,10 +1327,12 @@ void initial_guess(pvector<cmplx,N>& roots)
   rg.resize(n); 
   //cout << "q=" << q << "\n";
   int cc=0;
-  for (i=1; i < q; i++)
+
+  for (i=q-1; i >= 1; i--)
     {
       ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
       //cout << "uk[" << i+1 << "]=" << ukip1 << "\n";
+      //cout << "k[" << i << "]=" << k[i] << "\n";
       //cout << "k[i]-k[i+1]=" << k[i]-k[i+1] << "\n"; 
       for (j=1; j <= k[i]-k[i+1]; j++)
         {
@@ -1344,8 +1347,9 @@ void initial_guess(pvector<cmplx,N>& roots)
   //std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
   for (i=0; i < n; i++)
     {
-      roots[i]=rg[i];
-      cout << setprecision(16) << "roots[" << i << "]=" << roots[i] << "abs=" << abs(roots[i]) << "\n";
+      //roots[i]=rg[n-1-i]; //dal più grande al più piccolo
+      roots[i]=rg[i]; //dal più piccolo al più grande
+      //cout << setprecision(16) << "roots[" << i << "]=" << roots[i] << "abs=" << abs(roots[i]) << "\n";
     }
   exit(-1);
 }
