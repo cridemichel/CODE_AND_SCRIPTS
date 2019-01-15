@@ -679,7 +679,7 @@ public:
           r0old=r0;
           sum=0;
           for (i=0; i < iac; i++)
-            sum += 1.0/(r0-roots[i]);
+            sum += ntype(1.0)/(r0-roots[i]);
           sum *= p;
           p1c = p1 - sum;
           r0 -= p/p1c;
@@ -844,7 +844,7 @@ public:
       //its=iter;
       b=cmon[0];
       d=f=0.0;
-      x=1.0/xini;
+      x=ntype(1.0)/xini;
       abx=abs(x);
       for (j=m-1;j>=0;j--) {
         f=x*f+d;
@@ -902,7 +902,7 @@ public:
         {
           if (j==iac)
             continue;
-          term=1.0/(xini-roots[j]);
+          term=ntype(1.0)/(xini-roots[j]);
           gc += term;
           hc += term*term; 
         }
@@ -912,7 +912,7 @@ public:
       g -= gc;
       g2=g*g;
       xsq=x*x;
-      h=xsq*(ntype(m)-2.0*x*db+xsq*ddb)-hc;
+      h=xsq*(ntype(m)-ntype(2.0)*x*db+xsq*ddb)-hc;
       sq=sqrt( ((ntype)(m-1))*(((ntype)m)*h-g2));
       gp=g+sq;
       gm=g-sq;
@@ -1021,7 +1021,7 @@ public:
         {
           if (j==iac)
             continue;
-          term=1.0/(x-roots[j]);
+          term=ntype(1.0)/(x-roots[j]);
           gc += term;
           hc += term*term; 
         }
@@ -1351,7 +1351,6 @@ void initial_guess(pvector<cmplx,N>& roots)
       roots[i]=rg[i]; //dal più piccolo al più grande
       //cout << setprecision(16) << "roots[" << i << "]=" << roots[i] << "abs=" << abs(roots[i]) << "\n";
     }
-  exit(-1);
 }
 
 void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
@@ -1808,9 +1807,9 @@ template<class cmplx, int N, class ntype> void cpoly<cmplx,N,ntype>::solve_quadr
   cmplx acx,bcx,zx1,zx2,cdiskr,zxmax,zxmin;
   acx = coeff[1]/coeff[2];
   bcx = coeff[0]/coeff[2];
-  cdiskr=sqrt(acx*acx-4.0*bcx);
-  zx1 = -0.5*(acx+cdiskr);
-  zx2 = -0.5*(acx-cdiskr);
+  cdiskr=sqrt(acx*acx-ntype(4.0)*bcx);
+  zx1 = -ntype(0.5)*(acx+cdiskr);
+  zx2 = -ntype(0.5)*(acx-cdiskr);
   if (abs(zx1) > abs(zx2))
     zxmax = zx1;
   else
