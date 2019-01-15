@@ -28,7 +28,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-#define BINI_CONV_CRIT
+//#define BINI_CONV_CRIT
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 //#define POLISH_NR_REAL 
@@ -908,6 +908,7 @@ public:
       if (abp < abm) gp=gm;
       //cout << "abp=" << abp << " abm=" << abm << "\n";
       //cout << "1/gp=" << 1.0/gp << "\n";
+#if 0
       if (MAX(abp,abm) > 0.0)
         {
           dx =  ((cmplx)m)/((cmplx)gp);
@@ -916,13 +917,18 @@ public:
         {
           dx = polar(((ntype)(1+abx)),ntype(1.0));
         }
+#else
+      dx =  ((cmplx)m)/((cmplx)gp);
+#endif
       //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
       //cout << "dx=" << dx << "\n";
       x1=xini-dx;
+#if 0
       if (x1 == xini) 
         {
           return true;
         }
+#endif
       xini=x1;
       //else 
       //x -= frac[iter/MT]*dx;
@@ -1007,7 +1013,7 @@ public:
         }
       //cout << "K=" << K << " s=" << s << " gc=" << gc << " hc=" << hc << "\n"; 
       g=d/b;
-      h=g*g-((ntype)2.0)*f/b-hc;
+      h=(g*g-((ntype)2.0)*f/b)-hc;
       g-=gc;
       g2=g*g;
       sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
@@ -1019,6 +1025,7 @@ public:
       if (abp < abm) gp=gm;
       //cout << "abp=" << abp << " abm=" << abm << "\n";
       //cout << "1/gp=" << 1.0/gp << "\n";
+#if 0
       if (MAX(abp,abm) > 0.0)
         {
           dx =  ((cmplx)m)/((cmplx)gp);
@@ -1027,14 +1034,18 @@ public:
         {
           dx = polar(((ntype)(1+abx)),ntype(1));
         }
+#else
+      dx =  ((cmplx)m)/((cmplx)gp);
+#endif
       //dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
       //cout << "dx=" << dx << "\n";
       x1=x-dx;
+#if 0
       if (x == x1) 
         {
           return true;
         }
-
+#endif
       //if (1||iter % MT != 0) 
       x=x1;
       //else 
@@ -1749,6 +1760,7 @@ cpoly(int nc): cpolybase<cmplx,N>(nc)
   meps = epsilon();
   eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
   maxf= getmax();
+  //cout << "maxf="  << maxf << "\n";
   maxdigits = numeric_limits<ntype>::digits10-1;
   //force_hqr=0;
   maxf2 = pow(maxf,0.5)/10.0;

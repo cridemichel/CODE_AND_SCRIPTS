@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -128,8 +128,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<50>>;
-using cmplx=number<mpc_complex_backend<50>>;
+using numty=number<mpfr_float_backend<16>>;
+using cmplx=number<mpc_complex_backend<16>>;
 #ifdef BACKSTAB
 using bsdbl=number<mpfr_float_backend<500>>;
 using bscmplx=number<mpc_complex_backend<500>>;
@@ -306,19 +306,25 @@ bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
   bsdbl err, errmax;
   for (i=0; i < NDEG+1; i++)
     {
-      //if (abs(real(c[i]))==0)
+      if (abs(real(c[i]))==0)
         err=abs(cbs[i] - bscmplx(c[i]));
-      //else
-      //err=abs((cbs[i] - bsdbl(real(c[i])))/bsdbl(real(c[i])));
+      else
+        err=abs((cbs[i] - bsdbl(real(c[i])))/bsdbl(real(c[i])));
+      if (err > 100)
+        cout << "i=" << i << " cbs=" << cbs[i] << " c=" << c[i] << "\n";
       if (i==0 || err > errmax)
         errmax=err;
    }
+#if 0
   bsdbl sum;
   for (i=0; i < NDEG+1; i++)
     sum+=abs(c[i])*abs(c[i]);
   sum=sqrt(sum);
   //cout << "backward error=" << errmax << "\n";
   return errmax/sum;
+#else
+  return errmax;
+#endif
 }
 #else
 bsdbl calc_backward_err(pvector<cmplx,NN> roots,  pvector<numty,NN> c)
@@ -525,7 +531,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #ifdef BACKSTAB
 #ifdef CPOLY
       for (j=0; j < NDEG; j++)
-        c[j]=cmplx(sig*(drand48()-0.5),0.0);
+        c[j]=cmplx(2.0*sig*(drand48()-0.5),0.0);
 #else
       if (poltype==0)
         {
@@ -594,7 +600,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #else
 #ifdef CPOLY
       for (j=0; j < NDEG; j++)
-        c[j]=cmplx(2.0*sig*(drand48()-0.5),2.0*sig*(drand48()-0.5));
+        c[j]=cmplx(2.0*sig*(drand48()-0.5),0.0);
 #else
 
       for (j=0; j < NDEG; j++)
@@ -654,18 +660,18 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       berr=calc_backward_err(roots, c);
       if (i==0 || berr > berrmax)
         berrmax=berr;
-#if 0
+#if 1
       if (berrmax > 100)
         {
           cout << "?!?!?!?\n";
-          rp.show("poly=");
+          //rp.show("poly=");
           //for (i=0; i < NDEG; i++)
            // cout << c[i] << ",";
 #if 0
           for (i=0; i < NDEG+1; i++)
             {
-              cout << setprecision(40) << roots[i] << "\n";
-              //cout << setprecision(40) << real(c[i]) << ",";
+              cout << setprecision(6) << roots[i] << "\n";
+              //cout << setprecision(80) << real(c[i]) << "\n";
             }
 #endif
           exit(-1);
