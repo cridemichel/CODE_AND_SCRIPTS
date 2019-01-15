@@ -28,7 +28,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define USE_DEFL_NR // metterlo o no non cambia nulla
 //#define USE_FULL_NR // peggiora l'accuratezza attivandolo
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-//#define BINI_CONV_CRIT
+#define BINI_CONV_CRIT
 #define USE_BRENT
 #define USE_LAGUERRE_ONLY 
 //#define POLISH_NR_REAL 
@@ -813,6 +813,20 @@ public:
       //cout << "NR iter=" << iter << " err=" << err << "\n";
 #endif
     }
+  void cmplx_div(ntype c[2], ntype a[2], ntype b[2])
+  {
+    cmplx ac,bc, acbc;
+    ac=cmplx(a[0],a[1]);
+    bc=cmplx(b[0],b[1]);
+    acbc=ac/bc;
+    c[0]=(acbc).real();
+    c[1]=(acbc).imag();
+  } 
+  void cmplx_mul(ntype c[2], ntype a[2], ntype b[2])
+  {
+    c[0] = a[0]*b[0]-a[1]*b[1];
+    c[1] = a[0]*b[1]+a[1]*b[0];
+  }
   bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
     {
       const ntype EPS=goaleps;
@@ -1155,7 +1169,8 @@ vector<Point> upper_convex_hull(vector<Point> P)
   H.resize(k);
   return H;
 }
-//#define BINI_CHEAP
+//#define BINI_CHEAP 
+//// BINI_CHEAP risulta più lenta poiché il guess è meno preciso
 void initial_guess(pvector<cmplx,N>& roots)
 {
 #ifdef BINI_CHEAP
@@ -1275,7 +1290,7 @@ void initial_guess(pvector<cmplx,N>& roots)
             }
         }
     } 
-  k.resize(n+1); 
+  k.resize(n+2); 
   q=1;
   for (kk=0; kk <= n; kk++)
     {
@@ -1330,8 +1345,9 @@ void initial_guess(pvector<cmplx,N>& roots)
   for (i=0; i < n; i++)
     {
       roots[i]=rg[i];
-      //cout << "roots[" << i << "]=" << roots[i] << "\n";
+      cout << setprecision(16) << "roots[" << i << "]=" << roots[i] << "abs=" << abs(roots[i]) << "\n";
     }
+  exit(-1);
 }
 
 void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
