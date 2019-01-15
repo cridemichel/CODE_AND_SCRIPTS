@@ -832,6 +832,7 @@ public:
       const ntype EPS=goaleps;
       int j;
       ntype abx,abp,abm, M, s, pr, absb;
+      cmplx term;
 #ifndef BINI_CONV_CRIT
       ntype err;
 #else
@@ -884,7 +885,7 @@ public:
         }
 #else
       err=abs(cmon[0])*(3.8*m+1);
-      abx=abs(x);
+      abx=1.0/abs(xini);
       for (j=1;j<=m;j++) {
         err=abx*err+abs(cmon[j])*(3.8*j+1);
       }
@@ -894,24 +895,22 @@ public:
           return true;
         }
 #endif
-      cmplx gc=0.0, hc=0.0, term;
+      db=d/b;
+      ddb=db*db-((ntype)2.0)*f/b;
+      g=x*(ntype(m)-x*db);
+      xsq=x*x;
+      h=xsq*(ntype(m)-ntype(2.0)*x*db+xsq*ddb);
+    
       for (j=0; j < n; j++)
         {
           if (j==iac)
             continue;
           term=ntype(1.0)/(xini-roots[j]);
-          gc += term;
-          hc += term*term; 
+          g -= term;
+          h -= term*term; 
         }
-      db=d/b;
-      ddb=db*db-((ntype)2.0)*f/b;
-      g=x*(ntype(m)-x*db);
-      g -= gc;
+
       g2=g*g;
-      xsq=x*x;
-      h=xsq*(ntype(m)-ntype(2.0)*x*db+xsq*ddb)-hc;
-
-
       sq=sqrt( ((ntype)(m-1))*(((ntype)m)*h-g2));
       gp=g+sq;
       gm=g-sq;
@@ -954,6 +953,7 @@ public:
     {
       const int MR=8,MT=10,MAXIT=2*MT*MR;
       const ntype EPS=goaleps;
+      cmplx term;
       //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int j;
       ntype be,abx,abp,abm, M, s, pr, absb;
@@ -1015,19 +1015,18 @@ public:
           return true;
         }
 #endif
-      cmplx gc=0.0, hc=0.0, term;
+     //cout << "K=" << K << " s=" << s << " gc=" << gc << " hc=" << hc << "\n"; 
+      g=d/b;
+      h=(g*g-((ntype)2.0)*f/b);
       for (j=0; j < n; j++)
         {
           if (j==iac)
             continue;
           term=ntype(1.0)/(x-roots[j]);
-          gc += term;
-          hc += term*term; 
+          g -= term;
+          h -= term*term; 
         }
-      //cout << "K=" << K << " s=" << s << " gc=" << gc << " hc=" << hc << "\n"; 
-      g=d/b;
-      h=(g*g-((ntype)2.0)*f/b)-hc;
-      g-=gc;
+      
       g2=g*g;
       sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
       gp=g+sq;
