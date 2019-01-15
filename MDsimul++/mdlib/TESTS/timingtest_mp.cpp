@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 //#include "pmatrix.H"
-//#define CPOLY
+#define CPOLY
 #define AURENTZ
-#define BACKSTAB
+//#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -128,8 +128,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<200>>;
-using cmplx=number<mpc_complex_backend<200>>;
+using numty=number<mpfr_float_backend<32>>;
+using cmplx=number<mpc_complex_backend<32>>;
 #ifdef BACKSTAB
 using bsdbl=number<mpfr_float_backend<500>>;
 using bscmplx=number<mpc_complex_backend<500>>;
@@ -158,6 +158,38 @@ using cmplx=complex<numty>;
 #endif
 #ifdef BACKSTAB
 void calc_coeff(bsdbl co[], bscmplx er[])
+{
+  bscmplx c[NDEG+1], alpha;
+
+  int ii, jj;
+
+  for (ii=0; ii < NDEG; ii++)
+    {
+      c[ii]  = 0.0;
+    }
+  c[NDEG]=1.0;
+  ii=0;
+  
+  while (ii < NDEG)
+    { 
+      alpha = -er[ii];
+      for (jj=ii; jj >= 0; jj--)
+        {         
+          //do jj=ii,1,-1
+          if (jj==0)
+            c[jj] = c[jj] + alpha;
+          else
+            c[jj] = c[jj] + alpha*c[jj-1];
+        }
+      ii=ii+1;
+    }
+  for (ii=0; ii < NDEG; ii++)
+     co[ii] = real(c[NDEG-ii-1]);
+  co[NDEG]=1.0;
+}
+// in questa routine si assume che la radice è reale solo se la parte immaginaria è 0
+// ma le radici calcolate possono avere una parte immaginaria piccola 
+void calc_coeff_ideal(bsdbl co[], bscmplx er[])
 {
   bsdbl rr[NDEG], ir[NDEG], c[NDEG+1], alpha, beta, zero;
   int ii, jj;
@@ -218,15 +250,63 @@ void calc_coeff(bsdbl co[], bscmplx er[])
 #else
 #define NN -1
 #endif
+#ifdef CPOLY
+bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
+{
+  int i;
+  vector<cmplx> rv;
+  bscmplx *er = new bscmplx[NDEG];
+  bsdbl *cbs = new bsdbl[NDEG+1];
+  rv.resize(NDEG);
+  for (i=0; i < NDEG; i++)
+    {
+      rv[i] = cmplx(roots[i]);
+    }
+  std::sort(rv.begin(),rv.end(),[&](cmplx a, cmplx b)->bool {return real(a) < real(b);}); 
+
+  for (i=0; i < NDEG; i++)
+    {
+      if (abs(imag(rv[i])) <= numeric_limits<numty>::epsilon()*abs(rv[i]))
+        er[i]=real(rv[i]);
+      else
+        er[i] = bscmplx(rv[i]);
+      //cout << setprecision(16) <<"roots #" << i << " =" << er[i]<< "\n";
+    }  
+  calc_coeff(cbs, er);
+  bsdbl err, errmax;
+  for (i=0; i < NDEG+1; i++)
+    {
+      if (abs(real(c[i]))==0)
+        err=abs(cbs[i] - bsdbl(real(c[i])));
+      else
+        err=abs((cbs[i] - bsdbl(real(c[i])))/bsdbl(real(c[i])));
+      if (i==0 || err > errmax)
+        errmax=err;
+   }
+  //cout << "backward error=" << errmax << "\n";
+  return errmax;
+}
+#else
 bsdbl calc_backward_err(pvector<cmplx,NN> roots,  pvector<numty,NN> c)
 {
   int i;
   bscmplx *er = new bscmplx[NDEG];
   bsdbl *cbs = new bsdbl[NDEG+1];
-  for (i=0; i < NDEG; i++)
-    er[i] = bscmplx(roots[i]);  
-  calc_coeff(cbs, er);
+  vector<cmplx> rv;
+   
   bsdbl err, errmax;
+  rv.resize(NDEG);
+  for (i=0; i < NDEG; i++)
+    {
+      rv[i] = cmplx(roots[i]);
+    }
+  std::sort(rv.begin(),rv.end(),[&](cmplx a, cmplx b)->bool {return real(a) < real(b);}); 
+  for (i=0; i < NDEG; i++)
+    {
+      //cout << setprecision(16) <<"roots #" << i << " =" << rv[i]<< "\n";
+      er[i] = bscmplx(rv[i]); 
+    }
+  calc_coeff(cbs, er);
   for (i=0; i < NDEG+1; i++)
     {
       if (abs(c[i])==0)
@@ -239,6 +319,7 @@ bsdbl calc_backward_err(pvector<cmplx,NN> roots,  pvector<numty,NN> c)
   //cout << "backward error=" << errmax << "\n";
   return errmax;
 }
+#endif
 #endif
 using namespace std;
 int main(int argc, char* argv[])
@@ -394,7 +475,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
   // set precision equal to precision of input coefficients (i.e. double epsilon)
   //rp.set_output_prec(numeric_limits<double>::epsilon());
-  rp.set_output_prec(1E-60);
+  rp.set_output_prec(1E-16);
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
@@ -486,33 +567,47 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
         c[j]=sig*(drand48()-0.5);
 #endif
 #endif
+      //c << -0.45979133123592,0.016854936689896,0.16284047520515,0.096589904467187,0.49233387428065,0.070947441607572,0.29190001457468,-0.12865167346755,-0.24557117982394,-0.044901894571694,-0.31653706131302,-0.17726595898969,0.3202022896471,0.45510206357928,-0.4201483108709,-0.49967657235846,0.40552818974112,-0.042645962421801,0.086290448952195,0.28437788338989;
+      //c << -0.34335362518832,0.3227620422213,-0.33523991717434,0.30603232236776,-0.0004913632795045,0.11895207913477,0.1106512587181,-0.12790756907631,0.48389077297934,-0.0030871046557621,-0.27676517724439,0.21125418248601,0.4490961224484,0.033645447195426,0.27715120795188,-0.012734115584344,0.072796330215358,-0.10955456879709,0.11290799827972,0.083943354978793, 1.0;
       if (caso==0)
         {
           rp.set_coeff(c);
           //rp.zroots(roots, false);
           //rp.show("f(x)=");
+          //c.show("coeff=");
           rp.find_roots(roots, false);
           roots.set_show_digits(50);
-          //roots.show("roots=");
+          //roots.show("roots");
+          //for (i=0; i < NDEG; i++)
+            //cout << setprecision(16) << "roots #" << i << " =" << roots[i]<< "\n";
+
           //rp.show("poly=");
         }
       else if (caso==1)
         {
           rphqr.set_coeff(c);
           rphqr.find_roots(roots);
+          //for (i=0; i < NDEG; i++)
+            //cout << setprecision(16) <<"roots #" << i << " =" << roots[i]<< "\n";
         }
 #ifdef AURENTZ
       else if (caso==2)
         {
           for (j=0; j < NDEG+1; j++)
-            ca[j]=double(c[j]); 
+            {
+              ca[j]=double(real(c[j]));
+              //cout << setprecision(16) <<"coeff #" << j << "=" << ca[j] << "\n";
+            } 
           if (balance==1)
             wrap_balance(NDEG,ca, &alpha);
           else
             alpha=1.0;
           wrap_damvw(NDEG,ca, rootsa, balance);
           for (j=0; j < NDEG; j++)
-            roots[j]=cmplx(alpha*rootsa[j]); 
+            {
+              roots[j]=cmplx(alpha*rootsa[j]); 
+              //cout << "roots # " << j << " = " << roots[j] << "\n"; 
+            }
         }
 #endif
       else 
@@ -524,6 +619,19 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       berr=calc_backward_err(roots, c);
       if (i==0 || berr > berrmax)
         berrmax=berr;
+#if 1
+      if (berrmax > 100)
+        {
+          cout << "?!?!?!?\n";
+          //rp.show("poly=");
+          //for (i=0; i < NDEG; i++)
+           // cout << c[i] << ",";
+          //roots.show("roots=");
+          for (i=0; i < NDEG+1; i++)
+            cout << setprecision(40) << real(c[i]) << ",";
+          exit(-1);
+        }
+#endif
 #endif
     }
 #if 0
@@ -533,7 +641,9 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       berrmaxmin=berrmax;
     }
 #endif
+#ifdef BACKSTAB
   cout << "Max backward error=" << berrmax << "\n";
+#endif
 #if 0
   printf("root 0: %.15LG %.15LG\n", roots[0].real(), roots[0].imag());
   printf("root 1: %.15LG %.15LG\n", roots[1].real(), roots[1].imag());

@@ -250,7 +250,7 @@ public:
       int i;
       if (str!=NULL)
 	cout <<  str;
-      for (i=N; i >= 0; i--)
+      for (i=n; i >= 0; i--)
 	{
 	  if (abs(coeff[i]) > 0.0)
     	    {
@@ -829,9 +829,6 @@ bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
     //cout << "r0 ini = "<< x << "\n"; 
     //its=iter;
     b=cmon[0];
-#ifndef BINI_CONV_CRIT
-    err=abs(b);
-#endif
     d=f=0.0;
     x=1.0/xini;
     abx=abs(x);
@@ -839,13 +836,7 @@ bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
       f=x*f+d;
       d=x*d+b;
       b=x*b+cmon[m-j];
-#ifndef BINI_CONV_CRIT
-      err=abs(b)+abx*err;
-#endif
     }
-#ifndef BINI_CONV_CRIT
-    err *= EPS;
-#endif
     
 #ifdef BINI_CONV_CRIT
     s=0.0;
@@ -863,6 +854,7 @@ bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
     absb=abs(ba);
     //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
     //absb=abs(b);
+#if 0
     if (isinf(absb) || isnan(absb))
       {
         //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
@@ -870,12 +862,22 @@ bool laguer_cmplx_mod_rev(cmplx &xini, pvector<cmplx,N> roots, int iac)
         //cout << "p(x)=" << evalpoly(x) << "\n";
         return false;
       }
+#endif
     if (absb <= K*s) // stopping criterion of bini 
       {
         //cout << "absb=" << absb << " K=" << K << " s=" << s << "\n";
         return true;
       }
 #else
+    err=abs(cmon[m])*(3.8*m+1);
+    ba=cmon[m];
+    abx=abs(xini);
+    for (j=m-1;j>=0;j--) {
+      ba=xini*ba+cmon[j];
+      err=abx*err+abs(cmon[j])*(3.8*j+1);
+    }
+    err *= EPS;
+    absb=abs(ba);
     if (absb <= err) 
       {
         return true;
@@ -935,7 +937,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     const ntype EPS=goaleps;
     //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
     int j;
-    ntype abx,abp,abm, M, s, pr, absb;
+    ntype be,abx,abp,abm, M, s, pr, absb;
 #ifndef BINI_CONV_CRIT
     ntype err;
 #else
@@ -948,7 +950,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     //its=iter;
     b=cmon[m];
 #ifndef BINI_CONV_CRIT
-    err=abs(b);
+    err=abs(cmon[m])*(3.8*m+1);
 #endif
     d=f=0.0;
     abx=abs(x);
@@ -957,7 +959,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       d=x*d+b;
       b=x*b+cmon[j];
 #ifndef BINI_CONV_CRIT
-      err=abs(b)+abx*err;
+      err=abx*err + abs(cmon[j])*(3.8*ntype(j)+1.0);
 #endif
     }
 #ifndef BINI_CONV_CRIT
@@ -965,6 +967,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #endif
     //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
     absb=abs(b);
+#if 0
     if (isinf(absb) || isnan(absb))
       {
         //cout << "f= " << f << "d= " << d << "b=" << b << "\n";
@@ -972,6 +975,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         //cout << "p(x)=" << evalpoly(x) << "\n";
         return false;
       }
+#endif
 #ifdef BINI_CONV_CRIT
     s=0.0;
     pr=1.0; 
@@ -1001,9 +1005,11 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         gc += term;
         hc += term*term; 
       }
-    g=d/b-gc;
+    //cout << "K=" << K << " s=" << s << " gc=" << gc << " hc=" << hc << "\n"; 
+    g=d/b;
+    h=g*g-((ntype)2.0)*f/b-hc;
+    g-=gc;
     g2=g*g;
-    h=g2-((ntype)2.0)*f/b-hc;
     sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
     gp=g+sq;
     gm=g-sq;
@@ -1128,7 +1134,7 @@ void initial_guess(pvector<cmplx,N>& roots)
      // we need just upper hull for Bini's algorithm
      // Build upper hull
      for (int i = n-1; i >= 0; i--) {
-       while (k >= 1 && cross(H[k-1], H[k], P[i]) < 0) 
+       while (k >= 2 && cross(H[k-1], H[k], P[i]) < 0) 
          {
            k--;
          }
@@ -1166,8 +1172,18 @@ void initial_guess(pvector<cmplx,N>& roots)
      //cout << "size=" << pts.size() << "\n";
      convh=upper_convex_hull(pts);
      q=convh.size();
+     if (q<=2)
+       {
+         q=2;
+         k.resize(q+1);
+         k[1]=n;
+         k[2]=0;
+       }
+     else
+       {
+         k.resize(q+1);
+       }
      i=1; 
-     k.resize(q+1);
      //FILE *f=fopen("chull.dat", "w+");
      for (auto e:convh)
        {
@@ -1246,12 +1262,15 @@ void initial_guess(pvector<cmplx,N>& roots)
            }
        } 
 #endif
-    sigma=2.0*M_PI*(drand48()-0.5);
+     sigma=2.0*M_PI*(drand48()-0.5);
      rg.resize(n); 
+     //cout << "q=" << q << "\n";
+     int cc=0;
      for (i=1; i < q; i++)
        {
          ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
          //cout << "uk[" << i+1 << "]=" << ukip1 << "\n";
+         //cout << "k[i]-k[i+1]=" << k[i]-k[i+1] << "\n"; 
          for (j=1; j <= k[i]-k[i+1]; j++)
            {
 #if 0
@@ -1261,20 +1280,23 @@ void initial_guess(pvector<cmplx,N>& roots)
                  exit(-1);
                }
 #endif
-             rg[k[i]+j-2] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
-             //cout << "i=" << i << " j=" << j << " guess[" << k[i]+j-2 << "]" << rg[k[i]+j-2] << "\n";
-             //cout << "abs(guess)=" << abs(rg[k[i]+j-2]) << "\n";
+             rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+             //cout << "i=" << i << " j=" << j << " guess[" << cc << "]" << rg[cc] << "\n";
+             //cout << "abs(guess)=" << abs(rg[cc]) << "\n";
+             cc++;
            }
        }
      
      //exit(-1);
      // sort in descending order
+#if 1
      std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
      for (i=0; i < n; i++)
        {
          roots[i]=rg[i];
          //cout << "roots[" << i << "]=" << roots[i] << "\n";
        }
+#endif
    }
 
 void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
@@ -1322,6 +1344,11 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
                    }
                }
            }
+       }
+     if (nf < n)
+       {
+         cout << "we had a problem\n";
+         exit(1);
        }
      //cout << "iter=" << iter << " # found=" << nf << "\n";
      delete []found;
@@ -1616,8 +1643,8 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
 #endif
           else
             {
-              //laguerre_defl_lag_parall(roots);
-              laguerre_defl(roots, polish, backup);
+              laguerre_defl_lag_parall(roots);
+              //laguerre_defl(roots, polish, backup);
             }
         }
       else
@@ -1643,8 +1670,8 @@ void laguerre_defl_lag_parall(pvector<cmplx,N>& roots)
 #endif
           else 
             {
-              //laguerre_defl_lag_parall(roots);
-              laguerre_defl(roots, polish);
+              laguerre_defl_lag_parall(roots);
+              //laguerre_defl(roots, polish);
             }
         }
     }
