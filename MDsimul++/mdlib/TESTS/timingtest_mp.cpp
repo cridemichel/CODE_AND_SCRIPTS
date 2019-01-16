@@ -616,7 +616,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
         {
           rp.set_coeff(c);
           //rp.zroots(roots, false);
-          //rp.show("f(x)=");
+          //rp.show("f[x_]:=");
           //c.show("coeff=");
           //rp.find_roots_defl(roots);
           rp.find_roots(roots);
@@ -686,7 +686,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
   for (i=0; i < NDEG+1; i++)
     {
       //cout << setprecision(6) << roots[i] << "\n";
-      //cout << setprecision(80) << real(c[i]) << "\n";
+      cout << setprecision(80) << real(c[i]) << "\n";
     }
 #endif
 #if 0
