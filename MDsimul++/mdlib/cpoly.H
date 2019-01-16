@@ -25,6 +25,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 //#define BINI_CONV_CRIT
 #define USE_BRENT
+#define USE_CONVEX_HULL 
 #define USE_LAGUERRE_ONLY 
 //#define USE_LAGUER_REAL
 using namespace std;
@@ -77,7 +78,7 @@ public:
       coeff = v;
     }
   void use_vec(int nc, cmplx* coeffv, cmplx* cmonv,
-               cmplx* acmonv, cmplx *alphav, cmplx *deflcoeff0v, cmplx* deflcoeff1v, cmplx* deflcoeffv)
+               ntype* acmonv, ntype *alphav, cmplx *deflcoeff0v, cmplx* deflcoeff1v, cmplx* deflcoeffv)
     {
       coeff.use_vec(nc+1,coeffv);
       cmon.use_vec(nc+1,cmonv);
@@ -823,13 +824,13 @@ public:
 
   // Returns a list of points on the convex hull in counter-clockwise order.
   // Note: the last point in the returned list is the same as the first one.
+  // Method: Andrew’s monotone chain algorithm O(n) in this case since we do not need sorting
   vector<Point> upper_convex_hull(vector<Point> P)
     {
       int n = P.size(), k = 0;
       if (n <= 3) 
         return P;
       vector<Point> H(n+1);
-      // Sort points lexicographically
       // points are already ordered in the present case!
       //sort(P.begin(), P.end());
       // we need just upper hull for Bini's algorithm
@@ -845,7 +846,6 @@ public:
       H.resize(k+1);
       return H;
     }
-#define USE_CONVEX_HULL 
   void initial_guess(pvector<cmplx,N>& roots)
     {
 #ifdef USE_CONVEX_HULL
@@ -978,6 +978,7 @@ public:
       for (i=0; i < n; i++)
         {
           roots[i]=rg[i]; //dal più piccolo al più grande
+          //cout << setprecision(20) << "(" << real(roots[i]) << "," << imag(roots[i]) << ")" << "r=" << abs(roots[i]) << "\n";
         }
     }
 
@@ -1135,7 +1136,7 @@ public:
       qp.set_output_prec(this->get_output_prec());
       qp.set_coeff(deflcoeff);
 
-      qp.find_roots(qr, false, false);
+      qp.find_roots_defl(qr, false, false);
       if constexpr (N > 0)
         {
           for (i=1; i < n; i++)

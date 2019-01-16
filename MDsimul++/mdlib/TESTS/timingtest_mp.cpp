@@ -3,7 +3,7 @@
 //#include "pmatrix.H"
 #define CPOLY
 #define AURENTZ
-#define BACKSTAB
+//#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-#define MPC_MP
+//#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -301,7 +301,7 @@ bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
   for (i=0; i < NDEG; i++)
     {
       er[i] = bscmplx(rv[i]);
-      //cout << setprecision(16) <<"roots #" << i << " =" << er[i]<< "\n";
+      cout << setprecision(16) <<"roots #" << i << " =" << er[i]<< "\n";
     }  
   calc_coeff(cbs, er);
   bsdbl err, errmax;
@@ -609,16 +609,17 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
         c[j]=sig*(drand48()-0.5);
 #endif
 #endif
-      //c << -0.45979133123592,0.016854936689896,0.16284047520515,0.096589904467187,0.49233387428065,0.070947441607572,0.29190001457468,-0.12865167346755,-0.24557117982394,-0.044901894571694,-0.31653706131302,-0.17726595898969,0.3202022896471,0.45510206357928,-0.4201483108709,-0.49967657235846,0.40552818974112,-0.042645962421801,0.086290448952195,0.28437788338989;
+      //NDEG=21 for following case
       //c << -0.34335362518832,0.3227620422213,-0.33523991717434,0.30603232236776,-0.0004913632795045,0.11895207913477,0.1106512587181,-0.12790756907631,0.48389077297934,-0.0030871046557621,-0.27676517724439,0.21125418248601,0.4490961224484,0.033645447195426,0.27715120795188,-0.012734115584344,0.072796330215358,-0.10955456879709,0.11290799827972,0.083943354978793, 1.0;
+      //c << cmplx(0.0,20.0), 0.0, cmplx(0,1), 1.0; 
       if (caso==0)
         {
           rp.set_coeff(c);
           //rp.zroots(roots, false);
           //rp.show("f(x)=");
           //c.show("coeff=");
-          rp.find_roots(roots);
           //rp.find_roots_defl(roots);
+          rp.find_roots(roots);
           roots.set_show_digits(50);
           //roots.show("roots");
           //for (i=0; i < NDEG; i++)
@@ -662,7 +663,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       berr=calc_backward_err(roots, c);
       if (i==0 || berr > berrmax)
         berrmax=berr;
-#if 1
+#if 0
       if (berrmax > 100)
         {
           cout << "?!?!?!?\n";
@@ -681,6 +682,13 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #endif
 #endif
     }
+#if 0
+  for (i=0; i < NDEG+1; i++)
+    {
+      //cout << setprecision(6) << roots[i] << "\n";
+      //cout << setprecision(80) << real(c[i]) << "\n";
+    }
+#endif
 #if 0
   if (s==0 || berrmax < berrmaxmin) 
     {
