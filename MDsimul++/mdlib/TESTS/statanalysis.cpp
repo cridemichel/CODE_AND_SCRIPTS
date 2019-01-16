@@ -1,6 +1,6 @@
 #include<stdlib.h>
 #include<stdio.h>
-//#define CPOLY
+#define CPOLY
 #ifdef CPOLY
 #include "../cpoly.H"
 #else
@@ -551,7 +551,7 @@ int main(int argc, char **argv)
             cod[i] = co[i];
 #endif
           oqs.set_coeff(cod);
-          oqs.find_roots(csold, true);
+          oqs.find_roots(csold);
           //oqs.zroots(csold,true);
           for (i=0; i < NDEG; i++)
             csolall[ic][i] = csold[i];
