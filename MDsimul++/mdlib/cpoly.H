@@ -985,18 +985,31 @@ public:
   void laguerre_aberth(pvector<cmplx,N>& roots)
     {
       bool *found = new bool[n], fine=false, ret;
-      int i,  nf=0, iter;
+      int i,  nf=0, iter, is;
       int itmax=100;
       ntype r;
+      cmplx cn;
       if (coeff[n]==cmplx(0.0,0.0))
         {
           cout << "That's not an " << n << "degree polynomial!\n";
           return;
         }
+      i=0;
+      cn = coeff[n];
+      // if first is coefficients are zero we x=0 root with multiplicity is
+      while (coeff[i]==cmplx(0.0,0.0))
+        {
+          roots[n-1]=0;
+          n--;
+          i++;
+        }
+      is=i;
+      //cout << "n=" << n << " is=" << is << "\n";
       cmon[n]=1.0;
       for (i=n-1; i >=0; i--)
         {
-          cmon[i]=coeff[i]/coeff[n];
+          cmon[i]=coeff[i+is]/cn;
+          //cout << "cmon[" << i << "]=" << cmon[i] << "\n";
         }
       for (i=0; i <=n; i++)
         {

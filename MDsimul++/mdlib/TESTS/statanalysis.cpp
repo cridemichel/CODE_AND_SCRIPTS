@@ -552,6 +552,7 @@ int main(int argc, char **argv)
 #endif
           oqs.set_coeff(cod);
           oqs.find_roots(csold);
+
           //oqs.zroots(csold,true);
           for (i=0; i < NDEG; i++)
             csolall[ic][i] = csold[i];
