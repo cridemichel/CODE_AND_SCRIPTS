@@ -25,7 +25,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 #define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
-#define USE_LAGUER_REAL
+//#define USE_LAGUER_REAL
 using namespace std;
   template<class T>
 inline const T MAX(const T &a, const T &b)
@@ -622,7 +622,6 @@ public:
       b=cmon[0];
       d=f=0.0;
       x=ntype(1.0)/xini;
-      abx=abs(x);
       for (j=1;j<=m;j++) {
         f=x*f+d;
         d=x*d+b;
@@ -632,6 +631,7 @@ public:
 #ifdef BINI_CONV_CRIT
       s=acmon[m];
       ba=cmon[m];
+      abx=abs(xini);
       for (j=m-1; j >=0; j--) 
         {
           s=abx*s+acmon[j];
