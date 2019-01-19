@@ -23,7 +23,7 @@ inline ntype SIGN(ntype a, ntype b)
     return -abs(a);
 }
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-#define BINI_CONV_CRIT
+//#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
 using namespace std;
@@ -1272,7 +1272,7 @@ public:
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
-      int itmax=100;
+      int itmax=1000;
       ntype r;
       cmplx cn;
       if (coeff[n]==cmplx(0.0,0.0))

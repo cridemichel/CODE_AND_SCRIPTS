@@ -866,9 +866,15 @@ int main(int argc, char *argv[])
       rpoly<pdbl,-1,false,pcmplx> rp(NDEG);
 #endif
 #endif
+#if 0
+      mpfr_float::default_precision(300);
+      //rp.init_const();
+      //rp.set_output_prec(1E-100);
+      //rp.set_output_prec(1E-110);
+#endif
       rp.set_coeff(c);
-      c.show("coeff");
-      rp.show();
+      //c.show("coeff");
+      //rp.show();
       //rp.zroots(roots,false);
       rp.find_roots(roots);
       //rp.find_roots(roots,false);
