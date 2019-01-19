@@ -3,7 +3,7 @@
 //#include "pmatrix.H"
 #define CPOLY
 #define AURENTZ
-#define BACKSTAB
+//#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -128,8 +128,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<50>>;
-using cmplx=number<mpc_complex_backend<50>>;
+using numty=number<mpfr_float_backend<32>>;
+using cmplx=number<mpc_complex_backend<32>>;
 #ifdef BACKSTAB
 using bsdbl=number<mpfr_float_backend<500>>;
 using bscmplx=number<mpc_complex_backend<500>>;
