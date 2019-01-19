@@ -217,7 +217,7 @@ public:
       return bn;
     }
 
-#if 0
+#if 1
   bool laguer_real(cmplx &xc)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -431,22 +431,41 @@ public:
     }
   void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
     {
-      int iter,i;
+      int iter,i, j;
       ntype err;
       cmplx povp1, denom;
       // root polishing by NR
       cmplx r0old, p, sum;
       cmplx p1, p1c;
+      ntype b[2], d[2], d0, b0, x[2];
       ntype errold;
       for (iter=0; ; iter++)
         {
+#if 0
+          b[0]=real(cmon[n]);
+          b[1]=imag(cmon[n]);
+          d[0]=0.0;
+          d[1]=0.0;
+          x[0] = real(r0);
+          x[1] = imag(r0);
+          for (j=n-1;j>=0;j--) {
+            d0 = d[0];
+            d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+            d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+            b0 = b[0];
+            b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
+            b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
+          }
+          p=cmplx(b[0],b[1]);
+          p1=cmplx(d[0],d[1]);
+#else
           p=cmon[n]*r0+cmon[n-1];
           p1=cmon[n];
           for(i=n-2;i>=0;i--) {
             p1=p+p1*r0;
             p=cmon[i]+p*r0;
           }
-
+#endif
           if (iter > 0)
             errold=err;
 
@@ -1268,21 +1287,22 @@ public:
         }
     }
 
-  void laguerre_aberth(pvector<cmplx,N>& roots)
+  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false)
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
-      int itmax=1000;
+      int itmax=1000, nold;
       ntype r;
       cmplx cn;
       if (coeff[n]==cmplx(0.0,0.0))
         {
-          cout << "That's not an " << n << "degree polynomial!\n";
+          cout << "That's not an " << n << " degree polynomial!\n";
           return;
         }
       i=0;
       cn = coeff[n];
       // if first is coefficients are zero we x=0 root with multiplicity is
+      nold=n;
       while (coeff[i]==cmplx(0.0,0.0))
         {
           roots[n-1]=0;
@@ -1340,8 +1360,14 @@ public:
             }
         }
       // refine 
+      if (polish==true)
+        {
+          for (i=0; i < n; i++)
+            refine_root_maehly(roots[i], roots, i);
+        }
       if (nf < n)
         {
+#if 0
           cout << "[LAGABERTH-ERROR] We had a problem, I was not able to converge to all roots\n";
           cout << "Only " << nf << " out of " << n << " were found\n";
           cout << "Try to increase floating-point precision\n";
@@ -1350,7 +1376,9 @@ public:
               cout << setprecision(80) << real(cmon[i]) << "\n";
             }
           exit(1);
+#endif
         }
+      n=nold;
       //cout << "iter=" << iter << " # found=" << nf << "\n";
       delete []found;
     }
