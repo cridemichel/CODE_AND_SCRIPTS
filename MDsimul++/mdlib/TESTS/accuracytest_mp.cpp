@@ -41,8 +41,8 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<200>>;
-using cmplx=number<mpc_complex_backend<200>>;
+using vldbl=number<mpfr_float_backend<500>>;
+using cmplx=number<mpc_complex_backend<500>>;
 using pdbl=double;
 using pcmplx=complex<double>;
 #else
@@ -877,6 +877,8 @@ int main(int argc, char *argv[])
       //rp.show();
       //rp.zroots(roots,false);
       rp.find_roots(roots);
+      for (i=0; i < NDEG+1; i++)
+        cout << setprecision(64) << real(c[i]) << "\n";
       //rp.find_roots(roots,false);
       //roots.show();  
       sprintf(testo2, "OPS");

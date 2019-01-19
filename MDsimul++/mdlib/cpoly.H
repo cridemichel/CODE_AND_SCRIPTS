@@ -1233,7 +1233,7 @@ public:
             }
         }  
       q--;
-      sigma=2.0*M_PI*(drand48()-0.5);
+      sigma=M_PI+2.0*M_PI*(drand48()-0.5);
       rg.resize(n); 
       int cc=0, dk;
       for (i=1; i < q; i++)
@@ -1246,7 +1246,7 @@ public:
             }
         }
 #else
-      sigma=2.0*M_PI*(drand48()-0.5);
+      sigma=-0.01;//2.0*M_PI*(drand48()-0.5)-M_PI;
       rg.resize(n); 
       int cc=0;
 
