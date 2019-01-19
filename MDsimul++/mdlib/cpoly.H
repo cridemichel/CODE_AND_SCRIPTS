@@ -23,10 +23,8 @@ inline ntype SIGN(ntype a, ntype b)
     return -abs(a);
 }
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-//#define BINI_CONV_CRIT
-#define USE_BRENT
+#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
-#define USE_LAGUERRE_ONLY 
 #define USE_LAGUER_REAL
 using namespace std;
   template<class T>
@@ -632,18 +630,13 @@ public:
       }
 
 #ifdef BINI_CONV_CRIT
-      s=0.0;
-      pr=1.0; 
-      abx=abs(xini);
-      for (j=0; j <= n; j ++) 
-        {
-          s+=acmon[j]*pr;
-          pr *= abx;
-        }
+      s=acmon[m];
       ba=cmon[m];
-      for (j=m-1;j>=0;j--) {
-        ba=xini*ba+cmon[j];
-      }
+      for (j=m-1; j >=0; j--) 
+        {
+          s=abx*s+acmon[j];
+          ba=xini*ba+cmon[j];
+        }
       absb=abs(ba);
       if (absb <= K*s) // stopping criterion of bini 
         {
@@ -700,7 +693,7 @@ public:
      ntype abx,abp,abm,err, phi, rho,s, pr;
      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
      ntype xcR, xcI, x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2], aR, aI, invden, term[2];
-     ntype dovb[2], fovb[2], tt[2], ddb[2], tt2[2];
+     ntype dovb[2], fovb[2], tt[2], ddb[2], tt2[2], ba[2];
      cmplx bc,dc,fc,sqrtcmplx;
      int m=n;
      xcR = xc.real();
@@ -727,14 +720,18 @@ public:
      }
 
 #ifdef BINI_CONV_CRIT
-     s=0;
-     pr=1.0;
-     for (j=0; j <= n; j ++) 
+     s=acmon[m];
+     abx = sqrt(xcR*xcR+xcI*xcI);
+     ba[0]=real(cmon[m]);
+     ba[1]=imag(cmon[m]);
+     for (j=m-1; j >=0; j--) 
        {
-         s+=coeff[j].real()*pr;
-         pr *= abx;
+         s=abx*s+acmon[j];
+         b0 = ba[0];
+         ba[0] = xcR*ba[0] - xcI*ba[1] + real(cmon[j]);
+         ba[1] = xcR*ba[1] + xcI*b0 + imag(cmon[j]);
        }
-     if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+     if (abs(cmplx(ba[0],ba[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
        {
          //xc = cmplx(xcR, xcI);
          return true;
@@ -881,13 +878,12 @@ public:
      }
 
 #ifdef BINI_CONV_CRIT
-     s=0;
-     pr=1.0;
-     for (j=0; j <= n; j ++) 
+     s=acmon[n];
+     for (j=n-1; j >=0; j--) 
        {
-         s+=coeff[j].real()*pr;
-         pr *= abx;
+         s=abx*s+acmon[j];
        }
+
      if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
        {
          return true;
@@ -1014,14 +1010,11 @@ public:
       }
       absb=abs(b);
 #ifdef BINI_CONV_CRIT
-      s=0.0;
-      pr=1.0; 
-      for (j=0; j <= n; j ++) 
+      s=acmon[n];
+      for (j=n-1; j >=0; j--) 
         {
-          s+=acmon[j]*pr;
-          pr *= abx;
+          s=abx*s+acmon[j];
         }
-
       if (absb <= K*s) // stopping criterion of bini 
         {
           return true;

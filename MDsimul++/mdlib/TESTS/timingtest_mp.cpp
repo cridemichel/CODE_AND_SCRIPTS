@@ -516,7 +516,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
   // set precision equal to precision of input coefficients (i.e. double epsilon)
   //rp.set_output_prec(numeric_limits<double>::epsilon());
-  //rp.set_output_prec(1E-16);
+  rp.set_output_prec(1E-16);
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
