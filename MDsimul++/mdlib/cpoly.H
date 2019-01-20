@@ -27,7 +27,7 @@ inline ntype SIGN(ntype a, ntype b)
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
 #define USE_ROLD
-#define PETKOVIC_6TH
+//#define PETKOVIC_6TH
 using namespace std;
   template<class T>
 inline const T MAX(const T &a, const T &b)
@@ -272,12 +272,13 @@ public:
           if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
             {
               xc = cmplx(x[0],x[1]);
-              return true;
+             return true;
             }
 #else
           if (abs(cmplx(b[0],b[1])) <= err)
             {
               xc = cmplx(x[0],x[1]);
+              //cout << "QUI iter=" << iter << "\n";
               return true;
             }
 #endif          
@@ -1273,7 +1274,7 @@ public:
         }
 #else
       //sigma=2.0*M_PI*(drand48()-0.5)-M_PI;
-      sigma=0.6;//2.0*M_PI*(drand48()-0.5)-M_PI;
+      sigma=2.0*M_PI*(drand48()-0.5);
       rg.resize(n); 
       int cc=0;
 
@@ -1385,7 +1386,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #else
       ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
 #endif
-      cmplx dx,p,dp,ddp,u,du,S,S2,Ssq,d,h,z3,u2;
+      cmplx dx,p,dp,ddp,u,du,S,S2,Ssq,d,h,z3,u2,del1,del2,d1sq;
       int m;
       m=n;
       p=cmon[m];
@@ -1423,7 +1424,9 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           return true;
         }
 #endif
-
+      del1=dp/p;
+      d1sq=del1*del1;
+      del2=ddp/p;
       u=p/dp;
       u2=u*u;
       du=ddp/dp; 
@@ -1441,8 +1444,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       z3 = x - h; 
       cout << "iac=" << iac << " z3=" << z3 << "\n";
 #else
-      h = 2.0*u/(2.0*u2 - du);
-      z3 = x - h;//Halley's method of order 3
+      //x = x - h;//Halley's method of order 3
 #endif
 #if 0
       p=cmon[m];
@@ -1454,6 +1456,8 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       }
       u=dp/p;
 #endif
+      h = 2.0*del1/(2.0*d1sq-del2);
+      z3=x-h;
       S=S2=0;
       for (j=0; j < n; j++)
         {
@@ -1473,6 +1477,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 
       dx = u + u2*(du-u*(Ssq-S2))/d;
       //cout << "dx=" << dx << "\n";
+      
       x=x-dx;
       //cout << "iac=" << iac << " x=" << x << "\n";
 #if 0
@@ -1553,7 +1558,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       delete []found;
     }
 #endif
-  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false)
+  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=true)
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
@@ -1653,6 +1658,8 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       if (polish==true)
         {
           for (i=0; i < n; i++)
+            //refine_root(roots[i]);
+            //laguer_real(roots[i]);
             refine_root_maehly(roots[i], roots, i);
         }
       if (nf < n)
