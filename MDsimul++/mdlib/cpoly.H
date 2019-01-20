@@ -24,7 +24,7 @@ inline ntype SIGN(ntype a, ntype b)
 }
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 //#define BINI_CONV_CRIT
-#define USE_CONVEX_HULL 
+//#define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
 //#define PETKOVIC_6TH
 using namespace std;
@@ -1524,10 +1524,10 @@ public:
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
-      pvector<cmplx> rold;
+      //pvector<cmplx> rold;
       ntype r;
       cmplx cn;
-      rold.allocate(n);
+      //rold.allocate(n);
       if (coeff[n]==cmplx(0.0,0.0))
         {
           cout << "That's not an " << n << " degree polynomial!\n";
@@ -1564,7 +1564,7 @@ public:
       initial_guess(roots);
       for (iter=0; iter < itmax && !fine; iter++)
         {
-          rold=roots;
+          //rold=roots;
           for (i=0; i < n; i++)
             {
               // refine conjuigate pairs only once!
@@ -1573,14 +1573,14 @@ public:
               r=abs(roots[i]);
 #ifdef USE_LAGUER_REAL
               if (r > 1)
-                ret = laguer_real_mod_rev(roots[i], rold, i);
+                ret = laguer_real_mod_rev(roots[i], roots, i);
               else
-                ret = laguer_real_mod(roots[i], rold, i);
+                ret = laguer_real_mod(roots[i], roots, i);
 #else
               if (r > 1)
-                ret = laguer_cmplx_mod_rev(roots[i], rold, i);
+                ret = laguer_cmplx_mod_rev(roots[i], roots, i);
               else
-                ret = laguer_cmplx_mod(roots[i], rold, i);
+                ret = laguer_cmplx_mod(roots[i], roots, i);
 #endif
               if (ret)
                 {
@@ -1594,7 +1594,7 @@ public:
                 }
             }
         }
-      cout << "iter=" << iter << "\n";
+      //cout << "iter=" << iter << "\n";
       // refine 
       if (polish==true)
         {
