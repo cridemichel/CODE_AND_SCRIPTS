@@ -1558,11 +1558,11 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       delete []found;
     }
 #endif
-  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=true)
+  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=false)
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
-      int itmax=1000, nold;
+      int itmax=100, nold;
 #ifdef USE_ROLD
       pvector<cmplx> rold;
 #endif
@@ -1664,6 +1664,14 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         }
       if (nf < n)
         {
+          if (try_harder)
+            {
+              for (i=0; i < n; i++)
+                {
+                  if (!found[i])
+                    laguer_real(roots[i]);
+                }
+            }
 #if 0
           cout << "[LAGABERTH-ERROR] We had a problem, I was not able to converge to all roots\n";
           cout << "Only " << nf << " out of " << n << " were found\n";

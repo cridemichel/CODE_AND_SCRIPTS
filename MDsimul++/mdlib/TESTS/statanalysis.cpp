@@ -7,8 +7,8 @@
 #include "../rpoly.H"
 #endif
 #include <complex>
-#define AURENTZ
-//#define MPC_MP
+//#define AURENTZ
+#define MPC_MP
 #ifndef NDEG
 #define NDEG 6
 #endif
@@ -469,7 +469,7 @@ int main(int argc, char **argv)
       printf("numtrials=%lld numout=%lld cmplxreal=%d dojust=%d\n", 
 	     numtrials, numout, cmplxreal, dojust);
     }
-
+  //oqs.set_output_prec(1E-40);
   for (its=itsI; its < numtrials; its++)
     {
       if (its > 0 && (its % (numtrials/numout) == 0))
