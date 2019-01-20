@@ -1221,6 +1221,8 @@ public:
         {
           for (i=0; i < kk; i++) 
             {
+              //if (cmon[kk]==cmplx(0.0,0.0))
+                //continue;
               ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
               if (i==0 || ukc > uk[kk])
                 uk[kk]=ukc;
@@ -1233,6 +1235,8 @@ public:
             {
               if (cmon[i]==cmplx(0.0,0.0)) 
                 continue;
+              //if (cmon[kk]==cmplx(0.0,0.0))
+                //continue;
               vkc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
               if (first || vkc < vk[kk])
                 {
@@ -1252,7 +1256,8 @@ public:
             }
         }  
       q--;
-      sigma=M_PI+2.0*M_PI*(drand48()-0.5);
+      //sigma=M_PI+2.0*M_PI*(drand48()-0.5);
+      sigma=2.0*M_PI*(drand48()-0.5);
       rg.resize(n); 
       int cc=0, dk;
       for (i=1; i < q; i++)
@@ -1265,7 +1270,8 @@ public:
             }
         }
 #else
-      sigma=-0.01;//2.0*M_PI*(drand48()-0.5)-M_PI;
+      //sigma=2.0*M_PI*(drand48()-0.5)-M_PI;
+      sigma=0.6;//2.0*M_PI*(drand48()-0.5)-M_PI;
       rg.resize(n); 
       int cc=0;
 
@@ -1292,8 +1298,10 @@ public:
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
+      pvector<cmplx> rold;
       ntype r;
       cmplx cn;
+      rold.allocate(n);
       if (coeff[n]==cmplx(0.0,0.0))
         {
           cout << "That's not an " << n << " degree polynomial!\n";
@@ -1330,6 +1338,7 @@ public:
       initial_guess(roots);
       for (iter=0; iter < itmax && !fine; iter++)
         {
+          rold=roots;
           for (i=0; i < n; i++)
             {
               // refine conjuigate pairs only once!
@@ -1338,14 +1347,14 @@ public:
               r=abs(roots[i]);
 #ifdef USE_LAGUER_REAL
               if (r > 1)
-                ret = laguer_real_mod_rev(roots[i], roots, i);
+                ret = laguer_real_mod_rev(roots[i], rold, i);
               else
-                ret = laguer_real_mod(roots[i], roots, i);
+                ret = laguer_real_mod(roots[i], rold, i);
 #else
               if (r > 1)
-                ret = laguer_cmplx_mod_rev(roots[i], roots, i);
+                ret = laguer_cmplx_mod_rev(roots[i], rold, i);
               else
-                ret = laguer_cmplx_mod(roots[i], roots, i);
+                ret = laguer_cmplx_mod(roots[i], rold, i);
 #endif
               if (ret)
                 {
@@ -1359,6 +1368,7 @@ public:
                 }
             }
         }
+      cout << "iter=" << iter << "\n";
       // refine 
       if (polish==true)
         {
@@ -1367,7 +1377,7 @@ public:
         }
       if (nf < n)
         {
-#if 0
+#if 1
           cout << "[LAGABERTH-ERROR] We had a problem, I was not able to converge to all roots\n";
           cout << "Only " << nf << " out of " << n << " were found\n";
           cout << "Try to increase floating-point precision\n";
