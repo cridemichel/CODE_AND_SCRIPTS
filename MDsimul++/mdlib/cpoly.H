@@ -24,7 +24,7 @@ inline ntype SIGN(ntype a, ntype b)
 }
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 //#define BINI_CONV_CRIT
-//#define USE_CONVEX_HULL 
+#define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
 #define USE_ROLD
 #define PETKOVIC_6TH
@@ -1426,7 +1426,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 
       u=p/dp;
       u2=u*u;
-      du=p/ddp; 
+      du=ddp/dp; 
 #if 0
       h=u2-du;
       cmplx sq, gp, gm;
@@ -1464,17 +1464,17 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           S2 += term*term; 
         }
       Ssq=S*S;
-      cout << "Ssq=" << Ssq << " S=" << S << "\n";
-      cout << "Ssq-S2=" << Ssq-S2 << "\n";
-      cout << "ddp/dp=" << ddp/dp << "\n";
-      d=1.0-u*S;
+      //cout << "Ssq=" << Ssq << " S=" << S << "\n";
+      //cout << "Ssq-S2=" << Ssq-S2 << "\n";
+      //cout << "ddp/dp=" << ddp/dp << "\n";
+      d = 1.0-u*S;
       d = 2.0*d*d;
-      cout << "d=" << d << " u=" << u << "\n";
+      //cout << "d=" << d << " u=" << u << "\n";
 
-      dx = u + u2*(ddp/dp-u*(Ssq-S2))/d;
-      cout << "dx=" << dx << "\n";
+      dx = u + u2*(du-u*(Ssq-S2))/d;
+      //cout << "dx=" << dx << "\n";
       x=x-dx;
-      cout << "iac=" << iac << " x=" << x << "\n";
+      //cout << "iac=" << iac << " x=" << x << "\n";
 #if 0
       if (x == x1) 
         {
@@ -1523,7 +1523,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 continue;
               r=abs(roots[i]);
               if (r > 1)
-                ret = halley_mod_rev(roots[i], rold, i);
+                ret = halley_mod(roots[i], rold, i);
               else
                 ret = halley_mod(roots[i], rold, i);
               if (ret)
