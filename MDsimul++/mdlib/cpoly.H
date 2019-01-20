@@ -26,7 +26,8 @@ inline ntype SIGN(ntype a, ntype b)
 //#define BINI_CONV_CRIT
 //#define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
-//#define PETKOVIC_6TH
+#define USE_ROLD
+#define PETKOVIC_6TH
 using namespace std;
   template<class T>
 inline const T MAX(const T &a, const T &b)
@@ -1372,36 +1373,37 @@ public:
 #endif
       return false;
     }
-  bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
+bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       const ntype EPS=goaleps;
       cmplx term;
       //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
       int j;
-      ntype be,abx,abp,abm, M, s, pr, absb;
+      ntype abx, be, M, s, pr, absb;
 #ifndef BINI_CONV_CRIT
       ntype err;
 #else
       ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
 #endif
-      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      cmplx dx,p,dp,ddp,u,du,S,S2,Ssq,d,h,z3,u2;
       int m;
       m=n;
-      b=cmon[m];
+      p=cmon[m];
 #ifndef BINI_CONV_CRIT
       err=alpha[m];//abs(cmon[m])*(Kconv*m+1);
 #endif
-      d=f=0.0;
+      dp=ddp=0.0;
       abx=abs(x);
       for (j=m-1;j>=0;j--) {
-        f=x*f+d;
-        d=x*d+b;
-        b=x*b+cmon[j];
+        ddp=x*ddp+dp;// ddp=p''/2
+        dp=x*dp+p;
+        p=x*p+cmon[j];
 #ifndef BINI_CONV_CRIT
         err=abx*err + alpha[j];//abs(cmon[j])*(Kconv*ntype(j)+1.0);
 #endif
       }
-      absb=abs(b);
+      absb=abs(p);
+      ddp*=2.0;
 #ifdef BINI_CONV_CRIT
       s=0.0;
       pr=1.0; 
@@ -1421,27 +1423,58 @@ public:
           return true;
         }
 #endif
-      g=d/b;
-      h=(g*g-((ntype)2.0)*f/b);
+
+      u=p/dp;
+      u2=u*u;
+      du=p/ddp; 
+#if 0
+      h=u2-du;
+      cmplx sq, gp, gm;
+      ntype abp, abm;
+      sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-u2));
+      gp=u+sq;
+      gm=u-sq;
+      abp=abs(gp);
+      abm=abs(gm);
+      if (abp < abm) gp=gm;
+      h =  ((cmplx)m)/((cmplx)gp);
+      z3 = x - h; 
+      cout << "iac=" << iac << " z3=" << z3 << "\n";
+#else
+      h = 2.0*u/(2.0*u2 - du);
+      z3 = x - h;//Halley's method of order 3
+#endif
+#if 0
+      p=cmon[m];
+      dp=ddp=0.0;
+      for (j=m-1;j>=0;j--) {
+        ddp=z3*ddp+dp;
+        dp=z3*dp+p;
+        p=z3*p+cmon[j];
+      }
+      u=dp/p;
+#endif
+      S=S2=0;
       for (j=0; j < n; j++)
         {
           if (j==iac)
             continue;
-          term=ntype(1.0)/(x-roots[j]);
-          g -= term;
-          h -= term*term; 
+          term=ntype(1.0)/(z3-roots[j]);
+          S += term;
+          S2 += term*term; 
         }
+      Ssq=S*S;
+      cout << "Ssq=" << Ssq << " S=" << S << "\n";
+      cout << "Ssq-S2=" << Ssq-S2 << "\n";
+      cout << "ddp/dp=" << ddp/dp << "\n";
+      d=1.0-u*S;
+      d = 2.0*d*d;
+      cout << "d=" << d << " u=" << u << "\n";
 
-      g2=g*g;
-      sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
-      gp=g+sq;
-      gm=g-sq;
-      abp=abs(gp);
-      abm=abs(gm);
-
-      if (abp < abm) gp=gm;
-      dx =  ((cmplx)m)/((cmplx)gp);
+      dx = u + u2*(ddp/dp-u*(Ssq-S2))/d;
+      cout << "dx=" << dx << "\n";
       x=x-dx;
+      cout << "iac=" << iac << " x=" << x << "\n";
 #if 0
       if (x == x1) 
         {
@@ -1450,6 +1483,7 @@ public:
 #endif
       return false;
     }
+
   void petkovic6th(pvector<cmplx,N>& roots)
     {
       bool *found = new bool[n], fine=false, ret;
@@ -1524,10 +1558,14 @@ public:
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
-      //pvector<cmplx> rold;
+#ifdef USE_ROLD
+      pvector<cmplx> rold;
+#endif
       ntype r;
       cmplx cn;
-      //rold.allocate(n);
+#ifdef USE_ROLD
+      rold.allocate(n);
+#endif
       if (coeff[n]==cmplx(0.0,0.0))
         {
           cout << "That's not an " << n << " degree polynomial!\n";
@@ -1564,13 +1602,28 @@ public:
       initial_guess(roots);
       for (iter=0; iter < itmax && !fine; iter++)
         {
-          //rold=roots;
+#ifdef USE_ROLD
+          rold=roots;
+#endif
           for (i=0; i < n; i++)
             {
               // refine conjuigate pairs only once!
               if (found[i]) 
                 continue;
               r=abs(roots[i]);
+#ifdef USE_ROLD
+#ifdef USE_LAGUER_REAL
+              if (r > 1)
+                ret = laguer_real_mod_rev(roots[i], rold, i);
+              else
+                ret = laguer_real_mod(roots[i], rold, i);
+#else
+              if (r > 1)
+                ret = laguer_cmplx_mod_rev(roots[i], rold, i);
+              else
+                ret = laguer_cmplx_mod(roots[i], rold, i);
+#endif
+#else
 #ifdef USE_LAGUER_REAL
               if (r > 1)
                 ret = laguer_real_mod_rev(roots[i], roots, i);
@@ -1581,6 +1634,7 @@ public:
                 ret = laguer_cmplx_mod_rev(roots[i], roots, i);
               else
                 ret = laguer_cmplx_mod(roots[i], roots, i);
+#endif
 #endif
               if (ret)
                 {
@@ -1603,7 +1657,7 @@ public:
         }
       if (nf < n)
         {
-#if 1
+#if 0
           cout << "[LAGABERTH-ERROR] We had a problem, I was not able to converge to all roots\n";
           cout << "Only " << nf << " out of " << n << " were found\n";
           cout << "Try to increase floating-point precision\n";
