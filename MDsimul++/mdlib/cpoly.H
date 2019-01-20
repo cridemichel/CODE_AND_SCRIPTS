@@ -26,6 +26,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
+//#define PETKOVIC_6TH
 using namespace std;
   template<class T>
 inline const T MAX(const T &a, const T &b)
@@ -1292,7 +1293,232 @@ public:
           //cout << setprecision(20) << "(" << real(roots[i]) << "," << imag(roots[i]) << ")" << "r=" << abs(roots[i]) << "\n";
         }
     }
+#ifdef PETKOVIC_6TH
+  bool halley_mod_rev(cmplx &x, pvector<cmplx,N> roots, int iac)
+    {
+      const ntype EPS=goaleps;
+      cmplx term;
+      //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int j;
+      ntype be,abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+      ntype err;
+#else
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      int m;
+      m=n;
+      b=cmon[m];
+#ifndef BINI_CONV_CRIT
+      err=alpha[m];//abs(cmon[m])*(Kconv*m+1);
+#endif
+      d=f=0.0;
+      abx=abs(x);
+      for (j=m-1;j>=0;j--) {
+        f=x*f+d;
+        d=x*d+b;
+        b=x*b+cmon[j];
+#ifndef BINI_CONV_CRIT
+        err=abx*err + alpha[j];//abs(cmon[j])*(Kconv*ntype(j)+1.0);
+#endif
+      }
+      absb=abs(b);
+#ifdef BINI_CONV_CRIT
+      s=0.0;
+      pr=1.0; 
+      for (j=0; j <= n; j ++) 
+        {
+          s+=acmon[j]*pr;
+          pr *= abx;
+        }
 
+      if (absb <= K*s) // stopping criterion of bini 
+        {
+          return true;
+        }
+#else
+      if (absb <= err*EPS) 
+        {
+          return true;
+        }
+#endif
+      g=d/b;
+      h=(g*g-((ntype)2.0)*f/b);
+      for (j=0; j < n; j++)
+        {
+          if (j==iac)
+            continue;
+          term=ntype(1.0)/(x-roots[j]);
+          g -= term;
+          h -= term*term; 
+        }
+
+      g2=g*g;
+      sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+      gp=g+sq;
+      gm=g-sq;
+      abp=abs(gp);
+      abm=abs(gm);
+
+      if (abp < abm) gp=gm;
+      dx =  ((cmplx)m)/((cmplx)gp);
+      x=x-dx;
+#if 0
+      if (x == x1) 
+        {
+          return true;
+        }
+#endif
+      return false;
+    }
+  bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
+    {
+      const ntype EPS=goaleps;
+      cmplx term;
+      //static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int j;
+      ntype be,abx,abp,abm, M, s, pr, absb;
+#ifndef BINI_CONV_CRIT
+      ntype err;
+#else
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      int m;
+      m=n;
+      b=cmon[m];
+#ifndef BINI_CONV_CRIT
+      err=alpha[m];//abs(cmon[m])*(Kconv*m+1);
+#endif
+      d=f=0.0;
+      abx=abs(x);
+      for (j=m-1;j>=0;j--) {
+        f=x*f+d;
+        d=x*d+b;
+        b=x*b+cmon[j];
+#ifndef BINI_CONV_CRIT
+        err=abx*err + alpha[j];//abs(cmon[j])*(Kconv*ntype(j)+1.0);
+#endif
+      }
+      absb=abs(b);
+#ifdef BINI_CONV_CRIT
+      s=0.0;
+      pr=1.0; 
+      for (j=0; j <= n; j ++) 
+        {
+          s+=acmon[j]*pr;
+          pr *= abx;
+        }
+
+      if (absb <= K*s) // stopping criterion of bini 
+        {
+          return true;
+        }
+#else
+      if (absb <= err*EPS) 
+        {
+          return true;
+        }
+#endif
+      g=d/b;
+      h=(g*g-((ntype)2.0)*f/b);
+      for (j=0; j < n; j++)
+        {
+          if (j==iac)
+            continue;
+          term=ntype(1.0)/(x-roots[j]);
+          g -= term;
+          h -= term*term; 
+        }
+
+      g2=g*g;
+      sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+      gp=g+sq;
+      gm=g-sq;
+      abp=abs(gp);
+      abm=abs(gm);
+
+      if (abp < abm) gp=gm;
+      dx =  ((cmplx)m)/((cmplx)gp);
+      x=x-dx;
+#if 0
+      if (x == x1) 
+        {
+          return true;
+        }
+#endif
+      return false;
+    }
+  void petkovic6th(pvector<cmplx,N>& roots)
+    {
+      bool *found = new bool[n], fine=false, ret;
+      int i,  nf=0, iter;
+      int itmax=100;
+      pvector<cmplx> rold;
+      ntype r;
+      rold.allocate(n);
+      if (coeff[n]==cmplx(0.0,0.0))
+        {
+          cout << "That's not an " << n << "degree polynomial!\n";
+          return;
+        }
+      cmon[n]=1.0;
+      for (i=n-1; i >=0; i--)
+        {
+          cmon[i]=coeff[i]/coeff[n];
+        }
+      for (i=0; i <=n; i++)
+        {
+          acmon[i] = abs(cmon[i]);
+          alpha[i] = acmon[i]*Kconv*(ntype(i)+ntype(1.0));
+        }
+      //absolute value of coefficients are used in Bini's stopping criterion
+      //we use coeff vector to store them since it won't be used anymore from here on
+
+      for (i=0;i < n; i++)
+        found[i]=false;
+      initial_guess(roots);
+      for (iter=0; iter < itmax && !fine; iter++)
+        {
+          rold=roots;
+          for (i=0; i < n; i++)
+            {
+              // refine conjuigate pairs only once!
+              if (found[i]) 
+                continue;
+              r=abs(roots[i]);
+              if (r > 1)
+                ret = halley_mod_rev(roots[i], rold, i);
+              else
+                ret = halley_mod(roots[i], rold, i);
+              if (ret)
+                {
+                  found[i]=true;
+                  nf++;
+                  if (nf==n)
+                    {
+                      fine=true;
+                      break;
+                    }
+                }
+            }
+        }
+      if (nf < n)
+        {
+          cout << "[ERROR] We had a problem, I was not able to converge to all roots\n";
+          cout << "Only " << nf << " out of " << n << " were found\n";
+          cout << "Try to increase floating-point precision\n";
+          for (i=0; i <= n; i++)
+            {
+              cout << setprecision(80) << real(cmon[i]) << "\n";
+            }
+          exit(1);
+        }
+      //cout << "iter=" << iter << " # found=" << nf << "\n";
+      delete []found;
+    }
+#endif
   void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false)
     {
       bool *found = new bool[n], fine=false, ret;
