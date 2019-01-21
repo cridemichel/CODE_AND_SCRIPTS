@@ -209,6 +209,7 @@ public:
     }
   void deallocate()
     {
+      if (v!=nullptr)
       delete [] v;
     }
   void resize(int NN)

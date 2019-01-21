@@ -26,7 +26,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
-#define USE_ROLD
+//#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
@@ -46,6 +46,9 @@ public:
   pvector<cmplx, N> deflcoeff0;
   pvector<cmplx, N> deflcoeff1;
   pvector<cmplx, N> deflcoeff;
+#ifdef USE_ROLD
+  pvector<cmplx, N> rold;
+#endif
   void set_coeff(pvector<cmplx,N+1> v)
     {
       coeff = v;
@@ -72,6 +75,9 @@ public:
   pvector<cmplx> deflcoeff0;
   pvector<cmplx> deflcoeff1;
   pvector<cmplx> deflcoeff;
+#ifdef USE_ROLD
+  pvector<cmplx> rold;
+#endif
   cpoly_base_dynamic() = default;
   void set_coeff(pvector<cmplx,-1> v)
     {
@@ -92,6 +98,9 @@ public:
 
   cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), acmon(nc+1), alpha(nc+1),
   deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
+#ifdef USE_ROLD
+  ,rold(nc)
+#endif
   {
     n=nc;
   }
@@ -105,6 +114,9 @@ public:
       deflcoeff0.deallocate();
       deflcoeff1.deallocate();
       deflcoeff.deallocate();
+#ifdef USE_ROLD
+      rold.deallocate();
+#endif
     }
   void allocate(int nc)
     {
@@ -116,6 +128,9 @@ public:
       deflcoeff0.allocate(n);
       deflcoeff1.allocate(n);
       deflcoeff.allocate(n);
+#ifdef USE_ROLD
+      rold.allocate(n);
+#endif
     }
 };
 
@@ -134,6 +149,9 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N>
   using cpolybase<cmplx,ntype,N>::deflcoeff0;
   using cpolybase<cmplx,ntype,N>::deflcoeff1;
   using cpolybase<cmplx,ntype,N>::deflcoeff;
+#ifdef USE_ROLD
+  using cpolybase<cmplx,ntype,N>::rold;
+#endif
   template <class vtype>
     using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
           pvector<vtype, -1>>::type;
@@ -1476,7 +1494,7 @@ public:
         }  
       q--;
       //sigma=M_PI+2.0*M_PI*(drand48()-0.5);
-      sigma=2.0*M_PI*(drand48()-0.5);
+      sigma=-0.01;//2.0*M_PI*(drand48()-0.5);
       rg.resize(n); 
       int cc=0, dk;
       for (i=1; i < q; i++)
@@ -1490,7 +1508,7 @@ public:
         }
 #else
       //sigma=2.0*M_PI*(drand48()-0.5)-M_PI;
-      sigma=2.0*M_PI*(drand48()-0.5);
+      sigma=-0.01;//2.0*M_PI*(drand48()-0.5);
       rg.resize(n); 
       int cc=0;
 
@@ -1779,10 +1797,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
-#ifdef USE_ROLD
-      pvector<cmplx> rold;
-#endif
-      ntype r;
+     ntype r;
       cmplx cn;
 #ifdef USE_ROLD
       rold.allocate(n);
@@ -1869,6 +1884,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                 }
             }
         }
+      //if (iter > 100)
       //cout << "iter=" << iter << "\n";
       if (nf < n)
         {
@@ -2003,6 +2019,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         {
           //qp.allocate(n-1);
           //qr.allocate(n-1);
+          qp.rold=nullptr;
           qr.use_vec(n-1,&(roots[1])); 
           qp.use_vec(n-1,coeff.v, cmon.v, acmon.v, alpha.v, deflcoeff0.v, deflcoeff1.v, deflcoeff.v);
         }
