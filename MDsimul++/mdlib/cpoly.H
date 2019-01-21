@@ -99,7 +99,7 @@ public:
   cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), acmon(nc+1), alpha(nc+1),
   deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
 #ifdef USE_ROLD
-  ,rold(nc)
+  //,rold(nc)
 #endif
   {
     n=nc;
@@ -115,7 +115,7 @@ public:
       deflcoeff1.deallocate();
       deflcoeff.deallocate();
 #ifdef USE_ROLD
-      rold.deallocate();
+      //rold.deallocate();
 #endif
     }
   void allocate(int nc)
@@ -129,7 +129,7 @@ public:
       deflcoeff1.allocate(n);
       deflcoeff.allocate(n);
 #ifdef USE_ROLD
-      rold.allocate(n);
+      //rold.allocate(n);
 #endif
     }
 };
@@ -664,6 +664,75 @@ public:
         }
       return false;
     }
+  bool nr_aberth(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+    {
+      int i,j;
+      ntype err;
+      cmplx povp1, denom;
+      const ntype EPS=goaleps;
+      // root polishing by NR
+      cmplx r0old, p, sum;
+      cmplx p1, p1c;
+      ntype absb, abx, b[2], d[2], d0, b0, x[2];
+      ntype errold;
+#if 0
+      b[0]=real(cmon[n]);
+      b[1]=imag(cmon[n]);
+      d[0]=0.0;
+      d[1]=0.0;
+      x[0] = real(r0);
+      x[1] = imag(r0);
+      abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+      err=alpha[n];
+      for (j=n-1;j>=0;j--) {
+        d0 = d[0];
+        d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+        d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+        b0 = b[0];
+        b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
+        b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
+        err=abx*err+alpha[j];
+      }
+      p=cmplx(b[0],b[1]);
+      p1=cmplx(d[0],d[1]);
+#else
+      abx=abs(r0);
+      err=alpha[n]*abx+alpha[n-1];
+      p=cmon[n]*r0+cmon[n-1];
+      p1=cmon[n];
+      for(i=n-2;i>=0;i--) {
+        p1=p+p1*r0;
+        p=cmon[i]+p*r0;
+        err=abx*err+alpha[i];
+      }
+#endif
+      //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= EPS*err)
+      absb=abs(p);
+      if (absb <= EPS*err || (EPS*err <= minf && absb < minf))
+        {
+          return true;
+        }
+
+#if 0
+      if (p1==cmplx(0,0))
+        {
+          return false;
+        }
+#endif
+      r0old=r0;
+      sum=0;
+      for (i=0; i < n; i++)
+        {
+          if (i==iac)
+            continue;
+          sum += ntype(1.0)/(r0-roots[i]);
+        }
+      sum *= p;
+      p1c = p1 - sum;
+      r0 -= p/p1c;
+      return false;
+    }
+
   void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
     {
       int iter,i;
@@ -1797,7 +1866,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
-     ntype r;
+      ntype r;
       cmplx cn;
 #ifdef USE_ROLD
       rold.allocate(n);
@@ -1862,8 +1931,10 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #else
 #ifdef USE_LAGUER_REAL
               if (r > 1)
+                //ret = nr_aberth(roots[i], roots, i);
                 ret = laguer_real_mod_rev(roots[i], roots, i);
               else
+                //ret = nr_aberth(roots[i], roots, i);
                 ret = laguer_real_mod(roots[i], roots, i);
 #else
               if (r > 1)
@@ -1927,7 +1998,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
             //laguer_real(roots[i]);
             refine_root_maehly(roots[i], roots, i);
         }
-            n=nold;
+      n=nold;
       //cout << "iter=" << iter << " # found=" << nf << "\n";
       delete []found;
     }
