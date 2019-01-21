@@ -3,7 +3,7 @@
 //#include "pmatrix.H"
 #define CPOLY
 #define AURENTZ
-//#define BACKSTAB
+#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
