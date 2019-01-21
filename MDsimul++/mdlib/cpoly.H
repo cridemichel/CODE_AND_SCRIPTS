@@ -145,7 +145,7 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N>
 
   const int maxiter_polish=8;
   int imaxarg1,imaxarg2;
-  ntype eps05, meps, maxf, maxf2, maxf3, scalfact, cubic_rescal_fact;
+  ntype eps05, meps, maxf, maxf2, maxf3, minf, scalfact, cubic_rescal_fact;
   int maxdigits;
   ntype goaleps;
   ntype Kconv;
@@ -218,8 +218,151 @@ public:
         }
       return bn;
     }
+  bool laguer_real_th(cmplx &xc)
+    {
+      const int MR=8,MT=10,MAXIT=MT*MR;
+      const ntype EPS=goaleps;
+      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int iter,j;
+      ntype abx,abp,abm,err, phi, rho,s, pr, absb;
+      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
+      ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2];
+      cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
+      int m=n;
+      x[0] = xc.real();
+      x[1] = xc.imag();
+      for (iter=1;iter<=MAXIT;iter++) 
+        {
+          //its=iter;
+          b[0]=real(cmon[m]);
+          b[1]=imag(cmon[m]);
+#ifndef BINI_CONV_CRIT
+          err=alpha[m];
+#endif
+          d[0]=f[0]=0.0;
+          d[1]=f[1]=0.0;
+          abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+          for (j=m-1;j>=0;j--) {
+            f0 = f[0];
+            f[0] = x[0]*f[0] - x[1]*f[1] + d[0];
+            f[1] = x[0]*f[1] + x[1]*f0 + d[1];
+            d0 = d[0];
+            d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
+            d[1] = x[0]*d[1] + x[1]*d0 + b[1];
+            b0 = b[0];
+            b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
+            b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
+#ifndef BINI_CONV_CRIT
+            err=abx*err+alpha[j];
+#endif
+          }
+          if (isinf(b[0]) || isnan(b[0]) || 
+              isinf(b[1]) || isnan(b[1]))
+            {
+              return false;
+            }
 
-#if 1
+#ifdef BINI_CONV_CRIT
+          s=acmon[n];
+          for (j=n-1; j >=0; j--) 
+            {
+              s=abx*s+acmon[j];
+            }
+
+          if (abs(cmplx(b[0],b[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+            {
+              xc = cmplx(x[0],x[1]);
+              return true;
+            }
+#else
+          absb=abs(cmplx(b[0],b[1]));
+          if (absb <= EPS*err || (EPS*err<=minf && absb<=minf))
+            {
+              xc = cmplx(x[0],x[1]);
+              return true;
+            }
+#endif          
+          bc=cmplx(b[0],b[1]);
+          dc=cmplx(d[0],d[1]);
+          fc=cmplx(f[0],f[1]);
+          dovb=dc/bc;
+          fovb=fc/bc;
+          g[0]=dovb.real();
+          g[1]=dovb.imag();
+          g2[0] = g[0]*g[0] - g[1]*g[1];
+          g2[1] = 2.0*g[0]*g[1];
+          fb[0] = fovb.real();
+          fb[1] = fovb.imag();
+          h[0] = g2[0] - 2.0*fb[0];
+          h[1] = g2[1] - 2.0*fb[1];
+          sarg[0] = ((ntype)(m-1))*( ((ntype)m) *h[0] - g2[0]);
+          sarg[1] = ((ntype)(m-1))*( ((ntype)m) *h[1] - g2[1]);
+          rho = sqrt(sarg[0]*sarg[0] + sarg[1]*sarg[1]);
+          if (rho==0)
+            {
+              sq[0] = sq[1] = 0.0;
+            }
+          else
+            {
+              phi = acos(sarg[0]/rho);
+              if (sarg[1] < 0.0)
+                {
+                  phi = -phi;
+                }
+              rho = sqrt(rho);
+              sq[0] = rho*cos(phi/2.0);
+              sq[1] = rho*sin(phi/2.0);
+            }
+          gp[0] = g[0] + sq[0];
+          gp[1] = g[1] + sq[1];
+          gm[0] = g[0] - sq[0];
+          gm[1] = g[1] - sq[1]; 
+          abp = sqrt(gp[0]*gp[0] + gp[1]*gp[1]);
+          abm = sqrt(gm[0]*gm[0] + gm[1]*gm[1]);
+          if (abp < abm) 
+            {
+              gp[0]=gm[0];
+              gp[1]=gm[1];
+            }
+          invn = 1.0/(gp[0]*gp[0]+gp[1]*gp[1]);
+          invgp[0] = gp[0]*invn;
+          invgp[1] = -gp[1]*invn;
+
+          if (MAX(abp,abm) > 0.0)
+            {
+              dx[0]=((ntype)m)*invgp[0];
+              dx[1]=((ntype)m)*invgp[1];
+            }
+          else
+            {
+              pol[0] = (1.0+abx)*cos((ntype)iter);
+              pol[1] = (1.0+abx)*sin((ntype)iter); 
+              dx[0]=pol[0];
+              dx[1]=pol[1];
+            }
+          //x1=x-dx;
+          x1[0] = x[0] - dx[0];
+          x1[1] = x[1] - dx[1];
+          if (x[0] == x1[0] && x[1]==x1[1]) 
+            {
+              xc = cmplx(x[0],x[1]);
+              return true;
+            }
+          if (iter % MT != 0) 
+            {
+              x[0]=x1[0];
+              x[1]=x1[1];
+            }
+          else 
+            {
+              x[0] -= frac[iter/MT]*dx[0];
+              x[1] -= frac[iter/MT]*dx[1];
+            }
+        }
+      xc = cmplx(x[0],x[1]);
+      //cout << "absb= " << abs(cmplx(b[0],b[1])) << " EPS*err=" << EPS*err << " x=" << xc << "\n";
+      return false;
+    }
   bool laguer_real(cmplx &xc)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;
@@ -360,9 +503,80 @@ public:
             }
         }
       xc = cmplx(x[0],x[1]);
+      cout << "absb= " << abs(cmplx(b[0],b[1])) << " err=" << err << " x=" << xc << "\n";
+      cout << "absx= " << abs(xc) << "\n";
       return false;
     }
+  bool laguer_cmplx_th(cmplx &x)
+    {
+      const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
+      const ntype EPS=goaleps;
+      static const ntype frac[MR+1]= {0.0,0.5,0.25,0.75,0.13,0.38,0.62,0.88,1.0};
+      int iter,j;
+      ntype abx,abp,abm,err, M, s, pr;
+      cmplx dx,x1,b,d,f,g,h,sq,gp,gm,g2;
+      int m;
+      m=n;
+      //cout << "r0 ini = "<< x << "\n"; 
+      for (iter=1;iter<=MAXIT;iter++) 
+        {
+          //its=iter;
+          b=cmon[m];
+#ifndef BINI_CONV_CRIT
+          err=alpha[m];
 #endif
+          d=f=0.0;
+          abx=abs(x);
+          for (j=m-1;j>=0;j--) {
+            f=x*f+d;
+            d=x*d+b;
+            b=x*b+cmon[j];
+#ifdef BINI_CONV_CRIT
+            err=abx*err+alpha[j];
+#endif
+          }
+          if (isinf(b.real()) || isinf(b.imag()) || isnan(b.real()) ||
+              isnan(b.imag()))
+            return false;
+#ifdef BINI_CONV_CRIT
+          s=acmon[n];
+          for (j=n-1; j >=0; j--) 
+            {
+              s=abx*s+acmon[j];
+            }
+
+          if (abs(b) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+            return true;
+#else
+          if (abs(b) <= EPS*err) 
+            {
+              return true;
+            }
+#endif
+          g=d/b;
+          g2=g*g;
+          h=g2-((ntype)2.0)*f/b;
+          sq=sqrt( ((ntype)(m-1))*( ((ntype)m)*h-g2));
+          gp=g+sq;
+          gm=g-sq;
+          abp=abs(gp);
+          abm=abs(gm);
+
+          if (abp < abm) gp=gm;
+          dx=(MAX(abp,abm) > 0.0) ? ((cmplx)m)/((cmplx)gp) : polar(((ntype)(1+abx)),((ntype)iter));
+          x1=x-dx;
+          if (x == x1) 
+            {
+              return true;
+            }
+
+          if (iter % MT != 0) 
+            x=x1;
+          else 
+            x -= frac[iter/MT]*dx;
+        }
+      return false;
+    }
   bool laguer_cmplx(cmplx &x)
     {
       const int MR=8,MT=10,MAXIT=MT*MR;// MT changed from 10 to 30 
@@ -434,7 +648,7 @@ public:
     }
   void refine_root_maehly(cmplx &r0, pvector<cmplx,N> &roots, int iac)
     {
-      int iter,i, j;
+      int iter,i;
       ntype err;
       cmplx povp1, denom;
       // root polishing by NR
@@ -670,7 +884,8 @@ public:
       for (j=1;j<=m;j++) {
         err=abx*err+alpha[j];//abs(cmon[j])*(Kconv*j+1);
       }
-      if (abs(b) <= EPS*err) 
+      absb=abs(b);
+      if (absb <= EPS*err|| (EPS*err<=minf && absb<=minf)) 
         {
           return true;
         }
@@ -712,7 +927,7 @@ public:
    {
      const ntype EPS=goaleps;
      int j;
-     ntype abx,abp,abm,err, phi, rho,s, pr;
+     ntype abx,abp,abm,err, phi, rho,s, pr, absb;
      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
      ntype xcR, xcI, x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2], aR, aI, invden, term[2];
      ntype dovb[2], fovb[2], tt[2], ddb[2], tt2[2], ba[2];
@@ -766,9 +981,9 @@ public:
        err=abx*err+alpha[j];//abs(cmon[j])*(Kconv*j+1);
      }
      //cout << "abs=" << abs(cmplx(b[0],b[1])) << " EPS*err=" << EPS*err << "\n";
-     if (abs(cmplx(b[0],b[1])) <= EPS*err)
+     absb=abs(cmplx(b[0],b[1]));
+     if (absb <= EPS*err || (EPS*err <= minf && absb < minf))
        {
-         //xc = cmplx(x[0],x[1]);
          return true;
        }
 #endif          
@@ -868,7 +1083,7 @@ public:
    {
      const ntype EPS=goaleps;
      int j;
-     ntype abx,abp,abm,err, phi, rho,s, pr;
+     ntype abx,abp,abm,err, phi, rho,s, pr, absb;
      ntype dx[2],x1[2],b[2],d[2],f[2],g[2],h[2],sq[2],gp[2],gm[2],g2[2], fb[2], pol[2];
      ntype x[2], f0, d0, b0, invn, g0, invgp[2], sarg[2], aR, aI, invden, term[2];
      cmplx bc,dc,fc,sqrtcmplx, fovb, dovb;
@@ -912,7 +1127,8 @@ public:
        }
 #else
      //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= EPS*err)
-     if (abs(cmplx(b[0],b[1])) <= EPS*err)
+     absb=abs(cmplx(b[0],b[1]));
+     if (absb <= EPS*err || (EPS*err <= minf && absb < minf))
        {
          return true;
        }
@@ -1042,7 +1258,7 @@ public:
           return true;
         }
 #else
-      if (absb <= err*EPS) 
+      if (absb <= err*EPS || (EPS*err<=minf && absb<=minf)) 
         {
           return true;
         }
@@ -1558,11 +1774,11 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       delete []found;
     }
 #endif
-  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=false)
+  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true)
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
-      int itmax=100, nold;
+      int itmax=1000, nold;
 #ifdef USE_ROLD
       pvector<cmplx> rold;
 #endif
@@ -1654,23 +1870,26 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
             }
         }
       //cout << "iter=" << iter << "\n";
-      // refine 
-      if (polish==true)
-        {
-          for (i=0; i < n; i++)
-            //refine_root(roots[i]);
-            //laguer_real(roots[i]);
-            refine_root_maehly(roots[i], roots, i);
-        }
       if (nf < n)
         {
           if (try_harder)
             {
+              //cout << ">>>>>>>>>>nf=" << nf << "\n";
               for (i=0; i < n; i++)
                 {
                   if (!found[i])
-                    laguer_real(roots[i]);
+                    {
+#ifdef USE_LAGUER_REAL
+                      if (laguer_real_th(roots[i]))
+                        nf++;
+#else
+                      if (laguer_cmplx_th(roots[i]))
+                        nf++;
+#endif
+                    }
                 }
+              if (nf < n)
+                cout << "Found " << nf << " roots out of " << n << "\n";
             }
 #if 0
           cout << "[LAGABERTH-ERROR] We had a problem, I was not able to converge to all roots\n";
@@ -1683,7 +1902,16 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           exit(1);
 #endif
         }
-      n=nold;
+
+      // refine 
+      if (polish==true)
+        {
+          for (i=0; i < n; i++)
+            //refine_root(roots[i]);
+            //laguer_real(roots[i]);
+            refine_root_maehly(roots[i], roots, i);
+        }
+            n=nold;
       //cout << "iter=" << iter << " # found=" << nf << "\n";
       delete []found;
     }
@@ -1884,6 +2112,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       meps = epsilon();
       eps05 = pow(numeric_limits<ntype>::epsilon(),0.5);
       maxf= getmax();
+      minf = numeric_limits<ntype>::min();
       maxdigits = numeric_limits<ntype>::digits10-1;
       maxf2 = pow(maxf,0.5)/10.0;
       maxf3 = pow(maxf,1.0/3.0)/10.0;
