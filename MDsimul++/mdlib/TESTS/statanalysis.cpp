@@ -551,6 +551,7 @@ int main(int argc, char **argv)
             cod[i] = co[i];
 #endif
           oqs.set_coeff(cod);
+          oqs.set_polish(false);
           oqs.find_roots(csold);
           //oqs.find_roots_laguerre(csold);
           //oqs.zroots(csold,true);
