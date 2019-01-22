@@ -833,7 +833,7 @@ public:
       r0 = cmplx(x[0],x[1]);
       return false;
     }   
-  bool nr_aberth(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+  bool nr_aberth_cmplx(cmplx &r0, pvector<cmplx,N> &roots, int iac)
     {
       int i;
       cmplx povp1, denom;
@@ -894,7 +894,7 @@ public:
       r0 -= ntype(1.0)/p1p;
       return false;
     }
-  bool nr_aberth_rev(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+  bool nr_aberth_cmplx_rev(cmplx &r0, pvector<cmplx,N> &roots, int iac)
     {
       int i;
       cmplx povp1, denom;
@@ -2144,15 +2144,35 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               r=abs(roots[i]);
 #ifdef USE_ROLD
 #ifdef USE_LAGUER_REAL
-              if (r > 1)
-                ret = laguer_real_mod_rev(roots[i], rold, i);
+              if (method==1)
+                {
+                  if (r > 1)
+                    ret = nr_aberth_real_rev(roots[i], rold, i);
+                  else
+                    ret = nr_aberth_real(roots[i], rold, i);
+                }
               else
-                ret = laguer_real_mod(roots[i], rold, i);
+                {
+                  if (r > 1)
+                    ret = laguer_real_mod_rev(roots[i], rold, i);
+                  else
+                    ret = laguer_real_mod(roots[i], rold, i);
+                }
 #else
-              if (r > 1)
-                ret = laguer_cmplx_mod_rev(roots[i], rold, i);
+              if (method==1)
+                {
+                  if (r > 1)
+                    ret = nr_aberth_cmplx_rev(roots[i], rold, i);
+                  else
+                    ret = nr_aberth_cmplx(roots[i], rold, i);
+                }
               else
-                ret = laguer_cmplx_mod(roots[i], rold, i);
+                {
+                  if (r > 1)
+                    ret = laguer_cmplx_mod_rev(roots[i], rold, i);
+                  else
+                    ret = laguer_cmplx_mod(roots[i], rold, i);
+                }
 #endif
 #else
 #ifdef USE_LAGUER_REAL
@@ -2174,9 +2194,9 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               if (method==1)
                 {
                   if (r > 1)
-                    ret = nr_aberth_rev(roots[i], roots, i);
+                    ret = nr_aberth_cmplx_rev(roots[i], roots, i);
                   else
-                    ret = nr_aberth_rev(roots[i], roots, i);
+                    ret = nr_aberth_cmplx(roots[i], roots, i);
                 }
               else
                 {
@@ -2383,6 +2403,11 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       laguerre_aberth(roots);
     }
+  inline void find_roots_aberth(pvector<cmplx,N>& roots)
+    {
+      laguerre_aberth(roots, false, true, 1);
+    }
+ 
   inline void find_roots_defl(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)
     {
       // if backup is true the dynamic version preserve the coefficients after calling this method
