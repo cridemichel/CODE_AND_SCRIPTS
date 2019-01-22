@@ -25,8 +25,8 @@ inline ntype SIGN(ntype a, ntype b)
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
-//#define USE_LAGUER_REAL
-//#define USE_ROLD
+#define USE_LAGUER_REAL
+#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
@@ -2087,7 +2087,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       delete []found;
     }
 #endif
-  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true, int method=1)
+  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true, int method=0)//0 is laguerre; 1=aberth (faster)
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
@@ -2399,10 +2399,17 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       return n; 
     }
+  // find roots by default uses aberth method which is faster than laguerre implicit method
   inline void find_roots(pvector<cmplx,N>& roots)
+    {
+      laguerre_aberth(roots, false, true, 1);
+    }
+
+  inline void find_roots_laguerre(pvector<cmplx,N>& roots)
     {
       laguerre_aberth(roots);
     }
+
   inline void find_roots_aberth(pvector<cmplx,N>& roots)
     {
       laguerre_aberth(roots, false, true, 1);

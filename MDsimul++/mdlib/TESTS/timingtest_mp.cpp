@@ -3,7 +3,7 @@
 //#include "pmatrix.H"
 #define CPOLY
 #define AURENTZ
-//#define BACKSTAB
+#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-#define MPC_MP
+//#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -621,7 +621,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           //c.show("coeff=");
           //rp.find_roots_defl(roots);
           rp.find_roots(roots);
-          //rp.petkovic6th(roots);
+          //rp.find_roots_laguerre(roots);
           roots.set_show_digits(50);
           //roots.show("roots");
           //for (i=0; i < NDEG; i++)
