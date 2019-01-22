@@ -876,11 +876,12 @@ int main(int argc, char *argv[])
       //c.show("coeff");
       //rp.show();
       //rp.zroots(roots,false);
-      //rp.find_roots(roots);
-      rp.find_roots_laguerre(roots);
+      rp.set_polish(false);
+      rp.find_roots(roots);
+      //rp.find_roots_laguerre(roots);
       //rp.petkovic6th(roots);
-      for (i=0; i < NDEG+1; i++)
-        cout << setprecision(64) << real(c[i]) << "\n";
+      //for (i=0; i < NDEG+1; i++)
+        //cout << setprecision(64) << real(c[i]) << "\n";
       //rp.find_roots(roots,false);
       //roots.show();  
       sprintf(testo2, "OPS");

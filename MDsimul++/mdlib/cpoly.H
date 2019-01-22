@@ -23,10 +23,10 @@ inline ntype SIGN(ntype a, ntype b)
     return -abs(a);
 }
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-#define BINI_CONV_CRIT
+//#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
-#define USE_ROLD
+//#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
@@ -167,6 +167,7 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N>
   int maxdigits;
   ntype goaleps;
   ntype Kconv;
+  bool gpolish;
   inline void solve_quadratic(pvector<cmplx,N>& sol);
 public:
   void show(void)
@@ -2404,15 +2405,20 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       return n; 
     }
+  
+  void set_polish(bool p)
+    {
+      gpolish=p;
+    }
   // find roots by default uses aberth method which is faster than laguerre implicit method
   inline void find_roots(pvector<cmplx,N>& roots)
     {
-      laguerre_aberth(roots, false, true, 1);
+      laguerre_aberth(roots, gpolish, true, 1);
     }
 
   inline void find_roots_laguerre(pvector<cmplx,N>& roots)
     {
-      laguerre_aberth(roots);
+      laguerre_aberth(roots, gpolish, true, 0);
     }
 
   inline void find_roots_aberth(pvector<cmplx,N>& roots)
@@ -2490,6 +2496,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       goaleps=numeric_limits<ntype>::epsilon(); 
       //Kconv=sqrt(ntype(2.0))*ntype(2.0)+ntype(1.0);  
       Kconv=3.8;
+      gpolish=false;
     }
   cpoly()
     {
