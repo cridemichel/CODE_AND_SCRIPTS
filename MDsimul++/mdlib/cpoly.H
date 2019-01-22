@@ -1,3 +1,17 @@
+/* 
+ * NOTES:
+ *
+ * Find_roots uses by default aberth method (implicit deflation based on newton-raphson method) 
+ * which is faster and more accurate than implicit laguerre. In particular aberth should be parallelized without issues
+ * while implicit laguerre seeems to be get worse if using estimates of roots from previous step 
+ *
+ * By using the method set_polish(true), polishing by maehly's method is enabled (by defulat is disabled since it is slower)
+ *
+ * set_output_prec() set the precision to use for checking convergence
+ *
+ * This class can be used also using multiprecision types from boost library (e.g. mpfr and mpc )
+ *
+ * */
 #include "pvector.H"
 #include "pmatrix.H"
 #include<cstdlib>
