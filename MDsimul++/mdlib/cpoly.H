@@ -24,7 +24,9 @@
 #include <cstdlib>
 #include <vector>
 #include <array>
-
+#if defined(_OPENMP)
+#include<omp.h>
+#endif
 #define Sqr(x) ((x)*(x))
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
                    (imaxarg1) : (imaxarg2))
@@ -40,7 +42,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
-//#define USE_ROLD
+#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
@@ -2109,7 +2111,8 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #endif
   void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true, int method=0)//0 is laguerre; 1=aberth (faster)
     {
-      bool *found = new bool[n], fine=false, ret;
+      bool *found = new bool[n], ret;
+      volatile bool fine=false;
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
       ntype r;
@@ -2156,9 +2159,13 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #ifdef USE_ROLD
           rold=roots;
 #endif
+
+#if defined(_OPENMP)
+#pragma omp parallel for private(r) private(ret)
+#endif
           for (i=0; i < n; i++)
             {
-              // refine conjuigate pairs only once!
+              // refine conjugate pairs only once!
               if (found[i]) 
                 continue;
               r=abs(roots[i]);
@@ -2230,12 +2237,27 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               if (ret)
                 {
                   found[i]=true;
+                  // all processess should wait here before updating nf
+
+#if defined(_OPENMP)
+#pragma omp critical
+                    {
+                      nf++;
+                      if (nf==n)
+                        {
+                          fine=true;
+                          i=n;// this is like a break but thread-safe
+                        }
+
+                    }
+#else
                   nf++;
                   if (nf==n)
                     {
                       fine=true;
-                      break;
+                      i=n;// this is like a break but thread-safe
                     }
+#endif
                 }
             }
         }
