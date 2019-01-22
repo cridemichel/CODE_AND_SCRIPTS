@@ -620,7 +620,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           //rp.show("f[x_]:=");
           //c.show("coeff=");
           //rp.find_roots_defl(roots);
-          rp.set_polish(true);
+          //rp.set_polish(true);
           rp.find_roots(roots);
           //rp.find_roots_laguerre(roots);
           roots.set_show_digits(50);
