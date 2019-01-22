@@ -23,10 +23,10 @@ inline ntype SIGN(ntype a, ntype b)
     return -abs(a);
 }
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
-//#define BINI_CONV_CRIT
+#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
-//#define USE_ROLD
+#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
@@ -693,11 +693,11 @@ public:
      }
 
 #ifdef BINI_CONV_CRIT
-     s=acmon[m];
+     s=acmon[n];
      abx = sqrt(xcR*xcR+xcI*xcI);
-     pa[0]=real(cmon[m]);
-     pa[1]=imag(cmon[m]);
-     for (j=m-1; j >=0; j--) 
+     pa[0]=real(cmon[n]);
+     pa[1]=imag(cmon[n]);
+     for (j=n-1; j >=0; j--) 
        {
          s=abx*s+acmon[j];
          p0 = pa[0];
@@ -845,9 +845,12 @@ public:
       ntype err;
 #else
       ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+      ntype s;
 #endif
       abx=abs(r0);
+#ifndef BINI_CONV_CRIT
       err=alpha[n];
+#endif
       p=cmon[n];
       p1=0;
 #ifndef BINI_CONV_CRIT
@@ -866,7 +869,8 @@ public:
         {
           s=abx*s+acmon[i];
         }
-      if (absb <= K*s) // stopping criterion of bini 
+      absp=abs(p);
+      if (absp <= K*s) // stopping criterion of bini 
         {
           return true;
         }
@@ -906,6 +910,7 @@ public:
       ntype err;
 #else
       ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+      ntype s;
 #endif
       x=ntype(1.0)/r0;
       p=cmon[0];
@@ -917,11 +922,11 @@ public:
 #ifdef BINI_CONV_CRIT
       s=acmon[n];
       pa=cmon[n];
-      abx=abs(xini);
+      abx=abs(r0);
       for (i=n-1; i >=0; i--) 
         {
           s=abx*s+acmon[i];
-          pa=xini*pa+cmon[i];
+          pa=r0*pa+cmon[i];
         }
       absp=abs(pa);
       if (absp <= K*s) // stopping criterion of bini 
