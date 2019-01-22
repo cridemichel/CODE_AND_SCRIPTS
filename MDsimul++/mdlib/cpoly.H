@@ -26,7 +26,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
-#define USE_ROLD
+//#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
