@@ -25,7 +25,7 @@ inline ntype SIGN(ntype a, ntype b)
 //#define LAGUERRE_POLISH // migliora drasticamente con maxiter=8 ma per polinomi di alto grado (500) crea problemi
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
-#define USE_LAGUER_REAL
+//#define USE_LAGUER_REAL
 //#define USE_ROLD
 //#define PETKOVIC_6TH
 using namespace std;
@@ -664,54 +664,282 @@ public:
         }
       return false;
     }
+  bool nr_aberth_real_rev(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+    {
+      int j;
+      ntype err;
+      cmplx p1pc;
+      const ntype EPS=goaleps;
+      // root polishing by NR
+      ntype tt[2], pa[2], xcR, xcI, aR, aI, sump[2], p1p[2];
+      ntype absp, abx, p10, p0, x[2], s, p[2], p1[2], pp1[2], dx[2], invden, sum[2];
+      //cout << "xc=" << xc << "\n";
+      xcR=real(r0);
+      xcI=imag(r0);
+      invden = 1.0/(xcR*xcR+xcI*xcI);
+      x[0] = xcR*invden;// 1/x
+      x[1] = -xcI*invden;
+      p[0]=real(cmon[0]);
+      p[1]=imag(cmon[0]);
+      p1[0]=0.0;
+      p1[1]=0.0;
+      for (j=1;j<=n;j++) {
+       p10 = p1[0];
+       p1[0] = x[0]*p1[0] - x[1]*p1[1] + p[0];
+       p1[1] = x[0]*p1[1] + x[1]*p10 + p[1];
+       p0 = p[0];
+       p[0] = x[0]*p[0] - x[1]*p[1] + real(cmon[j]);
+       p[1] = x[0]*p[1] + x[1]*p0 + imag(cmon[j]);
+     }
+
+#ifdef BINI_CONV_CRIT
+     s=acmon[m];
+     abx = sqrt(xcR*xcR+xcI*xcI);
+     pa[0]=real(cmon[m]);
+     pa[1]=imag(cmon[m]);
+     for (j=m-1; j >=0; j--) 
+       {
+         s=abx*s+acmon[j];
+         p0 = pa[0];
+         pa[0] = xcR*pa[0] - xcI*pa[1] + real(cmon[j]);
+         pa[1] = xcR*pa[1] + xcI*p0 + imag(cmon[j]);
+       }
+     if (abs(cmplx(pa[0],pa[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+       {
+         //xc = cmplx(xcR, xcI);
+         return true;
+       }
+#else
+     //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= EPS*err)
+     err=alpha[0];//abs(cmon[0])*(Kconv*m+1);
+     abx=1.0/sqrt(xcR*xcR+xcI*xcI);
+     for (j=1;j<=n;j++) {
+       err=abx*err+alpha[j];//abs(cmon[j])*(Kconv*j+1);
+     }
+     //cout << "abs=" << abs(cmplx(b[0],b[1])) << " EPS*err=" << EPS*err << "\n";
+     absp=abs(cmplx(p[0],p[1]));
+     if (absp <= EPS*err || (EPS*err <= minf && absp < minf))
+       {
+         return true;
+       }
+#endif 
+#if 0
+      if (p1==cmplx(0,0))
+        {
+          return false;
+        }
+#endif
+      p1pc=cmplx(p1[0],p1[1])/cmplx(p[0],p[1]);
+      p1p[0]=real(p1pc);
+      p1p[1]=imag(p1pc);
+      tt[0] = ntype(n)-x[0]*p1p[0]+x[1]*p1p[1];
+      tt[1] = -x[0]*p1p[1]-x[1]*p1p[0];
+      p1p[0] = x[0]*tt[0] - x[1]*tt[1];
+      p1p[1] = x[1]*tt[0] + x[0]*tt[1];
+
+      for (j=0; j < n; j++)
+        {
+          if (j==iac)
+            continue;
+          aR = xcR-real(roots[j]);
+          aI = xcI-imag(roots[j]);
+          invden = 1.0/(aR*aR+aI*aI);
+          p1p[0] -= aR*invden;
+          p1p[1] -= -aI*invden;
+        }
+      invden=1.0/(p1p[0]*p1p[0]+p1p[1]*p1p[1]);
+      dx[0]=p1p[0]*invden;
+      dx[1]=-p1p[1]*invden;
+      r0 = cmplx(xcR-dx[0],xcI-dx[1]);
+      return false;
+    }
+  bool nr_aberth_real(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+    {
+      int j;
+      ntype err;
+      cmplx p1pc;
+      const ntype EPS=goaleps;
+      // root polishing by NR
+      ntype aR, aI, sump[2], p1p[2];
+      ntype absp, abx, p10, p0, x[2], s, p[2], p1[2], pp1[2], dx[2], invden, sum[2];
+      x[0] = r0.real();
+      x[1] = r0.imag();
+     //its=iter;
+      p[0]=real(cmon[n]);
+      p[1]=imag(cmon[n]);
+#ifndef BINI_CONV_CRIT
+      err=alpha[n];
+#endif
+      p1[0]=0.0;
+      p1[1]=0.0;
+      abx=sqrt(x[0]*x[0]+x[1]*x[1]);
+      for (j=n-1;j>=0;j--) {
+        p10 = p1[0];
+        p1[0] = x[0]*p1[0] - x[1]*p1[1] + p[0];
+        p1[1] = x[0]*p1[1] + x[1]*p10 + p[1];
+        p0 = p[0];
+        p[0] = x[0]*p[0] - x[1]*p[1] + real(cmon[j]);
+        p[1] = x[0]*p[1] + x[1]*p0 + imag(cmon[j]);
+#ifndef BINI_CONV_CRIT
+        err=abx*err+alpha[j];
+#endif
+     }
+      //cout << "p=" << p[0] << " " << p[1] << " p1=" << p1[0] << " " << p1[1] << "\n";
+#ifdef BINI_CONV_CRIT
+     s=acmon[n];
+     for (j=n-1; j >=0; j--) 
+       {
+         s=abx*s+acmon[j];
+       }
+
+     if (abs(cmplx(p[0],p[1])) <= 2.0*EPS*(4.0*ntype(n)+1)*s) // stopping criterion of bini 
+       {
+         return true;
+       }
+#else
+     //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= EPS*err)
+
+     absp=abs(cmplx(p[0],p[1]));
+     //cout << "absp=" << absp << " EPS*err=" << err*EPS << "\n";
+     if (absp <= EPS*err || (EPS*err <= minf && absp < minf))
+       {
+         return true;
+       }
+#endif 
+#if 0
+      if (p1==cmplx(0,0))
+        {
+          return false;
+        }
+#endif
+      p1pc=cmplx(p1[0],p1[1])/cmplx(p[0],p[1]);
+      p1p[0]=real(p1pc);
+      p1p[1]=imag(p1pc);
+      for (j=0; j < n; j++)
+        {
+          if (j==iac)
+            continue;
+          aR = x[0]-real(roots[j]);
+          aI = x[1]-imag(roots[j]);
+          invden = 1.0/(aR*aR+aI*aI);
+          p1p[0] -= aR*invden;
+          p1p[1] -= -aI*invden;
+        }
+      invden=1.0/(p1p[0]*p1p[0]+p1p[1]*p1p[1]);
+      dx[0]=p1p[0]*invden;
+      dx[1]=-p1p[1]*invden;
+      x[0] -= dx[0];
+      x[1] -= dx[1];
+      r0 = cmplx(x[0],x[1]);
+      return false;
+    }   
   bool nr_aberth(cmplx &r0, pvector<cmplx,N> &roots, int iac)
     {
-      int i,j;
-      ntype err;
+      int i;
       cmplx povp1, denom;
       const ntype EPS=goaleps;
       // root polishing by NR
-      cmplx r0old, p, sum;
-      cmplx p1, p1c;
-      ntype absb, abx, b[2], d[2], d0, b0, x[2];
-      ntype errold;
-#if 0
-      b[0]=real(cmon[n]);
-      b[1]=imag(cmon[n]);
-      d[0]=0.0;
-      d[1]=0.0;
-      x[0] = real(r0);
-      x[1] = imag(r0);
-      abx=sqrt(x[0]*x[0]+x[1]*x[1]);
-      err=alpha[n];
-      for (j=n-1;j>=0;j--) {
-        d0 = d[0];
-        d[0] = x[0]*d[0] - x[1]*d[1] + b[0];
-        d[1] = x[0]*d[1] + x[1]*d0 + b[1];
-        b0 = b[0];
-        b[0] = x[0]*b[0] - x[1]*b[1] + real(cmon[j]);
-        b[1] = x[0]*b[1] + x[1]*b0 + imag(cmon[j]);
-        err=abx*err+alpha[j];
-      }
-      p=cmplx(b[0],b[1]);
-      p1=cmplx(d[0],d[1]);
+      cmplx p, p1, p1p;
+      ntype absp, abx;
+#ifndef BINI_CONV_CRIT
+      ntype err;
 #else
-      abx=abs(r0);
-      err=alpha[n]*abx+alpha[n-1];
-      p=cmon[n]*r0+cmon[n-1];
-      p1=cmon[n];
-      for(i=n-2;i>=0;i--) {
-        p1=p+p1*r0;
-        p=cmon[i]+p*r0;
-        err=abx*err+alpha[i];
-      }
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
 #endif
-      //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= EPS*err)
-      absb=abs(p);
-      if (absb <= EPS*err || (EPS*err <= minf && absb < minf))
+      abx=abs(r0);
+      err=alpha[n];
+      p=cmon[n];
+      p1=0;
+#ifndef BINI_CONV_CRIT
+      err=alpha[n];//abs(cmon[m])*(Kconv*m+1);
+#endif
+      for(i=n-1;i>=0;i--) {
+        p1=p1*r0+p;
+        p=p*r0+cmon[i];
+#ifndef BINI_CONV_CRIT
+        err=abx*err+alpha[i];
+#endif
+      }
+#ifdef BINI_CONV_CRIT
+      s=acmon[n];
+      for (i=n-1; i >=0; i--) 
+        {
+          s=abx*s+acmon[i];
+        }
+      if (absb <= K*s) // stopping criterion of bini 
         {
           return true;
         }
+#else
+      //if (sqrt(b[0]*b[0]+b[1]*b[1]) <= EPS*err)
+      absp=abs(p);
+      if (absp <= EPS*err || (EPS*err <= minf && absp < minf))
+        {
+          return true;
+        }
+#endif
+#if 0
+      if (p1==cmplx(0,0))
+        {
+          return false;
+        }
+#endif
+      p1p=p1/p;
+      for (i=0; i < n; i++)
+        {
+          if (i==iac)
+            continue;
+          p1p -= ntype(1.0)/(r0-roots[i]);
+        }
+      r0 -= ntype(1.0)/p1p;
+      return false;
+    }
+  bool nr_aberth_rev(cmplx &r0, pvector<cmplx,N> &roots, int iac)
+    {
+      int i;
+      cmplx povp1, denom;
+      const ntype EPS=goaleps;
+      // root polishing by NR
+      cmplx pa, p, p1, p1p, x;
+      ntype absp, abx;
+#ifndef BINI_CONV_CRIT
+      ntype err;
+#else
+      ntype K=2.0*EPS*(4.0*ntype(n)+1.0);
+#endif
+      x=ntype(1.0)/r0;
+      p=cmon[0];
+      p1=0;
+      for(i=1;i<=n;i++) {
+        p1=p1*x+p;
+        p=p*x+cmon[i];
+      }
+#ifdef BINI_CONV_CRIT
+      s=acmon[n];
+      pa=cmon[n];
+      abx=abs(xini);
+      for (i=n-1; i >=0; i--) 
+        {
+          s=abx*s+acmon[i];
+          pa=xini*pa+cmon[i];
+        }
+      absp=abs(pa);
+      if (absp <= K*s) // stopping criterion of bini 
+        {
+          return true;
+        }
+#else
+      err=alpha[0];//abs(cmon[0])*(Kconv*m+1);
+      abx=1.0/abs(r0);
+      for (i=1;i<=n;i++) {
+        err=abx*err+alpha[i];//abs(cmon[j])*(Kconv*j+1);
+      }
+      absp=abs(p);
+      if (absp <= EPS*err|| (EPS*err<=minf && absp<=minf)) 
+        {
+          return true;
+        }
+#endif
 
 #if 0
       if (p1==cmplx(0,0))
@@ -719,17 +947,15 @@ public:
           return false;
         }
 #endif
-      r0old=r0;
-      sum=0;
+      p1p=p1/p;
+      p1p=x*(ntype(n)-x*p1p);
       for (i=0; i < n; i++)
         {
           if (i==iac)
             continue;
-          sum += ntype(1.0)/(r0-roots[i]);
+          p1p -= ntype(1.0)/(r0-roots[i]);
         }
-      sum *= p;
-      p1c = p1 - sum;
-      r0 -= p/p1c;
+      r0 -= ntype(1.0)/p1p;
       return false;
     }
 
@@ -1861,7 +2087,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       delete []found;
     }
 #endif
-  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true)
+  void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true, int method=1)
     {
       bool *found = new bool[n], fine=false, ret;
       int i,  nf=0, iter, is;
@@ -1930,17 +2156,35 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #endif
 #else
 #ifdef USE_LAGUER_REAL
-              if (r > 1)
-                //ret = nr_aberth(roots[i], roots, i);
-                ret = laguer_real_mod_rev(roots[i], roots, i);
+              if (method==1)
+                {
+                  if (r > 1)
+                    ret = nr_aberth_real_rev(roots[i], roots, i);
+                  else
+                    ret = nr_aberth_real(roots[i], roots, i);
+                }
               else
-                //ret = nr_aberth(roots[i], roots, i);
-                ret = laguer_real_mod(roots[i], roots, i);
+                {
+                  if (r > 1)
+                    ret = laguer_real_mod_rev(roots[i], roots, i);
+                  else
+                    ret = laguer_real_mod(roots[i], roots, i);
+                }
 #else
-              if (r > 1)
-                ret = laguer_cmplx_mod_rev(roots[i], roots, i);
+              if (method==1)
+                {
+                  if (r > 1)
+                    ret = nr_aberth_rev(roots[i], roots, i);
+                  else
+                    ret = nr_aberth_rev(roots[i], roots, i);
+                }
               else
-                ret = laguer_cmplx_mod(roots[i], roots, i);
+                {
+                  if (r > 1)
+                    ret = laguer_cmplx_mod_rev(roots[i], roots, i);
+                  else
+                    ret = laguer_cmplx_mod(roots[i], roots, i);
+                }
 #endif
 #endif
               if (ret)
