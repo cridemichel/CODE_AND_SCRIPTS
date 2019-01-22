@@ -37,6 +37,7 @@ inline ntype SIGN(ntype a, ntype b)
 #define POLISH_NR_REAL
 #define BINI_CONV_CRIT
 #ifdef BINI_INIGUESS
+#define USE_CONVEX_HULL
 #include<vector>
 #include<set>
 #include<utility>
@@ -2130,6 +2131,147 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
        return xi1;
    }
 #endif
+void initial_guess(pvector<cmplx,N>& roots)
+    {
+#ifdef USE_CONVEX_HULL
+      vector<Point> pts, convh;
+#endif
+      vector<cmplx> rg;
+      vector<int> k;
+      ntype sigma, ukc, vkc, maxt, t;
+      Point p;
+      int q, i, j;
+#ifdef USE_CONVEX_HULL
+      pts.resize(n+1);
+      for (i = 0; i <= n; i++)
+        {
+          p.x=ntype(i);
+          if (abs(cmon[i])!=0)
+            {
+              p.y=log(abs(cmon[i]));
+            }
+          else
+            {
+              p.y=-maxf/1.618034;
+            }
+          pts[i] = p;
+        }
+      convh=upper_convex_hull(pts);
+      q=convh.size()-1;
+      if (q<=2)
+        {
+          q=2;
+          k.resize(q+1);
+          k[1]=n;
+          k[2]=0;
+        }
+      else
+        {
+          k.resize(q+1);
+        }
+      i=1; 
+      for (i=1; i <= q; i++)
+        {
+          k[i] = ((int)convh[i].x);
+        }
+#endif
+      ntype ukip1;
+#ifndef USE_CONVEX_HULL
+      vector<ntype> vk, uk;
+      int kk;
+      vk.resize(n+1);
+      uk.resize(n+1);
+      for (i=1; i <= n; i++) 
+        {
+          t=abs(cmon[i]/cmon[0]);
+          if (i==1 || t > maxt)
+            maxt=t;
+        }
+      uk[0] = 1.0/(1.0+maxt);   
+
+      for (i=0; i < n; i++) 
+        {
+          t=abs(cmon[i]/cmon[n]);
+          if (i==0 || t > maxt)
+            maxt=t;
+        }
+      vk[n] = 1.0 + maxt;
+
+      for (kk=1; kk <= n; kk++)
+        {
+          for (i=0; i < kk; i++) 
+            {
+              //if (cmon[kk]==cmplx(0.0,0.0))
+                //continue;
+              ukc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+              if (i==0 || ukc > uk[kk])
+                uk[kk]=ukc;
+            }
+        }
+      for (kk=0; kk < n; kk++)
+        {
+          bool first=true;
+          for (i=kk+1; i <= n; i++) 
+            {
+              if (cmon[i]==cmplx(0.0,0.0)) 
+                continue;
+              //if (cmon[kk]==cmplx(0.0,0.0))
+                //continue;
+              vkc=pow(abs(cmon[i]/cmon[kk]),1.0/(kk-i));
+              if (first || vkc < vk[kk])
+                {
+                  first=false;
+                  vk[kk]=vkc;
+                }
+            }
+        } 
+      k.resize(n+2); 
+      q=1;
+      for (kk=0; kk <= n; kk++)
+        {
+          if (uk[kk] <= vk[kk])
+            {
+              k[q] = kk; 
+              q++;
+            }
+        }  
+      q--;
+      //sigma=M_PI+2.0*M_PI*(drand48()-0.5);
+      sigma=-0.01;//2.0*M_PI*(drand48()-0.5);
+      rg.resize(n); 
+      int cc=0, dk;
+      for (i=1; i < q; i++)
+        {
+          dk = k[i+1]-k[i];
+          for (j=1; j <= dk; j++)
+            {
+              rg[(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+              cc++;
+            }
+        }
+#else
+      //sigma=2.0*M_PI*(drand48()-0.5)-M_PI;
+      sigma=-0.01;//2.0*M_PI*(drand48()-0.5);
+      rg.resize(n); 
+      int cc=0;
+
+      for (i=q-1; i >= 1; i--)
+        {
+          ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
+          for (j=1; j <= k[i]-k[i+1]; j++)
+            {
+              rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+              cc++;
+            }
+        }
+#endif
+      //std::sort(rg.begin(),rg.end(), [&] (cmplx a, cmplx b)-> bool {return abs(a) > abs(b);});
+      for (i=0; i < n; i++)
+        {
+          roots[i]=rg[i]; //dal più piccolo al più grande
+          //cout << setprecision(20) << "(" << real(roots[i]) << "," << imag(roots[i]) << ")" << "r=" << abs(roots[i]) << "\n";
+        }
+    }
  void laguerre_defl(pvector<cmplx,N>& roots,bool polish=false, bool backup=false)
    {
      // find initial guess for x here
@@ -2229,7 +2371,6 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           int MAXSTPS=1000;// MT=100;
           sigold=0.0;
           sig=1.0;
-
           //cout << "Upper bound xi=" << xi << "\n";
           bool rescaled=false;
           //cout << "scfact=" << scfact << "0.1/maxf=" << 0.1/maxf << " n=" << n << "\n";

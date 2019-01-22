@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-#define CPOLY
+//#define CPOLY
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -876,7 +876,7 @@ int main(int argc, char *argv[])
       //c.show("coeff");
       //rp.show();
       //rp.zroots(roots,false);
-      rp.set_polish(false);
+      //rp.set_polish(false);
       rp.find_roots(roots);
       //rp.find_roots_laguerre(roots);
       //rp.petkovic6th(roots);

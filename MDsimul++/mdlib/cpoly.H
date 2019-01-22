@@ -5,7 +5,7 @@
  * which is faster and more accurate than implicit laguerre. In particular aberth should be parallelized without issues
  * while implicit laguerre seeems to be get worse if using estimates of roots from previous step 
  *
- * By using the method set_polish(true), polishing by maehly's method is enabled (by defulat is disabled since it is slower)
+ * By using the method set_polish(true), polishing by maehly's method is enabled (by default is disabled since it is slower)
  *
  * set_output_prec() set the precision to use for checking convergence
  *
