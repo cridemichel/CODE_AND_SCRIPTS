@@ -215,30 +215,60 @@ public:
   void show(const char* str)
     {
       int i;
+      bool re, im;
       if (str!=NULL)
         cout <<  str;
       for (i=n; i >= 0; i--)
         {
-          if (abs(coeff[i]) > 0.0)
+          re=false;
+          im=false;
+          if (real(coeff[i]) > 0.0)
             {
               if (i < n)
                 cout << "+";
+              if (imag(coeff[i])!=0)
+                cout << "(";
+              if (abs(real(coeff[i]))!=1.0 || imag(coeff[i])!=0)
+                {
+                  cout << setprecision(maxdigits) << abs(real(coeff[i]));
+                }
+              re=true;
             }
-          else
+          else if (real(coeff[i]) < 0)
             { 
               cout << "-";
+              cout << setprecision(maxdigits) << abs(real(coeff[i]));
+              re=true;
             }
-          if (i==0)
-            cout << setprecision(maxdigits) << abs(coeff[i]);
-          else if (i > 0 && abs(coeff[i]) != 1.0)
-            cout << setprecision(maxdigits) << abs(coeff[i])<< "*";
+          else
+            re=false;
 
-          if ( i > 1)
+          if (imag(coeff[i]) > 0.0)
             {
-              cout << "x^" << i;
+              if (i < n && re==true)
+                cout << "+" << abs(imag(coeff[i]));
+              im=true;
             }
-          else if (i==1)
-            cout << "x";
+          else if (imag(coeff[i]) < 0)
+            { 
+              cout << "-" << abs(imag(coeff[i]));
+              im=true;
+            }
+          else
+            im=false;
+          if (im==true && re==true)
+            cout << ")";
+          if (im==true || re==true)
+            {
+              if ((im==true || abs(real(coeff[i]))!=1.0) && i > 0) 
+                cout << "*";
+              if ( i > 1)
+                {
+                  cout << "x^" << i;
+                }
+              else if (i==1)
+                cout << "x";
+            }
         }
       cout << "\n";
     }

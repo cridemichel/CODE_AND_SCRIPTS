@@ -41,8 +41,8 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<500>>;
-using cmplx=number<mpc_complex_backend<500>>;
+using vldbl=number<mpfr_float_backend<200>>;
+using cmplx=number<mpc_complex_backend<200>>;
 using pdbl=vldbl;//double;
 using pcmplx=cmplx;//complex<double>;
 #else
@@ -872,19 +872,22 @@ int main(int argc, char *argv[])
       //rp.set_output_prec(1E-100);
       //rp.set_output_prec(1E-110);
 #endif
-      //rp.set_output_prec(1E-32);
+      rp.set_output_prec(1E-34);
       rp.set_coeff(c);
       //c.show("coeff");
-      //rp.show();
+      rp.show();
       //rp.zroots(roots,false);
       //rp.set_polish(false);
       rp.find_roots(roots);
       //rp.find_roots_laguerre(roots);
       //rp.petkovic6th(roots);
-      //for (i=0; i < NDEG+1; i++)
+      for (i=0; i < NDEG+1; i++)
+        cout << setprecision(200) << c[i] << "\n";
         //cout << setprecision(64) << real(c[i]) << "\n";
       //rp.find_roots(roots,false);
       //roots.show();  
+      for (i=0; i < NDEG; i++)
+        cout << setprecision(32) << "Root #" << i << " =" << roots[i] << "p(x)=" << rp.evalpoly(roots[i]) << "\n";
       sprintf(testo2, "OPS");
     }
   else if (algo==1)
