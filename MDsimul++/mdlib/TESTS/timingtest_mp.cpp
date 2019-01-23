@@ -2,7 +2,7 @@
 #include <stdio.h>
 //#include "pmatrix.H"
 #define CPOLY
-#define AURENTZ
+//#define AURENTZ
 //#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -128,8 +128,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<32>>;
-using cmplx=number<mpc_complex_backend<32>>;
+using numty=number<mpfr_float_backend<500>>;
+using cmplx=number<mpc_complex_backend<500>>;
 #ifdef BACKSTAB
 using bsdbl=number<mpfr_float_backend<500>>;
 using bscmplx=number<mpc_complex_backend<500>>;
@@ -379,6 +379,9 @@ int main(int argc, char* argv[])
   pvector<cmplx,NDEG> roots;
 #else
 #ifdef CPOLY
+  cpoly<complex<double>,-1,double> drp(NDEG);
+  pvector<complex<double>,-1> dc(NDEG+1);
+  pvector<complex<double>,-1> dr(NDEG);
   cpoly<cmplx,-1,numty> rp(NDEG);
   cpoly<cmplx,-1,numty> rphqr(NDEG);
   pvector<cmplx,-1> c(NDEG+1);
@@ -516,7 +519,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
   // set precision equal to precision of input coefficients (i.e. double epsilon)
   //rp.set_output_prec(numeric_limits<double>::epsilon());
-  rp.set_output_prec(1E-16);
+  //rp.set_output_prec(1E-16);
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
@@ -615,12 +618,20 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       //c << 0,0,0,0,-0.0004913632795045,0.11895207913477,0.1106512587181,-0.12790756907631,0.48389077297934,-0.0030871046557621,-0.27676517724439,0.21125418248601,0.4490961224484,0.033645447195426,0.27715120795188,-0.012734115584344,0.072796330215358,-0.10955456879709,0.11290799827972,0.083943354978793, 1.0;
       if (caso==0)
         {
-          rp.set_coeff(c);
+#if 0
+          for (j=0; j < NDEG+1; j++)
+            dc[j]=complex<double>(c[j]);
+          drp.set_coeff(dc);
+          drp.find_roots(dr);
           //rp.zroots(roots, false);
           //rp.show("f[x_]:=");
           //c.show("coeff=");
           //rp.find_roots_defl(roots);
           //rp.set_polish(true);
+          rp.use_this_guess(dr);
+#endif
+          rp.set_coeff(c);
+          //rp.show();
           rp.find_roots(roots);
           //rp.find_roots_laguerre(roots);
           roots.set_show_digits(50);

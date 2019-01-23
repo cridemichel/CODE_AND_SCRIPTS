@@ -42,14 +42,16 @@ inline ntype SIGN(ntype a, ntype b)
 //#define BINI_CONV_CRIT
 #define USE_CONVEX_HULL 
 #define USE_LAGUER_REAL
+#if defined(_OPENMP)
 #define USE_ROLD
+#endif
 //#define PETKOVIC_6TH
 using namespace std;
   template<class T>
 inline const T MAX(const T &a, const T &b)
 {return b > a ? (b) : (a);}
 
-template <class cmplx, class ntype, int N> 
+template <class cmplx, class ntype, class dcmplx, int N> 
 class cpoly_base_static 
 {
 public:
@@ -65,6 +67,8 @@ public:
 #ifdef USE_ROLD
   pvector<cmplx, N> rold;
 #endif
+  pvector<dcmplx,N> droots;
+
   void set_coeff(pvector<cmplx,N+1> v)
     {
       coeff = v;
@@ -78,7 +82,7 @@ public:
     n=nc;
   }
 };
-template <class cmplx, class ntype, int N> 
+template <class cmplx, class ntype, class dcmplx, int N> 
 class cpoly_base_dynamic 
 {
 public:
@@ -94,6 +98,8 @@ public:
 #ifdef USE_ROLD
   pvector<cmplx> rold;
 #endif
+  pvector<dcmplx> droots;
+
   cpoly_base_dynamic() = default;
   void set_coeff(pvector<cmplx,-1> v)
     {
@@ -113,7 +119,7 @@ public:
     }
 
   cpoly_base_dynamic(int nc): coeff(nc+1), cmon(nc+1), acmon(nc+1), alpha(nc+1),
-  deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc)
+  deflcoeff0(nc), deflcoeff1(nc), deflcoeff(nc), droots(nc)
 #ifdef USE_ROLD
   //,rold(nc)
 #endif
@@ -130,6 +136,7 @@ public:
       deflcoeff0.deallocate();
       deflcoeff1.deallocate();
       deflcoeff.deallocate();
+      droots.deallocate();
 #ifdef USE_ROLD
       //rold.deallocate();
 #endif
@@ -144,29 +151,31 @@ public:
       deflcoeff0.allocate(n);
       deflcoeff1.allocate(n);
       deflcoeff.allocate(n);
+      droots.allocate(n);
 #ifdef USE_ROLD
       //rold.allocate(n);
 #endif
     }
 };
 
-template <class cmplx, class ntype, int N> using cpolybase = 
-typename std::conditional<(N>0), cpoly_base_static <cmplx, ntype, N>,
-         cpoly_base_dynamic <cmplx, ntype, N>>::type;
+template <class cmplx, class ntype, class dcmplx, int N> using cpolybase = 
+typename std::conditional<(N>0), cpoly_base_static <cmplx, ntype, dcmplx, N>,
+         cpoly_base_dynamic <cmplx, ntype, dcmplx, N>>::type;
 
-template <class cmplx, int N=-1, class ntype=double> 
-class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N> 
+template <class cmplx, int N=-1, class ntype=double, class dcmplx=complex<double>, class dntype=double> 
+class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,dcmplx,N> 
 {
-  using cpolybase<cmplx,ntype,N>::n;
-  using cpolybase<cmplx,ntype,N>::coeff;
-  using cpolybase<cmplx,ntype,N>::cmon;
-  using cpolybase<cmplx,ntype,N>::acmon;
-  using cpolybase<cmplx,ntype,N>::alpha;
-  using cpolybase<cmplx,ntype,N>::deflcoeff0;
-  using cpolybase<cmplx,ntype,N>::deflcoeff1;
-  using cpolybase<cmplx,ntype,N>::deflcoeff;
+  using cpolybase<cmplx,ntype,dcmplx,N>::n;
+  using cpolybase<cmplx,ntype,dcmplx,N>::coeff;
+  using cpolybase<cmplx,ntype,dcmplx,N>::cmon;
+  using cpolybase<cmplx,ntype,dcmplx,N>::acmon;
+  using cpolybase<cmplx,ntype,dcmplx,N>::alpha;
+  using cpolybase<cmplx,ntype,dcmplx,N>::deflcoeff0;
+  using cpolybase<cmplx,ntype,dcmplx,N>::deflcoeff1;
+  using cpolybase<cmplx,ntype,dcmplx,N>::deflcoeff;
+  using cpolybase<cmplx,ntype,dcmplx,N>::droots;
 #ifdef USE_ROLD
-  using cpolybase<cmplx,ntype,N>::rold;
+  using cpolybase<cmplx,ntype,dcmplx,N>::rold;
 #endif
   template <class vtype>
     using pvecNm1 = typename std::conditional<(N>0),  pvector<vtype, N-1>,
@@ -176,7 +185,9 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N>
           pvector<vtype, -1>>::type;
   using cpolyNm1 = typename std::conditional<(N>0),  cpoly<cmplx, N-1,ntype>,
         cpoly<cmplx, -1,ntype>>::type;
-
+  template <class vtype>
+    using pdvecNp1 = typename std::conditional<(N>0),  pvector<vtype, N+1>,
+          pvector<vtype, -1>>::type;
   const int maxiter_polish=8;
   int imaxarg1,imaxarg2;
   ntype eps05, meps, maxf, maxf2, maxf3, minf, scalfact, cubic_rescal_fact;
@@ -185,7 +196,18 @@ class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,N>
   ntype Kconv;
   bool gpolish;
   inline void solve_quadratic(pvector<cmplx,N>& sol);
+  bool use_dbl_iniguess;
+  bool guess_provided;
 public:
+  void use_this_guess(pvector<dcmplx,N>& rg)
+    {
+      droots=rg;
+      guess_provided=true;
+    }
+  void no_guess(void)
+    {
+      guess_provided=false;
+    }
   void show(void)
     {
       show(NULL);
@@ -1834,7 +1856,7 @@ public:
           ukip1 = pow(abs(cmon[k[i+1]]/cmon[k[i]]),1.0/(k[i]-k[i+1]));
           for (j=1; j <= k[i]-k[i+1]; j++)
             {
-              rg[cc] = polar(ukip1,j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+              rg[cc] = polar(ukip1,ntype(j*2.0*M_PI/(k[i]-k[i+1])+2.0*M_PI*ntype(i)/ntype(n)+sigma));
               cc++;
             }
         }
@@ -2112,7 +2134,11 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
   void laguerre_aberth(pvector<cmplx,N>& roots, bool polish=false, bool try_harder=true, int method=0)//0 is laguerre; 1=aberth (faster)
     {
       bool *found = new bool[n], ret;
+#ifdef _OPENMP
       volatile bool fine=false;
+#else
+      bool fine=false;
+#endif
       int i,  nf=0, iter, is;
       int itmax=1000, nold;
       ntype r;
@@ -2143,6 +2169,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           cmon[i]=coeff[i+is]/cn;
           //cout << "cmon[" << i << "]=" << cmon[i] << "\n";
         }
+   
       for (i=0; i <=n; i++)
         {
           acmon[i] = abs(cmon[i]);
@@ -2150,10 +2177,41 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         }
       //absolute value of coefficients are used in Bini's stopping criterion
       //we use coeff vector to store them since it won't be used anymore from here on
-
+      if (guess_provided)
+        {
+          for (i=0; i < n; i++)
+            {
+              roots[i]=cmplx(droots[i]);
+              //cout << "r#" << i << "= " << roots[i] << "\n";
+            }
+        }
+      else if (use_dbl_iniguess)
+        {
+          if constexpr (!is_same<cmplx,dcmplx>::value 
+                        && !is_same<dcmplx,complex<float>>::value)
+            {
+              pvector<dcmplx,-1> dcoeff(n+1);
+              //if constexpr (N < 0)
+                //dcoeff.allocate(n+1);
+              for (i=0; i < n+1; i++)
+                dcoeff[i]=dcmplx(cmon[i]);
+              cpoly<dcmplx,-1,dntype,dcmplx,dntype> drs(n);
+              drs.use_iniguess();
+              drs.set_coeff(dcoeff);
+              drs.find_roots(droots);
+              for (i=0; i < n; i++)
+                roots[i]=cmplx(droots[i]); 
+            }
+          else
+            initial_guess(roots);
+        }
+      else
+        {
+          //cout << "qui2\n";
+          initial_guess(roots);
+        }
       for (i=0;i < n; i++)
         found[i]=false;
-      initial_guess(roots);
       for (iter=0; iter < itmax && !fine; iter++)
         {
 #ifdef USE_ROLD
@@ -2161,7 +2219,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 #endif
 
 #if defined(_OPENMP)
-#pragma omp parallel for private(r) private(ret)
+#pragma omp parallel for private(r) private(ret) //schedule(static)
 #endif
           for (i=0; i < n; i++)
             {
@@ -2240,7 +2298,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                   // all processess should wait here before updating nf
 
 #if defined(_OPENMP)
-#pragma omp critical
+#pragma omp critical // "critical" prevents multiple access of code between { ... } 
                     {
                       nf++;
                       if (nf==n)
@@ -2248,7 +2306,6 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
                           fine=true;
                           i=n;// this is like a break but thread-safe
                         }
-
                     }
 #else
                   nf++;
@@ -2517,7 +2574,10 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       return goaleps;
     } 
-
+  void use_iniguess(void)
+    {
+      use_dbl_iniguess=false;
+    }
   void init_const(void)
     {
       meps = epsilon();
@@ -2533,19 +2593,21 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       //Kconv=sqrt(ntype(2.0))*ntype(2.0)+ntype(1.0);  
       Kconv=3.8;
       gpolish=false;
+      guess_provided=false;
+      use_dbl_iniguess=true;
     }
   cpoly()
     {
       init_const();  
     }
 
-  cpoly(int nc): cpolybase<cmplx,ntype,N>(nc)
+  cpoly(int nc): cpolybase<cmplx,ntype,dcmplx,N>(nc)
   {
     init_const();
   }
 };
 // quadratic equation
-template<class cmplx, int N, class ntype> void cpoly<cmplx,N,ntype>::solve_quadratic(pvector<cmplx,N>&sol)
+template<class cmplx, int N, class ntype, class dcmplx, class dntype> void cpoly<cmplx,N,ntype,dcmplx,dntype>::solve_quadratic(pvector<cmplx,N>&sol)
 {
   cmplx acx,bcx,zx1,zx2,cdiskr,zxmax,zxmin;
   acx = coeff[1]/coeff[2];

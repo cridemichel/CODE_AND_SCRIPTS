@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "pmatrix.H"
-//#define CPOLY
+#define CPOLY
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -43,8 +43,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<500>>;
 using cmplx=number<mpc_complex_backend<500>>;
-using pdbl=double;
-using pcmplx=complex<double>;
+using pdbl=vldbl;//double;
+using pcmplx=cmplx;//complex<double>;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
