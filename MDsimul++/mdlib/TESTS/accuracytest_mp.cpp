@@ -872,6 +872,7 @@ int main(int argc, char *argv[])
       //rp.set_output_prec(1E-100);
       //rp.set_output_prec(1E-110);
 #endif
+      //rp.set_output_prec(1E-32);
       rp.set_coeff(c);
       //c.show("coeff");
       //rp.show();

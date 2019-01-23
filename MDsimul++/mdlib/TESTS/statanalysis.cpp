@@ -121,8 +121,8 @@ using pcmplx=cmplx;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using vldbl=number<mpfr_float_backend<200>>;
-using cmplx=number<mpc_complex_backend<200>>;
+using vldbl=number<mpfr_float_backend<100>>;
+using cmplx=number<mpc_complex_backend<100>>;
 using pdbl=vldbl;
 using pcmplx=cmplx;
 #else
