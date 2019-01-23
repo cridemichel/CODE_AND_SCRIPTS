@@ -2,8 +2,8 @@
 #include <stdio.h>
 //#include "pmatrix.H"
 #define CPOLY
-//#define AURENTZ
-//#define BACKSTAB
+#define AURENTZ
+#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-#define MPC_MP
+//#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -301,7 +301,7 @@ bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
   for (i=0; i < NDEG; i++)
     {
       er[i] = bscmplx(rv[i]);
-      cout << setprecision(16) <<"roots #" << i << " =" << er[i]<< "\n";
+      //cout << setprecision(16) <<"roots #" << i << " =" << er[i]<< "\n";
     }  
   calc_coeff(cbs, er);
   bsdbl err, errmax;
@@ -382,7 +382,7 @@ int main(int argc, char* argv[])
   cpoly<complex<double>,-1,double> drp(NDEG);
   pvector<complex<double>,-1> dc(NDEG+1);
   pvector<complex<double>,-1> dr(NDEG);
-  cpoly<cmplx,-1,numty> rp(NDEG);
+  cpoly<cmplx,-1,numty,complex<float>,float> rp(NDEG);
   cpoly<cmplx,-1,numty> rphqr(NDEG);
   pvector<cmplx,-1> c(NDEG+1);
   pvector<cmplx,-1> roots(NDEG);
@@ -633,6 +633,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           rp.set_coeff(c);
           //rp.show();
           rp.find_roots(roots);
+          rp.no_iniguess();
           //rp.find_roots_laguerre(roots);
           roots.set_show_digits(50);
           //roots.show("roots");

@@ -2217,8 +2217,8 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         }
       else if (use_dbl_iniguess)
         {
-          if constexpr (!is_same<cmplx,dcmplx>::value 
-                        && !is_same<dcmplx,complex<float>>::value)
+          if constexpr (!is_same<cmplx,dcmplx>::value) 
+                        //&& !is_same<dcmplx,complex<float>>::value)
             {
               pvector<dcmplx,-1> dcoeff(n+1);
               //if constexpr (N < 0)
@@ -2608,6 +2608,11 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       use_dbl_iniguess=false;
     }
+  void no_iniguess(void)
+    {
+      use_dbl_iniguess=true;
+    }
+  
   void init_const(void)
     {
       meps = epsilon();
