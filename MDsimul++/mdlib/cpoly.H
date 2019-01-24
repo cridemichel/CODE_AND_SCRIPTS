@@ -2217,8 +2217,8 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         }
       else if (use_dbl_iniguess)
         {
-          if constexpr (!is_same<cmplx,dcmplx>::value) 
-                        //&& !is_same<dcmplx,complex<float>>::value)
+          if constexpr (!is_same<cmplx,dcmplx>::value 
+                        && !is_same<cmplx,complex<float>>::value)
             {
               pvector<dcmplx,-1> dcoeff(n+1);
               //if constexpr (N < 0)
@@ -2546,7 +2546,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
 
   inline void find_roots_aberth(pvector<cmplx,N>& roots)
     {
-      laguerre_aberth(roots, false, true, 1);
+      laguerre_aberth(roots, gpolish, true, 1);
     }
  
   inline void find_roots_defl(pvector<cmplx,N>& roots, bool polish=false, bool backup=true)

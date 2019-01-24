@@ -3,7 +3,7 @@
 //#include "pmatrix.H"
 #define CPOLY
 #define AURENTZ
-#define BACKSTAB
+//#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
@@ -106,7 +106,7 @@ double gauss(void)
 
 }
 
-//#define MPC_MP
+#define MPC_MP
 #ifdef CPP_MP
 #include <boost/multiprecision/cpp_bin_float.hpp> 
 #include <boost/multiprecision/cpp_complex.hpp>
@@ -128,8 +128,8 @@ using cmplx=complex<numty>;
 using namespace boost;
 using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<500>>;
-using cmplx=number<mpc_complex_backend<500>>;
+using numty=number<mpfr_float_backend<50>>;
+using cmplx=number<mpc_complex_backend<50>>;
 #ifdef BACKSTAB
 using bsdbl=number<mpfr_float_backend<500>>;
 using bscmplx=number<mpc_complex_backend<500>>;
@@ -300,6 +300,8 @@ bsdbl calc_backward_err(pvector<cmplx,NN>& roots,  pvector<cmplx,NN>& c)
 
   for (i=0; i < NDEG; i++)
     {
+      //if (abs(imag(rv[i])) < numeric_limits<numty>::epsilon()*abs(real(rv[i])))
+        //rv[i]=cmplx(real(rv[i]),0);
       er[i] = bscmplx(rv[i]);
       //cout << setprecision(16) <<"roots #" << i << " =" << er[i]<< "\n";
     }  
@@ -492,7 +494,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       int smin;
   for (int s=0; s < 5000; s++)
 #endif
-  srand48(244);// 244 best
+  srand48(42);// 244 best
+  //srand48(244);// 244 best
   numty sig=1.0;
   if (argc>=2)
     caso = atoi(argv[1]);
@@ -633,7 +636,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           rp.set_coeff(c);
           //rp.show();
           rp.find_roots(roots);
-          rp.no_iniguess();
+          //rp.no_iniguess();
           //rp.find_roots_laguerre(roots);
           roots.set_show_digits(50);
           //roots.show("roots");
