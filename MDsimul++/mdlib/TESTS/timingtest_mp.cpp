@@ -2,13 +2,65 @@
 #include <stdio.h>
 //#include "pmatrix.H"
 #define CPOLY
-#define AURENTZ
-//#define BACKSTAB
 #ifdef CPOLY
 #include "./cpoly.H"
 #else
 #include "./rpoly.H"
 #endif
+
+#define AURENTZ
+//#define BACKSTAB
+#define MPC_MP
+#ifdef CPP_MP
+#include <boost/multiprecision/cpp_bin_float.hpp> 
+#include <boost/multiprecision/cpp_complex.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty = number<cpp_bin_float<50>>;
+using cmplx = cpp_complex<50>;
+#elif defined(GMP_MP)
+#include <boost/multiprecision/gmp.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty=number<gmp_float<100>>;
+using cmplx=complex<numty>;
+#elif defined(MPC_MP)
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty=number<mpfr_float_backend<64>>;
+using cmplx=number<mpc_complex_backend<64>>;
+#ifdef BACKSTAB
+using bsdbl=number<mpfr_float_backend<500>>;
+using bscmplx=number<mpc_complex_backend<500>>;
+#endif
+#elif defined(FL128)
+#include<complex>
+#include <boost/multiprecision/float128.hpp>
+#include <boost/multiprecision/complex128.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+using numty=float128;
+using cmplx=complex128;
+#else
+#include <boost/multiprecision/mpc.hpp>
+#include <boost/multiprecision/mpfr.hpp>
+using namespace boost;
+using namespace boost::multiprecision;
+using namespace boost::multiprecision::backends;
+#ifdef BACKSTAB
+using bsdbl=number<mpfr_float_backend<200>>;
+using bscmplx=number<mpc_complex_backend<200>>;
+#endif
+using numty=double;
+using cmplx=complex<numty>;
+#endif
+
 //#include<complex>
 #ifndef NDEG
 #define NDEG 6
@@ -106,56 +158,6 @@ double gauss(void)
 
 }
 
-#define MPC_MP
-#ifdef CPP_MP
-#include <boost/multiprecision/cpp_bin_float.hpp> 
-#include <boost/multiprecision/cpp_complex.hpp>
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using numty = number<cpp_bin_float<50>>;
-using cmplx = cpp_complex<50>;
-#elif defined(GMP_MP)
-#include <boost/multiprecision/gmp.hpp>
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using numty=number<gmp_float<100>>;
-using cmplx=complex<numty>;
-#elif defined(MPC_MP)
-#include <boost/multiprecision/mpc.hpp>
-#include <boost/multiprecision/mpfr.hpp>
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using numty=number<mpfr_float_backend<50>>;
-using cmplx=number<mpc_complex_backend<50>>;
-#ifdef BACKSTAB
-using bsdbl=number<mpfr_float_backend<500>>;
-using bscmplx=number<mpc_complex_backend<500>>;
-#endif
-#elif defined(FL128)
-#include<complex>
-#include <boost/multiprecision/float128.hpp>
-#include <boost/multiprecision/complex128.hpp>
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-using numty=float128;
-using cmplx=complex128;
-#else
-#include <boost/multiprecision/mpc.hpp>
-#include <boost/multiprecision/mpfr.hpp>
-using namespace boost;
-using namespace boost::multiprecision;
-using namespace boost::multiprecision::backends;
-#ifdef BACKSTAB
-using bsdbl=number<mpfr_float_backend<200>>;
-using bscmplx=number<mpc_complex_backend<200>>;
-#endif
-using numty=double;
-using cmplx=complex<numty>;
-#endif
 #ifdef BACKSTAB
 #ifdef CPOLY
 void calc_coeff(bscmplx co[], bscmplx er[])
@@ -367,7 +369,7 @@ bsdbl calc_backward_err(pvector<cmplx,NN> roots,  pvector<numty,NN> c)
 using namespace std;
 int main(int argc, char* argv[])
 {
-  //numty::default_precision(unsigned(50));
+  //numty::default_precision(unsigned(16));
   //cmplx::default_precision(unsigned(50));
 #ifdef BACKSTAB
   bsdbl berr, berrmax;
@@ -384,7 +386,7 @@ int main(int argc, char* argv[])
   cpoly<complex<double>,-1,double> drp(NDEG);
   pvector<complex<double>,-1> dc(NDEG+1);
   pvector<complex<double>,-1> dr(NDEG);
-  cpoly<cmplx,-1,numty,complex<float>,float> rp(NDEG);
+  cpoly<cmplx,-1,numty,number<mpc_complex_backend<20>>,number<mpfr_float_backend<20>>> rp(NDEG);
   cpoly<cmplx,-1,numty> rphqr(NDEG);
   pvector<cmplx,-1> c(NDEG+1);
   pvector<cmplx,-1> roots(NDEG);
@@ -495,6 +497,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
   for (int s=0; s < 5000; s++)
 #endif
   srand48(42);// 244 best
+  //srand48(time(0));
   //srand48(244);// 244 best
   numty sig=1.0;
   if (argc>=2)
@@ -522,7 +525,7 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #if defined(MPC_MP) || defined(CPP_MP) || defined(FL128) || defined(GMP_MP)
   // set precision equal to precision of input coefficients (i.e. double epsilon)
   //rp.set_output_prec(numeric_limits<double>::epsilon());
-  rp.set_output_prec(1E-24);
+  //rp.set_output_prec(1E-16);
   //rp.set_output_prec(numeric_limits<numty>::epsilon());
   //cout << "qui\n" << " eps=" << numeric_limits<double>::epsilon() << "\n" ;
 #else
@@ -535,6 +538,8 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
 #endif
   for (int i=0; i < maxiter; i++)
     {
+        cout << "iter #" << i << "\n";
+       
 #ifdef BACKSTAB
 #ifdef CPOLY
       for (j=0; j < NDEG; j++)
@@ -619,7 +624,17 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
       //c << -0.34335362518832,0.3227620422213,-0.33523991717434,0.30603232236776,-0.0004913632795045,0.11895207913477,0.1106512587181,-0.12790756907631,0.48389077297934,-0.0030871046557621,-0.27676517724439,0.21125418248601,0.4490961224484,0.033645447195426,0.27715120795188,-0.012734115584344,0.072796330215358,-0.10955456879709,0.11290799827972,0.083943354978793, 1.0;
       //c << cmplx(0.0,20.0), 0.0, cmplx(0,1), 1.0; 
       //c << 0,0,0,0,-0.0004913632795045,0.11895207913477,0.1106512587181,-0.12790756907631,0.48389077297934,-0.0030871046557621,-0.27676517724439,0.21125418248601,0.4490961224484,0.033645447195426,0.27715120795188,-0.012734115584344,0.072796330215358,-0.10955456879709,0.11290799827972,0.083943354978793, 1.0;
-      if (caso==0)
+#if 0
+ if (i==14)
+          {
+            for (i=0; i < NDEG+1; i++)
+              {
+                //cout << setprecision(6) << roots[i] << "\n";
+                cout << setprecision(80) << real(c[i]) << "\n";
+              }
+          }
+#endif 
+ if (caso==0)
         {
 #if 0
           for (j=0; j < NDEG+1; j++)
@@ -638,10 +653,11 @@ c << -0.2269860014469,0.106758402093,-0.02494545844908,0.08966693274224,-0.26134
           rp.find_roots(roots);
           //rp.no_iniguess();
           //rp.find_roots_laguerre(roots);
-          roots.set_show_digits(50);
+          //roots.set_show_digits(50);
           //roots.show("roots");
           //for (i=0; i < NDEG; i++)
-            //cout << setprecision(16) << "roots #" << i << " =" << roots[i]<< "\n";
+            //cout << setprecision(32) << "roots #" << i << " =" << roots[i]<< "\n";
+            //cout << setprecision(200) << c[i]<< "\n";
 
           //rp.show("poly=");
         }

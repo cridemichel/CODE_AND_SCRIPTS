@@ -1871,7 +1871,7 @@ public:
           dk = k[i+1]-k[i];
           for (j=1; j <= dk; j++)
             {
-              rg[(k[i]+j-1)] = polar(uk[k[i+1]],j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma);
+              rg[(k[i]+j-1)] = polar(ntype(uk[k[i+1]]),ntype(j*2.0*M_PI/dk+2.0*M_PI*ntype(i)/ntype(n)+sigma));
               cc++;
             }
         }
@@ -2218,11 +2218,13 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       else if (use_dbl_iniguess)
         {
           if constexpr (!is_same<cmplx,dcmplx>::value 
-                        && !is_same<cmplx,complex<float>>::value)
+                        && !is_same<cmplx,complex<float>>::value
+                        && !is_same<cmplx,complex<double>>::value)
             {
               pvector<dcmplx,-1> dcoeff(n+1);
               //if constexpr (N < 0)
                 //dcoeff.allocate(n+1);
+              //cout << "qui?!?!\n";
               for (i=0; i < n+1; i++)
                 dcoeff[i]=dcmplx(cmon[i]);
               cpoly<dcmplx,-1,dntype,dcmplx,dntype> drs(n);
@@ -2610,7 +2612,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     }
   void no_iniguess(void)
     {
-      use_dbl_iniguess=true;
+      use_dbl_iniguess=false;
     }
   
   void init_const(void)

@@ -547,11 +547,11 @@ public:
 #ifdef USE_LAPACK
 	if (N > vecpars::NMAXMUL)
 	  {
-	    if constexpr (is_same<ntype, double>::value)
+	    if constexpr (std::is_same<ntype, double>::value)
 	      {
 		wrap_dgemv('t',&(v[0]), &(m1.m[0][0]), &(v1.v[0]), N, alpha, beta);
 	      }
-	    else if constexpr (is_same<ntype, float>::value)
+	    else if constexpr (std::is_same<ntype, float>::value)
 	      {
 		wrap_sgemv('t',&(v[0]), &(m1.m[0][0]), &(v1.v[0]), N, alpha, beta);
 	      }
