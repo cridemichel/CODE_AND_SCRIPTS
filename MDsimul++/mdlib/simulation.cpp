@@ -18,4 +18,4 @@ public:
   void measure(void);
   void savesnap(void);
   void savestate(void);
-}
+};

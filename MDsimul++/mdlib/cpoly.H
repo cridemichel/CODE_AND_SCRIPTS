@@ -162,7 +162,7 @@ template <class cmplx, class ntype, class dcmplx, int N> using cpolybase =
 typename std::conditional<(N>0), cpoly_base_static <cmplx, ntype, dcmplx, N>,
          cpoly_base_dynamic <cmplx, ntype, dcmplx, N>>::type;
 
-template <class cmplx, int N=-1, class ntype=double, class dcmplx=complex<double>, class dntype=double> 
+template <class cmplx, int N=-1, class ntype=double, class dcmplx=complex<long double>, class dntype=long double> 
 class cpoly: public numeric_limits<ntype>, public cpolybase<cmplx,ntype,dcmplx,N> 
 {
   using cpolybase<cmplx,ntype,dcmplx,N>::n;
@@ -1862,8 +1862,8 @@ public:
             }
         }  
       q--;
-      //sigma=M_PI+2.0*M_PI*(drand48()-0.5);
-      sigma=-0.01;//2.0*M_PI*(drand48()-0.5);
+      //sigma=2.0*M_PI*(drand48()-0.5);
+      sigma=0.7;//-0.01;
       rg.resize(n); 
       int cc=0, dk;
       for (i=1; i < q; i++)
@@ -1876,8 +1876,8 @@ public:
             }
         }
 #else
-      //sigma=2.0*M_PI*(drand48()-0.5)-M_PI;
-      sigma=-0.01;//2.0*M_PI*(drand48()-0.5);
+      //sigma=2.0*M_PI*(drand48()-0.5);
+      sigma=0.7;//-0.01;
       rg.resize(n); 
       int cc=0;
 
@@ -2230,7 +2230,10 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
               cpoly<dcmplx,-1,dntype,dcmplx,dntype> drs(n);
               drs.use_iniguess();
               drs.set_coeff(dcoeff);
-              drs.find_roots(droots);
+              if (method==0)
+                drs.find_roots_laguerre(droots);
+              else
+                drs.find_roots(droots);
               for (i=0; i < n; i++)
                 roots[i]=cmplx(droots[i]); 
             }
@@ -2239,7 +2242,6 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
         }
       else
         {
-          //cout << "qui2\n";
           initial_guess(roots);
         }
       for (i=0;i < n; i++)
@@ -2545,8 +2547,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       laguerre_aberth(roots, gpolish, true, 0);
     }
-
-  inline void find_roots_aberth(pvector<cmplx,N>& roots)
+ inline void find_roots_aberth(pvector<cmplx,N>& roots)
     {
       laguerre_aberth(roots, gpolish, true, 1);
     }
@@ -2612,7 +2613,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     }
   void no_iniguess(void)
     {
-      use_dbl_iniguess=false;
+      use_dbl_iniguess=true;
     }
   
   void init_const(void)
@@ -2631,7 +2632,7 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
       Kconv=3.8;
       gpolish=false;
       guess_provided=false;
-      use_dbl_iniguess=true;
+      use_dbl_iniguess=false;
     }
   cpoly()
     {

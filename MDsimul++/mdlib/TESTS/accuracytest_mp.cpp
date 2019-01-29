@@ -43,8 +43,8 @@ using namespace boost::multiprecision;
 using namespace boost::multiprecision::backends;
 using vldbl=number<mpfr_float_backend<200>>;
 using cmplx=number<mpc_complex_backend<200>>;
-using pdbl=double;
-using pcmplx=complex<double>;
+using pdbl=double;//number<mpfr_float_backend<50>>;//=double;
+using pcmplx=complex<double>;//number<mpc_complex_backend<50>>;//complex<double>;
 #else
 using vldbl=long double;
 using cmplx=complex<vldbl>;
@@ -877,7 +877,7 @@ int main(int argc, char *argv[])
       //c.show("coeff");
       //rp.show();
       //rp.zroots(roots,false);
-      //rp.set_polish(false);
+      //rp.set_polish(true);
       rp.find_roots(roots);
       //rp.find_roots_laguerre(roots);
       //rp.petkovic6th(roots);
