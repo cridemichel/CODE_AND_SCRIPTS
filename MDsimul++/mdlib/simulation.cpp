@@ -4,7 +4,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-template <int n>
 class simulation: public params, simstate
 {
   void randomgen(void);

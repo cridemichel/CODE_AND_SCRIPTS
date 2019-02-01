@@ -1977,7 +1977,7 @@ public:
 #endif
       return false;
     }
-bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
+  bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
     {
       const ntype EPS=goaleps;
       cmplx term;
@@ -2126,7 +2126,6 @@ bool halley_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
           rold=roots;
           for (i=0; i < n; i++)
             {
-              // refine conjuigate pairs only once!
               if (found[i]) 
                 continue;
               r=abs(roots[i]);
