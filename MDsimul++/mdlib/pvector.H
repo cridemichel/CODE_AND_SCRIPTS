@@ -282,6 +282,18 @@ public:
   using pvecbase<ntype,NT>::N;
   // /numeric_limits<complex<double>>::digits10=0 that's why I set explicitly 16;//fix this!
   int maxdigits=std::numeric_limits<ntype>::digits10-1;
+  auto begin()
+    {
+      // un puntatore è un iteratore!
+      return v;
+    }
+
+  auto end()
+    {
+      // un puntatore è un iteratore!
+      return v+N;
+    }
+
   void set_show_digits(int p)
     {
       maxdigits=p;
