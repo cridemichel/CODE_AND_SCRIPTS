@@ -241,14 +241,14 @@ void solve_quartic(pvector<ntype,5> coeff, int *numsol, ntype *solqua)
 template <class ntype>
 ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 {
-  int kk1, kk2, numsol[2], fallback, solset;
+  int kk1, numsol[2], fallback, solset;
   ntype tmp, sp, solec[4][2], solqua[4], solquad[2];
   ntype c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
   ntype diff[2][4], maxdiff[2], sumdiff[2];
   ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   ntype omnip02, omnip12, omnip22;
   ntype D2isq, D2i, D2jsq, D2j, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
-  pvector<ntype,3> nip[2], Cip[2], uy;
+  pvector<ntype,3> nip[2], Cip[2];
   pmatrixq<ntype,3> Rl, dsc, dscperp;
   pvector<ntype,5> coeff;
   pvec3<ntype> solarr[2][4];
@@ -261,7 +261,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
 #else
-  uy = B.disk[wd];
+  //uy = B.disk[wd];
   //versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 1); 
   //versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
 #endif
