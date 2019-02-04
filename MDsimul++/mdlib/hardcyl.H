@@ -143,36 +143,53 @@ double diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
   return 0;
 }
 template <class ntype>
+void solve_quartic(pvector<ntype,5> coeff, int *numsol, ntype *solqua)
+{
+  int k;
+  rpoly<ntype,4> rp;
+  pvector<complex<ntype>,4> roots;
+  rp.set_coeff(coeff);
+  rp.find_roots(roots);
+  for (k=0; k < 4; k++)
+    {
+      if (imag(roots[k])==0)
+	{
+	  solqua[*numsol] = real(roots[k]);
+	  (*numsol)++;
+	}
+    }
+
+}
+template <class ntype>
 ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
   const ntype FALLBACK_THR = 1E-4;
-  ntype tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2], uy[3];
+  ntype tmp, sp, solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
   ntype dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
   ntype diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
   ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   ntype omnip02, omnip12, omnip22;
   ntype D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
-  pvector<ntype,3> nip[2], Cip[2];
+  pvector<ntype,3> nip[2], Cip[2], uy;
   pmatrixq<ntype,3> Rl;
-  /* se asse del rim e asse del disco sono paralleli si deve considerare un caso a parte */
-  D2 = A.D*0.5; 
+  pvector<ntype,5> coeff;
+  /* rim of A and disk[wd] of B */
+  D2 = B.D*0.5; 
   D2sq = D2*D2;
   /* mi metto nel riferimento del disco (p) */
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
 #else
-  uy = Dj[1];
+  uy = B.disk[wd];
   //versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 1); 
-
-
   //versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
 #endif
   nip[0] = Rl*A.n;
-  Cip[0] = Rl*(A.r-Dj[1]);
+  Cip[0] = Rl*((A.r+A.shift)-(B.disk[wd]+B.shift));
 
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-  norm = calc_norm(nip[0]);
+  norm = abs(nip[0]);
   nip0 = nip[0][0]/norm;
   nip1 = nip[0][1]/norm;
   nip2 = nip[0][2]/norm;
@@ -182,14 +199,6 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   nip02=Sqr(nip0);
   nip12=Sqr(nip1);
   nip22=Sqr(nip2);
-#if 0
-  nip04=Sqr(nip02);
-  nip14=Sqr(nip12);
-  nip24=Sqr(nip22);
-  nip03=nip02*nip0;
-  nip13=nip12*nip1;
-  nip23=nip22*nip2;
-#endif
   Cip02=Sqr(Cip0);
   Cip12=Sqr(Cip1);
   Cip22=Sqr(Cip2);
@@ -200,7 +209,6 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   nip1nip2 = nip1*nip2;
   nip0nip2 = nip0*nip2;
   nip0nip1 = nip0*nip1;
-
   coeffEr[0] = omnip12;
   coeffEr[1] = omnip22;
   coeffEr[2] = -2.0*nip1nip2;  
@@ -215,7 +223,6 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   coeffEr[2] *= D2sq;
   coeffEr[4] *= D2;
   coeffEr[5] *= D2;
-  //printf("coeffEr=%.15G %.15G\n", coeffEr[0], coeffEr[1]);
   c0 = coeffEr[0];
   c1 = coeffEr[1];
   c2 = coeffEr[2];
@@ -228,7 +235,6 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   c32 = Sqr(c3);
   c42 = Sqr(c4);
   c52 = Sqr(c5);
-  //xC=yC=0;
 #ifndef MC_EXCHG_QUART_SOL
   coeff[4] = c02 - 2*c0*c1 + c12 + c22;
   coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
@@ -248,53 +254,10 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
     }
   else
-    solve_quartic(coeff, &(numsol[0]), solqua);
-#if 0
-  if (numsol==1)
     {
-      printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
-      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
-      printf("sol=%.15G\n", solqua[0]);
-      printf("BOH\n");
+      solve_quartic(coeff, &(numsol[0]), solqua);
     }
-#endif
-  discard_spurious(solqua, &(numsol[0]));
-
-  //solve_fourth_deg(coeff, &numsol, solqua);
-  /* ora assegno a solec[][] e calcolo x */
-#if 0
-  if (numsol > 1)
-    {
-      printf("PRIMA solqua=%.15G %.15G\n", solqua[0], solqua[1]);
-      qsort(solqua, numsol, sizeof(double), compare_func);
-      //printf("numsol=%d\n", numsol);
-      //printf("DOPO solqua=%.15G %.15G\n", solqua[0], solqua[1]);
-    }
-#endif
-  /* use bisection newton-raphson to refine solutions */
-#if 0
-  for (kk1=0; kk1 < numsol; kk1++)
-    {
-      double xg;
-
-      if (kk1==0)
-	x1b = -1.1; /* le soluzioni devono essere tra -1 e 1 */
-      else
-	x1b = (solqua[kk1-1]+solqua[kk1])*0.5;
-      if (kk1==numsol-1)
-	x2b = 1.1;
-      else 
-	x2b = (solqua[kk1+1]+solqua[kk1])*0.5;
-      xg=solqua[kk1];
-#if 0
-      if ((kk1 == 0 && xg < -1)
-	  ||(kk1==numsol-1 && xg > 1))
-	solqua[kk1]=rtsafe(coeff, xg, x1b, x2b, 1E-12, 0);
-      else
-#endif
-	solqua[kk1]=rtsafe(coeff, xg, x1b, x2b, 1E-12, 1);
-    }
-#endif
+  //discard_spurious(solqua, &(numsol[0]));
   fallback = 0;
   for (kk1=0; kk1 < numsol[0]; kk1++)
     {
@@ -341,37 +304,17 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       if (diff[0][kk1] > maxdiff[0] || kk1==0)
 	maxdiff[0] = diff[0][kk1];  
     }
+#if 0
   if (tinyimagGBL)
     {
       //printf("qui\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
+#endif
   solset=0;
   if (fallback)
     {
-#if defined(MC_QUART_VERBOSE) && 0
-      printf("numsol=%d,", numsol[0]);
-      for (kk1=0; kk1 < numsol[0]; kk1++)
-	{
-	  printf("sol=%.16G ", solqua[kk1]);
-	}
-      printf("\n");
-      for (kk1=0; kk1 < numsol[0]; kk1++)
-	{
-	  temp = c4 + c2*solqua[kk1];
-	  printf("temp[%d]=%.16G\n", kk1, temp);
-	}
-      printf("c2=%.16G c4=%.16G c5=%.16G\n", c2, c4, c5);
-      store_bump(iGbl,jGbl);
-#endif
-
-#if 0
-      for (kk1=0; kk1 < 3; kk1++)
-	uy[kk1] = D2*Rl[1][kk1];
-      versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 2); 
-#else
       rotate_axes_on_plane(Rl);
-#endif
       for (kk1=0; kk1 < 3; kk1++)
 	{
 	  nip[1][kk1] = 0;
