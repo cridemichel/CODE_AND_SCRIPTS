@@ -164,16 +164,15 @@ void solve_quartic(pvector<ntype,5> coeff, int *numsol, ntype *solqua)
 template <class ntype>
 ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
-  const ntype FALLBACK_THR = 1E-4;
-  ntype tmp, sp, solec[4][2], solqua[4], solquasort[4], solquad[2];
-  ntype dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  ntype diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  int kk1, kk2, numsol[2], fallback, solset;
+  ntype tmp, sp, solec[4][2], solqua[4], solquad[2];
+  ntype c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
+  ntype diff[2][4], maxdiff[2], sumdiff[2];
   ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   ntype omnip02, omnip12, omnip22;
   ntype D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
   pvector<ntype,3> nip[2], Cip[2], uy;
-  pmatrixq<ntype,3> Rl;
+  pmatrixq<ntype,3> Rl, dsc, dscperp;
   pvector<ntype,5> coeff;
   pvec3<ntype> solarr[2][4];
   /* rim of A and disk[wd] of B */
