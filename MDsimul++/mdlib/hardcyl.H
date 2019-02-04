@@ -1,13 +1,14 @@
 #include "./pmatrix.H"
 #include "./rpoly.H"
 #include "./pmatrix.H"
+#include "./particle.H"
 template <class ntype>
 using pvec3=pvector<ntype,3>;
 template <class ntype>
 using pmat3=pmatrixq<ntype,3>;
 #define Sqr(x) ((x)*(x))
 template <class ntype>
-class hardcyl
+class hardcyl: public particle<ntype>
 {
   friend ntype rimrim(class hardcyl<ntype> A, class hardcyl<ntype> B);
   friend ntype diskdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
@@ -90,10 +91,9 @@ class hardcyl
 public:
   ntype L, D;
   pvector<ntype,3> disk[2];
-  pvector<ntype,3> n;
-  pvector<ntype,3> r;
+  pvector<ntype,3> n, r;
   pvector<ntype,3> shift;
-  friend double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
+  virtual friend double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
   pvector<ntype,3> update_disks(void)
     {
       ntype Lh=0.5*L;
