@@ -4,6 +4,8 @@
 #include<cstdlib>
 #include<iostream>
 #include<iomanip>
+#include<algorithm>
+#include<iterator>
 using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
@@ -543,11 +545,24 @@ public:
       return (*this).cross(vv);
     }
   //* dot product
-  inline double operator *(const pvector<ntype,NT> &vv)
+  inline ntype operator *(const pvector<ntype,NT> &vv)
     {
       return (*this).dot(vv);
     }
-
+  bool operator==(const pvector<ntype,NT>& vb)
+    {
+#if 0
+      int i;
+      for (i=0; i < N; i++)
+        if (v[i]!=vb.v[i])
+          {
+            return false;
+          }
+      return true;
+#else
+      return std::equal(v,v+N, vb.v);
+#endif
+    }
   // uso un template poiché qua non posso usare pmatrixq al posto di T in quanto ancora non ho dichiarato la classo
   template <typename T>
     void muladd(T& m1, const pvector<ntype,NT>& v1, ntype alpha=1.0, ntype beta=1.0)
