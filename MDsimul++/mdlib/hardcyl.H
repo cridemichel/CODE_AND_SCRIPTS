@@ -11,7 +11,7 @@ class hardcyl
   friend double rimdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
 public:
   ntype L, D;
-  pvector<ntype,3> Di[2];
+  pvector<ntype,3> disk[2];
   pvector<ntype,3> n;
   pvector<ntype,3> r;
   pvector<ntype,3> shift;
@@ -19,8 +19,8 @@ public:
   pvector<ntype,3> update_disks(void)
     {
       ntype Lh=0.5*L;
-      Di[0] = r+Lh*n;
-      Di[1] = r-Lh*n;
+      disk[0] = r+Lh*n;
+      disk[1] = r-Lh*n;
     }
   hardcyl()
     {
@@ -94,7 +94,7 @@ double diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
       for (j1=0; j1 < 2; j1++)
 	for (j2=j1; j2 < 2; j2++)
 	  {
-            VV = Di[j1]-Dj[j2];
+            VV = A.disk[j1]-B.disk[j2];
             sp=A.n*VV;
 	    if (sp == 0 && VV.norm() < 0.5*(A.D+B.D))
 	      {
@@ -113,14 +113,14 @@ double diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
       for (j1=0; j1 < 2; j1++)
 	for (j2=0; j2 < 2; j2++)
 	  {
-	    DiN = Di[j1]*N;
-	    DjN = Dj[j2]*N;
-	    Dini = Di[j1]*A.n;
-	    Djnj = Dj[j2]*B.n;
+	    DiN = A.disk[j1]*N;
+	    DjN = B.disk[j2]*N;
+	    Dini = A.disk[j1]*A.n;
+	    Djnj = B.disk[j2]*B.n;
             Pi = (DiN*N+Dini*njN-Djnj*niN)/normNSq;
             Pj = (DjN*N+Dini*njN-Djnj*niN)/normNSq;
-            PiDi = Pi - Di[j1];
-            PjDj = Pj - Dj[j2]; 
+            PiDi = Pi - A.disk[j1];
+            PjDj = Pj - B.disk[j2]; 
 	    normPiDi = PiDi.norm();
 	    normPjDj = PjDj.norm();
 	    if (normPiDi <= 0.5*A.D && normPjDj <= 0.5*B.D)
@@ -635,200 +635,36 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, pvector<ntype,3> Di[2], pve
     }
   return 1;  
 }
-double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
+template <class ntype>
+ntype rimdisk(hardcyl<ntype> A, hardcyl<ntype> B)
 {
-  int j1, kk, j2, k2, ignore[2];
-  char fileop2[512];
-  double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
-  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
+  ntype sp, perpdist[2];
+  pvec3<ntype> DjCi;
+  int whichdisk;
+  /* choose the disk closest to cyl axis */
+  DjCi = B.disk[0] - A.r;
+  sp = DjCi*A.n;
+  perpdist[0]=abs(DjCi - sp*A.n);
+  DjCi = B.disk[1] - A.r;
+  sp = DjCi*A.n;
+  perpdist[1]=abs(DjCi - sp*A.n);
+  whichdisk=(perpdist[0]<perpdist[1])?0:1;
 
-  //numcallsRD++;
+  if (rimdiskone(A, B, whichdisk) < 0.0)
+    return -1;
+  
+  /* choose the disk closest to cyl axis */
+  DjCi = A.disk[0] - B.r;
+  sp = DjCi*B.n;
+  perpdist[0]=abs(DjCi - sp*B.n);
+  DjCi = A.disk[1] - B.r;
+  sp = DjCi*B.n;
+  perpdist[1]=abs(DjCi - sp*B.n);
+  whichdisk=(perpdist[0]<perpdist[1])?0:1;
 
-  for (j1=0; j1 < 2; j1++)
-    {
-      if (j1==1)
-	{
-	  //break;
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      for (k2=0; k2 < 2; k2++)
-		DjTmp[k2][kk] = Dj[k2][kk];
-	      CiTmp[kk] = Ci[kk];
-	      niTmp[kk] = ni[kk];
-	      njTmp[kk] = nj[kk];
-	      /* exhange the two particles */	
-	      for (k2=0; k2 < 2; k2++)
-		Dj[k2][kk] = Di[k2][kk];
-	      Ci[kk] = Cj[kk];
-	      ni[kk] = nj[kk];
-	      nj[kk] = niTmp[kk];
-	    }
-	}
-      
-      for (k2=0; k2 < 2; k2++)
-	{
-  	  perpdist[k2]=perpcomp(Dj[k2], Ci, ni);
-	  ignore[k2] = 0;
-	}
+  if (rimdiskone(B, A, whichdisk) < 0.0)
+    return -1;
 
-      if (perpdist[0] < perpdist[1])
-	{ 
-    	  ignore[1] = 1;
-	}
-      else
-	{
-	  ignore[0] = 1;
-	}
-
-      for (j2=0; j2 < 2; j2++)
-	{
-	  if (ignore[j2])
-	    continue;
-	  for (kk=0; kk < 3; kk++)
-	    DjCi[kk] = Dj[j2][kk] - Ci[kk];
-	  normDjCi = calc_norm(DjCi);
-	  DjCini = scalProd(DjCi,ni);
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      Ui[kk] = Ci[kk] + DjCini*ni[kk];
-	      DjUi[kk] = Dj[j2][kk] - Ui[kk];
-	    }
-
-	  DjUini = scalProd(DjUi,ni);
-	  normDjUi = calc_norm(DjUi);
-#if 0
-	  if (dostorebump)
-	    {
-	      printf("normDjUi=%.15G DjUini=%.15G\n", normDjUi, DjUini);
-	      printf("Ci=%f %f %f Dj=%f %f %f\n", Ci[0], Ci[1], Ci[2], Dj[0], Dj[1], Dj[2]);
-	      printf("DjUi=%.15G %.15G %.15G\n", DjUi[0], DjUi[1], DjUi[2]); 
-	      printf("Uj=%.15G %.15G %.15G\n", Ui[0], Ui[1], Ui[2]); 
-	      printf("nj=%.15G %.15G %.15G\n", ni[0], ni[1], ni[2]);
-	      printf("DjCini= %.15G\n", DjCini);
-	    }
-#endif 
-	  if (normDjUi > D)
-	    continue;
-
-	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
-	     there is some mess about following conditions:
-	     The second and third condition on right column of page 514 
-	     should read (D=sigma):
-	     |Di-Ui| < D/2  && |(Dj-Ci).ni| > L/2
-
-	     |Dj-Ui| < D/2  && |(Dj-Ci).ni| <= L/2
-
-*/
-#ifndef MC_IBARRA_SIMPLER
-	  /* se sono paralleli... */
-	  if (1.0-fabs(scalProd(ni,nj)) == 0)
-	  //if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
-	    {
-	      if (normDjUi <= D && fabs(DjCini) <= L*0.5)
-		return -1;
-	      else
-		continue;
-	    }
-#else
-	  /* se sono paralleli... */
-	  if (1.0-fabs(scalProd(ni,nj)) == 0)
-	  //if (1.0-fabs(scalProd(ni,nj)) < 3E-16)
-	    {
-	      if (normDjUi <= D && fabs(DjCini) <= L*0.5)
-		return -1;
-	      else
-		continue;
-	    }
-#endif
-	  if (normDjUi < D*0.5 && fabs(DjCini) > L*0.5)
-	    continue;
-
-	  if (normDjUi < D*0.5 && fabs(DjCini) <= L*0.5)
-	    {
-#ifdef DEBUG_HCMC
-	      if (dostorebump)
-		printf("A #1 disk-rim NP=%d\n", Oparams.parnum);
-#endif	
-	      return -1;
-	    }
-
-#ifdef MC_IBARRA_SIMPLER
-  	  if (rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
-	    return -1;
-#else
-#ifdef MC_QUART_LONG_DOUBLE
-#ifdef MC_DEBUG_HCALGO
-	    {
-	      double alg1, alg2; 
-	      alg1 = rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini);
-	      alg2 = rimdiskonel(D, L, Ci, ni, Dj[j2], nj, DjCini);
-	      //alg1=alg2;
-	      //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-		  //printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
-	      if (alg1!=alg2)
-		{
-		  store_bump(iGbl, jGbl);
-		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
-		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
-		  //saveCorAscii();
-		  sprintf(fileop2 ,"coord-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
-		  saveCoord(fileop2);
-		  sprintf(fileop2 ,"coorbakascii-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
-		  saveBakAscii(fileop2);
-		  //exit(-1);
-		}
-	      if (alg2 < 0)
-		return -1;
-	    }
-#else
-	  if (rimdiskonel(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
-	    return -1;
-#endif
-#else
-#ifdef MC_DEBUG_HCALGO
-	    {
-	      double alg1, alg2; 
-	      alg1 = rimdiskone_ibarra(D, L, Ci, ni, Dj[j2], nj, DjCini);
-	      alg2 = rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini);
-	      //if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-		  //printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
-	      if (alg1!=alg2)
-		{
-		  store_bump(iGbl, jGbl);
-		  printf("Discrepancy between i=%d and j=%d!!\n", iGbl, jGbl);
-		  printf("IBARRA=%f QUARTIC=%f\n", alg1, alg2);
-		  //saveCorAscii();
-		  sprintf(fileop2 ,"coord-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
-		  saveCoord(fileop2);
-		  sprintf(fileop2 ,"coorbakascii-%d-%d-s%d.cor", iGbl, jGbl, Oparams.curStep);
-		  saveBakAscii(fileop2);
-		  //exit(-1);
-		}
-	      if (alg2 < 0)
-		return -1;
-	    }
-#else
-	  if (rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
-	    return -1;
-
-#endif
-#endif
-#endif
-	}
-      if (j1==1)
-	{
-	  for (kk=0; kk < 3; kk++)
-	    {
-	      /* restore particles*/
-	      for (k2=0; k2 < 2; k2++)
-		Dj[k2][kk] = DjTmp[k2][kk];
-	      Ci[kk] = CiTmp[kk];
-	      ni[kk] = niTmp[kk];
-	      nj[kk] = njTmp[kk];
-	    }
-	}
-
-    }
   return 0;
 }
 double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
@@ -1039,8 +875,25 @@ double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2
 template <class ntype>
 double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift)
 {
+  pvec3<ntype> CiCj, pv;
+  ntype sp, perpc, parac;
   A.shift << 0,0,0;
   B.shift = shift;
+  //numcallsRD++;
+  /* if cyls are parallel is simpler... */
+  if (1.0-abs(A.n*B.n) == 0)
+    //if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
+    {
+      CiCj = A.r - B.r;
+      sp = CiCj*A.n;
+      pv = sp*A.n;
+      parac = abs(pv);
+      perpc = abs(CiCj - pv);
+      if (perpc <= (A.D+B.D)*0.5 && parac <= (A.L+B.L)*0.5)
+        return -1.0;
+      else 
+        return 1.0;
+    }
   if ((ret=diskdisk(A,B,shift)!=0)
    return ret; 
   if ((ret=rimrim(A,B,shift))!=0)

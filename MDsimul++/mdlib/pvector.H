@@ -544,6 +544,10 @@ public:
     {
       return (*this).cross(vv);
     }
+  inline friend ntype abs(const pvector<ntype,NT> &vv)
+    {
+      return vv.norm();
+    }
   //* dot product
   inline ntype operator *(const pvector<ntype,NT> &vv)
     {
