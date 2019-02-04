@@ -461,7 +461,6 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 #endif
       for (kk1=0; kk1 < numsol[1]; kk1++)
 	{
-
 #if 0 
 	  temp = c5 + c2*solqua[kk1];
 	  solec[kk1][0] = solqua[kk1];
