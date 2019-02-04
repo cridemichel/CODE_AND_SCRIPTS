@@ -611,6 +611,7 @@ double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> 
   pvec3<ntype> CiCj, pv;
   ntype sp, perpc, parac;
   A.shift << 0,0,0;
+  bool ret;
   B.shift = shift;
   //numcallsRD++;
   /* if cyls are parallel is simpler... */
@@ -627,7 +628,7 @@ double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> 
       else 
         return 1.0;
     }
-  if ((ret=diskdisk(A,B)!=0)
+  if ((ret=diskdisk(A,B))!=0)
    return ret; 
   if ((ret=rimrim(A,B))!=0)
    return ret; 
