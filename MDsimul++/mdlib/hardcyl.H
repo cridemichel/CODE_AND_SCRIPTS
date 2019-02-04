@@ -1,15 +1,92 @@
 #include "./pmatrix.H"
 #include "./rpoly.H"
+#include "./pmatrix.H"
 template <class ntype>
 using pvec3=pvector<ntype,3>;
+template <class ntype>
+using pmat3=pmatrixq<ntype,3>;
 #define Sqr(x) ((x)*(x))
-
 template <class ntype>
 class hardcyl
 {
-  friend double rimrim(class hardcyl<ntype> A, class hardcyl<ntype> B);
-  friend double diskdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
-  friend double rimdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
+  friend ntype rimrim(class hardcyl<ntype> A, class hardcyl<ntype> B);
+  friend ntype diskdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
+  friend ntype rimdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
+  friend ntype test_overlap_parall_cyl(class hardcyl<ntype> A, class hardcyl<ntype> B)
+    {
+      int kk;
+      double DjCini, normDjUi;
+      pvec3<ntype> DjCi, Ui, DjUi;
+      DjCi[kk] = (B.disk+B.shift) - (A.r+A.shift);
+      //normDjCi = calc_norm(DjCi);
+      DjCini = DjCi*A.n;
+
+      Ui = (A.r+A.shift) + DjCini*A.n;
+      DjUi = B.disk+B.shift - Ui;
+      normDjUi = abs(DjUi);
+
+      if (normDjUi <= 0.5*(A.D+B.D) && abs(DjCini) <= A.L*0.5)
+        return -1.0;
+      else
+        return 1.0;
+    }
+  int test_for_fallback(pvec3<ntype> P, pvec3<ntype> Cip, pvec3<ntype> nip, ntype D2i, ntype D2j, ntype *diff)
+    {
+      const double DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
+      double diff1, diff2;
+      diff1=fabs(perpcomp(P, Cip, nip)-D2i); // qui D2 è il diametro del rim
+      diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2j);// qui D2 è il diametro del disco
+
+      *diff=diff1+diff2;
+      if (diff1 > DIST_THR*D2i || diff2 > DIST_THR*D2j)
+        return 1;
+      else
+        return 0;
+    }
+  friend ntype perpcomp(pvec3<ntype> V, pvec3<ntype> C, pvec3<ntype> n)
+    {
+      pvec3<ntype> dsc, dscperp;
+      ntype sp;
+      dsc = V - C; 
+      sp = dsc*n;
+      dscperp = dsc-sp*n;
+      return abs(dscperp);
+    }
+  friend void rotate_axes_on_plane(pmat3<ntype>& RR)
+    {
+      pmat3<ntype> Rin, OmegaSq, Omega, M;
+      double ox, oy, oz, theta, thetaSq, sinw, cosw;
+
+      ox = RR[0][0];
+      oy = RR[0][1];
+      oz = RR[0][2];
+      Rin=RR;
+      theta = M_PI/4.0;
+      thetaSq=Sqr(theta);
+      sinw = sin(theta);
+      cosw = (1.0 - cos(theta));
+      Omega[0][0] = 0;
+      Omega[0][1] = -oz;
+      Omega[0][2] = oy;
+      Omega[1][0] = oz;
+      Omega[1][1] = 0;
+      Omega[1][2] = -ox;
+      Omega[2][0] = -oy;
+      Omega[2][1] = ox;
+      Omega[2][2] = 0;
+      OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+      OmegaSq[0][1] = ox*oy;
+      OmegaSq[0][2] = ox*oz;
+      OmegaSq[1][0] = ox*oy;
+      OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+      OmegaSq[1][2] = oy*oz;
+      OmegaSq[2][0] = ox*oz;
+      OmegaSq[2][1] = oy*oz;
+      OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+      M = -sinw*Omega+cosw*OmegaSq;
+      RR = Rin*M;
+    }
+
 public:
   ntype L, D;
   pvector<ntype,3> disk[2];
@@ -170,14 +247,16 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   ntype diff[2][4], maxdiff[2], sumdiff[2];
   ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   ntype omnip02, omnip12, omnip22;
-  ntype D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
+  ntype D2isq, D2i, D2jsq, D2j, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
   pvector<ntype,3> nip[2], Cip[2], uy;
   pmatrixq<ntype,3> Rl, dsc, dscperp;
   pvector<ntype,5> coeff;
   pvec3<ntype> solarr[2][4];
   /* rim of A and disk[wd] of B */
-  D2 = B.D*0.5; 
-  D2sq = D2*D2;
+  D2i = A.D*0.5;
+  D2j = B.D*0.5; 
+  D2isq = D2i*D2i;
+  D2jsq = D2j*D2j;
   /* mi metto nel riferimento del disco (p) */
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
@@ -214,16 +293,16 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   coeffEr[1] = omnip22;
   coeffEr[2] = -2.0*nip1nip2;  
   coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
-								    Cip1*Cip2*nip1nip2) - D2sq;
+								    Cip1*Cip2*nip1nip2) - D2jsq;
   coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
   coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
   /* check ellipse */
   /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
-  coeffEr[0] *= D2sq;
-  coeffEr[1] *= D2sq; 
-  coeffEr[2] *= D2sq;
-  coeffEr[4] *= D2;
-  coeffEr[5] *= D2;
+  coeffEr[0] *= D2jsq;
+  coeffEr[1] *= D2jsq; 
+  coeffEr[2] *= D2jsq;
+  coeffEr[4] *= D2j;
+  coeffEr[5] *= D2j;
   c0 = coeffEr[0];
   c1 = coeffEr[1];
   c2 = coeffEr[2];
@@ -252,7 +331,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   if (coeff[4]==0)
     {
       /* cilindri paralleli */
-      return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
+      return test_overlap_parall_cyl(A, B);
     }
   else
     {
@@ -285,9 +364,9 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
       solarr[0][kk1][0] = 0.0;
-      solarr[0][kk1][1] = D2*solec[kk1][0];
-      solarr[0][kk1][2] = D2*solec[kk1][1];
-      if (test_for_fallback(solarr[0][kk1], Cip[0], nip[0], D2, &(diff[0][kk1])))
+      solarr[0][kk1][1] = D2j*solec[kk1][0];
+      solarr[0][kk1][2] = D2j*solec[kk1][1];
+      if (test_for_fallback(solarr[0][kk1], Cip[0], nip[0], D2i, D2j, &(diff[0][kk1])))
 	{
 	  fallback=1;
 #if 0
@@ -318,18 +397,11 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       rotate_axes_on_plane(Rl);
       for (kk1=0; kk1 < 3; kk1++)
 	{
-	  nip[1][kk1] = 0;
-	  //Aip[kk1] = 0;
-	  Cip[1][kk1] = 0;
-	  for (kk2=0; kk2 < 3; kk2++)
-	    {
-	      nip[1][kk1] += Rl[kk1][kk2]*ni[kk2];
-	      Cip[1][kk1] += Rl[kk1][kk2]*(Ci[kk2]-Dj[kk2]);
-	      //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
-	    } 
+          nip[1][kk1] = Rl*A.n;
+          Cip[1][kk1] = Rl*(A.r+A.shift-(B.disk+B.shift));
 	}
       /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-      norm = calc_norm(nip[1]);
+      norm = abs(nip[1]);
       nip0 = nip[1][0]/norm;
       nip1 = nip[1][1]/norm;
       nip2 = nip[1][2]/norm;
@@ -359,7 +431,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       coeffEr[1] = omnip22;
       coeffEr[2] = -2.0*nip1nip2;  
       coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
-									Cip1*Cip2*nip1nip2) - D2sq;
+									Cip1*Cip2*nip1nip2) - D2isq;
       coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
       coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
 
@@ -418,12 +490,11 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       /* check ellipse */
 
       /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
-      coeffEr[0] *= D2sq;
-      coeffEr[1] *= D2sq; 
-      coeffEr[2] *= D2sq;
-      coeffEr[4] *= D2;
-      coeffEr[5] *= D2;
-      //printf("coeffEr=%.15G %.15G\n", coeffEr[0], coeffEr[1]);
+      coeffEr[0] *= D2jsq;
+      coeffEr[1] *= D2jsq; 
+      coeffEr[2] *= D2jsq;
+      coeffEr[4] *= D2j;
+      coeffEr[5] *= D2j;
       c0 = coeffEr[0];
       c1 = coeffEr[1];
       c2 = coeffEr[2];
@@ -452,7 +523,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       if (coeff[4]==0)
 	{
 	  /* cilindri paralleli */
-	  return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
+	  return test_overlap_parall_cyl(A, B);
 	}
       else
 	solve_quartic(coeff, &(numsol[1]), solqua);
@@ -468,15 +539,12 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 	  solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
 #endif
 	  temp = c4 + c2*solqua[kk1];
-	  //printf("tempnew=%.16G\n", temp);
 	  if (temp==0)
 	    {
 	      printf("[WARNING] temp is 0 in fallback hybrid numsol=%d %d\n", numsol[0], numsol[1]);
 	    }
 	  solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
 	  solec[kk1][1] = solqua[kk1];
-	  //printf("fallback:");
-	  //test_solution_xy(solec[kk1], &(diffxy[1][kk1]));
 	}
       sumdiff[1] = maxdiff[1]=0;
       for (kk1=0; kk1 < numsol[1]; kk1++)
@@ -484,13 +552,9 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 	  /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
 	   * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
 	  solarr[1][kk1][0] = 0.0;
-	  solarr[1][kk1][1] = D2*solec[kk1][0];
-	  solarr[1][kk1][2] = D2*solec[kk1][1];
-#if 0
-	  printf("[fallback] solarr[%d]=%.16G %.16G\n", kk1, solarr[0][kk1][1], solarr[0][kk1][2]);
-	  printf("[fbprevsol]solarr[%d]=%.16G %.16G\n", kk1, solarr[1][kk1][1], solarr[1][kk1][2]);
-#endif
-	  test_for_fallback(solarr[1][kk1], Cip[1], nip[1], D2, &(diff[1][kk1]));
+	  solarr[1][kk1][1] = D2j*solec[kk1][0];
+	  solarr[1][kk1][2] = D2j*solec[kk1][1];
+	  test_for_fallback(solarr[1][kk1], Cip[1], nip[1], D2i, D2j, &(diff[1][kk1]));
 	  sumdiff[1] += diff[1][kk1];
 	  if (diff[1][kk1] > maxdiff[1] || kk1==0)
 	    maxdiff[1] = diff[1][kk1];  
@@ -502,24 +566,15 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       else
 	{
 	  if (maxdiff[1] < maxdiff[0])
-	    //if (sumdiff[1] < sumdiff[0])
 	    solset = 1;
 	  else 
 	    solset = 0;
 	}
     }
-#if 0
-  if (fallback && numsol==4)
-    printf("CHOSEN SOLSET IS N. %d\n", solset);
-#endif
   for (kk1=0; kk1 < numsol[solset]; kk1++)
     {
       dsc = solarr[solset][kk1] - Cip[solset];
-      //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
-
-#if 1
-      //if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-11)
-      if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2, &tmp)) 
+      if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2i, D2j, &tmp)) 
 	{
 	  printf("# %d numsol=%d %d ===================== <<<< \n", kk1, numsol[0], numsol[1]);
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[solset][kk1]));
@@ -528,12 +583,11 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 	  if (kk1 < numsol[1-solset])
 	    {
 	      printf("DISCARDED SOLSET [%d]\n", 1-solset);
-	      printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[1-solset][kk1]));
+	      printf("distanza punto-centro disk: %.15G\n", abs(solarr[1-solset][kk1]));
 	      printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[1-solset][kk1], Cip[1-solset], nip[1-solset]));
 	    }
 #ifdef MC_QUART_VERBOSE
 	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
-	  printf("Cip1=%15G Cip2=%.15G\n", Cip[solset][1], Cip[solset][2]);
 	  printf("numsol=%d fallback=%d\n", numsol[solset], fallback);
 	  print_vec("ni=",ni);
 	  print_vec("nj=",nj);
@@ -555,20 +609,9 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 	  printf("temp=%.15G\n", temp);
 #endif
 	  printf("# %d >>>> =====================  \n", kk1);
-	  //printf("semiaxes=%f %f %f %f\n", aEd, bEd, aEr, bEr);
-	  //printf("ellips(sol)=%.15G\n", Sqr(solec[kk1][0]/a)+Sqr(solec[kk1][1]/b)-1.0);
-#if 0
-	  if (coeff[4] < 1E-10) 
-	    {
-	      for (kk1=0; kk1 < numsol; kk1++)
-		printf("sol=%.20G\n", solqua[kk1]);
-	      exit(-1);
-	    }
-#endif
 	}
-#endif
       sp = dsc*nip[solset];
-      if (fabs(sp) < B.L*0.5)
+      if (abs(sp) < A.L*0.5)
 	{
 	  return -1;
 	}
