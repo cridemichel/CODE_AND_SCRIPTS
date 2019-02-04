@@ -2,6 +2,7 @@
 #include "./rpoly.H"
 template <class ntype>
 using pvec3=pvector<ntype,3>;
+#define Sqr(x) ((x)*(x))
 
 template <class ntype>
 class hardcyl
@@ -46,7 +47,7 @@ double rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
   ntype CiCjni, CiCjnj, detA; 
   pvector<ntype,3> CiCj, ViVj, Vi, Vj;
   /* case A.3 rim-rim overlap */
-  CiCj = A.r - B.r;
+  CiCj = A.r - (B.r+B.shift);
   CiCjni = CiCj*A.n;
   CiCjnj = CiCj*B.n;
   ninj = A.n*B.n;
@@ -57,7 +58,7 @@ double rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
   lambdaj = (-CiCjnj + CiCjni*ninj)/detA;
 
   Vi = A.r + lambdai*A.n;
-  Vj = B.r + lambdaj*B.n;
+  Vj = (B.r+B.shift) + lambdaj*B.n;
   ViVj = Vi-Vj;
   if (ViVj.norm() < 0.5*(A.D+B.D) && abs(lambdai) < 0.5*A.L && abs(lambdaj) < 0.5*B.L)
     {
@@ -165,7 +166,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
   const ntype FALLBACK_THR = 1E-4;
-  ntype tmp, sp, solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
+  ntype tmp, sp, solec[4][2], solqua[4], solquasort[4], solquad[2];
   ntype dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
   ntype diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
   ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
@@ -174,6 +175,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   pvector<ntype,3> nip[2], Cip[2], uy;
   pmatrixq<ntype,3> Rl;
   pvector<ntype,5> coeff;
+  pvec3<ntype> solarr[2][4];
   /* rim of A and disk[wd] of B */
   D2 = B.D*0.5; 
   D2sq = D2*D2;
@@ -455,7 +457,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 	}
       else
 	solve_quartic(coeff, &(numsol[1]), solqua);
-      discard_spurious(solqua, &(numsol[1]));
+      //discard_spurious(solqua, &(numsol[1]));
 #ifdef MC_QUART_VERBOSE
       printf("falling back [#%ld] type=%d numsol=%d %d\n", numfb++,fallback, numsol[0], numsol[1]);
 #endif
@@ -513,10 +515,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 #endif
   for (kk1=0; kk1 < numsol[solset]; kk1++)
     {
-      for (kk2=0; kk2 < 3; kk2++)
-	{
-	  dsc[kk2] = solarr[solset][kk1][kk2] - Cip[solset][kk2];
-	}
+      dsc = solarr[solset][kk1] - Cip[solset];
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
 #if 1
@@ -569,7 +568,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 #endif
 	}
 #endif
-      sp = scalProd(dsc, nip[solset]);
+      sp = dsc*nip[solset];
       if (fabs(sp) < B.L*0.5)
 	{
 	  return -1;
@@ -618,7 +617,7 @@ double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> 
   if (1.0-abs(A.n*B.n) == 0)
     //if (1.0-fabs(scalProd(ni,nj)) < 1.0E-8)
     {
-      CiCj = A.r - (B.r+B.shift);
+      CiCj = (A.r+A.shift) - (B.r+B.shift);
       sp = CiCj*A.n;
       pv = sp*A.n;
       parac = abs(pv);
