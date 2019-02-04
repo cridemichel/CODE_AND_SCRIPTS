@@ -649,10 +649,8 @@ ntype rimdisk(hardcyl<ntype> A, hardcyl<ntype> B)
   sp = DjCi*A.n;
   perpdist[1]=abs(DjCi - sp*A.n);
   whichdisk=(perpdist[0]<perpdist[1])?0:1;
-
-  if (rimdiskone(A, B, whichdisk) < 0.0)
+  if (perpdist[whichdisk] < 0.5*(A.D+B.D) && rimdiskone(A, B, whichdisk) < 0.0)
     return -1;
-  
   /* choose the disk closest to cyl axis */
   DjCi = A.disk[0] - B.r;
   sp = DjCi*B.n;
@@ -661,10 +659,8 @@ ntype rimdisk(hardcyl<ntype> A, hardcyl<ntype> B)
   sp = DjCi*B.n;
   perpdist[1]=abs(DjCi - sp*B.n);
   whichdisk=(perpdist[0]<perpdist[1])?0:1;
-
-  if (rimdiskone(B, A, whichdisk) < 0.0)
+  if (perpdist[whichdisk] < 0.5*(A.D+B.D) && rimdiskone(B, A, whichdisk) < 0.0)
     return -1;
-
   return 0;
 }
 double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
