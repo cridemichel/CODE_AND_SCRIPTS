@@ -8,6 +8,13 @@ template <class ntype>
 using pmat3=pmatrixq<ntype,3>;
 #define Sqr(x) ((x)*(x))
 template <class ntype>
+class patch
+{
+public:
+  pvector<ntype,3> r;
+  int pidx;
+};
+template <class ntype>
 class phardcyl: public hardcyl<ntype> 
 {
 public:
@@ -17,17 +24,17 @@ public:
   using hardcyl<ntype>::disk;
   using hardcyl<ntype>::n;
   using hardcyl<ntype>::shift;
-  using hardcyl<ntype>::overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
+  //using hardcyl<ntype>::overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
   static const int NP;
   //pvector<ntype,3> rpaB[NP];// position of patches (body reference system)
   pvector<ntype,3> rpaL[NP];// position of patches (lab reference system)
   ntype sig[NP][NP]; // range of site-site interactions
   ntype u0[NP][NP];  // well depth of site-site interactions
-  phardcyl(): hardcyl()
+  phardcyl(): hardcyl<ntype>()
     {
       update_patches();
     }
-  phardcyl(ntype l, ntype d): hardcyl(l,d)
+  phardcyl(ntype l, ntype d): hardcyl<ntype>(l,d)
     {
       update_patches();
     }
