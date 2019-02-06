@@ -18,7 +18,7 @@ template <class ntype> class params
   llint curstep, maxstep;
 public:
   ntype D, L, u0, sigR, sigP;
-  ntype rcut;
+  ntype rcutpa, rcutho;
   ntype Lbox[3];
  
   params()
@@ -153,8 +153,8 @@ public:
     }
   void init_lcls(void)
     {
-      lclpa.init_lcls(pars.Lbox, pars.rcut, patches);
-      lclho.init_lcls(pars.Lbox, pars.rcut, hardobjs);
+      lclpa.init_lcls(pars.Lbox, pars.rcutpa, patches);
+      lclho.init_lcls(pars.Lbox, pars.rcutho, hardobjs);
     }
   void init(void)
     {
