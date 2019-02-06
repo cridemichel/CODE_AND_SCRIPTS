@@ -1,4 +1,5 @@
 #include "pmatrix.H"
+#include "./linked_cell_lists.H"
 #include <vector>
 //#include "./phardcyl.H"
 typedef long long int llint;
@@ -17,7 +18,9 @@ template <class ntype> class params
   llint curstep, maxstep;
 public:
   ntype D, L, u0, sigR, sigP;
-  
+  ntype rcut;
+  ntype Lbox[3];
+ 
   params()
     {
     }
@@ -67,12 +70,16 @@ public:
 
 template <class ntype, class particle, class hardobj> class sim 
 {
-  class simstate<ntype,particle> state;
+  simstate<ntype,particle> state;
+  params<ntype> pars;
+  extrapars<ntype> epars; 
   /* auxiliary vectors */
   vector<patch<ntype>*> patches;
   vector<hardobj*> hardobjs;
   int NP; //num. of tot. patches 
   int NHO;//num. of tot. hard objects
+  linked_cell_list<ntype,vector<patch<ntype>*>> lclpa;
+  linked_cell_list<ntype,vector<hardobj*>> lclho;
 public:
   int N;  //actual number of simulated particles 
   int Nalloc;// number of allocated particles (Nalloc >= N)
@@ -85,9 +92,14 @@ public:
     {
       return state.finalstep();
     }
-  virtual void onestep(void);
-  virtual void saveobserv(void);
-  virtual void terminate(void);
+  void onestep(void);
+  void saveobserv(void)
+    {}
+  void terminate(void)
+    {
+      // save last conf here
+      exit(0);
+    }
   void savesnap(int type=0);
   void get_patches()
     {
@@ -133,10 +145,21 @@ public:
   sim(int n)
     {
       N=n;
-      NP=get_num_patches();
-      patches.resize(NP);
-      hardobjs.resize(n);
       state.particles.resize(n);
+      NP=get_num_patches();
+      NHO=get_hard_objs();
+      patches.resize(NP);
+      hardobjs.resize(NHO);
+    }
+  void init_lcls(void)
+    {
+      lclpa.init_lcls(pars.Lbox, pars.rcut, patches);
+      lclho.init_lcls(pars.Lbox, pars.rcut, hardobjs);
+    }
+  void init(void)
+    {
+      // place all particles if a configuration is not provided
+      init_lcls();
     }
 };
 
@@ -150,4 +173,13 @@ void sim<ntype,particle,hardobj>::run(void)
       saveobserv();
       savesnap();
     }
+}
+
+template <class ntype, class particle, class hardobj>
+void sim<ntype,particle,hardobj>::onestep(void)
+{
+  //if (state.particles.size()==0)
+   // return 0;
+
+
 }
