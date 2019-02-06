@@ -1,7 +1,17 @@
 #include "pmatrix.H"
 #include <vector>
-#include "./phardcyl.H"
+//#include "./phardcyl.H"
 typedef long long int llint;
+// patch will have a standard definition and a vector of patches
+// will be a member of any particle object
+template <class ntype>
+class patch
+{
+public:
+  pvector<ntype,3> r;
+  int pidx;
+};
+
 template <class ntype> class params
 {
   llint curstep, maxstep;

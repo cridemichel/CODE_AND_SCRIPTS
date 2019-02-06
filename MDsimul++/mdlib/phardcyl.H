@@ -8,13 +8,6 @@ template <class ntype>
 using pmat3=pmatrixq<ntype,3>;
 #define Sqr(x) ((x)*(x))
 template <class ntype>
-class patch
-{
-public:
-  pvector<ntype,3> r;
-  int pidx;
-};
-template <class ntype>
 class phardcyl: public hardcyl<ntype> 
 {
 public:
