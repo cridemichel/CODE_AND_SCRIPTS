@@ -4,8 +4,9 @@ class simulmc: public sim<ntype,particle,hardobj,params>
 {
   using sim = sim<ntype,particle,hardobj,params>;
   using simmc = simulmc<ntype,particle,hardobj,params>;
- 
-  void mcexc(int& err) 
+  using sim::N; 
+  using sim::ranf;
+  void mcexc(int& err); 
     {err=0;}
   void mcoutin(ntype beta, ntype pbias)
     {
@@ -25,7 +26,10 @@ class simulmc: public sim<ntype,particle,hardobj,params>
 
  int mcmotion(void); 
 public:
-
+ void run(void)
+   {
+     sim::run();
+   }
 simulmc() = delete;
 simulmc(int n): sim(n)
   {
