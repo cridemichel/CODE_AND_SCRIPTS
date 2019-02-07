@@ -15,26 +15,7 @@ public:
   int pidx;
 };
 
-template <class ntype> 
-class params
-{
-  llint curstep, maxstep;
-public:
-  ntype D, L, u0, sigR, sigP;
-  ntype rcutpa, rcutho;
-  ntype Lbox[3];
-  ntype pbias;
-  ntype T; // temperature
-  int npav, nexc;
-  int ensemble; 
-  params()
-    {
-    }
-  ~params()
-    {
-
-    }
-};
+ 
 #if 0
 template <class ntype> class extrapars
 {
@@ -77,7 +58,8 @@ public:
     }
 };
 
-template <class ntype, class particle, class hardobj, class params> class sim
+template <class ntype, class particle, class hardobj, class params> 
+class sim
 {
   simstate<ntype,particle> state;
   params pars;

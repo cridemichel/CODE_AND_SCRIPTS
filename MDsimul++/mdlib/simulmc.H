@@ -3,6 +3,8 @@ template <class ntype, class particle, class hardobj, class params>
 class simulmc: public sim<ntype,particle,hardobj,params>
 {
   using sim = sim<ntype,particle,hardobj,params>;
+  using simmc = simulmc<ntype,particle,hardobj,params>;
+ 
   void mcexc(int& err) 
     {err=0;}
   void mcoutin(ntype beta, ntype pbias)
