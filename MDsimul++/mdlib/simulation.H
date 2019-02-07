@@ -1,6 +1,8 @@
 #include "pmatrix.H"
 #include "./linked_cell_lists.H"
 #include <vector>
+#include <stdlib.h>
+#include <stdio.h>
 //#include "./phardcyl.H"
 typedef long long int llint;
 // patch will have a standard definition and a vector of patches
@@ -13,14 +15,18 @@ public:
   int pidx;
 };
 
-template <class ntype> class params
+template <class ntype> 
+class params
 {
   llint curstep, maxstep;
 public:
   ntype D, L, u0, sigR, sigP;
   ntype rcutpa, rcutho;
   ntype Lbox[3];
- 
+  ntype pbias;
+  ntype T; // temperature
+  int npav, nexc;
+  int ensemble; 
   params()
     {
     }
@@ -29,6 +35,7 @@ public:
 
     }
 };
+#if 0
 template <class ntype> class extrapars
 {
 public:
@@ -40,27 +47,29 @@ public:
 
     }
 };
+#endif
 // particles are patchy hard cylinders here!
 //template<class ntype> 
 //using particle=phardcyl<ntype>;
 
 template <class ntype, class particle> class simstate
 {
-  params<ntype> pars;
-  extrapars<ntype> epars;
+  //extrapars<ntype> epars;
+  int curstep, maxstep;
+  int ensemble;
+  llint excmoveMC, volmoveMC, totmovesMC;
 public:
-  vector<particle> particles;
   llint getcurstep(void)
     {
-      return pars.curstep;
+      return curstep;
     }
   llint getfinalstep(void)
     {
-      return pars.maxstep;
+      return maxstep;
     }
- simstate()
+  simstate()
     {
-      pars.curstep=1;
+      curstep=1;
     }
   ~simstate()
     {
@@ -68,18 +77,20 @@ public:
     }
 };
 
-template <class ntype, class particle, class hardobj> class sim 
+template <class ntype, class particle, class hardobj, class params> class sim
 {
   simstate<ntype,particle> state;
-  params<ntype> pars;
-  extrapars<ntype> epars; 
+  params pars;
+  //extrapars<ntype> epars; 
   /* auxiliary vectors */
+  vector<particle> particles;
   vector<patch<ntype>*> patches;
   vector<hardobj*> hardobjs;
   int NP; //num. of tot. patches 
   int NHO;//num. of tot. hard objects
   linked_cell_list<ntype,vector<patch<ntype>*>> lclpa;
   linked_cell_list<ntype,vector<hardobj*>> lclho;
+
 public:
   int N;  //actual number of simulated particles 
   int Nalloc;// number of allocated particles (Nalloc >= N)
@@ -92,7 +103,15 @@ public:
     {
       return state.finalstep();
     }
-  void onestep(void);
+  ntype ranf(void)
+    {
+      return ((ntype)drand48());
+    }
+  void seed(int s)
+    {
+      srand48((long)s);
+    }
+  virtual void onestep(void);
   void saveobserv(void)
     {}
   void terminate(void)
@@ -158,16 +177,17 @@ public:
     }
   void init(void)
     {
+      seed(42);
       // place all particles if a configuration is not provided
       init_lcls();
     }
 };
 
-template <class ntype, class particle, class hardobj>
-void sim<ntype,particle,hardobj>::run(void)
+template <class ntype, class particle, class hardobj, class params>
+void sim<ntype,particle,hardobj,params>::run(void)
 {
   int i;
-  for (i=getinistep(); i++; i < getfinalstep())
+  for (i=getinistep(); i < getfinalstep(); i++)
     {
       onestep();
       saveobserv();
@@ -175,11 +195,4 @@ void sim<ntype,particle,hardobj>::run(void)
     }
 }
 
-template <class ntype, class particle, class hardobj>
-void sim<ntype,particle,hardobj>::onestep(void)
-{
-  //if (state.particles.size()==0)
-   // return 0;
 
-
-}
