@@ -2104,7 +2104,11 @@ void set_pos_R_ho(int i, int a)
 #endif
 }
 #endif
+//////////////////////////////////////
+//Perram Wertheim overlap ellipsoid //
+//////////////////////////////////////
 #ifdef MC_PERWER
+/* perram wertheim overlap ellissoidi */
 void tRDiagRpw(int i, double M[3][3], double D[3], double **Ri)
 {
   int k1, k2, k3;
@@ -2372,6 +2376,226 @@ double check_overlap_pw(int i, int j, double shift[3])
     }
   //printf("res=%f\n", res);
   return res - 1.0;
+}
+#endif
+#ifdef QUARTELLIPS
+// rotazione intorno ad asse (ox,oy,oz) di un angolo theta
+// (serve per l'algoritmo per trovare alpha risolvendo una quartica)
+/* perram wertheim overlap ellissoidi */
+void tRDiagRqe(int i, double M[3][3], double D[3], double **Ri)
+{
+  int k1, k2, k3;
+  double Di[3][3];
+  double Rtmp[3][3];
+  /* calcolo del tensore d'inerzia */ 
+  Di[0][0] = D[0];
+  Di[1][1] = D[1];
+  Di[2][2] = D[2];
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	if (k1 != k2)
+	  Di[k1][k2] = 0.0;
+      } 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Rtmp[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    if (Di[k1][k3] == 0.0)
+	      continue;
+	    Rtmp[k1][k2] += Di[k1][k3]*Ri[k3][k2];
+	  }
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	M[k1][k2] = 0.0;
+	for (k3=0; k3 < 3; k3++)
+	  {
+	    M[k1][k2] += Ri[k3][k1]*Rtmp[k3][k2];
+	  }
+      }
+}
+
+void rotate_axes_on_plane(double RR[3][3])
+{
+  double Rin[3][3];
+  int k1, k2, k3;
+  double ox, oy, oz, theta, thetaSq, sinw, cosw;
+  double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
+
+  ox = RR[0][0];
+  oy = RR[0][1];
+  oz = RR[0][2];
+  for (k1=0; k1 < 3; k1++)
+    for (k2=0; k2 < 3; k2++)
+      {
+	Rin[k1][k2]=RR[k1][k2];
+      }
+  //NOTA 15/01/2018
+  //se uso ranf altero la sequenza casuale e perdo il confronto la simulazione da 50x10^6 già fatta con il metodo di Alberto 
+  //theta = (ranf()>0.5?1.:-1.)*M_PI/4.0;
+  theta = M_PI/4.0;
+  thetaSq=Sqr(theta);
+  sinw = sin(theta);
+  cosw = (1.0 - cos(theta));
+  Omega[0][0] = 0;
+  Omega[0][1] = -oz;
+  Omega[0][2] = oy;
+  Omega[1][0] = oz;
+  Omega[1][1] = 0;
+  Omega[1][2] = -ox;
+  Omega[2][0] = -oy;
+  Omega[2][1] = ox;
+  Omega[2][2] = 0;
+  OmegaSq[0][0] = -Sqr(oy) - Sqr(oz);
+  OmegaSq[0][1] = ox*oy;
+  OmegaSq[0][2] = ox*oz;
+  OmegaSq[1][0] = ox*oy;
+  OmegaSq[1][1] = -Sqr(ox) - Sqr(oz);
+  OmegaSq[1][2] = oy*oz;
+  OmegaSq[2][0] = ox*oz;
+  OmegaSq[2][1] = oy*oz;
+  OmegaSq[2][2] = -Sqr(ox) - Sqr(oy);
+
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      for (k2 = 0; k2 < 3; k2++)
+	{
+	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+	}
+    }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Ro[k1][k2] = Rin[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Ro[k1][k2] += Rin[k1][k3]*M[k3][k2];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+     RR[k1][k2] = Ro[k1][k2];
+}
+void invM(double M[3][3], double invM[3][3])
+{
+  double m11m20, m12m20, m12m21, m12m21, m10m22, m11m22, A1, A2, A3;
+  double invd;
+
+  m11m20= m[1][1]*m[2][0];
+  m12m20= m[1][2]*m[2][0];
+  m10m21= m[1][0]*m[2][1];
+  m12m21= m[1][2]*m[2][1];
+  m10m22= m[1][0]*m[2][2];
+  m11m22= m[1][1]*m[2][2];
+  A1 = -m[0][2]*m11m20 + m[0][1]*m12m20;
+  A2 = m[0][2]*m10m21 - m[0][0]*m12m21;
+  A3 = - m[0][1]*m10m22 + m[0][0]*m11m22;
+
+  invd = A1 + A2 + A3;
+  invd = 1.0/invd;
+  //invd = 1.0/(-m[0][2]*m11m20 + m[0][1]*m12m20 + m[0][2]*m10m21
+  //	  - m[0][0]*m12m21 - m[0][1]*m10m22 + m[0][0]*m11m22);
+
+  invM[0][0] = -m12m21 + m11m22;
+  invM[0][1] = m[0][2]*m[2][1] - m[0][1]*m[2][2];
+  invM[0][2] = -m[0][2]*m[1][1] + m[0][1]*m[1][2];
+  invM[1][0] = m12m20 - m10m22;
+  invM[1][1] = -m[0][2]*m[2][0] + m[0][0]*m[2][2]; 
+  invM[1][2] = m[0][2]*m[1][0] - m[0][0]*m[1][2]; 
+  invM[2][0] = -m11m20 + m10m21; 
+  invM[2][1] = m[0][1]*m[2][0] - m[0][0]*m[2][1];
+  invM[2][2] = -m[0][1]*m[1][0] + m[0][0]*m[1][1];
+
+  invM[0][0] *= invd;
+  invM[0][1] *= invd;
+  invM[0][2] *= invd;
+  invM[1][0] *= invd;
+  invM[1][1] *= invd;
+  invM[1][2] *= invd;
+  invM[2][0] *= invd;
+  invM[2][1] *= invd;
+  invM[2][2] *= invd;
+}
+double check_overlap_quartell(int i, int j, double shift[3])
+{
+  double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xpg[3], M2I[3][3], invM2I[3][3];
+  int typei, typej;
+
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+
+  ri[0] = rx[i];
+  ri[1] = ry[i];
+  ri[2] = rz[i];
+  rj[0] = rx[j]+shift[0];
+  rj[1] = ry[j]+shift[1];
+  rj[2] = rz[j]+shift[2];
+
+  /* switch to ellipsoid i reference system */
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      r0jp[kk1] = 0;
+      for (kk2=0; kk2 < 3; kk2++)
+        {
+          r0jp[kk1] += R[i][kk1][kk2]*(rj[kk2]-ri[kk2]);
+          Rjp[kk1][kk2] = 0;
+          //Aip[kk1] = 0;
+          for (kk3=0; kk3 < 3; kk3++)
+            {
+              Rjp[kk1][kk2] += R[i][kk1][kk3]*R[j][kk3][kk];
+              //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
+            } 
+        }
+    }
+  /* apply affinity to reduce first ellipsoid to a sphere */
+  for (k1=0; k1 < 3; k1++)
+    {
+      Di[k1]= 1.0/Sqr(typesArr[typei].sax[k1]);
+      Dj[k1]= 1.0/Sqr(typesArr[typej].sax[k1]);
+    }
+  //tRDiagRpw(i, Mi, DA, R[i]);
+  tRDiagRpw(j, Mjp, Dj, Rjp[j]);
+
+  /* calculate matrix and position of ellipsoid j after application of affinity
+   * which reduces ellipsoid i to a sphere */   
+  Mjpp[0][0] = Mjp[0][0]*Sqr(Dj[0]);
+  Mjpp[0][1] = Mjp[0][1]*Dj[0]*Dj[1];
+  Mjpp[0][2] = Mjp[0][2]*Dj[0]*Dj[2];
+  Mjpp[1][0] = Mjp[1][0]*Dj[0]*Dj[1];
+  Mjpp[1][1] = Mjp[1][1]*Sqr(Dj[1]);
+  Mjpp[2][0] = Mjp[2][0]*Dj[0]*Dj[2];
+  Mjpp[2][1] = Mjp[2][1]*Dj[1]*Dj[2];
+  Mjpp[2][2] = Mjp[2][2]*Sqr(Dj[2]);
+  r0jpp[0] = r0jp[0]/Dj[0];
+  r0jpp[1] = r0jp[1]/Dj[1];
+  r0jpp[2] = r0jp[2]/Dj[2];
+  
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      for (kk2=0; kk2 < 3; kk2++)
+        {
+          M2I[kk1][kk2] = Mjpp[kk1][kk2]-(kk1==kk2)?1:0;
+        }
+    }
+  /* calcola l'inversa di M2I */
+  invM(M2I, invM2I);
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      xpg[kk1]=0.0;
+      for (kk2=0; kk2 < 3; kk2++)
+        {
+          xpg[kk1] += invM2I[kk1][kk2]*r0jpp[kk2];
+        }
+    } 
+  /* rotate reference system of ellipsoid i so that z axis becomes vector xpg[] */
+
+  /* found quartic coefficients (it will have one positive solution, one negative and two complex conjugates,
+   * hence easy to solve for quarticsolver) */
+
+  /* solve for alpha (if alpha > 1 => no overlap else overlap ) */
+
 }
 #endif
 double check_overlap_ij(int i, int j, double shift[3], int *errchk)
@@ -9215,7 +9439,7 @@ void calc_bonding_volume_kf(long long int maxtrials, int outits, int type, doubl
     {
       if (tt%outits==0 && tt!=0)
 	{
-	  printf("tt=%lld\n", tt); 
+	  printf("tt=%lld size1=%d\n", tt); 
 	  if (distcc > 0)
 	    {
 	      printf("Bonding distance=%.15G\n", totdist/distcc);
@@ -9485,9 +9709,9 @@ void calc_bonding_volume_mc(long long int maxtrials, int outits, int type, doubl
       if (Oparams.parnum > 2)
 	{
 #ifdef MD_LXYZ
-	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
+	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L[0]*L[1]*L[2])/Sqr(typesArr[0].nspots)/(Oparams.parnum-1), totene);
 #else
-	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/Oparams.parnum-1, totene);
+	  printf("Vbonding=%.10f (totene=%f)\n", (totene/((double)tt))*(L*L*L)/Sqr(typesArr[0].nspots)/(Oparams.parnum-1), totene);
 #endif
 	}
       else
