@@ -2418,22 +2418,16 @@ void tRDiagRqe(int i, double M[3][3], double D[3], double **Ri)
 	  }
       }
 }
-
-void rotate_axes_on_plane(double RR[3][3])
+/* calculate matrix RM associated to rotation around axis oax by an angle theta */
+void calc_rotation_matrix(double oax[3], double theta, double RM[3][3])
 {
-  double Rin[3][3];
   int k1, k2, k3;
   double ox, oy, oz, theta, thetaSq, sinw, cosw;
   double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
 
-  ox = RR[0][0];
-  oy = RR[0][1];
-  oz = RR[0][2];
-  for (k1=0; k1 < 3; k1++)
-    for (k2=0; k2 < 3; k2++)
-      {
-	Rin[k1][k2]=RR[k1][k2];
-      }
+  ox = oax[0];
+  oy = oax[1];
+  oz = oax[2];
   //NOTA 15/01/2018
   //se uso ranf altero la sequenza casuale e perdo il confronto la simulazione da 50x10^6 già fatta con il metodo di Alberto 
   //theta = (ranf()>0.5?1.:-1.)*M_PI/4.0;
@@ -2464,9 +2458,11 @@ void rotate_axes_on_plane(double RR[3][3])
     {
       for (k2 = 0; k2 < 3; k2++)
 	{
-	  M[k1][k2] = -sinw*Omega[k1][k2]+cosw*OmegaSq[k1][k2];
+          /* RM = I - sinw*Omega + cosw*Omega*Omega */ 
+	  RM[k1][k2] = (k1==k2)?1.0:0.0 - sinw*Omega[k1][k2] + cosw*OmegaSq[k1][k2];
 	}
     }
+#if 0
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
@@ -2477,6 +2473,7 @@ void rotate_axes_on_plane(double RR[3][3])
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
      RR[k1][k2] = Ro[k1][k2];
+#endif
 }
 void invM(double M[3][3], double invM[3][3])
 {
@@ -2518,10 +2515,27 @@ void invM(double M[3][3], double invM[3][3])
   invM[2][1] *= invd;
   invM[2][2] *= invd;
 }
+/* Mout=MA*MB */
+void mul_matrix(double MA[3][3], double MB[3][3], double Mout[3][3])
+{
+  int k1, k2, k3
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Mout[k1][k2] = 0;
+	for (k3 = 0; k3 < 3; k3++)
+	  Mtmp[k1][k2] += RM[k1][k3]*Mjpp[k3][k2];
+      }
+
+
+
+}
 double check_overlap_quartell(int i, int j, double shift[3])
 {
-  double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xpg[3], M2I[3][3], invM2I[3][3];
+  double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
+  double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   int typei, typej;
+  int kk1, kk2, kk3, k1, k2, k3;
 
   typei = typeOfPart[i];
   typej = typeOfPart[j];
@@ -2583,13 +2597,47 @@ double check_overlap_quartell(int i, int j, double shift[3])
   invM(M2I, invM2I);
   for (kk1=0; kk1 < 3; kk1++)
     {
-      xpg[kk1]=0.0;
+      xppg[kk1]=0.0;
       for (kk2=0; kk2 < 3; kk2++)
         {
-          xpg[kk1] += invM2I[kk1][kk2]*r0jpp[kk2];
+          xppg[kk1] += invM2I[kk1][kk2]*r0jpp[kk2];
         }
     } 
   /* rotate reference system of ellipsoid i so that z axis becomes vector xpg[] */
+  oax[0] = -xpg[1];
+  oax[1] = xpg[0];
+  oax[2] = 0.0;
+
+  norm = calc_norm(xpg); 
+  theta = acos(xpg[2]/norm);
+  calc_rotation_matrix(oax, theta, RM);
+ 
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Mtmp[k1][k2] = Mjpp[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Mtmp[k1][k2] += RM[k1][k3]*Mjpp[k3][k2];
+      }
+
+  for (k1 = 0; k1 < 3; k1++)
+    for (k2 = 0; k2 < 3; k2++)
+      {
+	Mjp3[k1][k2] = Mtmp[k1][k2];
+	for (k3 = 0; k3 < 3; k3++)
+	  Mjp3[k1][k2] += Mtmp[k1][k3]*RM[k2][k3];
+      }
+  for (k1 = 0; k1 < 3; k1++)
+    {
+      r0jp3[k1] = 0;
+      xp3g[k1] = 0;
+      for (k2 = 0; k2 < 3; k2++)
+        {
+          r0jp3[k1] += RM[k1][k2]*r0jpp[k2];
+          xp3g[k1] += RM[k1][k2]*xppg[k2];
+        } 
+    }
+  /* xp3g[0]=xp3g[1]=0 at least approximately */
 
   /* found quartic coefficients (it will have one positive solution, one negative and two complex conjugates,
    * hence easy to solve for quarticsolver) */
