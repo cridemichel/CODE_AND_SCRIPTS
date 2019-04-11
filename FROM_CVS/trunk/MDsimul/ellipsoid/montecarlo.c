@@ -2515,6 +2515,72 @@ void invM(double M[3][3], double invM[3][3])
   invM[2][1] *= invd;
   invM[2][2] *= invd;
 }
+#ifdef USE_LAPACK
+/* find eigenvectors and eigenvalues */
+void sort_eigenvect(double R[3][3], double EV[3])
+{
+  /* sort from smallest eigenvalues to bigges */
+  int i, j, k;
+  double u[3], ev;
+  for (i=0; i < 2; i++)
+    for (j=i+1; j < 3; j++)
+      {
+	if (EV[i] > EV[j])
+	  {
+	    /* swap eigenvectors */
+	    for (k=0; k < 3; k++)
+	      u[k] = R[i][k];
+	    for (k=0; k < 3; k++)
+	      R[i][k] = R[j][k];
+	    for (k=0; k < 3; k++)
+	      R[j][k] = u[k];
+	    /* swap eigenvalues */
+	    ev = EV[i];
+	    EV[i] = EV[j];
+	    EV[j] = ev;
+	  }
+      }
+}
+void calcEigenValVect(double I[3][3], double R[3][3], double EV[3])
+{
+  int ok, kk;
+  double u1[3], u2[3];
+  wrap_dsyev(I, R, EV, &ok);
+  sort_eigenvect(R, EV);
+
+  /* we want a right-handed reference system */
+  for (kk=0; kk < 3; kk++)
+    u1[kk] = R[0][kk];
+  for (kk=0; kk < 3; kk++)
+    u2[kk] = R[1][kk];
+  vectProdVec(u1, u2, R[2]);
+}
+void wrap_dsyev(double a[3][3], double b[3][3], double x[3], int *ok)
+{
+  char JOBZ, UPLO;
+  double AT[9], work[10];
+  int i, j, c1, c2, c3;
+  JOBZ='V';
+  UPLO='U';
+  extern void dsyev_(char* , char*, int*, double* , int*, double*, double*, int*, int*);
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) AT[j+3*i]=a[j][i];		
+    }						
+  c1 = 3;
+  c2 = 1;
+  c3 = 8;
+  dsyev_(&JOBZ, &UPLO, &c1, AT, &c1, x, work, &c3, ok);      
+  /* il primo autovettore è b[0][], il secondo b[1][] ed il terzo b[2][] */
+  for (i=0; i<3; i++)		/* to call a Fortran routine from C we */
+    {				/* have to transform the matrix */
+      for(j=0; j<3; j++) b[i][j]=AT[j+3*i];		
+    }	
+  if (*ok != 0)
+    printf("not ok (%d)\n", *ok);
+}
+#endif
+
 /* Mout=MA*MB */
 void mul_matrix(double MA[3][3], double MB[3][3], double Mout[3][3])
 {
@@ -2526,16 +2592,67 @@ void mul_matrix(double MA[3][3], double MB[3][3], double Mout[3][3])
 	for (k3 = 0; k3 < 3; k3++)
 	  Mtmp[k1][k2] += RM[k1][k3]*Mjpp[k3][k2];
       }
+}
+// cubic polynomial
+// we know that 3 zeros have to be real!
+void solve_cubic_analytic(double coeff[4], double sol[3])
+{
+  /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
+   * according to the method described in Numerical Recipe book */  
+  double a, b, c, Q, R, theta, Q3, R2, A, B;
+  const double sqrt32=sqrt((ntype)3.0)/2.0;
+  a = coeff[2]/coeff[3];
+  b = coeff[1]/coeff[3];
+  c = coeff[0]/coeff[3];
+  Q = (Sqr(a) - 3.0*b)/9.0;
+  R = (2.0*Sqr(a)*a - 9.0*a*b + 27.0*c)/54.0;
+  Q3 = Sqr(Q)*Q;
+  R2 = Sqr(R);
+  if (R2 < Q3)
+    {
+      theta = acos(R/sqrt(Q3));
+      sol[0] = -2.0*sqrt(Q)*cos(theta/3.0)- a/3.0;
+      sol[1] = -2.0*sqrt(Q)*cos((theta+2.0*M_PI)/3.0) - a/3.0;
+      sol[2] = -2.0*sqrt(Q)*cos((theta-2.0*M_PI)/3.0) - a/3.0;
+    }
+  else
+    {
+      printf("here?!?\n");
+      exit(-1);
+      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      if (A==0.0)
+	B=0.0;
+      else
+	B = Q/A;
+#if 0
+      sol[0] = (A+B) - a/3.0;
+      sol[1] = cmplx(-0.5*(A+B)-a/3.0,sqrt32*(A-B));
+      sol[2] = conj(sol[1]);
+#endif
+      //sol[1] = -0.5*(A+B)-a/3.0+cmplx(0,1)*sqrt32*(A-B);
+      //sol[2] = -0.5*(A+B)-a/3.0-cmplx(0,1)*sqrt32*(A-B);
+    }
+}
 
-
-
+double polyalpha(double cmon[7], double x)
+{
+  // evaluate polynomail via Horner's formula 
+  double bn=0.0;
+  int i,
+  for (i=6; i >= 0; i--)
+    {
+      bn = cmon[i] + bn*x;
+    }
+  return bn;
 }
 double check_overlap_quartell(int i, int j, double shift[3])
 {
   double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
+  double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
+  double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02;
   int typei, typej;
-  int kk1, kk2, kk3, k1, k2, k3;
+  int kk1, kk2, kk3, k1, k2, k3, ok;
 
   typei = typeOfPart[i];
   typej = typeOfPart[j];
@@ -2579,13 +2696,83 @@ double check_overlap_quartell(int i, int j, double shift[3])
   Mjpp[0][2] = Mjp[0][2]*Dj[0]*Dj[2];
   Mjpp[1][0] = Mjp[1][0]*Dj[0]*Dj[1];
   Mjpp[1][1] = Mjp[1][1]*Sqr(Dj[1]);
+  Mjpp[1][2] = Mjp[1][2]*Dj[1]*Dj[2];
   Mjpp[2][0] = Mjp[2][0]*Dj[0]*Dj[2];
   Mjpp[2][1] = Mjp[2][1]*Dj[1]*Dj[2];
   Mjpp[2][2] = Mjp[2][2]*Sqr(Dj[2]);
   r0jpp[0] = r0jp[0]/Dj[0];
   r0jpp[1] = r0jp[1]/Dj[1];
   r0jpp[2] = r0jp[2]/Dj[2];
-  
+   /* find eigenvalues of ellipsoid j (i.e. of matrix Mjpp), we need just eigenvalues, hence we do not need to
+    * change reference frame to ellipsoid i principal axes given by eigenvectors */
+  //wrap_dsyev(Mjpp, evec, eval, &ok);
+  /* eigenvalues are provided by zeros of the 3th order characteristic polynomial */
+  coeff[0] = -Sqr(Mjpp[0][2])*Mjpp[1][1] + 2.0*Mjpp[0][1]*Mjpp[0][2]*Mjpp[1][2] - Mjpp[0][0]*Sqr(Mjpp[1][2])
+    -Sqr(Mjpp[0][1])*Sqr(Mjpp[2][2]) + Mjpp[0][0]*Mjpp[1][1]*Mjpp[2][2];
+  coeff[1] = Sqr(Mjpp[0][1]) + Sqr(Mjpp[0][2]) - Mjpp[0][0]*Mjpp[1][1] + Sqr(Mjpp[1][2]) - Mjpp[0][0]*Mjpp[2][2] 
+    - Mjpp[1][1]*Mjpp[2][2];
+  coeff[2] = Mjpp[0][0] + Mjpp[1][1] + Mjpp[2][2];
+  coeff[3] = -1.0;
+  solve_cubic_analytic(coeff, eval);
+  sx = eval[0];
+  sy = eval[1];
+  sz = eval[2];
+  x0 = r0jpp[0];
+  y0 = r0jpp[1];
+  z0 = r0jpp[2];
+  sx2 = sx*sx;
+  sy2 = sy*sy;
+  sz2 = sz*sz;
+  x02 = x0*x0;
+  y02 = y0*y0;
+  z02 = z0*z0; 
+  sx4 = sx2*sx2;
+  sy4 = sy2*sy2;
+  sz4 = sz2*sz2;
+  coeffpa[0] = -1; 
+  coeffpa[1] = -2.0*sx2 - 2.0*sy2 - 2.0*sz2;
+  coeffpa[2] = -sx4 - 4.0*sx2*sy2 - sy4 - 4.0*sx2*sz2 - 4.0*sy2*sz2 - sz4 + sx2*x02 + sy2*y02 + sz2*z02;
+  coeffpa[3] = -2.0*sx4*sy2 - 2.0*sx2*sy4 - 2.0*sx4*sz2 - 8.0*sx2*sy2*sz2 - 2.0*sy4*sz2 - 2.0*sx2*sz4 - 
+      2.0*sy2*sz4 + 2.0*sx2*sy2*x02 + 2.0*sx2*sz2*x02 + 2.0*sx2*sy2*y02 + 2*sy2*sz2*y02 + 2.0*sx2*sz2*z02 + 2.0*sy2*sz2*z02;
+  coeffpa[4] = -sx4*sy4-4.0*sx4*sy2*sz2 - 4.0*sx2*sy4*sz2 - sx4*sz4 - 4.0*sx2*sy2*sz4 - sy4*sz4 + 
+      sx2*sy4*x02 + 4.0*sx2*sy2*sz2*x02 + sx2*sz4*x02 + sx4*sy2*y02 + 4.0*sx2*sy2*sz2*y02 + sy2*sz4*y02 + 
+      sx4*sz2*z02 + 4.0*sx2*sy2*sz2*z02 + sy4*sz2*z02;
+  coeffpa[5] =-2.0*sx4*sy4*sz2 - 2.0*sx4*sy2*sz4 - 2.0*sx2*sy4*sz4 + 2.0*sx2*sy4*sz2*x02 + 2.0*sx2*sy2*sz4*x02 
+    + 2.0*sx4*sy2*sz2*y02 + 2.0*sx2*sy2*sz4*y02 + 2.0*sx4*sy2*sz2*z02 + 2.0*sx2*sy4*sz2*z02;
+  coeffpa[6] = -sx4*sy4*sz4 + sx2*sy4*sz4*x02 + sx4*sy2*sz4*y02 + sx4*sy4*sz2*z02;
+  if (polyalpha(coeffpa, 1.0) > 0.0) //if positive there exist a solution, i.e a value of alpha, between 0 and 1
+    {
+      return -1.0;
+    }
+  else
+    {
+      return 1.0;
+    }
+  /* -1 + (-2 sx^2 - 2 sy^2 - 2 sz^2) \[Alpha] + (-sx^4 - 4 sx^2 sy^2 - 
+    sy^4 - 4 sx^2 sz^2 - 4 sy^2 sz^2 - sz^4 + sx^2 x0^2 + sy^2 y0^2 + 
+    sz^2 z0^2) \[Alpha]^2 + (-2 sx^4 sy^2 - 2 sx^2 sy^4 - 
+    2 sx^4 sz^2 - 8 sx^2 sy^2 sz^2 - 2 sy^4 sz^2 - 2 sx^2 sz^4 - 
+    2 sy^2 sz^4 + 2 sx^2 sy^2 x0^2 + 2 sx^2 sz^2 x0^2 + 
+    2 sx^2 sy^2 y0^2 + 2 sy^2 sz^2 y0^2 + 2 sx^2 sz^2 z0^2 + 
+    2 sy^2 sz^2 z0^2) \[Alpha]^3 + (-sx^4 sy^4 - 4 sx^4 sy^2 sz^2 - 
+    4 sx^2 sy^4 sz^2 - sx^4 sz^4 - 4 sx^2 sy^2 sz^4 - sy^4 sz^4 + 
+    sx^2 sy^4 x0^2 + 4 sx^2 sy^2 sz^2 x0^2 + sx^2 sz^4 x0^2 + 
+    sx^4 sy^2 y0^2 + 4 sx^2 sy^2 sz^2 y0^2 + sy^2 sz^4 y0^2 + 
+    sx^4 sz^2 z0^2 + 4 sx^2 sy^2 sz^2 z0^2 + 
+    sy^4 sz^2 z0^2) \[Alpha]^4 + (-2 sx^4 sy^4 sz^2 - 
+    2 sx^4 sy^2 sz^4 - 2 sx^2 sy^4 sz^4 + 2 sx^2 sy^4 sz^2 x0^2 + 
+    2 sx^2 sy^2 sz^4 x0^2 + 2 sx^4 sy^2 sz^2 y0^2 + 
+    2 sx^2 sy^2 sz^4 y0^2 + 2 sx^4 sy^2 sz^2 z0^2 + 
+    2 sx^2 sy^4 sz^2 z0^2) \[Alpha]^5 + (-sx^4 sy^4 sz^4 + 
+    sx^2 sy^4 sz^4 x0^2 + sx^4 sy^2 sz^4 y0^2 + 
+    sx^4 sy^4 sz^2 z0^2) \[Alpha]^6 */
+
+  /* a questo si deve calcolare la distanza dell'origine dall'ellissoide nel riferimento degli assi principali */
+
+  /* impose tangence condition (gradient equal up to a costan alpha and tangent point belonging to ellipsoid)*/
+  /* se gli ellissoidi sono uniassiali ci si può ridurre a trovare gli zeri di una quartica altrimenti
+   * si devono trovare gli zeri un polinomio di sesto grado */
+#if 0
   for (kk1=0; kk1 < 3; kk1++)
     {
       for (kk2=0; kk2 < 3; kk2++)
@@ -2603,6 +2790,7 @@ double check_overlap_quartell(int i, int j, double shift[3])
           xppg[kk1] += invM2I[kk1][kk2]*r0jpp[kk2];
         }
     } 
+ 
   /* rotate reference system of ellipsoid i so that z axis becomes vector xpg[] */
   oax[0] = -xpg[1];
   oax[1] = xpg[0];
@@ -2637,6 +2825,7 @@ double check_overlap_quartell(int i, int j, double shift[3])
           xp3g[k1] += RM[k1][k2]*xppg[k2];
         } 
     }
+#endif
   /* xp3g[0]=xp3g[1]=0 at least approximately */
 
   /* found quartic coefficients (it will have one positive solution, one negative and two complex conjugates,
