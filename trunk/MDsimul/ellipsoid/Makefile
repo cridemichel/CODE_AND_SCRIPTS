@@ -3,7 +3,7 @@ SDHDR=ellipsoid.h
 
 UTIL = wtdutil heteroutil xvautil corutil jumps
 
-ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o superellipsoid.o multiple_ll.o montecarlo.o hard_cylinders.o
+ellipsoid: link measures.o move.o init.o corutil tree.o matrixalg.o nnl.o hesticky.o superellipsoid.o multiple_ll.o montecarlo.o hard_cylinders.o polysolv.o
 #parallel_ed.o # $(UTIL)
 
 link:
@@ -41,6 +41,9 @@ matrixalg.o: matrixalg.c $(SDHDR) $(COMM)/mdsimul.h
 
 nnl.o: nnl.c $(SDHDR) $(COMM)/mdsimul.h
 	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o nnl.o nnl.c
+	
+polysolv.o: polysolv.c $(SDHDR) $(COMM)/mdsimul.h
+	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o polysolv.o polysolv.c
 	
 hesticky.o: hesticky.c $(SDHDR) $(COMM)/mdsimul.h
 	$(CC) $(CFLAGS) $(MACROS) $(INCLUDES) -c -o hesticky.o hesticky.c
