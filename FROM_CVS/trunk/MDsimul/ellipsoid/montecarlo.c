@@ -2753,8 +2753,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
     * change reference frame to ellipsoid i principal axes given by eigenvectors */
   //wrap_dsyev(Mjpp, evec, eval, &ok);
   /* eigenvalues are provided by zeros of the 3th order characteristic polynomial */
-  coeff[0] = -Sqr(Mjpp[0][2])*Mjpp[1][1] + 2.0*Mjpp[0][1]*Mjpp[0][2]*Mjpp[1][2] - Mjpp[0][0]*Sqr(Mjpp[1][2])
-    -Sqr(Mjpp[0][1])*Sqr(Mjpp[2][2]) + Mjpp[0][0]*Mjpp[1][1]*Mjpp[2][2];
+  coeff[0] = -Sqr(Mjpp[0][2])*Mjpp[1][1] + 2.0*Mjpp[0][1]*Mjpp[0][2]*Mjpp[1][2] - Mjpp[0][0]*Sqr(Mjpp[1][2]) - Sqr(Mjpp[0][1])*Mjpp[2][2] + Mjpp[0][0]*Mjpp[1][1]*Mjpp[2][2];
   coeff[1] = Sqr(Mjpp[0][1]) + Sqr(Mjpp[0][2]) - Mjpp[0][0]*Mjpp[1][1] + Sqr(Mjpp[1][2]) - Mjpp[0][0]*Mjpp[2][2] 
     - Mjpp[1][1]*Mjpp[2][2];
   coeff[2] = Mjpp[0][0] + Mjpp[1][1] + Mjpp[2][2];
@@ -2767,16 +2766,6 @@ double check_overlap_polyell(int i, int j, double shift[3])
   x0 = r0jpp[0];
   y0 = r0jpp[1];
   z0 = r0jpp[2];
-  sx2 = sx*sx;
-  sy2 = sy*sy;
-  sz2 = sz*sz;
-  x02 = x0*x0;
-  y02 = y0*y0;
-  z02 = z0*z0; 
-  sx4 = sx2*sx2;
-  sy4 = sy2*sy2;
-  sz4 = sz2*sz2;
-
   if (sx==sz)
     {
       /* swap y and z axes */
@@ -2802,6 +2791,16 @@ double check_overlap_polyell(int i, int j, double shift[3])
       y0 = at[2];
       z0 = at[0];
     }
+  sx2 = sx*sx;
+  sy2 = sy*sy;
+  sz2 = sz*sz;
+  x02 = x0*x0;
+  y02 = y0*y0;
+  z02 = z0*z0; 
+  sx4 = sx2*sx2;
+  sy4 = sy2*sy2;
+  sz4 = sz2*sz2;
+
   /* maybe check for equal semi-axes an reorder semi-axes accordingly */
   if (sx==sy)
     {
