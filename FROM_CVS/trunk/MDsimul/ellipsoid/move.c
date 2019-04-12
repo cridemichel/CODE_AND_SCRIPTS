@@ -5901,6 +5901,8 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   return calcDistSpheroCyl(i, j, shift);
 #elif defined(MC_HC)
   return calcDistNegHC(i, j, shift, &calcdist_retcheck);
+#elif defined(POLYELLIPS)
+  return check_overlap_polyell(i, j, shift);
 #elif defined(MC_PERWER)
   return check_overlap_pw(i, j, shift);
 #elif defined(MC_HELIX)

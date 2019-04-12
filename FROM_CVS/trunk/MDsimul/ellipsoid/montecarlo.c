@@ -1884,7 +1884,7 @@ void rot_move(int ip, int flip)
   theta= OprogStatus.dthetaMC*(ranf()-0.5);
 #endif
   if (OprogStatus.useNNL)
-    displMC = abs(theta)*0.5001*maxax[ip]; 
+    displMC = fabs(theta)*0.5001*maxax[ip]; 
   thetaSq=Sqr(theta);
   sinw = sin(theta);
   cosw = (1.0 - cos(theta));
@@ -2382,7 +2382,7 @@ double check_overlap_pw(int i, int j, double shift[3])
 // rotazione intorno ad asse (ox,oy,oz) di un angolo theta
 // (serve per l'algoritmo per trovare alpha risolvendo una quartica)
 /* perram wertheim overlap ellissoidi */
-void tRDiagRqe(int i, double M[3][3], double D[3], double **Ri)
+void tRDiagRqe(int i, double M[3][3], double D[3], double Ri[3][3])
 {
   int k1, k2, k3;
   double Di[3][3];
@@ -2422,7 +2422,7 @@ void tRDiagRqe(int i, double M[3][3], double D[3], double **Ri)
 void calc_rotation_matrix(double oax[3], double theta, double RM[3][3])
 {
   int k1, k2, k3;
-  double ox, oy, oz, theta, thetaSq, sinw, cosw;
+  double ox, oy, oz, thetaSq, sinw, cosw;
   double OmegaSq[3][3],Omega[3][3], M[3][3], Ro[3][3];
 
   ox = oax[0];
@@ -2475,9 +2475,9 @@ void calc_rotation_matrix(double oax[3], double theta, double RM[3][3])
      RR[k1][k2] = Ro[k1][k2];
 #endif
 }
-void invM(double M[3][3], double invM[3][3])
+void invM(double m[3][3], double invM[3][3])
 {
-  double m11m20, m12m20, m12m21, m12m21, m10m22, m11m22, A1, A2, A3;
+  double m11m20, m12m20, m12m21, m10m22, m10m21, m11m22, A1, A2, A3;
   double invd;
 
   m11m20= m[1][1]*m[2][0];
@@ -2584,13 +2584,13 @@ void wrap_dsyev(double a[3][3], double b[3][3], double x[3], int *ok)
 /* Mout=MA*MB */
 void mul_matrix(double MA[3][3], double MB[3][3], double Mout[3][3])
 {
-  int k1, k2, k3
+  int k1, k2, k3;
   for (k1 = 0; k1 < 3; k1++)
     for (k2 = 0; k2 < 3; k2++)
       {
 	Mout[k1][k2] = 0;
 	for (k3 = 0; k3 < 3; k3++)
-	  Mtmp[k1][k2] += RM[k1][k3]*Mjpp[k3][k2];
+	  Mout[k1][k2] += MA[k1][k3]*MB[k3][k2];
       }
 }
 // cubic polynomial
@@ -2600,7 +2600,7 @@ void solve_cubic_analytic(double coeff[4], double sol[3])
   /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
    * according to the method described in Numerical Recipe book */  
   double a, b, c, Q, R, theta, Q3, R2, A, B;
-  const double sqrt32=sqrt((ntype)3.0)/2.0;
+  const double sqrt32=sqrt((double)3.0)/2.0;
   a = coeff[2]/coeff[3];
   b = coeff[1]/coeff[3];
   c = coeff[0]/coeff[3];
@@ -2619,7 +2619,7 @@ void solve_cubic_analytic(double coeff[4], double sol[3])
     {
       printf("here?!?\n");
       exit(-1);
-      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign((double)1.0,R)*pow(fabs(R) + sqrt(R2 - Q3),1.0/3.0);
       if (A==0.0)
 	B=0.0;
       else
@@ -2639,7 +2639,7 @@ double polyalpha(double cmon[7], double x)
 {
   // evaluate polynomail via Horner's formula 
   double bn=0.0;
-  int i,
+  int i;
   for (i=6; i >= 0; i--)
     {
       bn = cmon[i] + bn*x;
@@ -2652,7 +2652,7 @@ double distSq2orig(double alpha, double sx, double sy, double sz, double x0, dou
 }
 double calcfel(double M[3][3], double r0[3], double x[3])
 {
-  int i, j, k;
+  int i, j;
   double res, v[3], xr0[3];
   
   for (i=0; i < 3; i++)
@@ -2674,11 +2674,11 @@ double calcfel(double M[3][3], double r0[3], double x[3])
 }
 double check_overlap_polyell(int i, int j, double shift[3])
 {
-  double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
+  double Rjp[3][3], r0jp[3], ri[3], rj[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02;
-  double vt, at[3], Mi[3][3], Mj[3][3];
+  double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3];
   int typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
@@ -2689,13 +2689,17 @@ double check_overlap_polyell(int i, int j, double shift[3])
     {
       Di[k1]= 1.0/Sqr(typesArr[typei].sax[k1]);
       Dj[k1]= 1.0/Sqr(typesArr[typej].sax[k1]);
+      for (k2=0; k2 < 3; k2++)
+        {
+          Ri[k1][k2] = R[i][k1][k2];
+          Rj[k1][k2] = R[j][k1][k2];
+        }
     }
 
-  tRDiagRqe(i, Mi, Di, R[i]);
-  tRDiagRqe(j, Mj, Dj, R[j]);
+  tRDiagRqe(i, Mi, Di, Ri);
+  tRDiagRqe(j, Mj, Dj, Rj);
   typei = typeOfPart[i];
   typej = typeOfPart[j];
-
   ri[0] = rx[i];
   ri[1] = ry[i];
   ri[2] = rz[i];
@@ -2705,7 +2709,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
 
   /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
   if (calcfel(Mi,ri,rj) < 0.0)
-   return -1.0;
+    return -1.0;
   if (calcfel(Mj,rj,ri) < 0.0)
     return -1.0;
 
@@ -2720,13 +2724,13 @@ double check_overlap_polyell(int i, int j, double shift[3])
           //Aip[kk1] = 0;
           for (kk3=0; kk3 < 3; kk3++)
             {
-              Rjp[kk1][kk2] += R[i][kk1][kk3]*R[j][kk3][kk];
+              Rjp[kk1][kk2] += R[i][kk1][kk3]*R[j][kk3][kk2];
               //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
             } 
         }
     }
   //tRDiagRpw(i, Mi, DA, R[i]);
-  tRDiagRqe(j, Mjp, Dj, Rjp[j]);
+  tRDiagRqe(j, Mjp, Dj, Rjp);
 
   /* calculate matrix and position of ellipsoid j after application of affinity
    * which reduces ellipsoid i to a sphere */   
