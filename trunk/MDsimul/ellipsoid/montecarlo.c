@@ -2678,7 +2678,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02;
-  double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3];
+  double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3], dist;
   int typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
@@ -2798,7 +2798,6 @@ double check_overlap_polyell(int i, int j, double shift[3])
       y0 = at[2];
       z0 = at[0];
     }
-
   /* maybe check for equal semi-axes an reorder semi-axes accordingly */
   if (sx==sy)
     {
@@ -2811,11 +2810,13 @@ double check_overlap_polyell(int i, int j, double shift[3])
       coeffpa[4] = sx2*sz4*(x02 + y02) - sx4*sz2*(sz - z0)*(sz + z0);
       oqs_quartic_solver(coeffpa, roots);
       /* un'unica soluzione deve essere positiva */
-      for (kk1=0; kk1 < 4; kk1++)
+      for (kk1=0; kk1 < 6; kk1++)
         {
           if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
             {
-              if (distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0) < 1.0)
+              dist=distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
+              printf("dist=%.15G\n", dist);
+              if (dist < 1.0)
                 return -1.0;
               else
                 return 1.0;
@@ -2841,6 +2842,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
       /* un'unica soluzione deve essere positiva */
       for (kk1=0; kk1 < 6; kk1++)
         {
+          //printf("root[%d]=%.15G %.15G\n", kk1, creal(roots[kk1]), cimag(roots[kk1]));
           if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
             {
               if (distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0) < 1.0)
