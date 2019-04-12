@@ -2650,17 +2650,49 @@ double distSq2orig(double alpha, double sx, double sy, double sz, double x0, dou
 {
   return x0*x0/(1.0+sx*sx*alpha) + y0*y0/(1.0+sy*sy*alpha) + z0*z0/(1.0+sz*sz*alpha);
 }
+double calcfel(double M[3][3], double r0[3], double x[3])
+{
+  int i, j, k;
+  double res, v[3], xr0[3];
+  
+  for (i=0; i < 3; i++)
+    xr0[i] = x[i] - r0[i];
+  for (i=0; i < 3; i++)
+    {
+      v[i]=0;
+      for (j=0; j < 3; j++)
+        {
+          v[i] += M[i][j]*xr0[j];
+        }
+    }
+  res=0.0;
+  for (i=0; i < 3; i++)
+    {
+      res += xr0[i]*v[i];
+    }
+  return res-1.0;
+}
 double check_overlap_polyell(int i, int j, double shift[3])
 {
   double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02;
-  double vt, at[3];
+  double vt, at[3], Mi[3][3], Mj[3][3];
   int typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
 
+  
+  /* apply affinity to reduce first ellipsoid to a sphere */
+  for (k1=0; k1 < 3; k1++)
+    {
+      Di[k1]= 1.0/Sqr(typesArr[typei].sax[k1]);
+      Dj[k1]= 1.0/Sqr(typesArr[typej].sax[k1]);
+    }
+
+  tRDiagRqe(i, Mi, Di, R[i]);
+  tRDiagRqe(j, Mj, Dj, R[j]);
   typei = typeOfPart[i];
   typej = typeOfPart[j];
 
@@ -2670,6 +2702,12 @@ double check_overlap_polyell(int i, int j, double shift[3])
   rj[0] = rx[j]+shift[0];
   rj[1] = ry[j]+shift[1];
   rj[2] = rz[j]+shift[2];
+
+  /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
+  if (calcfel(Mi,ri,rj) < 0.0)
+   return -1.0;
+  if (calcfel(Mj,rj,ri) < 0.0)
+    return -1.0;
 
   /* switch to ellipsoid i reference system */
   for (kk1=0; kk1 < 3; kk1++)
@@ -2687,14 +2725,8 @@ double check_overlap_polyell(int i, int j, double shift[3])
             } 
         }
     }
-  /* apply affinity to reduce first ellipsoid to a sphere */
-  for (k1=0; k1 < 3; k1++)
-    {
-      Di[k1]= 1.0/Sqr(typesArr[typei].sax[k1]);
-      Dj[k1]= 1.0/Sqr(typesArr[typej].sax[k1]);
-    }
   //tRDiagRpw(i, Mi, DA, R[i]);
-  tRDiagRpw(j, Mjp, Dj, Rjp[j]);
+  tRDiagRqe(j, Mjp, Dj, Rjp[j]);
 
   /* calculate matrix and position of ellipsoid j after application of affinity
    * which reduces ellipsoid i to a sphere */   
