@@ -2378,7 +2378,7 @@ double check_overlap_pw(int i, int j, double shift[3])
   return res - 1.0;
 }
 #endif
-#ifdef QUARTELLIPS
+#ifdef POLYELLIPS
 // rotazione intorno ad asse (ox,oy,oz) di un angolo theta
 // (serve per l'algoritmo per trovare alpha risolvendo una quartica)
 /* perram wertheim overlap ellissoidi */
@@ -2633,7 +2633,8 @@ void solve_cubic_analytic(double coeff[4], double sol[3])
       //sol[2] = -0.5*(A+B)-a/3.0-cmplx(0,1)*sqrt32*(A-B);
     }
 }
-
+#include<complex.h>
+extern void oqs_quartic_solver(double coeff[], complex double roots[4]);
 double polyalpha(double cmon[7], double x)
 {
   // evaluate polynomail via Horner's formula 
@@ -2645,14 +2646,20 @@ double polyalpha(double cmon[7], double x)
     }
   return bn;
 }
-double check_overlap_quartell(int i, int j, double shift[3])
+double distSq2orig(double alpha, double sx, double sy, double sz, double x0, double y0, double z0)
+{
+  return x0*x0/(1.0+sx*sx*alpha) + y0*y0/(1.0+sy*sy*alpha) + z0*z0/(1.0+sz*sz*alpha);
+}
+double check_overlap_polyell(int i, int j, double shift[3])
 {
   double Rjp[3][3], r0jp[3], ri[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02;
+  double vt, at[3];
   int typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
+  complex double roots[6];
 
   typei = typeOfPart[i];
   typej = typeOfPart[j];
@@ -2729,110 +2736,84 @@ double check_overlap_quartell(int i, int j, double shift[3])
   sx4 = sx2*sx2;
   sy4 = sy2*sy2;
   sz4 = sz2*sz2;
-  coeffpa[0] = -1; 
-  coeffpa[1] = -2.0*sx2 - 2.0*sy2 - 2.0*sz2;
-  coeffpa[2] = -sx4 - 4.0*sx2*sy2 - sy4 - 4.0*sx2*sz2 - 4.0*sy2*sz2 - sz4 + sx2*x02 + sy2*y02 + sz2*z02;
-  coeffpa[3] = -2.0*sx4*sy2 - 2.0*sx2*sy4 - 2.0*sx4*sz2 - 8.0*sx2*sy2*sz2 - 2.0*sy4*sz2 - 2.0*sx2*sz4 - 
-      2.0*sy2*sz4 + 2.0*sx2*sy2*x02 + 2.0*sx2*sz2*x02 + 2.0*sx2*sy2*y02 + 2*sy2*sz2*y02 + 2.0*sx2*sz2*z02 + 2.0*sy2*sz2*z02;
-  coeffpa[4] = -sx4*sy4-4.0*sx4*sy2*sz2 - 4.0*sx2*sy4*sz2 - sx4*sz4 - 4.0*sx2*sy2*sz4 - sy4*sz4 + 
-      sx2*sy4*x02 + 4.0*sx2*sy2*sz2*x02 + sx2*sz4*x02 + sx4*sy2*y02 + 4.0*sx2*sy2*sz2*y02 + sy2*sz4*y02 + 
-      sx4*sz2*z02 + 4.0*sx2*sy2*sz2*z02 + sy4*sz2*z02;
-  coeffpa[5] =-2.0*sx4*sy4*sz2 - 2.0*sx4*sy2*sz4 - 2.0*sx2*sy4*sz4 + 2.0*sx2*sy4*sz2*x02 + 2.0*sx2*sy2*sz4*x02 
-    + 2.0*sx4*sy2*sz2*y02 + 2.0*sx2*sy2*sz4*y02 + 2.0*sx4*sy2*sz2*z02 + 2.0*sx2*sy4*sz2*z02;
-  coeffpa[6] = -sx4*sy4*sz4 + sx2*sy4*sz4*x02 + sx4*sy2*sz4*y02 + sx4*sy4*sz2*z02;
-  if (polyalpha(coeffpa, 1.0) > 0.0) //if positive there exist a solution, i.e a value of alpha, between 0 and 1
+
+  if (sx==sz)
     {
-      return -1.0;
+      /* swap y and z axes */
+      vt = sy;
+      sy = sz;
+      sz = vt;
+      vt = y0;
+      y0 = z0;
+      z0 = vt;
+    }
+  else if (sy==sz)
+    {
+      at[0] = sx;
+      at[1] = sy;
+      at[2] = sz;
+      sx = at[1];
+      sy = at[2];
+      sz = at[0];
+      at[0] = x0;
+      at[1] = y0;
+      at[2] = z0;
+      x0 = at[1];
+      y0 = at[2];
+      z0 = at[0];
+    }
+
+  /* maybe check for equal semi-axes an reorder semi-axes accordingly */
+  if (sx==sy)
+    {
+      /* uniaxial ellipsoids */
+      coeffpa[0] = -1;
+      coeffpa[1] = -2.0*sx2 - 2.0*sz2;
+      coeffpa[2] = -sx4 - 4.0*sx2*sz2 - sz4 + sx2*x02 + sx2*y02 + sz2*z02;
+      coeffpa[3]=-2.0*sx2*sz4 - sx4*sz*(sz - z0) - sx4*sz*(sz + z0) + 
+        2.0*sx2*sz2*(x02 + y02 + z02);
+      coeffpa[4] = sx2*sz4*(x02 + y02) - sx4*sz2*(sz - z0)*(sz + z0);
+      oqs_quartic_solver(coeffpa, roots);
+      /* un'unica soluzione deve essere positiva */
+      for (kk1=0; kk1 < 4; kk1++)
+        {
+          if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
+            {
+              if (distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0) < 1.0)
+                return -1.0;
+              else
+                return 1.0;
+            }
+        }
     }
   else
     {
-      return 1.0;
-    }
-  /* -1 + (-2 sx^2 - 2 sy^2 - 2 sz^2) \[Alpha] + (-sx^4 - 4 sx^2 sy^2 - 
-    sy^4 - 4 sx^2 sz^2 - 4 sy^2 sz^2 - sz^4 + sx^2 x0^2 + sy^2 y0^2 + 
-    sz^2 z0^2) \[Alpha]^2 + (-2 sx^4 sy^2 - 2 sx^2 sy^4 - 
-    2 sx^4 sz^2 - 8 sx^2 sy^2 sz^2 - 2 sy^4 sz^2 - 2 sx^2 sz^4 - 
-    2 sy^2 sz^4 + 2 sx^2 sy^2 x0^2 + 2 sx^2 sz^2 x0^2 + 
-    2 sx^2 sy^2 y0^2 + 2 sy^2 sz^2 y0^2 + 2 sx^2 sz^2 z0^2 + 
-    2 sy^2 sz^2 z0^2) \[Alpha]^3 + (-sx^4 sy^4 - 4 sx^4 sy^2 sz^2 - 
-    4 sx^2 sy^4 sz^2 - sx^4 sz^4 - 4 sx^2 sy^2 sz^4 - sy^4 sz^4 + 
-    sx^2 sy^4 x0^2 + 4 sx^2 sy^2 sz^2 x0^2 + sx^2 sz^4 x0^2 + 
-    sx^4 sy^2 y0^2 + 4 sx^2 sy^2 sz^2 y0^2 + sy^2 sz^4 y0^2 + 
-    sx^4 sz^2 z0^2 + 4 sx^2 sy^2 sz^2 z0^2 + 
-    sy^4 sz^2 z0^2) \[Alpha]^4 + (-2 sx^4 sy^4 sz^2 - 
-    2 sx^4 sy^2 sz^4 - 2 sx^2 sy^4 sz^4 + 2 sx^2 sy^4 sz^2 x0^2 + 
-    2 sx^2 sy^2 sz^4 x0^2 + 2 sx^4 sy^2 sz^2 y0^2 + 
-    2 sx^2 sy^2 sz^4 y0^2 + 2 sx^4 sy^2 sz^2 z0^2 + 
-    2 sx^2 sy^4 sz^2 z0^2) \[Alpha]^5 + (-sx^4 sy^4 sz^4 + 
-    sx^2 sy^4 sz^4 x0^2 + sx^4 sy^2 sz^4 y0^2 + 
-    sx^4 sy^4 sz^2 z0^2) \[Alpha]^6 */
-
-  /* a questo si deve calcolare la distanza dell'origine dall'ellissoide nel riferimento degli assi principali */
-
-  /* impose tangence condition (gradient equal up to a costan alpha and tangent point belonging to ellipsoid)*/
-  /* se gli ellissoidi sono uniassiali ci si può ridurre a trovare gli zeri di una quartica altrimenti
-   * si devono trovare gli zeri un polinomio di sesto grado */
-#if 0
-  for (kk1=0; kk1 < 3; kk1++)
-    {
-      for (kk2=0; kk2 < 3; kk2++)
+      coeffpa[0] = -1; 
+      coeffpa[1] = -2.0*sx2 - 2.0*sy2 - 2.0*sz2;
+      coeffpa[2] = -sx4 - 4.0*sx2*sy2 - sy4 - 4.0*sx2*sz2 - 4.0*sy2*sz2 - sz4 + sx2*x02 + sy2*y02 + sz2*z02;
+      coeffpa[3] = -2.0*sx4*sy2 - 2.0*sx2*sy4 - 2.0*sx4*sz2 - 8.0*sx2*sy2*sz2 - 2.0*sy4*sz2 - 2.0*sx2*sz4 - 
+        2.0*sy2*sz4 + 2.0*sx2*sy2*x02 + 2.0*sx2*sz2*x02 + 2.0*sx2*sy2*y02 + 2*sy2*sz2*y02 + 2.0*sx2*sz2*z02 + 2.0*sy2*sz2*z02;
+      coeffpa[4] = -sx4*sy4-4.0*sx4*sy2*sz2 - 4.0*sx2*sy4*sz2 - sx4*sz4 - 4.0*sx2*sy2*sz4 - sy4*sz4 + 
+        sx2*sy4*x02 + 4.0*sx2*sy2*sz2*x02 + sx2*sz4*x02 + sx4*sy2*y02 + 4.0*sx2*sy2*sz2*y02 + sy2*sz4*y02 + 
+        sx4*sz2*z02 + 4.0*sx2*sy2*sz2*z02 + sy4*sz2*z02;
+      coeffpa[5] =-2.0*sx4*sy4*sz2 - 2.0*sx4*sy2*sz4 - 2.0*sx2*sy4*sz4 + 2.0*sx2*sy4*sz2*x02 + 2.0*sx2*sy2*sz4*x02 
+        + 2.0*sx4*sy2*sz2*y02 + 2.0*sx2*sy2*sz4*y02 + 2.0*sx4*sy2*sz2*z02 + 2.0*sx2*sy4*sz2*z02;
+      coeffpa[6] = -sx4*sy4*sz4 + sx2*sy4*sz4*x02 + sx4*sy2*sz4*y02 + sx4*sy4*sz2*z02;
+      /* NOTA: se l'origine degli assi è dentro all'ellissoide o il centro dell'ellissoide (x0,y0,z0)
+       * è dentro la circonferenza unitaria i due ellissoidi si sovrappongono e non va calcolato nulla */
+      solve_numrec(coeffpa, roots, &ok);
+      /* un'unica soluzione deve essere positiva */
+      for (kk1=0; kk1 < 6; kk1++)
         {
-          M2I[kk1][kk2] = Mjpp[kk1][kk2]-(kk1==kk2)?1:0;
+          if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
+            {
+              if (distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0) < 1.0)
+                return -1.0;
+              else
+                return 1.0;
+            }
         }
     }
-  /* calcola l'inversa di M2I */
-  invM(M2I, invM2I);
-  for (kk1=0; kk1 < 3; kk1++)
-    {
-      xppg[kk1]=0.0;
-      for (kk2=0; kk2 < 3; kk2++)
-        {
-          xppg[kk1] += invM2I[kk1][kk2]*r0jpp[kk2];
-        }
-    } 
- 
-  /* rotate reference system of ellipsoid i so that z axis becomes vector xpg[] */
-  oax[0] = -xpg[1];
-  oax[1] = xpg[0];
-  oax[2] = 0.0;
-
-  norm = calc_norm(xpg); 
-  theta = acos(xpg[2]/norm);
-  calc_rotation_matrix(oax, theta, RM);
- 
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Mtmp[k1][k2] = Mjpp[k1][k2];
-	for (k3 = 0; k3 < 3; k3++)
-	  Mtmp[k1][k2] += RM[k1][k3]*Mjpp[k3][k2];
-      }
-
-  for (k1 = 0; k1 < 3; k1++)
-    for (k2 = 0; k2 < 3; k2++)
-      {
-	Mjp3[k1][k2] = Mtmp[k1][k2];
-	for (k3 = 0; k3 < 3; k3++)
-	  Mjp3[k1][k2] += Mtmp[k1][k3]*RM[k2][k3];
-      }
-  for (k1 = 0; k1 < 3; k1++)
-    {
-      r0jp3[k1] = 0;
-      xp3g[k1] = 0;
-      for (k2 = 0; k2 < 3; k2++)
-        {
-          r0jp3[k1] += RM[k1][k2]*r0jpp[k2];
-          xp3g[k1] += RM[k1][k2]*xppg[k2];
-        } 
-    }
-#endif
-  /* xp3g[0]=xp3g[1]=0 at least approximately */
-
-  /* found quartic coefficients (it will have one positive solution, one negative and two complex conjugates,
-   * hence easy to solve for quarticsolver) */
-
-  /* solve for alpha (if alpha > 1 => no overlap else overlap ) */
-
 }
 #endif
 double check_overlap_ij(int i, int j, double shift[3], int *errchk)
