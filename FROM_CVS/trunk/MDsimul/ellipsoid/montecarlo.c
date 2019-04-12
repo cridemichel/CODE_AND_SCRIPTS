@@ -2648,7 +2648,7 @@ double polyalpha(double cmon[7], double x)
 }
 double distSq2orig(double alpha, double sx, double sy, double sz, double x0, double y0, double z0)
 {
-  return x0*x0/(1.0+sx*sx*alpha) + y0*y0/(1.0+sy*sy*alpha) + z0*z0/(1.0+sz*sz*alpha);
+  return x0*x0/Sqr(1.0+sx*sx*alpha) + y0*y0/Sqr(1.0+sy*sy*alpha) + z0*z0/Sqr(1.0+sz*sz*alpha);
 }
 double calcfel(double M[3][3], double r0[3], double x[3])
 {
@@ -2677,13 +2677,12 @@ double check_overlap_polyell(int i, int j, double shift[3])
   double Rjp[3][3], r0jp[3], ri[3], rj[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
-  double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02;
+  double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02, sai[3];
   double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3], dist;
   int typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
 
-  
   /* apply affinity to reduce first ellipsoid to a sphere */
   for (k1=0; k1 < 3; k1++)
     {
@@ -2695,7 +2694,10 @@ double check_overlap_polyell(int i, int j, double shift[3])
           Rj[k1][k2] = R[j][k1][k2];
         }
     }
-
+  for (k1=0; k1 < 3; k1++)
+    {
+      sai[k1] = typesArr[typei].sax[k1];
+    } 
   tRDiagRqe(i, Mi, Di, Ri);
   tRDiagRqe(j, Mj, Dj, Rj);
   typei = typeOfPart[i];
@@ -2713,6 +2715,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
   if (calcfel(Mj,rj,ri) < 0.0)
     return -1.0;
 
+  //printf("coords i: %f %f %f j: %f %f %f\n", ri[0], ri[1], ri[2], rj[0], rj[1], rj[2]);
   /* switch to ellipsoid i reference system */
   for (kk1=0; kk1 < 3; kk1++)
     {
@@ -2734,18 +2737,18 @@ double check_overlap_polyell(int i, int j, double shift[3])
 
   /* calculate matrix and position of ellipsoid j after application of affinity
    * which reduces ellipsoid i to a sphere */   
-  Mjpp[0][0] = Mjp[0][0]*Sqr(Dj[0]);
-  Mjpp[0][1] = Mjp[0][1]*Dj[0]*Dj[1];
-  Mjpp[0][2] = Mjp[0][2]*Dj[0]*Dj[2];
-  Mjpp[1][0] = Mjp[1][0]*Dj[0]*Dj[1];
-  Mjpp[1][1] = Mjp[1][1]*Sqr(Dj[1]);
-  Mjpp[1][2] = Mjp[1][2]*Dj[1]*Dj[2];
-  Mjpp[2][0] = Mjp[2][0]*Dj[0]*Dj[2];
-  Mjpp[2][1] = Mjp[2][1]*Dj[1]*Dj[2];
-  Mjpp[2][2] = Mjp[2][2]*Sqr(Dj[2]);
-  r0jpp[0] = r0jp[0]/Dj[0];
-  r0jpp[1] = r0jp[1]/Dj[1];
-  r0jpp[2] = r0jp[2]/Dj[2];
+  Mjpp[0][0] = Mjp[0][0]*Sqr(sai[0]);
+  Mjpp[0][1] = Mjp[0][1]*sai[0]*sai[1];
+  Mjpp[0][2] = Mjp[0][2]*sai[0]*sai[2];
+  Mjpp[1][0] = Mjp[1][0]*sai[0]*sai[1];
+  Mjpp[1][1] = Mjp[1][1]*Sqr(sai[1]);
+  Mjpp[1][2] = Mjp[1][2]*sai[1]*sai[2];
+  Mjpp[2][0] = Mjp[2][0]*sai[0]*sai[2];
+  Mjpp[2][1] = Mjp[2][1]*sai[1]*sai[2];
+  Mjpp[2][2] = Mjp[2][2]*Sqr(sai[2]);
+  r0jpp[0] = r0jp[0]/sai[0];
+  r0jpp[1] = r0jp[1]/sai[1];
+  r0jpp[2] = r0jp[2]/sai[2];
    /* find eigenvalues of ellipsoid j (i.e. of matrix Mjpp), we need just eigenvalues, hence we do not need to
     * change reference frame to ellipsoid i principal axes given by eigenvectors */
   //wrap_dsyev(Mjpp, evec, eval, &ok);
@@ -2760,6 +2763,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
   sx = eval[0];
   sy = eval[1];
   sz = eval[2];
+  //printf("semi-axes=%.15G %.15G %.15G\n x0=%f %f %f", sx, sy, sz, x0, y0, z0);
   x0 = r0jpp[0];
   y0 = r0jpp[1];
   z0 = r0jpp[2];
@@ -2815,7 +2819,6 @@ double check_overlap_polyell(int i, int j, double shift[3])
           if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
             {
               dist=distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
-              printf("dist=%.15G\n", dist);
               if (dist < 1.0)
                 return -1.0;
               else
@@ -2845,7 +2848,9 @@ double check_overlap_polyell(int i, int j, double shift[3])
           //printf("root[%d]=%.15G %.15G\n", kk1, creal(roots[kk1]), cimag(roots[kk1]));
           if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
             {
-              if (distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0) < 1.0)
+              dist=distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
+              //printf("dist=%f alpha=%.15G sa=%f %f %f x=%f %f %f\n", dist, creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
+              if (dist < 1.0)
                 return -1.0;
               else
                 return 1.0;

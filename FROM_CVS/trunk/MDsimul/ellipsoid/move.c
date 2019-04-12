@@ -5871,6 +5871,9 @@ extern double check_overlap_helices(int i, int j, double shift[3]);
 #ifdef MC_PERWER
 extern double check_overlap_pw(int i, int j, double shift[3]);
 #endif
+#ifdef POLYELLIPS
+extern double check_overlap_polyell(int i, int j, double shift[3]);
+#endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
      		double *vecgsup, int calcguess)
 {
