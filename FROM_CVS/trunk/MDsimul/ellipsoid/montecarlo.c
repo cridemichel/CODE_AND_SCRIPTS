@@ -2679,7 +2679,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02, sai[3];
   double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3], dist;
-  int typei, typej;
+  int np, typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
 
@@ -2807,7 +2807,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
     {
       /* uniaxial ellipsoids */
       coeffpa[0] = -1;
-      coeffpa[1] = -2.0*sx2 - 2.0*sz2;
+      coeffpa[1] = -2.0*sx2-2.0*sz2;
       coeffpa[2] = -sx4 - 4.0*sx2*sz2 - sz4 + sx2*x02 + sx2*y02 + sz2*z02;
       coeffpa[3]=-2.0*sx2*sz4 - sx4*sz*(sz - z0) - sx4*sz*(sz + z0) + 
         2.0*sx2*sz2*(x02 + y02 + z02);
@@ -2843,9 +2843,12 @@ double check_overlap_polyell(int i, int j, double shift[3])
        * è dentro la circonferenza unitaria i due ellissoidi si sovrappongono e non va calcolato nulla */
       solve_numrec(coeffpa, roots, &ok);
       /* un'unica soluzione deve essere positiva */
+      //np=0;
       for (kk1=0; kk1 < 6; kk1++)
         {
           //printf("root[%d]=%.15G %.15G\n", kk1, creal(roots[kk1]), cimag(roots[kk1]));
+          //if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
+            //np++;
           if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
             {
               dist=distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
@@ -2856,6 +2859,13 @@ double check_overlap_polyell(int i, int j, double shift[3])
                 return 1.0;
             }
         }
+#if 0
+      if (np > 1)
+        {
+          printf("boh\n");
+          exit(-1);
+        }
+#endif 
     }
 }
 #endif
