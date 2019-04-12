@@ -2682,7 +2682,10 @@ double check_overlap_polyell(int i, int j, double shift[3])
   int np, typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
-
+ 
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
+  
   /* apply affinity to reduce first ellipsoid to a sphere */
   for (k1=0; k1 < 3; k1++)
     {
@@ -2700,8 +2703,6 @@ double check_overlap_polyell(int i, int j, double shift[3])
     } 
   tRDiagRqe(i, Mi, Di, Ri);
   tRDiagRqe(j, Mj, Dj, Rj);
-  typei = typeOfPart[i];
-  typej = typeOfPart[j];
   ri[0] = rx[i];
   ri[1] = ry[i];
   ri[2] = rz[i];
