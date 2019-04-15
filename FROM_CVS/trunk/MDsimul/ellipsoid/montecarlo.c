@@ -2751,16 +2751,6 @@ double distHE(double x)
 double rtsafe(double c[7], double xg, double x1, double x2, double  xacc, int guess)
 {
   /* xg is the initial guess and x1, x2 must bracket the solution */
-#if 0
-  p=c[n]*x+c[n-1];
-  p1=c[n];
-  for(i=n-2;i>=0;i--) {
-    p1=p+p1*x;
-    p=c[i]+p*x;
-  }
-  if (p1 == 0.0) throw("derivative should not vanish"); 
-  x -= p/p1;
-#endif
   const int MAXIT=100; //Maximum allowed number of iterations. Doub xh,xl;
   double fl, fh, xl, xh;
   double rts, dx, dxold, df, f, temp;
@@ -3138,6 +3128,8 @@ double check_overlap_polyell(int i, int j, double shift[3])
   alpha = rtsafe(coeffpa, 0, aL, aR, 2E-16, 0); 
   //alpha=zbrent(distHE, aL, aR, 2E-16);
   dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
+  /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
+   * si avrà la distanza tra i due ellissoidi che si può usare nella dinamica event-driven */
   if (dist < 0.0)
     return -1.0;
   else
