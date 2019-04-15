@@ -3125,7 +3125,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
     }
   for (kk1=0; kk1 < 7; kk1++)
     coeffpa_HE[kk1] = coeffpa[kk1];
-  alpha = rtsafe(coeffpa, 0, aL, aR, 2E-16, 0); 
+  alpha = rtsafe(coeffpa, 0, aL, aR, 2.0E-16, 0); 
   //alpha=zbrent(distHE, aL, aR, 2E-16);
   dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
   /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
