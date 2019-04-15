@@ -2733,7 +2733,6 @@ double coeffpa_HE[7];
 double distHE(double x)
 {
   return polyalpha(coeffpa_HE,x);
-
 }
 double check_overlap_polyell(int i, int j, double shift[3])
 {
@@ -3026,7 +3025,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
 #if 1
   /* ci deve essere sempre un solo zero positivo e quindi calcolo solo quello
    * usando zbrent con un opportuno bracketing (è la soluzione più veloce) */
-  aR = 10.0;
+  aR = 1.0;
   aL= 0.0;
   dL = polyalpha(coeffpa,aL);
   while (dL*polyalpha(coeffpa,aR) > 0.0)
@@ -3035,7 +3034,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
     }
   for (kk1=0; kk1 < 7; kk1++)
     coeffpa_HE[kk1] = coeffpa[kk1];
-  alpha=zbrent(distHE, aL, aR, 1E-15);
+  alpha=zbrent(distHE, aL, aR, 2E-16);
   dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
   if (dist < 0.0)
     return -1.0;
