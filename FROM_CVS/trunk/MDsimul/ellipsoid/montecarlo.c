@@ -2801,7 +2801,9 @@ double rtsafe(double c[7], double xg, double x1, double x2, double  xacc, int gu
 	  dx=0.5*(xh-xl);
 	  rts=xl+dx;
 	  if (xl == rts) 
-	    return rts;
+            {
+              return rts;
+            }
 	} 
       else 
 	{
@@ -2810,10 +2812,14 @@ double rtsafe(double c[7], double xg, double x1, double x2, double  xacc, int gu
 	  temp=rts;
 	  rts -= dx;
 	  if (temp == rts) 
-	    return rts;
+            {
+              return rts;
+            }
 	}
       if (fabs(dx) < xacc) 
-	return rts;
+        {
+          return rts;
+        }
       polyalphad(rts, c, &f, &df);
       //The one new function evaluation per iteration.
       if (f < 0.0) //Maintain the bracket on the root.
@@ -3118,7 +3124,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
    * usando zbrent con un opportuno bracketing (è la soluzione più veloce) */
   aR = 1.0;
   aL= 0.0;
-  dL = polyalpha(coeffpa,aL);
+  dL = coeffpa[0];
   while (dL*polyalpha(coeffpa,aR) > 0.0)
     {
       aR *= GOLD;
