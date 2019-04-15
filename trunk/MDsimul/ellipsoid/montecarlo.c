@@ -2649,10 +2649,63 @@ double polyalpha(double cmon[7], double x)
     }
   return bn;
 }
+double PowerI(double x, int n)
+{
+  int i;
+  double ret=1.0;
+  switch (n)
+    {
+    case 1:
+      ret = x;
+      break;
+    case 2:
+      ret =  x*x;
+      break;
+    case 3:
+      ret = x*x*x;
+      break;
+    case 4:
+      ret = x*x*x*x;
+      break;
+    default:
+      for (i=0; i < n; i++)
+        ret *= x;
+    }
+  //printf("x=%f n=%d ret=%f\n", x, n, ret);
+  return ret;
+
+}
+
 double distSq2orig(double alpha, double sx, double sy, double sz, double x0, double y0, double z0)
 {
   return x0*x0/Sqr(1.0+sx*sx*alpha) + y0*y0/Sqr(1.0+sy*sy*alpha) + z0*z0/Sqr(1.0+sz*sz*alpha);
 }
+double distSq2origM(double Alpha, double m00, double m01, double m02, double m11, double m12, double m22, 
+                    double x0, double y0, double z0)
+{
+  double x[3], detMa;
+  int i;
+  detMa = -m02*m02*m11 + 2*m01*m02*m12 - m00*m12*m12 - m01*m01*m22 + m00*m11*m22 - 
+    m01*m01*Alpha - m02*m02*Alpha + m00*m11*Alpha - m12*m12*Alpha +
+    m00*m22*Alpha + m11*m22*Alpha + m00*Alpha*Alpha + 
+    m11*Alpha*Alpha + m22*Alpha*Alpha + Alpha*Alpha*Alpha;
+  x[0] = -(Power(m02,2)*x0*(m11 + Alpha)) + 
+    m02*(2*m01*m12*x0 - m12*y0*Alpha + z0*Alpha*(m11 + Alpha)) - 
+    m01*(m12*z0*Alpha + m01*x0*(m22 + Alpha) - y0*Alpha*(m22 + Alpha)) + 
+    m00*x0*(-Power(m12,2) + (m11 + Alpha)*(m22 + Alpha));
+  x[1] = -(Power(m02,2)*m11*y0) + 2*m01*m02*m12*y0 - Power(m01,2)*m22*y0 + 
+    m01*m22*x0*Alpha - (Power(m01,2) + Power(m12,2) - m11*m22)*y0*Alpha - 
+    m02*(m12*x0 + m01*z0)*Alpha + (m01*x0 + m11*y0 + m12*z0)*Power(Alpha,2) + 
+    m00*(-(Power(m12,2)*y0) + m12*z0*Alpha + m11*y0*(m22 + Alpha));
+  x[2] = -(Power(m01,2)*m22*z0) - (m01*m12*x0 + (Power(m12,2) - m11*m22)*z0)*Alpha + 
+   (m12*y0 + m22*z0)*Power(Alpha,2) - Power(m02,2)*z0*(m11 + Alpha) + 
+   m00*(-(Power(m12,2)*z0) + m12*y0*Alpha + m22*z0*(m11 + Alpha)) + 
+   m02*(x0*Alpha*(m11 + Alpha) + m01*(2*m12*z0 - y0*Alpha));
+  for (i=0; i< 3; i++)
+    x[i] /= detMa;
+ return calc_norm(x); 
+}
+
 double calcfel(double M[3][3], double r0[3], double x[3])
 {
   int i, j;
@@ -2675,14 +2728,23 @@ double calcfel(double M[3][3], double r0[3], double x[3])
     }
   return res-1.0;
 }
+extern double zbrent(double (*func)(double), double x1, double x2, double tol);
+double coeffpa_HE[7];
+double distHE(double x)
+{
+  return polyalpha(coeffpa_HE,x);
+
+}
 double check_overlap_polyell(int i, int j, double shift[3])
 {
+  const double GOLD=1.618034;
   double Rjp[3][3], r0jp[3], ri[3], rj[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
   double Mip[3][3], Mipp[3][3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02, sai[3];
-  double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3], dist;
+  double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3], dist, m00, m01, m02, m11, m22, m12, b;
+  double aR, aL, dR, dL, alpha;
   int np, typei, typej;
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[6];
@@ -2754,6 +2816,333 @@ double check_overlap_polyell(int i, int j, double shift[3])
   r0jpp[0] = r0jp[0]/sai[0];
   r0jpp[1] = r0jp[1]/sai[1];
   r0jpp[2] = r0jp[2]/sai[2];
+  x0 = r0jpp[0];
+  y0 = r0jpp[1];
+  z0 = r0jpp[2];
+  m00 = Mjpp[0][0];
+  m01 = Mjpp[0][1];
+  m02 = Mjpp[0][2];
+  m11 = Mjpp[1][1];
+  m12 = Mjpp[1][2];
+  m22 = Mjpp[2][2]; 
+  b = -1 + m00*x0*x0 + 2*m01*x0*y0 + m11*y0*y0 + 
+    2*m02*x0*z0 + 2*m12*y0*z0 + m22*z0*z0;
+
+#if 0
+  printf("M=%f %f %f %f %f %f\n", m00, m01, m02, m11, m12, m22);
+  printf("x0=%f %f %f\n", x0, y0, z0);
+  printf("boh=%f\n", x0*(m00*x0 + m01*y0 + m02*z0) + y0*(m01*x0 + m11*y0 + m12*z0) + 
+    z0*(m02*x0 + m12*y0 + m22*z0));
+
+  printf("m00*x0=%f\n", Mjpp[0][0]*x0);
+  printf("m01*y0=%f\n", m01*y0);
+  printf("m02*z0=%f\n", m02*z0);
+#endif
+  coeffpa[0] = -(PowerI(PowerI(m02,2)*m11 - 2*m01*m02*m12 + PowerI(m01,2)*m22 + 
+       m00*(PowerI(m12,2) - m11*m22),2)*
+     (-b + m00*PowerI(x0,2) + 2*m01*x0*y0 + m11*PowerI(y0,2) + 2*m02*x0*z0 + 
+       2*m12*y0*z0 + m22*PowerI(z0,2)));
+  coeffpa[1] = -2*(PowerI(m01,2) + PowerI(m02,2) - m00*m11 + PowerI(m12,2) - 
+     (m00 + m11)*m22)*(PowerI(m02,2)*m11 - 2*m01*m02*m12 + 
+     PowerI(m01,2)*m22 + m00*(PowerI(m12,2) - m11*m22))*
+   (-b + m00*PowerI(x0,2) + 2*m01*x0*y0 + m11*PowerI(y0,2) + 2*m02*x0*z0 + 
+     2*m12*y0*z0 + m22*PowerI(z0,2));
+  coeffpa[2] = b*(PowerI(m01,4) + PowerI(m02,4) + PowerI(m00,2)*PowerI(m11,2) - 
+      2*PowerI(m00,2)*PowerI(m12,2) - 4*m00*m11*PowerI(m12,2) + 
+      PowerI(m12,4) + 4*m00*m11*(m00 + m11)*m22 - 
+      2*(2*m00 + m11)*PowerI(m12,2)*m22 + 
+      (PowerI(m00,2) + 4*m00*m11 + PowerI(m11,2))*PowerI(m22,2) + 
+      4*m01*m02*m12*(m00 + m11 + m22) - 
+      2*PowerI(m02,2)*(2*m00*m11 + PowerI(m11,2) - PowerI(m12,2) + m00*m22 + 
+         2*m11*m22) + 2*PowerI(m01,2)*
+       (PowerI(m02,2) - m00*m11 + PowerI(m12,2) - 2*(m00 + m11)*m22 - 
+         PowerI(m22,2))) + PowerI(m02,2)*m11*PowerI(m12,2)*PowerI(x0,2) - 
+   2*m01*m02*PowerI(m12,3)*PowerI(x0,2) - 
+   PowerI(m02,2)*PowerI(m11,2)*m22*PowerI(x0,2) + 
+   2*m01*m02*m11*m12*m22*PowerI(x0,2) + 
+   PowerI(m01,2)*PowerI(m12,2)*m22*PowerI(x0,2) - 
+   PowerI(m01,2)*m11*PowerI(m22,2)*PowerI(x0,2) - 
+   PowerI(m00,3)*(PowerI(m11,2) - 2*PowerI(m12,2) + 4*m11*m22 + PowerI(m22,2))*
+    PowerI(x0,2) - 2*PowerI(m01,5)*x0*y0 - 
+   4*PowerI(m01,3)*PowerI(m02,2)*x0*y0 - 2*m01*PowerI(m02,4)*x0*y0 + 
+   4*m01*PowerI(m02,2)*PowerI(m11,2)*x0*y0 - 
+   8*PowerI(m01,2)*m02*m11*m12*x0*y0 - 2*PowerI(m02,3)*m11*m12*x0*y0 - 
+   4*PowerI(m01,3)*PowerI(m12,2)*x0*y0 - 2*m01*PowerI(m12,4)*x0*y0 + 
+   8*PowerI(m01,3)*m11*m22*x0*y0 + 10*m01*PowerI(m02,2)*m11*m22*x0*y0 - 
+   14*PowerI(m01,2)*m02*m12*m22*x0*y0 + 4*m01*m11*PowerI(m12,2)*m22*x0*y0 + 
+   6*PowerI(m01,3)*PowerI(m22,2)*x0*y0 - 
+   2*m01*PowerI(m11,2)*PowerI(m22,2)*x0*y0 - PowerI(m01,4)*m11*PowerI(y0,2) - 
+   2*PowerI(m01,2)*PowerI(m02,2)*m11*PowerI(y0,2) + 
+   2*PowerI(m02,2)*PowerI(m11,3)*PowerI(y0,2) - 
+   2*m01*PowerI(m02,3)*m12*PowerI(y0,2) - 
+   4*m01*m02*PowerI(m11,2)*m12*PowerI(y0,2) - 
+   2*PowerI(m01,2)*m11*PowerI(m12,2)*PowerI(y0,2) - 
+   2*PowerI(m02,2)*m11*PowerI(m12,2)*PowerI(y0,2) - 
+   m11*PowerI(m12,4)*PowerI(y0,2) + 
+   PowerI(m01,2)*PowerI(m02,2)*m22*PowerI(y0,2) + 
+   4*PowerI(m01,2)*PowerI(m11,2)*m22*PowerI(y0,2) + 
+   4*PowerI(m02,2)*PowerI(m11,2)*m22*PowerI(y0,2) - 
+   4*m01*m02*m11*m12*m22*PowerI(y0,2) + 
+   2*PowerI(m11,2)*PowerI(m12,2)*m22*PowerI(y0,2) + 
+   2*PowerI(m01,2)*m11*PowerI(m22,2)*PowerI(y0,2) - 
+   PowerI(m11,3)*PowerI(m22,2)*PowerI(y0,2) - 
+   2*(m02*(PowerI(m02,4) + PowerI(m02,2)*
+          (-3*PowerI(m11,2) + 2*PowerI(m12,2) - 4*m11*m22) + 
+         PowerI(PowerI(m12,2) - m11*m22,2))*x0 + 
+      m12*(PowerI(m02,4) + PowerI(PowerI(m12,2) - m11*m22,2) - 
+         2*PowerI(m02,2)*(PowerI(m11,2) - PowerI(m12,2) + 2*m11*m22))*y0 + 
+      PowerI(m01,3)*m22*(m12*x0 + m02*y0) + 
+      PowerI(m01,4)*(m02*x0 + m12*y0) + 
+      m01*m02*(m02*m12*(7*m11 + 4*m22)*x0 + PowerI(m02,2)*m11*y0 + 
+         4*PowerI(m12,2)*(m11 + m22)*y0) + 
+      PowerI(m01,2)*(2*PowerI(m02,3)*x0 - m02*m22*(5*m11 + 2*m22)*x0 + 
+         2*m12*(PowerI(m12,2) - m22*(2*m11 + m22))*y0))*z0 - 
+   (2*PowerI(m01,3)*m02*m12 + 4*m01*m02*m12*m22*(m11 + m22) + 
+      m22*(PowerI(m02,4) + PowerI(PowerI(m12,2) - m11*m22,2) - 
+         2*PowerI(m02,2)*(PowerI(m11,2) - PowerI(m12,2) + 2*m11*m22)) - 
+      PowerI(m01,2)*(PowerI(m02,2)*(m11 - 2*m22) + 
+         2*m22*(-PowerI(m12,2) + 2*m11*m22 + PowerI(m22,2))))*PowerI(z0,2) + 
+   PowerI(m00,2)*(4*m11*PowerI(m12,2)*PowerI(x0,2) - 
+      4*PowerI(m11,2)*m22*PowerI(x0,2) + 4*PowerI(m12,2)*m22*PowerI(x0,2) - 
+      4*m11*PowerI(m22,2)*PowerI(x0,2) + 
+      2*PowerI(m02,2)*(2*m11 + m22)*PowerI(x0,2) + 
+      2*PowerI(m01,2)*(m11 + 2*m22)*PowerI(x0,2) - 
+      PowerI(m11,3)*PowerI(y0,2) + 2*m11*PowerI(m12,2)*PowerI(y0,2) - 
+      4*PowerI(m11,2)*m22*PowerI(y0,2) - PowerI(m12,2)*m22*PowerI(y0,2) - 
+      2*m01*x0*(2*m02*m12*x0 + 
+         (PowerI(m11,2) - 2*PowerI(m12,2) + 4*m11*m22 + PowerI(m22,2))*y0) - 
+      2*m02*(PowerI(m11,2) - 2*PowerI(m12,2) + 4*m11*m22 + PowerI(m22,2))*x0*
+       z0 - 2*m12*(PowerI(m11,2) - 3*PowerI(m12,2) + 5*m11*m22 + 
+         PowerI(m22,2))*y0*z0 - 
+      (m11*PowerI(m12,2) - 2*PowerI(m12,2)*m22 + 4*m11*PowerI(m22,2) + 
+         PowerI(m22,3))*PowerI(z0,2)) + 
+   m00*(-(PowerI(m01,4)*PowerI(x0,2)) - PowerI(m02,4)*PowerI(x0,2) + 
+      4*PowerI(m01,3)*(m11 + 2*m22)*x0*y0 + 
+      4*PowerI(m02,3)*(2*m11 + m22)*x0*z0 - 
+      2*m02*(PowerI(m12,2) - m11*m22)*x0*(m12*y0 - 5*m11*z0 - 4*m22*z0) - 
+      4*(m11 + m22)*(-PowerI(m12,2) + m11*m22)*
+       (m11*PowerI(y0,2) + z0*(2*m12*y0 + m22*z0)) + 
+      PowerI(m01,2)*(-2*PowerI(m02,2)*PowerI(x0,2) + 4*m11*m22*PowerI(x0,2) + 
+         2*PowerI(m22,2)*PowerI(x0,2) + 2*PowerI(m11,2)*PowerI(y0,2) + 
+         4*m11*m22*PowerI(y0,2) - PowerI(m22,2)*PowerI(y0,2) + 
+         2*m12*(2*m11 + 5*m22)*y0*z0 + 4*PowerI(m22,2)*PowerI(z0,2) + 
+         4*m02*x0*(-2*m12*y0 + (m11 + 2*m22)*z0) + 
+         PowerI(m12,2)*(-2*PowerI(x0,2) + PowerI(z0,2))) + 
+      PowerI(m02,2)*(PowerI(m12,2)*(-2*PowerI(x0,2) + PowerI(y0,2)) + 
+         10*m11*m12*y0*z0 + 4*m12*m22*y0*z0 + 2*PowerI(m22,2)*PowerI(z0,2) + 
+         PowerI(m11,2)*(2*PowerI(x0,2) + 4*PowerI(y0,2) - PowerI(z0,2)) + 
+         4*m11*m22*(PowerI(x0,2) + PowerI(z0,2))) + 
+      2*m01*(2*PowerI(m02,2)*x0*(2*m11*y0 + m22*y0 - 2*m12*z0) - 
+         (PowerI(m12,2) - m11*m22)*x0*(-4*m11*y0 - 5*m22*y0 + m12*z0) + 
+         m02*(-7*PowerI(m12,2)*y0*z0 + m11*m22*y0*z0 + 
+            m12*m22*(-2*PowerI(x0,2) + PowerI(y0,2) - 2*PowerI(z0,2)) + 
+            m11*m12*(-2*(PowerI(x0,2) + PowerI(y0,2)) + PowerI(z0,2)))));
+  coeffpa[3] = 2*(b*(2*m01*m02*m12 - m11*(2*PowerI(m02,2) + PowerI(m12,2)) - 
+        (PowerI(m02,2) - PowerI(m11,2) + PowerI(m12,2))*m22 + 
+        m11*PowerI(m22,2) + PowerI(m00,2)*(m11 + m22) - 
+        PowerI(m01,2)*(m11 + 2*m22) + 
+        m00*(-PowerI(m01,2) - PowerI(m02,2) + PowerI(m11,2) - 
+           2*PowerI(m12,2) + 4*m11*m22 + PowerI(m22,2))) - 
+     PowerI(m02,2)*PowerI(m11,2)*PowerI(x0,2) + 
+     2*m01*m02*m11*m12*PowerI(x0,2) - PowerI(m01,2)*m11*m22*PowerI(x0,2) - 
+     PowerI(m02,2)*m11*m22*PowerI(x0,2) + 2*m01*m02*m12*m22*PowerI(x0,2) - 
+     PowerI(m01,2)*PowerI(m22,2)*PowerI(x0,2) - 
+     PowerI(m00,3)*(m11 + m22)*PowerI(x0,2) + 2*PowerI(m01,3)*m11*x0*y0 + 
+     6*m01*PowerI(m02,2)*m11*x0*y0 - 8*PowerI(m01,2)*m02*m12*x0*y0 + 
+     2*m01*m11*PowerI(m12,2)*x0*y0 + 6*PowerI(m01,3)*m22*x0*y0 + 
+     2*m01*PowerI(m02,2)*m22*x0*y0 - 2*m01*PowerI(m11,2)*m22*x0*y0 + 
+     2*m01*PowerI(m12,2)*m22*x0*y0 - 2*m01*m11*PowerI(m22,2)*x0*y0 + 
+     PowerI(m01,2)*PowerI(m11,2)*PowerI(y0,2) + 
+     2*PowerI(m02,2)*PowerI(m11,2)*PowerI(y0,2) - 
+     2*m01*m02*m11*m12*PowerI(y0,2) + 
+     PowerI(m11,2)*PowerI(m12,2)*PowerI(y0,2) + 
+     2*PowerI(m01,2)*m11*m22*PowerI(y0,2) - PowerI(m11,3)*m22*PowerI(y0,2) + 
+     2*m01*m02*m12*m22*PowerI(y0,2) + m11*PowerI(m12,2)*m22*PowerI(y0,2) - 
+     PowerI(m01,2)*PowerI(m22,2)*PowerI(y0,2) - 
+     PowerI(m11,2)*PowerI(m22,2)*PowerI(y0,2) + 
+     2*(-4*m01*m02*m12 + PowerI(m02,2)*(3*m11 + m22) + 
+        PowerI(m01,2)*(m11 + 3*m22) - (m11 + m22)*(-PowerI(m12,2) + m11*m22))
+       *(m02*x0 + m12*y0)*z0 + 
+     (2*m01*m02*m12*(m11 - m22) + 
+        PowerI(m02,2)*(-PowerI(m11,2) + 2*m11*m22 + PowerI(m22,2)) + 
+        m22*(2*PowerI(m01,2)*m22 - (m11 + m22)*(-PowerI(m12,2) + m11*m22)))*
+      PowerI(z0,2) + PowerI(m00,2)*
+      (PowerI(m01,2)*PowerI(x0,2) + PowerI(m02,2)*PowerI(x0,2) - 
+        PowerI(m11,2)*PowerI(x0,2) + 2*PowerI(m12,2)*PowerI(x0,2) - 
+        4*m11*m22*PowerI(x0,2) - PowerI(m22,2)*PowerI(x0,2) - 
+        2*m01*(m11 + m22)*x0*y0 - PowerI(m11,2)*PowerI(y0,2) - 
+        PowerI(m12,2)*PowerI(y0,2) - 2*(m11 + m22)*(m02*x0 + m12*y0)*z0 - 
+        (PowerI(m12,2) + PowerI(m22,2))*PowerI(z0,2)) + 
+     m00*(2*PowerI(m02,2)*m11*PowerI(x0,2) + PowerI(m02,2)*m22*PowerI(x0,2) + 
+        2*PowerI(m01,3)*x0*y0 - PowerI(m11,3)*PowerI(y0,2) + 
+        2*m11*PowerI(m12,2)*PowerI(y0,2) - 4*PowerI(m11,2)*m22*PowerI(y0,2) - 
+        PowerI(m12,2)*m22*PowerI(y0,2) + 
+        2*(PowerI(m02,2) - PowerI(m11,2) + 3*PowerI(m12,2) - 5*m11*m22 - 
+           PowerI(m22,2))*(m02*x0 + m12*y0)*z0 - 
+        (m11*PowerI(m12,2) + PowerI(m02,2)*(m11 - m22) - 
+           2*PowerI(m12,2)*m22 + 4*m11*PowerI(m22,2) + PowerI(m22,3))*
+         PowerI(z0,2) + PowerI(m01,2)*
+         (2*m22*PowerI(x0,2) - m22*PowerI(y0,2) + 
+           m11*(PowerI(x0,2) + PowerI(y0,2)) + 2*m02*x0*z0 + 2*m12*y0*z0) + 
+        2*m01*(PowerI(m02,2)*x0*y0 - 
+           (PowerI(m11,2) - 3*PowerI(m12,2) + 5*m11*m22 + PowerI(m22,2))*x0*
+            y0 + m02*m12*(-PowerI(x0,2) + PowerI(y0,2) + PowerI(z0,2)))));
+  coeffpa[4] = b*(PowerI(m00,2) + PowerI(m11,2) - 
+      2*(PowerI(m01,2) + PowerI(m02,2) + PowerI(m12,2)) + 4*m11*m22 + 
+      PowerI(m22,2) + 4*m00*(m11 + m22)) - PowerI(m00,3)*PowerI(x0,2) + 
+   2*m00*PowerI(m02,2)*PowerI(x0,2) - 4*PowerI(m00,2)*m11*PowerI(x0,2) - 
+   PowerI(m01,2)*m11*PowerI(x0,2) - 4*PowerI(m02,2)*m11*PowerI(x0,2) + 
+   6*m01*m02*m12*PowerI(x0,2) - 4*PowerI(m00,2)*m22*PowerI(x0,2) - 
+   4*PowerI(m01,2)*m22*PowerI(x0,2) - PowerI(m02,2)*m22*PowerI(x0,2) - 
+   2*PowerI(m00,2)*m01*x0*y0 + 6*PowerI(m01,3)*x0*y0 + 
+   6*m01*PowerI(m02,2)*x0*y0 - 10*m00*m01*m11*x0*y0 - 
+   2*m01*PowerI(m11,2)*x0*y0 - 2*m00*m02*m12*x0*y0 - 2*m02*m11*m12*x0*y0 + 
+   6*m01*PowerI(m12,2)*x0*y0 - 8*m00*m01*m22*x0*y0 - 8*m01*m11*m22*x0*y0 - 
+   2*m02*m12*m22*x0*y0 + 2*PowerI(m01,2)*m11*PowerI(y0,2) - 
+   4*m00*PowerI(m11,2)*PowerI(y0,2) - PowerI(m11,3)*PowerI(y0,2) + 
+   6*m01*m02*m12*PowerI(y0,2) - 4*m00*PowerI(m12,2)*PowerI(y0,2) + 
+   2*m11*PowerI(m12,2)*PowerI(y0,2) - 4*PowerI(m01,2)*m22*PowerI(y0,2) - 
+   4*PowerI(m11,2)*m22*PowerI(y0,2) - PowerI(m12,2)*m22*PowerI(y0,2) + 
+   m00*PowerI(m01,2)*(2*PowerI(x0,2) - PowerI(y0,2)) - 
+   2*((PowerI(m00,2)*m02 - 3*PowerI(m01,2)*m02 + m01*m12*(m11 + m22) + 
+         m00*(4*m02*m11 + m01*m12 + 5*m02*m22) + 
+         m02*(-3*(PowerI(m02,2) + PowerI(m12,2)) + 4*m11*m22 + PowerI(m22,2)))
+        *x0 + (m00*m01*m02 - 3*PowerI(m01,2)*m12 + m01*m02*(m11 + m22) + 
+         4*m00*m12*(m11 + m22) + 
+         m12*(-3*PowerI(m02,2) + PowerI(m11,2) - 3*PowerI(m12,2) + 
+            5*m11*m22 + PowerI(m22,2)))*y0)*z0 - 
+   (m00*PowerI(m02,2) + 4*PowerI(m02,2)*m11 - 6*m01*m02*m12 + 
+      4*m00*PowerI(m12,2) + m11*PowerI(m12,2) - 
+      2*(PowerI(m02,2) + PowerI(m12,2))*m22 + 4*(m00 + m11)*PowerI(m22,2) + 
+      PowerI(m22,3))*PowerI(z0,2);
+  coeffpa[5] = 2*b*(m00 + m11 + m22) - 2*(PowerI(m00,2) + PowerI(m01,2) + PowerI(m02,2))*
+    PowerI(x0,2) - 4*(m01*(m00 + m11) + m02*m12)*x0*y0 - 
+   2*(PowerI(m01,2) + PowerI(m11,2) + PowerI(m12,2))*PowerI(y0,2) - 
+   4*(m00*m02*x0 + m02*m22*x0 + m12*(m11 + m22)*y0 + 
+      m01*(m12*x0 + m02*y0))*z0 - 
+   2*(PowerI(m02,2) + PowerI(m12,2) + PowerI(m22,2))*PowerI(z0,2);
+  coeffpa[6] = b;
+
+#if 1
+  /* ci deve essere sempre un solo zero positivo e quindi calcolo solo quello
+   * usando zbrent con un opportuno bracketing (è la soluzione più veloce) */
+  aR = 10.0;
+  aL= 0.0;
+  dL = polyalpha(coeffpa,aL);
+  while (dL*polyalpha(coeffpa,aR) > 0.0)
+    {
+      aR *= GOLD;
+    }
+  for (kk1=0; kk1 < 7; kk1++)
+    coeffpa_HE[kk1] = coeffpa[kk1];
+  alpha=zbrent(distHE, aL, aR, 1E-15);
+  dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
+  if (dist < 0.0)
+    return -1.0;
+  else
+    return 1.0;
+#else
+  solve_numrec(coeffpa, roots, &ok);
+  if (!ok)
+    {
+      for (kk1=0; kk1 < 7; kk1++)
+        {
+          printf("c[%d]=%.15G\n", kk1, coeffpa[kk1]);
+        }
+      printf("M=%f %f %f %f %f %f\n", m00, m01, m02, m11, m12, m22);
+      printf("x0= %f %f %f\n", x0, y0, z0);
+      printf("b=%.15G\n", b);
+      exit(-1);
+    }
+  for (kk1=0; kk1 < 6; kk1++)
+    {
+      //printf("root[%d]=%.15G %.15G\n", kk1, creal(roots[kk1]), cimag(roots[kk1]));
+      if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
+      np++;
+      if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
+        {
+          dist=distSq2origM(creal(roots[kk1]), m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
+          //printf("dist=%f alpha=%.15G x=%f %f %f\n", dist, creal(roots[kk1]), x0, y0, z0);
+#if 0
+          double distpw;
+          distpw=check_overlap_pw(i, j, shift);
+          if (dist*distpw < 0)
+            {
+              printf("evalpoly(alpha)=%.16G\n",polyalpha(coeffpa,roots[kk1]));
+              printf("dist=%f distpw=%f\n", dist, distpw);
+              printf("alpha=%.15G\n", creal(roots[kk1]));
+              printf("sa=%f %f %f x=%f %f %f dist=%f\n", sx, sy, sz, x0, y0, z0, distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0));
+#if 0
+              rx[i] = ry[i] = rz[i] = 0.0;
+              rx[j] = r0jpp[0];
+              ry[j] = r0jpp[1];
+              rz[j] = r0jpp[2];
+              typesArr[typej].sax[0] = sx;
+              typesArr[typej].sax[1] = sy;
+              typesArr[typej].sax[2] = sz;
+              for (kk1=0; kk1 < 3; kk1++)
+                {
+                  for (kk2=0; kk2 < 3; kk2++)
+                    {
+                      R[i][kk1][kk2] = (kk1==kk2)?1.0:0.0;
+                      R[j][kk1][kk2] = Rjpp[kk1][kk2];
+                    }
+                }
+
+#endif
+#if 1
+              rx[i] = ry[i] = rz[i] = 0.0;
+              rx[j] = r0jp[0];
+              ry[j] = r0jp[1];
+              rz[j] = r0jp[2];
+              for (kk1=0; kk1 < 3; kk1++)
+                {
+                  for (kk2=0; kk2 < 3; kk2++)
+                    {
+                      R[i][kk1][kk2] = (kk1==kk2)?1.0:0.0;
+                      R[j][kk1][kk2] = Rjp[kk1][kk2];
+                    }
+                }
+
+#endif
+#if 0
+              typesArr[typej].sax[0] = sx;
+              typesArr[typej].sax[1] = sy;
+              typesArr[typej].sax[2] = sz;
+              for (kk1=0; kk1 < 3; kk1++)
+                {
+                  for (kk2=0; kk2 < 3; kk2++)
+                    {
+                      R[i][kk1][kk2] = R[j][kk1][kk2] = (kk1==kk2)?1.0:0.0;
+                    }
+                }
+              rx[i] = 0.0;
+              ry[i] = 0.0;
+              rz[i] = 0.0;
+              rx[j] = x0;
+              ry[j] = y0;
+              rz[j] = z0;
+#endif
+              store_bump(i, j);
+              exit(-1);
+            }
+#endif
+          if (dist < 0.0)
+            return -1.0;
+          else
+            return 1.0;
+
+        }
+    }
+#endif
+#if 0
+      if (np > 1)
+        {
+          printf("boh\n");
+          exit(-1);
+        }
+#endif 
+#if 0
   wrap_dsyev_he(Mjpp, evec, eval, &ok);
   /* eigenvalues are provided by zeros of the 3th order characteristic polynomial */
 #if 0
@@ -2946,6 +3335,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
         }
 #endif 
     }
+#endif
 }
 #endif
 double check_overlap_ij(int i, int j, double shift[3], int *errchk)
