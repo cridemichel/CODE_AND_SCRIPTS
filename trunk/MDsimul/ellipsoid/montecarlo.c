@@ -2649,6 +2649,20 @@ double polyalpha(double cmon[7], double x)
     }
   return bn;
 }
+void polyalphad(double x, double c[7], double *p, double *p1)
+{
+  // evaluate polynomail via Horner's formula 
+  int i;
+  int n=6;
+  *p=c[n]*x+c[n-1];
+  *p1=c[n];
+  for(i=n-2;i>=0;i--) {
+    *p1=*p+*p1*x;
+    *p=c[i]+*p*x;
+  }
+}
+
+
 double PowerI(double x, int n)
 {
   int i;
@@ -2733,6 +2747,93 @@ double coeffpa_HE[7];
 double distHE(double x)
 {
   return polyalpha(coeffpa_HE,x);
+}
+double rtsafe(double c[7], double xg, double x1, double x2, double  xacc, int guess)
+{
+  /* xg is the initial guess and x1, x2 must bracket the solution */
+#if 0
+  p=c[n]*x+c[n-1];
+  p1=c[n];
+  for(i=n-2;i>=0;i--) {
+    p1=p+p1*x;
+    p=c[i]+p*x;
+  }
+  if (p1 == 0.0) throw("derivative should not vanish"); 
+  x -= p/p1;
+#endif
+  const int MAXIT=100; //Maximum allowed number of iterations. Doub xh,xl;
+  double fl, fh, xl, xh;
+  double rts, dx, dxold, df, f, temp;
+  int j;
+  fl=polyalpha(c,x1);
+  fh=polyalpha(c,x2);
+#if 1
+  if ((fl > 0.0 && fh > 0.0) || (fl < 0.0 && fh < 0.0)) 
+    {
+      printf("[WARNING] Root must be bracketed in rtsafe\n");
+      printf("fl=%.15G fh=%.15G\n", fl, fh);
+      printf("xg=%.15G x1=%.15G x2=%.15G\n", xg, x1, x2);
+      return xg;
+    }
+#endif
+  if (fl == 0.0) 
+    return x1;
+  if (fh == 0.0) 
+    return x2;
+  if (fl < 0.0) 
+    {
+      xl=x1;
+      xh=x2;
+    } 
+  else 
+    {
+      xh=x1;
+      xl=x2; 
+    }
+  if (guess)
+    rts = xg;
+  else
+    rts = 0.5*(x1+x2);
+  dxold=fabs(x2-x1);
+  dx=dxold;
+  polyalphad(rts,c,&f,&df);
+  for (j=0;j<MAXIT;j++) 
+    {
+      //Orient the search so that f .xl/ < 0.
+      //Initialize the guess for root, the “stepsize before last,” and the last step.
+      //Loop over allowed iterations.
+      if ((((rts-xh)*df-f)*((rts-xl)*df-f) > 0.0) 
+	  || (fabs(2.0*f) > fabs(dxold*df)) || (df==0)) 
+	{ 
+	  //Bisect if Newton out of range, 
+	  //or not decreasing fast enough.
+	  dxold=dx;
+	  dx=0.5*(xh-xl);
+	  rts=xl+dx;
+	  if (xl == rts) 
+	    return rts;
+	} 
+      else 
+	{
+	  dxold=dx;
+	  dx=f/df;
+	  temp=rts;
+	  rts -= dx;
+	  if (temp == rts) 
+	    return rts;
+	}
+      if (fabs(dx) < xacc) 
+	return rts;
+      polyalphad(rts, c, &f, &df);
+      //The one new function evaluation per iteration.
+      if (f < 0.0) //Maintain the bracket on the root.
+	xl=rts; 
+      else
+	xh=rts;
+    }
+
+  printf("[WARNING] Maximum number of iterations exceeded in rtsafe\n");
+  return rts;
 }
 double check_overlap_polyell(int i, int j, double shift[3])
 {
@@ -3034,7 +3135,8 @@ double check_overlap_polyell(int i, int j, double shift[3])
     }
   for (kk1=0; kk1 < 7; kk1++)
     coeffpa_HE[kk1] = coeffpa[kk1];
-  alpha=zbrent(distHE, aL, aR, 2E-16);
+  alpha = rtsafe(coeffpa, 0, aL, aR, 2E-16, 0); 
+  //alpha=zbrent(distHE, aL, aR, 2E-16);
   dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
   if (dist < 0.0)
     return -1.0;
