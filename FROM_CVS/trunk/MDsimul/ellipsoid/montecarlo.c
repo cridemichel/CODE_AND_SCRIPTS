@@ -2107,7 +2107,7 @@ void set_pos_R_ho(int i, int a)
 //////////////////////////////////////
 //Perram Wertheim overlap ellipsoid //
 //////////////////////////////////////
-#ifdef MC_PERWER
+#if defined(MC_PERWER) || defined(POLYELLIPS)
 /* perram wertheim overlap ellissoidi */
 void tRDiagRpw(int i, double M[3][3], double D[3], double **Ri)
 {
@@ -2515,6 +2515,7 @@ void invM(double m[3][3], double invM[3][3])
   invM[2][1] *= invd;
   invM[2][2] *= invd;
 }
+#define USE_LAPACK
 #ifdef USE_LAPACK
 /* find eigenvectors and eigenvalues */
 void sort_eigenvect(double R[3][3], double EV[3])
@@ -2541,11 +2542,12 @@ void sort_eigenvect(double R[3][3], double EV[3])
 	  }
       }
 }
+#if 0
 void calcEigenValVect(double I[3][3], double R[3][3], double EV[3])
 {
   int ok, kk;
   double u1[3], u2[3];
-  wrap_dsyev(I, R, EV, &ok);
+  wrap_dsyev_he(I, R, EV, &ok);
   sort_eigenvect(R, EV);
 
   /* we want a right-handed reference system */
@@ -2555,7 +2557,8 @@ void calcEigenValVect(double I[3][3], double R[3][3], double EV[3])
     u2[kk] = R[1][kk];
   vectProdVec(u1, u2, R[2]);
 }
-void wrap_dsyev(double a[3][3], double b[3][3], double x[3], int *ok)
+#endif
+void wrap_dsyev_he(double a[3][3], double b[3][3], double x[3], int *ok)
 {
   char JOBZ, UPLO;
   double AT[9], work[10];
@@ -2676,6 +2679,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
 {
   double Rjp[3][3], r0jp[3], ri[3], rj[3], Di[3], Dj[3], Mjp[3][3], gradj[3], xppg[3], M2I[3][3], invM2I[3][3], oax[3], theta, norm;
   double RM[3][3], Mtmp[3][3], Mjpp[3][3], r0jpp[3], Mjp3[3][3], r0jp3[3], xp3g[3];
+  double Mip[3][3], Mipp[3][3];
   double evec[3][3], eval[3], coeff[4], coeffpa[7], sx, sy, sz, x0, y0, z0;
   double sx2, sy2, sz2, sx4, sy4, sz4, x02, y02, z02, sai[3];
   double vt, at[3], Mi[3][3], Mj[3][3], Ri[3][3], Rj[3][3], dist;
@@ -2728,7 +2732,7 @@ double check_overlap_polyell(int i, int j, double shift[3])
           //Aip[kk1] = 0;
           for (kk3=0; kk3 < 3; kk3++)
             {
-              Rjp[kk1][kk2] += R[i][kk1][kk3]*R[j][kk3][kk2];
+              Rjp[kk1][kk2] += R[j][kk1][kk3]*R[i][kk2][kk3];
               //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
             } 
         }
@@ -2750,23 +2754,33 @@ double check_overlap_polyell(int i, int j, double shift[3])
   r0jpp[0] = r0jp[0]/sai[0];
   r0jpp[1] = r0jp[1]/sai[1];
   r0jpp[2] = r0jp[2]/sai[2];
-   /* find eigenvalues of ellipsoid j (i.e. of matrix Mjpp), we need just eigenvalues, hence we do not need to
-    * change reference frame to ellipsoid i principal axes given by eigenvectors */
-  //wrap_dsyev(Mjpp, evec, eval, &ok);
+  wrap_dsyev_he(Mjpp, evec, eval, &ok);
   /* eigenvalues are provided by zeros of the 3th order characteristic polynomial */
+#if 0
   coeff[0] = -Sqr(Mjpp[0][2])*Mjpp[1][1] + 2.0*Mjpp[0][1]*Mjpp[0][2]*Mjpp[1][2] - Mjpp[0][0]*Sqr(Mjpp[1][2]) - Sqr(Mjpp[0][1])*Mjpp[2][2] + Mjpp[0][0]*Mjpp[1][1]*Mjpp[2][2];
   coeff[1] = Sqr(Mjpp[0][1]) + Sqr(Mjpp[0][2]) - Mjpp[0][0]*Mjpp[1][1] + Sqr(Mjpp[1][2]) - Mjpp[0][0]*Mjpp[2][2] 
     - Mjpp[1][1]*Mjpp[2][2];
   coeff[2] = Mjpp[0][0] + Mjpp[1][1] + Mjpp[2][2];
   coeff[3] = -1.0;
   solve_cubic_analytic(coeff, eval);
-  sx = eval[0];
-  sy = eval[1];
-  sz = eval[2];
+#endif
+  sx = 1.0/sqrt(eval[0]);
+  sy = 1.0/sqrt(eval[1]);
+  sz = 1.0/sqrt(eval[2]);
   //printf("semi-axes=%.15G %.15G %.15G\n x0=%f %f %f", sx, sy, sz, x0, y0, z0);
-  x0 = r0jpp[0];
-  y0 = r0jpp[1];
-  z0 = r0jpp[2];
+
+  //since we move to reference frame of ellipsoid j we need to rotate the position of ellipsoid i (which is now a sphere)
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      r0jp3[kk1]=0.0;
+      for (kk2=0; kk2 < 3; kk2++)
+        {
+          r0jp3[kk1] += evec[kk1][kk2]*r0jpp[kk2]; 
+        }
+    }
+  x0 = r0jp3[0];
+  y0 = r0jp3[1];
+  z0 = r0jp3[2];
   if (sx==sz)
     {
       /* swap y and z axes */
@@ -2851,12 +2865,77 @@ double check_overlap_polyell(int i, int j, double shift[3])
             //np++;
           if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
             {
-              dist=distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
+              dist=distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0)-1.0;
               //printf("dist=%f alpha=%.15G sa=%f %f %f x=%f %f %f\n", dist, creal(roots[kk1]), sx, sy, sz, x0, y0, z0);
-              if (dist < 1.0)
+#if 0
+              double distpw;
+              distpw=check_overlap_pw(i, j, shift);
+              if (dist*distpw < 0)
+                {
+                  printf("evalpoly(alpha)=%.16G\n",polyalpha(coeffpa,roots[kk1]));
+                  printf("dist=%f distpw=%f\n", dist, distpw);
+                  printf("alpha=%.15G\n", creal(roots[kk1]));
+                  printf("sa=%f %f %f x=%f %f %f dist=%f\n", sx, sy, sz, x0, y0, z0, distSq2orig(creal(roots[kk1]), sx, sy, sz, x0, y0, z0));
+#if 0
+                  rx[i] = ry[i] = rz[i] = 0.0;
+                  rx[j] = r0jpp[0];
+                  ry[j] = r0jpp[1];
+                  rz[j] = r0jpp[2];
+                  typesArr[typej].sax[0] = sx;
+                  typesArr[typej].sax[1] = sy;
+                  typesArr[typej].sax[2] = sz;
+                  for (kk1=0; kk1 < 3; kk1++)
+                    {
+                      for (kk2=0; kk2 < 3; kk2++)
+                        {
+                          R[i][kk1][kk2] = (kk1==kk2)?1.0:0.0;
+                          R[j][kk1][kk2] = Rjpp[kk1][kk2];
+                        }
+                    }
+                  
+#endif
+#if 1
+                  rx[i] = ry[i] = rz[i] = 0.0;
+                  rx[j] = r0jp[0];
+                  ry[j] = r0jp[1];
+                  rz[j] = r0jp[2];
+                  for (kk1=0; kk1 < 3; kk1++)
+                    {
+                      for (kk2=0; kk2 < 3; kk2++)
+                        {
+                          R[i][kk1][kk2] = (kk1==kk2)?1.0:0.0;
+                          R[j][kk1][kk2] = Rjp[kk1][kk2];
+                        }
+                    }
+                  
+#endif
+#if 0
+                  typesArr[typej].sax[0] = sx;
+                  typesArr[typej].sax[1] = sy;
+                  typesArr[typej].sax[2] = sz;
+                  for (kk1=0; kk1 < 3; kk1++)
+                    {
+                      for (kk2=0; kk2 < 3; kk2++)
+                        {
+                          R[i][kk1][kk2] = R[j][kk1][kk2] = (kk1==kk2)?1.0:0.0;
+                        }
+                    }
+                  rx[i] = 0.0;
+                  ry[i] = 0.0;
+                  rz[i] = 0.0;
+                  rx[j] = x0;
+                  ry[j] = y0;
+                  rz[j] = z0;
+#endif
+                  store_bump(i, j);
+                  exit(-1);
+                }
+#endif
+              if (dist < 0.0)
                 return -1.0;
               else
                 return 1.0;
+              
             }
         }
 #if 0
@@ -3004,7 +3083,7 @@ double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 		  saxfactMC[2]*typesArr[typeOfPart[0]].sax[2]);
 #endif
 #endif
-#ifndef MC_PERWER
+#if !defined(MC_PERWER) && !defined(POLYELLIPS)
   for (k=0; k < 3; k++)
     {
 #ifdef MC_QUASI_CUBE
