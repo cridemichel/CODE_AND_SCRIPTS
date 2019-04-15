@@ -2717,7 +2717,7 @@ double distSq2origM(double Alpha, double m00, double m01, double m02, double m11
    m02*(x0*Alpha*(m11 + Alpha) + m01*(2*m12*z0 - y0*Alpha));
   for (i=0; i< 3; i++)
     x[i] /= detMa;
- return calc_norm(x); 
+ return x[0]*x[0]+x[1]*x[1]+x[2]*x[2]; 
 }
 
 double calcfel(double M[3][3], double r0[3], double x[3])
@@ -3122,18 +3122,19 @@ double check_overlap_polyell(int i, int j, double shift[3])
 #if 1
   /* ci deve essere sempre un solo zero positivo e quindi calcolo solo quello
    * usando zbrent con un opportuno bracketing (è la soluzione più veloce) */
-  aR = 1.0;
+  aR = 0.5;
   aL= 0.0;
   dL = coeffpa[0];
   while (dL*polyalpha(coeffpa,aR) > 0.0)
     {
+      aL = aR; 
       aR *= GOLD;
     }
   for (kk1=0; kk1 < 7; kk1++)
     coeffpa_HE[kk1] = coeffpa[kk1];
   alpha = rtsafe(coeffpa, 0, aL, aR, 2.0E-16, 0); 
   //alpha=zbrent(distHE, aL, aR, 2E-16);
-  dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0)-1.0;
+  dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0) - 1.0;
   /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
    * si avrà la distanza tra i due ellissoidi che si può usare nella dinamica event-driven */
   if (dist < 0.0)
