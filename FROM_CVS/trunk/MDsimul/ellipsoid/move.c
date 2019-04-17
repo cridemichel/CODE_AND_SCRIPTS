@@ -5881,6 +5881,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
      SDmethod=2 non usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
      SDmethod=3 usa la riduzione del passo e applica lo SD solo se il calcolo della distanza fallisce 
      SDmethod=4 non usa la riduzione del passo e applica lo SD sempre */
+#ifdef HE_FAST_DIST
+  double ri[3], rj[3], Ri[3][3], Rj[3][3], dist, shift2[3];
+#endif
   double vecg[8], rC[3], rD[3], rDC[3], r12[3], vecgcg[6], fx[3];
   double ti, segno, segno2;
   double g1=0.0, g2=0.0, SP, nrDC, vecnf[3], nvecnf;
@@ -6045,7 +6048,45 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
 #endif
   /* NOTA 17/04/19: inserire qui calcolo distanza nuovo!  */
 #ifdef HE_FAST_DIST 
-
+  ri[0]=rx[i];
+  ri[1]=ry[i];
+  ri[2]=rz[i];
+  rj[0]=rx[j];
+  rj[1]=ry[j];
+  rj[2]=rz[j];
+  rx[i] = rA[0];
+  ry[i] = rA[1];
+  rz[i] = rA[2];
+  rx[j] = rB[0];
+  ry[j] = rB[1];
+  rz[j] = rB[2];
+  for (k1=0; k1 < 3; k1++)
+    {
+      shift2[k1]=0;
+      for ( k2=0; k2 < 3; k2++)
+        {
+          Ri[k1][k2] = R[i][k1][k2];
+          Rj[k1][k2] = R[j][k1][k2];
+          R[i][k1][k2] = RtA[k1][k2];
+          R[j][k1][k2] = RtB[k1][k2];
+      }  
+    }
+  dist=check_overlap_polyell(i, j, shift2);
+  rx[i]=ri[0];
+  ry[i]=ri[1];
+  rz[i]=ri[2];
+  rx[j]=rj[0];
+  ry[j]=rj[1];
+  rz[j]=rj[2];
+  for (k1=0; k1 < 3; k1++)
+    {
+      for ( k2=0; k2 < 3; k2++)
+        {
+          R[i][k1][k2] = Ri[k1][k2];
+          R[j][k1][k2] = Rj[k1][k2];
+      }  
+    }
+  return dist;
 #endif
   /* ==================================================== */
   na = (j < Oparams.parnumA)?0:1;
