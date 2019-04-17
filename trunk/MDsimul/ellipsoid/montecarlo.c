@@ -2108,7 +2108,7 @@ void set_pos_R_ho(int i, int a)
 //////////////////////////////////////
 //Perram Wertheim overlap ellipsoid //
 //////////////////////////////////////
-#if defined(MC_PERWER) || defined(POLYELLIPS)
+#if defined(MC_PERWER) || defined(POLYELLIPS) || defined(HE_FAST_DIST)
 /* perram wertheim overlap ellissoidi */
 void tRDiagRpw(int i, double M[3][3], double D[3], double **Ri)
 {
@@ -2379,7 +2379,7 @@ double check_overlap_pw(int i, int j, double shift[3])
   return res - 1.0;
 }
 #endif
-#ifdef POLYELLIPS
+#if defined(POLYELLIPS) || defined(HE_FAST_DIST)
 // rotazione intorno ad asse (ox,oy,oz) di un angolo theta
 // (serve per l'algoritmo per trovare alpha risolvendo una quartica)
 /* perram wertheim overlap ellissoidi */
@@ -2744,6 +2744,42 @@ double distSq2orig(double alpha, double sx, double sy, double sz, double x0, dou
 {
   return x0*x0/Sqr(1.0+sx*sx*alpha) + y0*y0/Sqr(1.0+sy*sy*alpha) + z0*z0/Sqr(1.0+sz*sz*alpha);
 }
+#ifdef HE_FAST_DIST
+double dist2origSE(double Alpha, double m00, double m01, double m02, double m11, double m12, double m22, 
+                    double m012, double m022, double m122, double m222, double x0, double y0, double z0, double sai[3])
+{
+  double d[3], xi[3], norm;
+  double x[3], detMa, Al2, Al3, Al4;
+  int i;
+  Al2 = Alpha*Alpha;
+  Al3 = Al2*Alpha;
+  Al4 = Al2*Al2;
+  detMa = -m022*m11 + 2*m01*m02*m12 - m00*m12*m12 - m012*m22 + m00*m11*m22 - 
+    m012*Alpha - m022*Alpha + m00*m11*Alpha - m122*Alpha +
+    m00*m22*Alpha + m11*m22*Alpha + m00*Al2 + 
+    m11*Al2 + m22*Al2 + Al3;
+  x[0] = -(m022*x0*(m11 + Alpha)) + 
+    m02*(2*m01*m12*x0 - m12*y0*Alpha + z0*Alpha*(m11 + Alpha)) - 
+    m01*(m12*z0*Alpha + m01*x0*(m22 + Alpha) - y0*Alpha*(m22 + Alpha)) + 
+    m00*x0*(-m122 + (m11 + Alpha)*(m22 + Alpha));
+  x[1] = -(m022*m11*y0) + 2*m01*m02*m12*y0 - m012*m22*y0 + 
+    m01*m22*x0*Alpha - (m012 + m122 - m11*m22)*y0*Alpha - 
+    m02*(m12*x0 + m01*z0)*Alpha + (m01*x0 + m11*y0 + m12*z0)*Al2 + 
+    m00*(-(m122*y0) + m12*z0*Alpha + m11*y0*(m22 + Alpha));
+  x[2] = -(m012*m22*z0) - (m01*m12*x0 + (m122 - m11*m22)*z0)*Alpha + 
+   (m12*y0 + m22*z0)*Al2 - m022*z0*(m11 + Alpha) + 
+   m00*(-(m122*z0) + m12*y0*Alpha + m22*z0*(m11 + Alpha)) + 
+   m02*(x0*Alpha*(m11 + Alpha) + m01*(2*m12*z0 - y0*Alpha));
+  for (i=0; i< 3; i++)
+    x[i] /= detMa;
+  norm = calc_norm(x); 
+  for (i=0; i < 3; i++)
+    xi[i] /= norm;
+  for (i=0; i < 3; i++)
+    d[i] = x[i] - xi[i];
+  return (norm > 1.0)?calc_norm(d):-calc_norm(d);
+}
+#endif
 double distSq2origMopt(double Alpha, double m00, double m01, double m02, double m11, double m12, double m22, 
                     double m012, double m022, double m122, double m222, double x0, double y0, double z0)
 {
@@ -3372,7 +3408,6 @@ double check_overlap_polyell(int i, int j, double shift[3])
 
   if (!ok)
     {
-
       dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0) - 1.0;
       printf("alpha=%.20G dist=%.16G dbleps=%.20G\n", alpha, dist, DBL_EPSILON);
       solve_numrec(coeffpa, roots, &ok);
@@ -3393,10 +3428,14 @@ double check_overlap_polyell(int i, int j, double shift[3])
       store_bump(i, j);
       exit(-1);
     }
+#ifdef HE_FAST_DIST
+  return dist2origSE(alpha, m00, m01, m02, m11, m12, m22, m012, m022, m122, m222, x0, y0, z0, sai);
+#else
 #ifdef HE_OPT
   dist=distSq2origMopt(alpha, m00, m01, m02, m11, m12, m22, m012, m022, m122, m222, x0, y0, z0) - 1.0;
 #else
   dist=distSq2origM(alpha, m00, m01, m02, m11, m12, m22, x0, y0, z0) - 1.0;
+#endif
 #endif
   /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
    * si avrà la distanza tra i due ellissoidi che si può usare nella dinamica event-driven */
