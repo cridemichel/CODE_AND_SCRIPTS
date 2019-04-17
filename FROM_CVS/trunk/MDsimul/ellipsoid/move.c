@@ -5871,7 +5871,7 @@ extern double check_overlap_helices(int i, int j, double shift[3]);
 #ifdef MC_PERWER
 extern double check_overlap_pw(int i, int j, double shift[3]);
 #endif
-#ifdef POLYELLIPS
+#if defined(POLYELLIPS)|| defined(HE_FAST_DIST)
 extern double check_overlap_polyell(int i, int j, double shift[3]);
 #endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
@@ -6043,7 +6043,11 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(j, ti, RtB, Omega);
 #endif
 #endif
+  /* NOTA 17/04/19: inserire qui calcolo distanza nuovo!  */
+#ifdef HE_FAST_DIST 
 
+#endif
+  /* ==================================================== */
   na = (j < Oparams.parnumA)?0:1;
 #ifdef EDHE_FLEX
   na = 0;
