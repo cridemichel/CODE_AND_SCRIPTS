@@ -3063,8 +3063,8 @@ double calcDistNegHCopt(void)
   Cj[0] = HardCyl[1].rcm[0];
   Cj[1] = HardCyl[1].rcm[1];
   Cj[2] = HardCyl[1].rcm[2]; 
-  L = 2.0*HardCyl[0].sax[0];
-  D = 2.0*HardCyl[0].sax[1];
+  L = 2.0*HardCyl[0].sax[2];// elongated along z axis in the body reference frame
+  D = 2.0*HardCyl[0].sax[0];
   
   //meshptsGbl = MESH_PTS;
   for (kk=0; kk < 3; kk++)
@@ -3168,9 +3168,9 @@ double calcDistNegHCdiff(void)
   Cj[0] = HardCyl[1].rcm[0];
   Cj[1] = HardCyl[1].rcm[1];
   Cj[2] = HardCyl[1].rcm[2]; 
-  Li = 2.0*HardCyl[0].sax[0];
+  Li = 2.0*HardCyl[0].sax[2];
   Diami = 2.0*HardCyl[0].sax[1];
-  Lj = 2.0*HardCyl[1].sax[0];
+  Lj = 2.0*HardCyl[1].sax[2];
   Diamj = 2.0*HardCyl[1].sax[1];
   //printf("r1=%f %f %f r2=%f %f %f\n",CHROMall[0].rcm[0],CHROMall[0].rcm[1],CHROMall[0].rcm[2],
   //  CHROMall[1].rcm[0],CHROMall[1].rcm[1],CHROMall[1].rcm[2]);
@@ -4989,7 +4989,7 @@ int main(int argc, char**argv)
   ttini = 0;
 
   init_distbox();
-  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(HardCyl[0].boxsax[0])+Sqr(HardCyl[0].boxsax[1])+Sqr(HardCyl[0].boxsax[2]))*3.0;
+  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(HardCyl[0].boxsax[0])+Sqr(HardCyl[0].boxsax[1])+Sqr(HardCyl[0].boxsax[2]))*2.0;
 #if 0 
   Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
