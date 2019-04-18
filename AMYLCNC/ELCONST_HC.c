@@ -8,7 +8,7 @@
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
 #define LDLT_OPT_CUBIC
-//#define HC_DIST_OPT
+#define HC_DIST_OPT
 #include<float.h>
 #include<complex.h>
 //#ifdef __clang__
@@ -2746,7 +2746,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
   return 0;
 }
 
-double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
+double calcDistNegHCopt(void)
 {
 #ifdef MC_HC_SPHERO_OPT
   int rim;
@@ -2760,7 +2760,6 @@ double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
       || typesArr[typeOfPart[i]].sax[1] != typesArr[typeOfPart[j]].sax[1])
     return calcDistNegHCoptdiff(i, j, shift, retchk);
 #endif
-  *retchk = 0; 
 
   for (kk=0; kk < 3; kk++)
     {
@@ -4589,11 +4588,19 @@ int main(int argc, char**argv)
 #endif
 	  if (calcDistBox() < 0.0)
 	    {
+#ifdef HC_DIST_OPT
+	      if (calcDistNegHCopt() < 0.0)
+		{
+		  //printf("qui\n");
+		  overlap = 1;
+		}
+#else
 	      if (calcDistNegHCdiff() < 0.0)
 		{
 		  //printf("qui\n");
 		  overlap = 1;
 		}
+#endif
 	    }
 #ifdef CHROM_ELEC
 	  if (!overlap)
