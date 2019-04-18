@@ -1,5 +1,4 @@
 /* ====================================== >>> PARAMETRI DEFAULT HC <<< ===================================== */
-
 //#define POVRAY
 double diamHC=2.0, lengthHC=2.0;
 /* ========================================================================================================== */
@@ -8,6 +7,8 @@ double diamHC=2.0, lengthHC=2.0;
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <complex.h>
+#include <float.h>
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 //#define USEGSL
 #define GAUSS
@@ -19,6 +20,38 @@ double diamHC=2.0, lengthHC=2.0;
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
+static double maxarg1,maxarg2;
+#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+        (maxarg1) : (maxarg2))
+#if 0
+static int imaxarg1,imaxarg2;
+#define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
+        (imaxarg1) : (imaxarg2))
+#endif
+static int iminarg1,iminarg2;
+#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
+        (iminarg1) : (iminarg2))
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+
+static double minarg1,minarg2;
+#define FMIN(a,b) (minarg1=(a),minarg2=(b),(minarg1) < (minarg2) ?\
+        (minarg1) : (minarg2))
+
+static long lmaxarg1,lmaxarg2;
+#define LMAX(a,b) (lmaxarg1=(a),lmaxarg2=(b),(lmaxarg1) > (lmaxarg2) ?\
+        (lmaxarg1) : (lmaxarg2))
+#if 0
+static long lminarg1,lminarg2;
+#define LMIN(a,b) (lminarg1=(a),lminarg2=(b),(lminarg1) < (lminarg2) ?\
+        (lminarg1) : (lminarg2))
+
+static int imaxarg1,imaxarg2;
+#define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
+        (imaxarg1) : (imaxarg2))
+
+#endif
+#define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
+
 //#define ELEC
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
@@ -40,6 +73,14 @@ struct HardCylStr {
   double boxsax[3];
 } HardCyl[2];
 
+double calc_norm(double *vec)
+{
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
+}
 void body2lab(double xp[3], double x[3], double rO[3], double R[3][3])
 {
   int k1, k2;
@@ -408,7 +449,7 @@ void saveAmyloidPovray(char *fname, double L)
   fclose(f);
 }
 #endif
-void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma);
+//void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma);
 void versor_to_R_sym(double ox, double oy, double oz, double R[3][3]);
 
 
@@ -432,6 +473,79 @@ double perpcomp(double *V, double *C, double *n)
   for (kk2=0; kk2 < 3; kk2++)
     dscperp[kk2] = dsc[kk2]-sp*n[kk2];
   return calc_norm(dscperp);
+}
+void body2labHC(double xp[3], double x[3], double rO[3], double R[3][3])
+{
+  int k1, k2;
+  for (k1=0; k1 < 3; k1++)
+    {
+      x[k1] = 0;
+      /* NOTE: k2 starts from 1 because xp[0] = 0.0 see function find_initial_guess() below */
+      for (k2=1; k2 < 3; k2++)
+	{
+	  x[k1] += R[k2][k1]*xp[k2];
+       	} 
+      x[k1] += rO[k1];
+    }
+}
+void versor_to_R_sym(double ox, double oy, double oz, double R[3][3])
+{
+  int k;
+  double u[3], sp, norm;
+  /* first row vector (note that cylinder symmetry axis which is x) */
+  R[0][0] = ox;
+  R[0][1] = oy;
+  R[0][2] = oz;
+  //printf("orient=%f %f %f\n", ox, oy, oz);
+  u[0] = 0.0; u[1] = 1.0; u[2] = 0.0;
+  if (u[0]==R[0][0] && u[1]==R[0][1] && u[2]==R[0][2])
+    {
+      u[0] = 0.0; u[1] = 0.0; u[2] = 1.0;
+    }
+  /* second row vector */
+  sp = 0;
+  for (k=0; k < 3 ; k++)
+    sp+=u[k]*R[0][k];
+  for (k=0; k < 3 ; k++)
+    u[k] -= sp*R[0][k];
+  norm = calc_norm(u);
+  //printf("norm=%f u=%f %f %f\n", norm, u[0], u[1], u[2]);
+  for (k=0; k < 3 ; k++)
+    R[1][k] = u[k]/norm;
+#if 0
+  if (typesArr[0].nspots==3 && type==0)
+    {
+      for (k=0; k < 3 ; k++)
+	u[k] = R[1][k];
+      vectProdVec(R[0], u, up);
+      /* rotate randomly second axis */
+      angle=4.0*acos(0.0)*ranf_vb();
+      xx = cos(angle);
+      yy = sin(angle);
+      for (k=0; k < 3 ; k++)
+	R[1][k] = u[k]*xx + up[k]*yy;
+      //printf("calc_norm(R[1])=%.15G\n", calc_norm(R[1]));
+    }
+#endif
+  /* third row vector */
+  vectProdVec(R[0], R[1], u);
+ 
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+#if 0
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    Rt[k1][k2]=R[k2][k1];
+  for (k1=0; k1 < 3 ; k1++)
+    for (k2=0; k2 < 3 ; k2++)
+    R[k1][k2]=Rt[k1][k2];
+#endif
+  //printf("calc_norm R[2]=%f vp=%f\n", calc_norm(R[2]), scalProd(R[1],R[2]));
+#ifdef DEBUG
+  printf("==============\n");
+  print_matrix(R, 3);
+  printf("==============\n");
+#endif
 }
 void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
@@ -2996,6 +3110,25 @@ double calcDistNegHCopt(void)
   return 1;
 }
 /* cylinder overlap routines here */
+int check_convergence(double Told[3], double Tnew[3])
+{
+  double test=0.0, temp;
+  int i;
+  for (i=0;i<3;i++) 
+    {
+      temp=(fabs(Tnew[i]-Told[i]))/FMAX(fabs(Tnew[i]),1.0); 
+      //temp=(fabs(x[i]-xold[i]))/fabs(x[i]); 
+      if (temp > test) 
+	test=temp; 
+    }
+  if (test < 1.0E-13)
+    {
+      //printf("convergence reached! test=%.15G\n", test);
+      return 1;
+    }
+  else 
+    return 0;
+}
 double calcDistNegHCdiff(void)
 {
   const int MAX_ITERATIONS = 1000000;
@@ -3349,36 +3482,6 @@ double calcDistNegHCdiff(void)
     }
   return 1;
 }
-
-static int imaxarg1,imaxarg2;
-#define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
-        (imaxarg1) : (imaxarg2))
-
-static int iminarg1,iminarg2;
-#define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
-        (iminarg1) : (iminarg2))
-
-#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
-
-static float maxarg1,maxarg2;
-#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
-        (maxarg1) : (maxarg2))
-
-static float minarg1,minarg2;
-#define FMIN(a,b) (minarg1=(a),minarg2=(b),(minarg1) < (minarg2) ?\
-        (minarg1) : (minarg2))
-
-static long lmaxarg1,lmaxarg2;
-#define LMAX(a,b) (lmaxarg1=(a),lmaxarg2=(b),(lmaxarg1) > (lmaxarg2) ?\
-        (lmaxarg1) : (lmaxarg2))
-
-static long lminarg1,lminarg2;
-#define LMIN(a,b) (lminarg1=(a),lminarg2=(b),(lminarg1) < (lminarg2) ?\
-        (lminarg1) : (lminarg2))
-
-static int imaxarg1,imaxarg2;
-#define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1) > (imaxarg2) ?\
-        (imaxarg1) : (imaxarg2))
 
 static long iran=0;
 double *vector(int n1, int n2)
@@ -4037,23 +4140,8 @@ double qromb(double (*func)(double), double a, double b)
   return 0.0; /*Never get here.*/
 }
 
-
-void vectProdVec(double *A, double *B, double *C)
-{
-  C[0] = A[1] * B[2] - A[2] * B[1]; 
-  C[1] = A[2] * B[0] - A[0] * B[2];
-  C[2] = A[0] * B[1] - A[1] * B[0];
-}
-//#define ALBERTA
 char fn[1024];
-double calc_norm(double *vec)
-{
-  int k1;
-  double norm=0.0;
-  for (k1 = 0; k1 < 3; k1++)
-    norm += Sqr(vec[k1]);
-  return sqrt(norm);
-}
+
 
 #define MC_BENT_DBLCYL
 
@@ -4136,7 +4224,7 @@ void print_matrix(double M[3][3], int n)
 void versor_to_R(double ox, double oy, double oz, double gamma, double R[3][3])
 {
   int k;
-  double angle, u[3], sp, norm, up[3], xx, yy;
+  double u[3], sp, norm;
 #ifdef MC_BENT_DBLCYL
   double Rout[3][3];
   int k1, k2;
@@ -4208,11 +4296,9 @@ void place_HardCyl(double x, double y, double z, double cosphi12, double sinphi1
 		double sintheta12, double cosgamma12, double singamma12,
 		int which)
 {
-  FILE *fd;
-  char fn[256];
-  double xp[3], rO[3], xl[3];
+  double rO[3];
   double R[3][3];
-  int i, k1, k2;
+  int k1, k2;
   rO[0] = x;
   rO[1] = y;
   rO[2] = z;
@@ -4283,7 +4369,7 @@ double theta_onsager(double alpha)
   /* the comparison function g(theta) is just g(theta)=1 */ 
   static int first = 1;
   static double f0;
-  double pi, y, f, theta, dtheta;
+  double pi, y, f, theta;
   //printf("alpha=%f\n", alpha);
   pi = acos(0.0)*2.0;
   if (first == 1)
@@ -4350,7 +4436,7 @@ double theta_donsager(double alpha, int domain)
   /* the comparison function g(theta) is just g(theta)=1 */ 
   static int first = 1;
   static double f0;
-  double pi, y, f, theta, dtheta;
+  double pi, y, f, theta;
   //printf("alpha=%f\n", alpha);
   pi = acos(0.0)*2.0;
   if (first == 1)
@@ -4441,8 +4527,6 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
 		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
 		    double alpha)
 {
-  int i, j;
-  double sigsq, distsq, sigijsq, u1z, u2x, u2y, u2z;
   double sintheta12, costheta12, sinphi12, cosphi12, cosgamma12, singamma12;
 
   costheta12 = cos(theta12);
@@ -4786,7 +4870,6 @@ double miser_func(double x[])
 #endif
 int main(int argc, char**argv)
 {
-  char fname[255];
 #ifdef USE_MISER
   double regn[4];
   double mis_ave, mis_var;
@@ -4803,15 +4886,13 @@ int main(int argc, char**argv)
   MPI_Status status;
 #endif
   char fn[256];
-  int aa, bb, nL;
+  int aa, bb;
   double ccc, totfact;
-  int cc;
-  double gamma1, gamma2;
-  FILE *fin, *fout, *f, *fread, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
-  int ncontrib, k, i, j, overlap, contrib, cont=0, nfrarg;
-  char fnin[1024],fnout[256];
-  double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
-  double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
+  FILE *fout, *fxi1, *fxi2, *fxi3, *fxi4, *fxi5, *fxi6;
+  int i, j, cont=0, nfrarg;
+  char fnout[256];
+  double rcmx, rcmy, rcmz;
+  double vexcl=0.0, factor;
   /* syntax:  CG-DNA-k2K22 <pdb file> <DNAD length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
 #if defined(MPI) 
   MPI_Init(&argc, &argv);
@@ -4906,7 +4987,7 @@ int main(int argc, char**argv)
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
   Lz=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[2];
 #endif
-  printf("nL=%d L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", nL, L, alpha, type, tot_trials);
+  printf("L=%f alpha=%f I am going to calculate v%d and I will do %lld trials\n", L, alpha, type, tot_trials);
   printf("box semiaxes=%f %f %f alpha=%f ntheta=%d nphi=%d\n", HardCyl[0].boxsax[0], HardCyl[0].boxsax[1], 
 	 HardCyl[0].boxsax[2], alpha, ntheta, nphi);
 #ifdef MPI
@@ -5168,9 +5249,9 @@ int main(int argc, char**argv)
   //printf("XI1[7][8]:%.15G \n", XI1[7][8]);
   /* we use as the reference system the body reference system of first particle */
 #ifdef EULER_ROT
-  place_AMYLOID(0.0, 0.0, 0.0, 1., 0., 1., 0., 1., 0., 0);      
+  place_HardCyl(0.0, 0.0, 0.0, 1., 0., 1., 0., 1., 0., 0);      
 #else
-  place_AMYLOID(0.0, 0.0, 0.0, 0., 0., 1., 0., 0);      
+  place_HardCyl(0.0, 0.0, 0.0, 0., 0., 1., 0., 0);      
 #endif
 #if 0
   fonsfact= alpha/(4.0*M_PI*sinh(alpha));
@@ -5268,12 +5349,14 @@ int main(int argc, char**argv)
 #if 1
       if (tt <= 1)
 	{
+#if 0
 #ifdef POVRAY
 	  sprintf(fname, "amyfibrils-%lld.pov", tt);
 #else
 	  sprintf(fname, "amyfibrils-%lld.mgl", tt);
 #endif
-	  saveAmyloidPovray(fname, L);
+	  //saveAmyloidPovray(fname, L);
+#endif
 	  //exit(-1);
 	}
 #endif
