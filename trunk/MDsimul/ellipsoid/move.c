@@ -5871,7 +5871,9 @@ extern double check_overlap_helices(int i, int j, double shift[3]);
 #ifdef MC_PERWER
 extern double check_overlap_pw(int i, int j, double shift[3]);
 #endif
+
 #if defined(POLYELLIPS)|| defined(HE_FAST_DIST)
+extern double pi_HE[3], pj_HE[3];
 extern double check_overlap_polyell(int i, int j, double shift[3]);
 #endif
 double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r1, double *r2, double *alpha,
@@ -6046,7 +6048,9 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   UpdateOrient(j, ti, RtB, Omega);
 #endif
 #endif
-  /* NOTA 17/04/19: inserire qui calcolo distanza nuovo!  */
+  /* NOTA 17/04/19: inserire qui un eventuale nuovo calcolo della distanza,
+   * notare che il calcolo basato sull'affinità non può essere utilizzato poiché
+   * un'affinità non "conserva" la distanza tra due superfici */
 #ifdef HE_FAST_DIST 
   ri[0]=rx[i];
   ri[1]=ry[i];
@@ -6063,7 +6067,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   for (k1=0; k1 < 3; k1++)
     {
       shift2[k1]=0;
-      for ( k2=0; k2 < 3; k2++)
+      for (k2=0; k2 < 3; k2++)
         {
           Ri[k1][k2] = R[i][k1][k2];
           Rj[k1][k2] = R[j][k1][k2];
@@ -6071,7 +6075,10 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
           R[j][k1][k2] = RtB[k1][k2];
       }  
     }
-  dist=check_overlap_polyell(i, j, shift2);
+  //METTERE LA NUOVA EVENTUALE ROUTINE DI CALCOLO DELLA DISTANZA QUI
+  dist=0;
+  ///////
+  //printf("===>t=%.15G d=%.15G\n", t, dist);
   rx[i]=ri[0];
   ry[i]=ri[1];
   rz[i]=ri[2];
@@ -6080,6 +6087,8 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
   rz[j]=rj[2];
   for (k1=0; k1 < 3; k1++)
     {
+      r1[k1] = pi_HE[k1];
+      r2[k1] = pj_HE[k1];
       for ( k2=0; k2 < 3; k2++)
         {
           R[i][k1][k2] = Ri[k1][k2];
@@ -6670,6 +6679,21 @@ retry:
       fprintf(f, "%.15G %.15G\n", t+t1, (segno > 0)?calc_norm(r12):-calc_norm(r12));
       fclose(f);
       saveStore(t+t1);
+    }
+#endif
+#if 0 && defined(HE_FAST_DIST) 
+  if (fabs(calc_norm(r12) - fabs(dist)) > 1E-12)
+    {
+      printf("distold=%.16G distfast=%.16G\n", (segno>0)?calc_norm(r12):-calc_norm(r12), dist);
+    } 
+#endif
+#if 0
+    {
+      double gi[3], gj[3];
+      calc_grad(r1, rA, Xa, gi);
+      calc_grad(r2, rB, Xb, gj);
+      printf("OLD gi=%.15G %.15G %.15G gj=%.15G %.15G %.15G\n", gi[0], gi[1], gi[2], gj[0], gj[1], gj[2]);
+      printf("OLD gi/gj=%.15G %.15G %.15G\n", gi[0]/gj[0], gi[1]/gj[1], gi[2]/gj[2]);
     }
 #endif
   if (segno > 0)
@@ -7825,7 +7849,7 @@ int locate_contact(int i, int j, double shift[3], double t1, double t2, double v
   //printf("cazzarola prima i=%d j=%d\n", i, j);
   d = calcDistNeg(t, t1, i, j, shift, r1, r2, &alpha, vecgd, 1);
   //printf("cazzarola dopo d=%.15G\n", d);
-  //printf("t=%.15G t1=%.15G rA=%.15G %.15G %.15G rB=%.15G %.15G %.15G d=%.15G\n", t, t1, rx[i], ry[i], rz[i],
+  //printf("t=%.15G t1=%.15G t2=%.15G rA=%.15G %.15G %.15G rB=%.15G %.15G %.15G d=%.15G\n", t, t1, t2, rx[i], ry[i], rz[i],
   //	 rx[j], ry[j], rz[j], d);
 #if 1
 #if 0
