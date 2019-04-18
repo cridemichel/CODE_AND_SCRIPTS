@@ -1,3 +1,4 @@
+#define Sqr(x) ((x)*(x))
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
 #ifdef MC_QUART_USE_ANALYTIC

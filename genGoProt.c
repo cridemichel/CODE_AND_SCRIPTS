@@ -490,7 +490,7 @@ void calcItens(double pos[4][3], double m[4], double I[3][3])
 }
 void sort_eigenvect(double R[3][3], double EV[3])
 {
-  /* sort from smallest eigenvalues to bigges */
+  /* sort from smallest eigenvalues to biggest */
   int i, j, k;
   double u[3], ev;
   for (i=0; i < 2; i++)

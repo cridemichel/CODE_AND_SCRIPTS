@@ -15,7 +15,6 @@ public:
   int pidx;
 };
 
- 
 #if 0
 template <class ntype> class extrapars
 {
