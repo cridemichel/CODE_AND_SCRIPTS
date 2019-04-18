@@ -12,6 +12,7 @@ double diamHC=2.0, lengthHC=2.0;
 #define Sqr(VAL_) ( (VAL_) * (VAL_) ) /* Sqr(x) = x^2 */
 //#define USEGSL
 #define GAUSS
+//#define HC_FAST
 #define EULER_ROT
 #define MCGAMMA
 #define PRINC_AXES
@@ -3053,8 +3054,8 @@ double calcDistNegHCopt(void)
 
   for (kk=0; kk < 3; kk++)
     {
-      ni[kk] = HardCyl[0].R[0][kk];
-      nj[kk] = HardCyl[1].R[0][kk];
+      ni[kk] = HardCyl[0].R[2][kk];
+      nj[kk] = HardCyl[1].R[2][kk];
     }
   Ci[0] = HardCyl[0].rcm[0];
   Ci[1] = HardCyl[0].rcm[1];
@@ -3156,8 +3157,8 @@ double calcDistNegHCdiff(void)
   // return calcDistNegHCsame(i, j, shift, retchk);
   for (kk=0; kk < 3; kk++)
     {
-      ni[kk] = HardCyl[0].R[0][kk];
-      nj[kk] = HardCyl[1].R[0][kk];
+      ni[kk] = HardCyl[0].R[2][kk];
+      nj[kk] = HardCyl[1].R[2][kk];
     }
   
   /* qui va cambiato */
@@ -4522,7 +4523,14 @@ double max2(double a, double b)
   else 
     return b;
 }
-
+double calcDistNegHC(void)
+{
+#ifdef HC_FAST
+  return calcDistNegHCopt();
+#else
+  return calcDistNegHCdiff();
+#endif
+}
 double integrandv1(double rcmx, double rcmy, double rcmz, 
 		    double phi12, int nphi12, double theta12, int ntheta12, double gamma12, int ngamma12,
 		    double alpha)
@@ -4548,7 +4556,7 @@ double integrandv1(double rcmx, double rcmy, double rcmz,
   if (calcDistBox(HardCyl[0].rcm,HardCyl[0].boxsax,HardCyl[0].R,
 		  HardCyl[1].rcm,HardCyl[1].boxsax,HardCyl[1].R) < 0.0)
     {
-      if (calcDistNegHCopt() < 0.0)
+      if (calcDistNegHC() < 0.0)
 	{
 	  switch (type)
 	    {
@@ -4905,16 +4913,16 @@ int main(int argc, char**argv)
     {
 #ifdef GAUSS
 #ifdef QFGAUSS
-      printf("syntax:  ELCONST_HC <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
+      printf("syntax:  ELCONST_HC <diameter> <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
 #else
 #ifdef MCGAMMA
-      printf("syntax:  ELCONST_HC <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta]\n");
+      printf("syntax:  ELCONST_HC <diameter> <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta]\n");
 #else
-      printf("syntax:  ELCONST_HC <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
+      printf("syntax:  ELCONST_HC <diameter> <length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
 #endif
 #endif
 #else
-      printf("syntax:  ELCONST_HC <length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
+      printf("syntax:  ELCONST_HC <diameter> <length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
 #endif
       exit(1);
     }
@@ -4981,7 +4989,7 @@ int main(int argc, char**argv)
   ttini = 0;
 
   init_distbox();
-  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(HardCyl[0].boxsax[0])+Sqr(HardCyl[0].boxsax[1])+Sqr(HardCyl[0].boxsax[2]))*2.0;
+  L=Lx=Ly=Lz=1.05*2.0*sqrt(Sqr(HardCyl[0].boxsax[0])+Sqr(HardCyl[0].boxsax[1])+Sqr(HardCyl[0].boxsax[2]))*3.0;
 #if 0 
   Lx=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[0];
   Ly=1.05*2.0*sqrt(Sqr(DNADall[0].sax[0])+Sqr(DNADall[0].sax[1])+Sqr(DNADall[0].sax[2]))*2.0+2.0*DNADall[0].sax[1];
