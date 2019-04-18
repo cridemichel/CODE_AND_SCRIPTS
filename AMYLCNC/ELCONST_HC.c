@@ -8,7 +8,16 @@
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
 #define LDLT_OPT_CUBIC
-
+//#define HC_DIST_OPT
+#include<float.h>
+#include<complex.h>
+//#ifdef __clang__
+//#define complex _Complex
+//#endif
+#define complex _Complex
+#ifndef CMPLX
+#define CMPLX(x,y) (x)+(y)*I
+#endif
 //#define USEGSL
 //#define ALBERTA
 #ifdef USEGSL
@@ -53,6 +62,7 @@ double cchrom, csalt = 0.0; /* concentrazione del sale aggiunto molare */
 double ximanning, deltamann; /* Debye screening length */
 /* charge on phosphate groups */
 double zeta_a, zeta_b;
+
 double Ucoul(double rab)
 {
   //return esq_eps_prime10/rab;
@@ -178,7 +188,8 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
-void body2labHC(int i, double xp[3], double x[3], double rO[3], double R[3][3])
+
+void body2labHC(double xp[3], double x[3], double rO[3], double R[3][3])
 {
   int k1, k2;
   for (k1=0; k1 < 3; k1++)
@@ -222,6 +233,10 @@ void vectProdVec(double *A, double *B, double *C)
   C[1] = A[2] * B[0] - A[0] * B[2];
   C[2] = A[0] * B[1] - A[1] * B[0];
 }
+void print_vec(char *lbl, double *V)
+{
+  printf("%s(%.15G,%.15G,%.15G)\n", lbl, V[0], V[1], V[2]);
+}
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -230,24 +245,35 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
+double perpcomp(double *V, double *C, double *n)
+{
+  int kk2;
+  double dsc[3], sp, dscperp[3];
+  for (kk2=0; kk2 < 3; kk2++)
+    dsc[kk2] = V[kk2] - C[kk2]; 
+  sp = scalProd(dsc, n);
+  for (kk2=0; kk2 < 3; kk2++)
+    dscperp[kk2] = dsc[kk2]-sp*n[kk2];
+  return calc_norm(dscperp);
+}
 void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
   const int meshpts = 8;
-  double Pj[3], Rj[3][3], AiCi[3];
-  int kk, k1, k2, nn;
+  double Pj[3], Rj[3][3];
+  int kk, nn;
   static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3];
   static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
       {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
       {0,-1},{0.707106781186547,-0.707106781186547}};*/
-  double PjCini, PjCi[3], normPjCi, d, mindist=-1.0; 
+  double PjCini, PjCi[3], d, mindist=-1.0; 
   versor_to_R_sym(nj[0],nj[1],nj[2], Rj); 
 #if 1
   if (firstcall)
     {
-      mesh = malloc(sizeof(double*)*meshpts);
+      mesh = (double **)malloc(sizeof(double*)*meshpts);
       for (nn=0; nn < meshpts; nn++)
-	mesh[nn] = malloc(sizeof(double)*3);
+	mesh[nn] = (double*)malloc(sizeof(double)*3);
       firstcall=0;
       dth = acos(0)*4.0/((double)meshpts);
 
@@ -265,7 +291,7 @@ void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], do
       //xp[0] = 0.0;
       xp[1] = D*0.5*mesh[nn][0];
       xp[2] = D*0.5*mesh[nn][1];
-      body2labHC(0, xp, Pj, Dj, Rj);    
+      body2labHC(xp, Pj, Dj, Rj);    
       for (kk=0; kk < 3; kk++)
 	PjCi[kk] = Pj[kk] - Ci[kk];
       //normPjCi = calc_norm(PjCi);
@@ -297,15 +323,14 @@ void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], do
   printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
 #endif 
 }
-#ifdef HC_DIST_OPT
+double diamHC=2.0, lengthHC=2.0;
 double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, j2, kk; 
   double sp, normCiCj, CiCj[3], VV[3], Q1;
-  double DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], Dini, Pi[3], N[3], Pj[3], normN;
+  double DiN, DjN, niN[3], njN[3], Djnj, Dini, Pi[3], N[3], Pj[3], normN;
   double normNSq, PiPj[3], normPiPj, Q2, PjDj[3], normPiDi, normPjDj, PiDi[3];
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
-  numcallsDD++;
   for (kk=0; kk < 3; kk++)
     {
       CiCj[kk] = Ci[kk] - Cj[kk];
@@ -410,7 +435,6 @@ double rimrim(double D, double L, double Ci[3],double ni[3], double Cj[3], doubl
   double ViVj[3], lambdai, lambdaj, ninj;
   double CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3]; 
   /* case A.3 rim-rim overlap */
-  numcallsRR++;
   for (kk=0; kk < 3; kk++)
     {
       CiCj[kk] = Ci[kk] - Cj[kk];
@@ -448,8 +472,8 @@ void solve_cubic_analytic(double *coeff, complex double* sol)
 {
   /* solve the cubic coeff[3]*x^3 + coeff[2]*x^2 +  coeff[1]*x + coeff[0] = 0
    * according to the method described in Numerical Recipe book */  
-  ntype a, b, c, Q, R, theta, Q3, R2, A, B;
-  const ntype sqrt32=sqrt((ntype)3.0)/2.0;
+  double a, b, c, Q, R, theta, Q3, R2, A, B;
+  const double sqrt32=sqrt((double)3.0)/2.0;
   a = coeff[2]/coeff[3];
   b = coeff[1]/coeff[3];
   c = coeff[0]/coeff[3];
@@ -466,53 +490,26 @@ void solve_cubic_analytic(double *coeff, complex double* sol)
     }
   else
     {
-      A = -copysign((ntype)1.0,R)*pow(abs(R) + sqrt(R2 - Q3),1.0/3.0);
+      A = -copysign((double)1.0,R)*pow(fabs(R) + sqrt(R2 - Q3),1.0/3.0);
       if (A==0.0)
 	B=0.0;
       else
 	B = Q/A;
       sol[0] = (A+B) - a/3.0;
-      sol[1] = cmplx(-0.5*(A+B)-a/3.0,sqrt32*(A-B));
+      sol[1] = CMPLX(-0.5*(A+B)-a/3.0,sqrt32*(A-B));
       sol[2] = conj(sol[1]);
       //sol[1] = -0.5*(A+B)-a/3.0+cmplx(0,1)*sqrt32*(A-B);
       //sol[2] = -0.5*(A+B)-a/3.0-cmplx(0,1)*sqrt32*(A-B);
     }
 }
-void oqs_solve_quadratic(double a, double b, complex double *roots)
-{ 
-  ntype div,sqrtd,diskr,zmax,zmin;
-  diskr=a*a-4*b;   
-  if(diskr>=0.0)
-    {
-      if(a>=0.0)
-	div=-a-sqrt(diskr);
-      else
-	div=-a+sqrt(diskr);
-
-      zmax=div/2;
-
-      if(zmax==0.0)
-	zmin=0.0;
-      else
-	zmin=b/zmax;
-      roots[0]=cmplx(zmax,0.0);
-      roots[1]=cmplx(zmin,0.0);
-    } 
-  else
-    {   
-      sqrtd = sqrt(-diskr);
-      roots[0]=cmplx(-a/2,sqrtd/2);
-      roots[1]=cmplx(-a/2,-sqrtd/2);      
-    }   
-}
+void oqs_solve_quadratic(double a, double b, complex double roots[2]);
 
 void solve_cubic(double *coeff, int *numsol, double sol[3])
 {
-  const double sqrt3=sqrt(3.0);
-  int ok;
+  int k;
   /* solution from Abramovitz */
-  double a, b, s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
-  double complex cs1, cs2, s1ps2, s1ms2, csol[3];
+  double a, b;
+  double complex csol[3];
   if (coeff[3] == 0.0)
     {
       printf("[WARNING] fallback to quadratic from cubic\n");
@@ -541,7 +538,6 @@ void solve_cubic(double *coeff, int *numsol, double sol[3])
 	}
     }
 }
-#include<float.h>
 const double cubic_rescal_fact = 3.488062113727083E+102; //= pow(DBL_MAX,1.0/3.0)/1.618034;
 const double quart_rescal_fact = 7.156344627944542E+76; // = pow(DBL_MAX,1.0/4.0)/1.618034;
 const double macheps = 2.2204460492503131E-16; // DBL_EPSILON
@@ -1190,13 +1186,11 @@ void wrap_oqs_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 {
   //double ERRTHR=1E-10;
   double complex csol[4];
-  double sum, sum2;
-  long double complex csoll[4];
-  long double coeffl[5];
-  int k, planB=0;//, printsol;
+  int k; //, printsol;
   oqs_quartic_solver(coeff, csol);
   //quarticRoots(coeff, numsol, csol);
   *numsol=0;
+#if 0
   for (k=0; k < 4; k++)
     {
       if (isnan(creal(csol[k]))||isnan(cimag(csol[k]))|| 
@@ -1226,6 +1220,7 @@ void wrap_oqs_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 	}
       printf("[USING HQRL] AFTER sum=%.20G\n", sum2);
     }
+#endif
   for (k=0; k < 4; k++)
     {
       if (cimag(csol[k])==0)
@@ -1237,17 +1232,10 @@ void wrap_oqs_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 }
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
-  int ok, k;
   //double EPS=2.2204460492503131E-16;
-  double target;
-  complex double csol[3];
   if (coeff[4]==0)
     {
-      solve_cubic(coeff, numsol, csol);
-      for (k=0; k < *numsol; k++)
-        {
-          solqua[*numsol] = creal(csol[k]);
-        }
+      solve_cubic(coeff, numsol, solqua);
       return;
     }
   wrap_oqs_quartic_solver(coeff, numsol, solqua);   
@@ -1370,11 +1358,66 @@ void rotate_axes_on_plane(double RR[3][3])
     for (k2 = 0; k2 < 3; k2++)
      RR[k1][k2] = Ro[k1][k2];
 }
+void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D)
+{
+  int k, kk1, kk;
+  double u[3]; 
+  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDj[3], VV[3], ragg;
+  /* first row vector */
+  for (k=0; k < 3; k++)
+    R[0][k] = nj[k];
+
+  /* N.B. qui faccio uno step dell'algorito di Ibarra semplificato per
+   * determinare l'asse y del riferimenti del disco (l'asse x è l'asse perpendicolare
+   * al disco e l'asse z si ottiene con il prodotto vettore dell'asse x e y) */
+#if 1
+  for (kk=0; kk < 3; kk++)
+    DjCi[kk] = Dj[kk] - Ci[kk];
+  normDjCi = calc_norm(DjCi);
+  DjCini = scalProd(DjCi,ni);
+
+  for (kk1 = 0; kk1 < 3; kk1++)
+    Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
+  for (kk1=0; kk1 < 3; kk1++)
+    AiDj[kk1] = Ai[kk1] - Dj[kk1]; 
+  AiDjnj = scalProd(AiDj, nj);
+  for (kk1=0; kk1 < 3; kk1++)
+    {
+      VV[kk1] = AiDj[kk1] - AiDjnj*nj[kk1];
+    }
+  //for (kk1=0; kk1 < 3; kk1++)
+    //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+  ragg = calc_norm(VV);
+
+  for(k=0;k<3;k++)
+    {
+      R[1][k] = VV[k]/ragg;
+      //R[1][k] = VV[k];
+      //TnCi[k] = Tnew[k]-Ci[k];
+    }
+#if 0
+  ragg = scalProd(TnCi,ni);
+  for (k=0;k<3;k++)
+    Ai[k] = Ci[k] + ragg*ni[k];
+#endif
+#else
+
+ for (k=0; k < 3; k++)
+    dsc[k] = Ci[k] - Dj[k]; 
+  sp = scalProd(dsc, nj);
+  for (k=0; k < 3; k++)
+    R[1][k] = dsc[k] - sp*nj[k];
+#endif  
+  //printf("scalProd=%.15G\n", scalProd(R[1],R[0]));
+  vectProdVec(R[0], R[1], u);
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+}
 void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D, double *Tj, int MAXITS)
 {
-  int k, kk1, kk2, kk, its;
-  double u[3], norm, sp, dsc[3]; 
-  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
+  int k, kk1, kk, its;
+  double u[3]; 
+  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDj[3], VV[3], ragg;
   /* first row vector */
   for (k=0; k < 3; k++)
     R[0][k] = nj[k];
@@ -1458,14 +1501,13 @@ double test_overlap_parall_cyl(double *Ci, double *ni, double *Dj, double *nj, d
 
 double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
-  const double FALLBACK_THR = 1E-4;
-  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2], uy[3];
-  double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], uy[3];
+  double dsc[3], c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
+  double diff[2][4], maxdiff[2], sumdiff[2];
   double Cip[2][3], nip[2][3], norm, Rl[3][3];
   double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
@@ -1688,11 +1730,13 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       if (diff[0][kk1] > maxdiff[0] || kk1==0)
 	maxdiff[0] = diff[0][kk1];  
     }
+#if 0
   if (tinyimagGBL)
     {
       //printf("qui\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
+#endif
   solset=0;
   if (fallback)
     {
@@ -1990,14 +2034,13 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 }
 double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
-  const double FALLBACK_THR = 1E-4;
-  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
-  double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4];
+  double dsc[3], c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
+  double diff[2][4], maxdiff[2], sumdiff[2];
   double Cip[3], nip[3], norm, Rl[3][3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -2338,11 +2381,14 @@ double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double 
 	maxdiff[0] = diff[0][kk1];  
 #endif
     }
+#if 0
   if (tinyimagGBL)
     {
       //printf("BOHHHH\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
+#endif
+
   solset=0;
 #if 1
   if (fallback)
@@ -2568,11 +2614,9 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, kk, j2, k2, ignore[2];
-  char fileop2[512];
   double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
-  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
+  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3];
 
-  numcallsRD++;
 
   for (j1=0; j1 < 2; j1++)
     {
@@ -2683,6 +2727,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	    }
 
 	  if (rimdiskone(D, L, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
+            return -1;
 	}
       if (j1==1)
 	{
@@ -2703,8 +2748,6 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 
 double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
 {
-  static int firstcall=1;
-  const int MAX_ITERATIONS = 1000000;
 #ifdef MC_HC_SPHERO_OPT
   int rim;
   double sphov;
@@ -2719,22 +2762,21 @@ double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
 #endif
   *retchk = 0; 
 
-  numcallsHC += 1.0; 
   for (kk=0; kk < 3; kk++)
     {
-      ni[kk] = R[i][0][kk];
-      nj[kk] = R[j][0][kk];
+      ni[kk] = CHROMall[0].R[0][kk];
+      nj[kk] = CHROMall[1].R[0][kk];
     }
-  Ci[0] = rx[i];
-  Ci[1] = ry[i];
-  Ci[2] = rz[i]; 
-  Cj[0] = rx[j] + shift[0];
-  Cj[1] = ry[j] + shift[1];
-  Cj[2] = rz[j] + shift[2]; 
-  L = 2.0*typesArr[typeOfPart[i]].sax[0];
-  D = 2.0*typesArr[typeOfPart[i]].sax[1];
+  Ci[0] = CHROMall[0].rcm[0];
+  Ci[1] = CHROMall[0].rcm[1];
+  Ci[2] = CHROMall[0].rcm[2];
+  Cj[0] = CHROMall[1].rcm[0];
+  Cj[1] = CHROMall[1].rcm[1];
+  Cj[2] = CHROMall[1].rcm[2]; 
+  L = 2.0*CHROMall[0].sax[0];
+  D = 2.0*CHROMall[0].sax[1];
   
-  meshptsGbl = MESH_PTS;
+  //meshptsGbl = MESH_PTS;
   for (kk=0; kk < 3; kk++)
     {
       /* centers of mass of disks */
@@ -2778,9 +2820,7 @@ double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
  /* =================================== >>> Part B <<< ========================= */
   return 1;
 }
-#else
 /* cylinder overlap routines here */
-double diamHC=2.0, lengthHC=2.0;
 double calcDistNegHCdiff(void)
 {
   const int MAX_ITERATIONS = 1000000;
@@ -2789,19 +2829,17 @@ double calcDistNegHCdiff(void)
   double sphov;
 #endif
   int it, k2;
-  double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
+  double normDjCi, normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
   double LiTmp, LjTmp, DiamiTmp, DiamjTmp;
-  double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
-  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
-  double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
+  double normPiPj, Ui[3], DjCi[3];
+  double PiDi[3], PjDj[3], Ai[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
   double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
-  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
-  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
-  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
-  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
-  double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
-  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
+  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3];
+  double Dini, Tjm_perp[3];
+  double DjCini;
+  double Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
   double normCiCj;	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
   int kk, j1, j2;
@@ -3136,13 +3174,13 @@ double calcDistNegHCdiff(void)
     }
   return 1;
 }
-#endif
 
 /* ------------------------------- */
 static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
         (iminarg1) : (iminarg2))
 #define MAXBIT 30 
+#include<complex.h>
 #define MAXDIM 6
 void sobseq(int *n, double x[])
 /*When n is negative, internally initializes a set of MAXBIT direction numbers for each of MAXDIM different Sobol’ sequences. When n is positive (but ≤MAXDIM), returns as the vector x[1..n] the next values from n of these sequences. (n must not be changed between initializations.)*/
@@ -3480,7 +3518,7 @@ void print_matrix(double M[3][3], int n)
 void versor_to_R_sym(double ox, double oy, double oz, double R[3][3])
 {
   int k;
-  double angle, u[3], sp, norm, up[3], xx, yy;
+  double u[3], sp, norm;
   /* first row vector (note that cylinder symmetry axis which is x) */
   R[0][0] = ox;
   R[0][1] = oy;
@@ -3540,7 +3578,7 @@ void versor_to_R_sym(double ox, double oy, double oz, double R[3][3])
 void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
 {
   int k;
-  double angle, u[3], sp, norm, up[3], xx, yy;
+  double u[3], sp, norm;
 #ifdef CHROM_ELEC
   double Rout[3][3];
   int k1, k2;
@@ -3611,15 +3649,13 @@ void versor_to_R(double ox, double oy, double oz, double R[3][3], double gamma)
 double RMDNA[2][3][3];
 void place_CHROM(double x, double y, double z, double ux, double uy, double uz, int which, double gamma)
 {
-  double xp[3], rO[3], xl[3];
+  double rO[3];
   double R[3][3];
   int k1, k2;
 #ifdef DEBUG
   FILE *fd;
   char fn[128];
 #endif
-  FILE *f;
-  int i; 
   rO[0] = x;
   rO[1] = y;
   rO[2] = z;
@@ -3699,7 +3735,7 @@ double theta_onsager(double alpha)
   /* the comparison function g(theta) is just g(theta)=1 */ 
   static int first = 1;
   static double f0;
-  double pi, y, f, theta, dtheta;
+  double pi, y, f, theta;
   //printf("alpha=%f\n", alpha);
   pi = acos(0.0)*2.0;
   if (first == 1)
@@ -3727,7 +3763,6 @@ double distro[10000];
 const int nfons=100;
 void orient(double *omx, double *omy, double* omz)
 {
-  int i;
   //double inert;                 /* momentum of inertia of the molecule */
   //double norm, dot, osq, o, mean;
   double  xisq, xi1, xi2, xi;
@@ -3824,7 +3859,7 @@ double theta_donsager(double alpha, int domain)
   /* the comparison function g(theta) is just g(theta)=1 */ 
   static int first = 1;
   static double f0;
-  double pi, y, f, theta, dtheta;
+  double pi, y, f, theta;
   //printf("alpha=%f\n", alpha);
   pi = acos(0.0)*2.0;
   if (first == 1)
@@ -3895,8 +3930,8 @@ double estimate_maximum_dfons(double alpha)
 }
 void init_distbox(void)
 {
-  int i, k;
-  double max_x, max_y, max_z, distx, disty, distz;
+  int k;
+  double max_x, max_y, max_z;
   max_x = 0.5*lengthHC;
   //printf("max_x=%f len=%f\n", max_x, lengthHC);
   max_y = 0.5*diamHC;
@@ -4022,12 +4057,12 @@ int main(int argc, char**argv)
   int k1, k2, kk;
 #endif
   double Lx, Ly, Lz;
-  FILE *fin, *fout, *f, *fread;
-  int ncontrib, cc, k, i, j, overlap, contrib, cont=0, nfrarg;
+  FILE *fout, *fread;
+  int ncontrib, cc, overlap, contrib, cont=0, nfrarg;
   long long int fileoutits, outits;
-  char fnin[1024],fnout[256];
-  double dummydbl, segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
-  double sigijsq, distsq, vexcl=0.0, vexclel=0.0, factor, dth, th;
+  char fnout[256];
+  double segno, u1x, u1y, u1z, u2x, u2y, u2z, rcmx, rcmy, rcmz;
+  double vexcl=0.0, factor;
   /* syntax:  CG-DNA-k2K22 <pdb file> <CHROM length> <tot_trials> <alpha> <type:0=v0, 1=v1, 2=v2> <outits> */
   if (argc < 7)
     {
