@@ -107,17 +107,17 @@ void init_distbox(void)
 {
   int k;
   double max_x, max_y, max_z;
-  max_x = 0.5*lengthHC;
+  max_x = 0.5*diamHC;
   //printf("max_x=%f len=%f\n", max_x, lengthHC);
   max_y = 0.5*diamHC;
-  max_z = 0.5*diamHC;
+  max_z = 0.5*lengthHC;
  
   //printf("maxax=%f %f %f\n", max_x, max_y, max_z);
   for (k=0; k < 2; k++)
     {
-      HardCyl[k].sax[0] = lengthHC*0.5;
+      HardCyl[k].sax[0] = diamHC*0.5;
       HardCyl[k].sax[1] = diamHC*0.5;
-      HardCyl[k].sax[2] = diamHC*0.5;
+      HardCyl[k].sax[2] = lengthHC*0.5;
       HardCyl[k].boxsax[0] = max_x;
       HardCyl[k].boxsax[1] = max_y;
       HardCyl[k].boxsax[2] = max_z;
