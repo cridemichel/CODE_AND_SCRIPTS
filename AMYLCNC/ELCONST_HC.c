@@ -1,23 +1,7 @@
-//#include "./G-DNA-k2K22.h"
-/* ====================================== >>> PARAMETRI FIBRILLA  <<< ===================================== */
+/* ====================================== >>> PARAMETRI DEFAULT HC <<< ===================================== */
 
 //#define POVRAY
-
-//#define NEW_MODEL
-#define AMY_LBOX_ALONG_AXIS 2.0 /* lunghezza del box lungo l'asse dell'elica della fibrilla 
-				   (questo parametro dipende dal livello di coarse-graining e comunque deve essere 
-				   abbastanza più piccolo del pitch delle fibrille )
-				   */ 
-
-#define AMY_NUM_PROTO 2 // numero di protofilamenti che compongono la fibrilla (2 è la popolazione più abbondante)
-
-#define AMY_D_PROTO 2.0 // diametro del protofilamento (2.0 nm)
-
-#define AMY_RIBBON_THICK 2.0 // spessore del ribbon in nm (2.0 nm)
-
-#define AMY_PITCH 70.0 // pitch della fibrilla in nm 
-
-#define AMY_PERS_LEN 1980 // persistence length in nm
+double diamHC=2.0, lengthHC=2.0;
 /* ========================================================================================================== */
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,11 +19,6 @@
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
-#if defined(MPI)
-int MPIpid;
-extern int my_rank;
-extern int numOfProcs; /* number of processeses in a communicator */
-#endif 
 //#define ELEC
 //#define NO_INTERP
 double **XI1, **XI2, **XI3, **XI4, **XI5, **XI6;
@@ -83,7 +62,6 @@ double scalProd(double *A, double *B)
     R += A[kk]*B[kk];
   return R;
 }
-double diamHC, lengthHC;
 void init_distbox(void)
 {
   int k;
@@ -522,7 +500,6 @@ void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], do
   printf("norm AiCi=%.15G sp=%.15G\n", calc_norm(AiCi), scalProd(AiCi,nj));
 #endif 
 }
-double diamHC=2.0, lengthHC=2.0;
 double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, j2, kk; 
@@ -2962,17 +2939,17 @@ double calcDistNegHCopt(void)
 
   for (kk=0; kk < 3; kk++)
     {
-      ni[kk] = CHROMall[0].R[0][kk];
-      nj[kk] = CHROMall[1].R[0][kk];
+      ni[kk] = HardCyl[0].R[0][kk];
+      nj[kk] = HardCyl[1].R[0][kk];
     }
-  Ci[0] = CHROMall[0].rcm[0];
-  Ci[1] = CHROMall[0].rcm[1];
-  Ci[2] = CHROMall[0].rcm[2];
-  Cj[0] = CHROMall[1].rcm[0];
-  Cj[1] = CHROMall[1].rcm[1];
-  Cj[2] = CHROMall[1].rcm[2]; 
-  L = 2.0*CHROMall[0].sax[0];
-  D = 2.0*CHROMall[0].sax[1];
+  Ci[0] = HardCyl[0].rcm[0];
+  Ci[1] = HardCyl[0].rcm[1];
+  Ci[2] = HardCyl[0].rcm[2];
+  Cj[0] = HardCyl[1].rcm[0];
+  Cj[1] = HardCyl[1].rcm[1];
+  Cj[2] = HardCyl[1].rcm[2]; 
+  L = 2.0*HardCyl[0].sax[0];
+  D = 2.0*HardCyl[0].sax[1];
   
   //meshptsGbl = MESH_PTS;
   for (kk=0; kk < 3; kk++)
@@ -3046,21 +3023,21 @@ double calcDistNegHCdiff(void)
   // return calcDistNegHCsame(i, j, shift, retchk);
   for (kk=0; kk < 3; kk++)
     {
-      ni[kk] = CHROMall[0].R[0][kk];
-      nj[kk] = CHROMall[1].R[0][kk];
+      ni[kk] = HardCyl[0].R[0][kk];
+      nj[kk] = HardCyl[1].R[0][kk];
     }
   
   /* qui va cambiato */
-  Ci[0] = CHROMall[0].rcm[0];
-  Ci[1] = CHROMall[0].rcm[1];
-  Ci[2] = CHROMall[0].rcm[2];
-  Cj[0] = CHROMall[1].rcm[0];
-  Cj[1] = CHROMall[1].rcm[1];
-  Cj[2] = CHROMall[1].rcm[2]; 
-  Li = 2.0*CHROMall[0].sax[0];
-  Diami = 2.0*CHROMall[0].sax[1];
-  Lj = 2.0*CHROMall[1].sax[0];
-  Diamj = 2.0*CHROMall[1].sax[1];
+  Ci[0] = HardCyl[0].rcm[0];
+  Ci[1] = HardCyl[0].rcm[1];
+  Ci[2] = HardCyl[0].rcm[2];
+  Cj[0] = HardCyl[1].rcm[0];
+  Cj[1] = HardCyl[1].rcm[1];
+  Cj[2] = HardCyl[1].rcm[2]; 
+  Li = 2.0*HardCyl[0].sax[0];
+  Diami = 2.0*HardCyl[0].sax[1];
+  Lj = 2.0*HardCyl[1].sax[0];
+  Diamj = 2.0*HardCyl[1].sax[1];
   //printf("r1=%f %f %f r2=%f %f %f\n",CHROMall[0].rcm[0],CHROMall[0].rcm[1],CHROMall[0].rcm[2],
   //  CHROMall[1].rcm[0],CHROMall[1].rcm[1],CHROMall[1].rcm[2]);
   //printf("Li=%f Di=%f Lj=%f Dj=%f\n", Li, Diami, Li, Diamj);
@@ -4847,46 +4824,47 @@ int main(int argc, char**argv)
     {
 #ifdef GAUSS
 #ifdef QFGAUSS
-      printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
+      printf("syntax:  ELCONST_HC <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [rcmx] [rcmy] [rcmz] \n");
 #else
 #ifdef MCGAMMA
-      printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta]\n");
+      printf("syntax:  ELCONST_HC <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta]\n");
 #else
-      printf("syntax:  CG-AMYLOID-k2K22 <AMYLOID length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
+      printf("syntax:  ELCONST_HC <length>  <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [nphi] [ntheta] [ngamma]\n");
 #endif
 #endif
 #else
-      printf("syntax:  CG-DNA-k2K22 <AMYLOID length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
+      printf("syntax:  ELCONST_HC <length> <alpha> <tot_trials> <type:0=v0, 1=v1, 2=v2(K22) 3=v2(K11) 4=v2(K33)> <fileoutits> [outits] [romb-tol]\n");
 #endif
       exit(1);
     }
-  nL=len=atoi(argv[1]);
-  alpha = atof(argv[2]);
-  tot_trials=atoll(argv[3]);
-  type = atoi(argv[4]);
-  fileoutits = atoll(argv[5]);
+  diamHC=atof(argv[1]);
+  lengthHC=atof(argv[2]);
+  alpha = atof(argv[3]);
+  tot_trials=atoll(argv[4]);
+  type = atoi(argv[5]);
+  fileoutits = atoll(argv[6]);
   
-  if (argc <= 6)
+  if (argc <= 7)
     outits=100*fileoutits;
   else
-    outits = atoll(argv[6]);
+    outits = atoll(argv[7]);
 #ifdef GAUSS 
-  if (argc <= 7)
+  if (argc <= 8)
     nphi = 10;
   else
-    nphi = atoi(argv[7]);
-  if (argc <= 8)
+    nphi = atoi(argv[8]);
+  if (argc <= 9)
     ntheta = 10;
   else
     {
-      ntheta = atoi(argv[8]);
+      ntheta = atoi(argv[9]);
     }
   printf("qui argc=%d\n", argc);
 #if !defined(MCGAMMA)  && !defined(QFGAUSS)
-  if (argc <= 9)
+  if (argc <= 10)
     ngamma = 10;
   else
-    ngamma = atoi(argv[9]);
+    ngamma = atoi(argv[10]);
 #endif
 
 #ifdef QFGAUSS
