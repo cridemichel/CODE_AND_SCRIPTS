@@ -7515,6 +7515,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      ec_uz[i] = oz;
 	    }
 #else
+#if MC_ELCONST_FIXED
+          orient_onsager(&ox, &oy, &oz, alpha);
+          ec_segno[i] = 1.0;
+          ec_ux[i] = ox;
+          ec_uy[i] = oy;
+          ec_uz[i] = oz;
+#else
 	  if (i == cur_ii || i == cur_jj)
 	    {
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
@@ -7530,6 +7537,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	      ec_uy[i] = oy;
 	      ec_uz[i] = oz;
 	    }
+#endif
 #endif
 	}
 #endif
@@ -10362,7 +10370,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
       ry[0] = 0;
       rz[0] = 0;
       if (cur_ii==0 || cur_jj==0)
-	orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
+        orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
       else
 	{
 	  orient_onsager(&ox, &oy, &oz, alpha);
@@ -10734,6 +10742,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 	    //orient_onsager(&ox, &oy, &oz, alpha);
 	    ec_segno[0] = 1.0;
 #else
+#ifdef MC_ELCONST_FIXED
+            orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
+#else
 	    if (cur_ii==0 || cur_jj==0)
 	      orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0])); 
 	    else
@@ -10741,6 +10752,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		orient_onsager(&ox, &oy, &oz, alpha);
 		ec_segno[0] = 1.0;
 	      }
+#endif
 #endif
 	    ec_ux[0] = ox;
 	    ec_uy[0] = oy;
@@ -10862,6 +10874,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    //orient_onsager(&ox, &oy, &oz, alpha);
 		    ec_segno[i] = 1.0;
 #else
+#ifdef MC_ELCONST_FIXED
+                    orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
+#else
 		    if (i == cur_jj || i == cur_ii)
 		      {
 			orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[i]));
@@ -10871,6 +10886,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 			orient_onsager(&ox, &oy, &oz, alpha);
 			ec_segno[i] = 1.0;
 		      }
+#endif
 #endif
 		    ec_ux[i] = ox;
 		    ec_uy[i] = oy;
