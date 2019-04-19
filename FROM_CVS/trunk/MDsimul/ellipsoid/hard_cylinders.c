@@ -3101,56 +3101,7 @@ void solve_quadratic_cmplx(double coeff[3], complex double *sol)
     }
 }
 
-#if 0
 void solve_quadratic(double coeff[3], int *numsol, double *sol)
-{
-  double delta, a2inv, sqrtd;
-  delta = Sqr(coeff[1]) - 4.0*coeff[2]*coeff[0];
-  if (delta > 0.0)
-    {
-      sqrtd = sqrt(delta);
-      a2inv = 1.0/(2.0*coeff[2]);
-      sol[0] = (-coeff[1]+sqrtd)*a2inv;
-      sol[1] = (-coeff[1]-sqrtd)*a2inv; 
-      *numsol = 2;
-    } 
-  else if (delta == 0)
-    {
-      sol[0] = -coeff[1]/(2.0*coeff[2]);
-      *numsol = 1;
-    }
-  else
-    {
-      *numsol = 0;
-    }
-}
-#else
-void solve_quadratic(double coeff[3], int *numsol, double *sol)
-{
-  /* numeric error safe version of solve_quadratic from Numerical Recipe */
-  double delta, a, b, c, q;
-  a = coeff[2];
-  b = coeff[1];
-  c = coeff[0];
-  delta = Sqr(b) - 4.0*a*c;
-  if (delta > 0.0)
-    {
-      q = -0.5*(b+copysign(1.0,b)*sqrt(delta));
-      sol[0] = q/a;
-      sol[1] = c/q;
-      *numsol = 2;
-    } 
-  else if (delta == 0)
-    {
-      sol[0] = -b/(2.0*a);
-      *numsol = 1;
-    }
-  else
-    {
-      *numsol = 0;
-    }
-}
-#endif
 void csolve_cubic(double *coeff, double complex sol[3])
 {
   const double sqrt3=sqrt(3.0);
