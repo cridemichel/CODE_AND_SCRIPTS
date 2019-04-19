@@ -24,7 +24,7 @@
 //#define USE_LAGUERRE
 //#define MC_DEBUG_HCALGO
 //#define MC_EXCHG_QUART_SOL
-#define MC_QUART_VERBOSE
+//#define MC_QUART_VERBOSE
 #define MC_QUART_HYBRID
 #define FAST_QUARTIC_SOLVER
 #define LDLT_OPT_CUBIC
@@ -3993,6 +3993,8 @@ double PowerM(double x, int n)
       exit(-1);
     }
 }
+extern int compare_func (const void *aa, const void *bb);
+#if 0
 int compare_func (const void *aa, const void *bb)
 {
   double ai, bi, temp;
@@ -4005,6 +4007,7 @@ int compare_func (const void *aa, const void *bb)
   else
     return -1;
 }
+#endif
 double polyquart(double x, double *coeff)
 {
   int k;
@@ -4553,7 +4556,8 @@ void hqrl(long double a[4][4], complex long double wri[4], int *ok, int n)
     }
 }
 
-
+extern void balance(double a[4][4], int n);
+#if 0
 void balance(double a[4][4], int n)
 {
   const double RADIX=FLT_RADIX;// numeric_limits<Doub>::radix;
@@ -4605,6 +4609,9 @@ void balance(double a[4][4], int n)
 	}
     }
 }
+#endif
+extern void hqr(double a[4][4], complex double wri[4], int *ok, int n);
+#if 0
 void hqr(double a[4][4], complex double wri[4], int *ok, int n)
 {
   int nn,m,l,k,j,its,i,mmin;
@@ -4795,6 +4802,7 @@ void hqr(double a[4][4], complex double wri[4], int *ok, int n)
       while (l+1 < nn);
     }
 }
+#endif
 #define MR 10
 #define MT 8
 void laguer(complex double a[], int m, complex double *x, int *its)
@@ -4971,6 +4979,8 @@ void QRfactorizationl(long double hess[4][4], complex long double sol[4], int *o
   balancel(hess, n);
   hqrl(hess, sol, ok, n);
 }
+extern void QRfactorization(double hess[4][4], complex double sol[4], int *ok, int n);
+#if 0
 void QRfactorization(double hess[4][4], complex double sol[4], int *ok, int n)
 {
   //int ok;
@@ -4998,6 +5008,7 @@ void QRfactorization(double hess[4][4], complex double sol[4], int *ok, int n)
   //sort(); 
 #endif
 }
+#endif
 int tinyimagGBL=0;
 
 void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], int *ok, int m)
@@ -5047,6 +5058,7 @@ void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], i
     tinyimagGBL=0;
   //gsl_poly_complex_workspace_free (w);
 }
+#if 0
 void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int m)
 {
 //void zrhqr(VecDoub_I &a, VecComplex_O &rt) Pm i
@@ -5101,6 +5113,7 @@ void solve_numrec(double coeff[5], int *numrealsol, double rsol[4], int *ok, int
     }
   //gsl_poly_complex_workspace_free (w);
 }
+#endif
 /* NOTA: nell'articolo dice di usare un buffer di 4 quindi in tutto 5 elementi, tuttavia
  * stando ai risultati mostrati sembra che abbia usato un buffer più grande che in effetti
  * garantisce una migliore convergenza dei casi ciclici */
@@ -7305,7 +7318,8 @@ void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
   long double complex csoll[4];
   long double coeffl[5];
   int k, planB=0;//, printsol;
-  LDLT_quartic(coeff, csol);
+  //LDLT_quartic(coeff, csol);
+  oqs_quartic_solver(coeff,csol); // questo è il quartic solver ultimo sottomesso in ACM trans. math. softw.
   //quarticRoots(coeff, numsol, csol);
   *numsol=0;
 
@@ -7751,6 +7765,7 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #ifdef MC_QUART_HYBRID
 #ifdef FAST_QUARTIC_SOLVER
   const double DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
+  // NOTA 19/04/19: 5E-12 sarebbe comunque un valore più sicuro specialmente quando si fanno calcoli di volume escluso 
 #else
   const double DIST_THR=5E-12;
 #endif
@@ -10149,7 +10164,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	}
       //printf("dist centro-punto=%.15G\n", calc_distance(Cjpp,solarr[kk1]));
 
-#if 1
+#if !defined(MC_ELASTIC_CONSTANTS) && !defined(MC_ELCONST_MC)
       //if (fabs(perpcomp(solarr[kk1], Cip, nip)-D2) > 1E-11)
       if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2, &tmp)) 
 	{
