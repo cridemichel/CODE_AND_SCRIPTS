@@ -7742,6 +7742,13 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	    }
 	  else
 	    {
+#ifdef MC_ELCONST_FIXED
+              if (j==0||j==size1)
+                {
+                  *merr=2;
+                  return;
+                }
+#endif
 #if 0
 	      restore_bonds_mc(-1);
 #else
@@ -10831,6 +10838,14 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    bt++;
 		  }
 		mcin(i, j, nb, type, alpha, &merr, 0);
+#ifdef MC_ELCONST_FIXED
+                if (merr==2)
+                  {
+                    orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0]));
+                    i=1;
+                    continue;
+                  }
+#endif
 		if (merr!=0)
 		  {
 		    save_conf_mc(0, 0);
@@ -10930,6 +10945,13 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    /* mette la particella i legata a j con posizione ed orientazione a caso */
 		    //printf("i=%d j=%d size1=%d size2=%d\n", i, j, size1, size2);
 		    mcin(i, j, nb, type, alpha, &merr, 0);
+#ifdef MC_ELCONST_FIXED
+                    if (merr==2)
+                      {
+                        i=size1;
+                        continue;
+                      }
+#endif
 		    if (merr!=0)
 		      {
 			save_conf_mc(0, 0);
