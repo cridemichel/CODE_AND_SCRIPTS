@@ -3101,7 +3101,7 @@ void solve_quadratic_cmplx(double coeff[3], complex double *sol)
     }
 }
 
-void solve_quadratic(double coeff[3], int *numsol, double *sol)
+void solve_quadratic(double coeff[3], int *numsol, double *sol);
 void csolve_cubic(double *coeff, double complex sol[3])
 {
   const double sqrt3=sqrt(3.0);

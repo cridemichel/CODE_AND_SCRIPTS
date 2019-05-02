@@ -6052,6 +6052,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
    * notare che il calcolo basato sull'affinità non può essere utilizzato poiché
    * un'affinità non "conserva" la distanza tra due superfici */
 #ifdef HE_FAST_DIST 
+  printf("qui\n");
   ri[0]=rx[i];
   ri[1]=ry[i];
   ri[2]=rz[i];
@@ -6076,7 +6077,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
       }  
     }
   //METTERE LA NUOVA EVENTUALE ROUTINE DI CALCOLO DELLA DISTANZA QUI
-  dist=0;
+  dist=check_overlap_polyell(i, j, shift); 
   ///////
   //printf("===>t=%.15G d=%.15G\n", t, dist);
   rx[i]=ri[0];
@@ -6681,8 +6682,8 @@ retry:
       saveStore(t+t1);
     }
 #endif
-#if 0 && defined(HE_FAST_DIST) 
-  if (fabs(calc_norm(r12) - fabs(dist)) > 1E-12)
+#if 1 && defined(HE_FAST_DIST) 
+  if (fabs(calc_norm(r12) - fabs(dist)) > 1E-14)
     {
       printf("distold=%.16G distfast=%.16G\n", (segno>0)?calc_norm(r12):-calc_norm(r12), dist);
     } 
