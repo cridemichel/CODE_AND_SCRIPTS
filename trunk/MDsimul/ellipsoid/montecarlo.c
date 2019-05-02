@@ -7243,6 +7243,9 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 #endif
 }
 #else
+#ifdef MC_ELCONST_FIXED
+int size1_gbl;
+#endif
 void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake)
 {
   /* dist_type=0 -> isotropic
@@ -7743,7 +7746,7 @@ void mcin(int i, int j, int nb, int dist_type, double alpha, int *merr, int fake
 	  else
 	    {
 #ifdef MC_ELCONST_FIXED
-              if (j==0||j==size1)
+              if (j==0||j==size1_gbl)
                 {
                   *merr=2;
                   return;
@@ -10693,6 +10696,9 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
   printf("Estimated maximum of dfons is %f maxtrials=%lld alpha=%f\n", dfons_sinth_max, maxtrials, alpha);
   tt=0;
   totene=0.0;
+#ifdef MC_ELCONST_FIXED
+  size1_gbl=size1;
+#endif
   while (tt < maxtrials) 
     {
 #if 0
@@ -10775,6 +10781,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		{
 		  R[0][k1][k2] = Rl[k1][k2];
 		}
+#ifndef MC_ELCONST_FIXED
 	    /* place first cluster */
 	    if (tt%outits==0)// && ii==0 && jj==size1)
 	      {
@@ -10808,6 +10815,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    sync();
 		  }
 	      }
+#endif
 	    for (i=0; i < Oparams.parnum; i++)
 	      {
 		numbonds[i] = 0;
@@ -10841,7 +10849,28 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 #ifdef MC_ELCONST_FIXED
                 if (merr==2)
                   {
+                    for (kk=0; kk < size1; kk++)
+                      {
+                        numbonds[kk] = 0;
+                      }
+                    merr=0;
                     orient_donsager(&ox, &oy, &oz, alpha, &(ec_segno[0]));
+                    ec_ux[0] = ox;
+                    ec_uy[0] = oy;
+                    ec_uz[0] = oz;
+                    //ox = 0; oy=0; oz=1;
+                    //printf("alpha=%f ox=%f oy=%f oz=%f norm=%f\n", alpha, ox, oy, oz, sqrt(Sqr(ox)+ Sqr(oy)+Sqr(oz)));
+                    versor_to_R(ox, oy, oz, Rl);
+#if defined(MC_CALC_COVADD) && defined(MC_BENT_DBLCYL)
+                    addRestrMatrix(Rl);
+#endif
+                    for (k1=0; k1 < 3; k1++)
+                      for (k2=0; k2 < 3; k2++)
+                        {
+                          R[0][k1][k2] = Rl[k1][k2];
+                        }
+
+                    selfoverlap=0;
                     i=1;
                     continue;
                   }
@@ -10867,6 +10896,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		//tt++;
 		continue;
 	      }
+
 	    /* place second cluster */
 	    for (i=size1; i < Oparams.parnum; i++)
 	      {
@@ -10948,9 +10978,17 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 #ifdef MC_ELCONST_FIXED
                     if (merr==2)
                       {
+                        for (kk=size1; kk < Oparams.parnum; kk++)
+                          {
+                            numbonds[kk] = 0;
+                          }
+                        merr=0;
+                        selfoverlap=0;
                         i=size1;
+                        overlap=0;
                         continue;
                       }
+                    //printf("i=%d tt=%d\n", i, tt);
 #endif
 		    if (merr!=0)
 		      {
@@ -10994,6 +11032,7 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		    shift[2] = L*rint((rz[i]-rz[j])/L);
 #endif
 		    ierr=0;
+                    //printf("tt=%lld rxi=%f %f %f rxj=%f %f %f L=%f %f %f\n", tt, rx[i], ry[i], rz[i], rx[j], ry[j], rz[j], L[0], L[1], L[2]);
 		    if (check_overlap(i, j, shift, &ierr)<0.0)
 		      {
 			overlap=1;
@@ -11126,6 +11165,41 @@ void calc_elastic_constants(int type, double alpha, long long int maxtrials, int
 		printf("i=%d j=%d scalp=%.15G\n", i, j, R[i][0][0]*R[j][0][0]+R[i][0][1]*R[j][0][1]+R[i][0][2]*R[j][0][2]);
 		store_bump(i,j);
 	      }
+#ifdef MC_ELCONST_FIXED
+	    /* place first cluster */
+	    if (tt%outits==0)// && ii==0 && jj==size1)
+	      {
+		if (tt!=0)
+		  {
+#ifdef MD_LXYZ
+		    cov = (totene/((double)tt))*(L[0]*L[1]*L[2]);
+
+#else
+		    cov = (totene/((double)tt))*(L*L*L);
+#endif
+#ifndef ELCONST_NEWALGO
+		    cov *= Sqr(alpha);
+#endif
+		    if (type == 11)
+		      f = fopen("v11.dat","a");
+		    else if (type==12)
+		      f = fopen("v22.dat","a");
+		    else
+		      f = fopen("v33.dat","a");
+
+		    if (type == 11)
+		      printf("v11=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+		    else if (type==12)
+		      printf("v22=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+		    else
+		      printf("v33=%.10f (totene=%f/%lld)\n", cov, totene, tt);
+
+		    fprintf(f, "%lld %.15G %.15G\n", tt, cov, totene);
+		    fclose(f);
+		    sync();
+		  }
+	      }
+#endif
       tt++;
     }
 }
@@ -13128,7 +13202,7 @@ void rot_cls_move(int nc, int flip)
       for (np=0; np < clsdim[nc]; np++)
 	{ 
 	  ip = clsarr[firstofcls[nc]+np];
-	  displMC = abs(theta)*0.5001*maxax[ip];
+	  displMC = fabs(theta)*0.5001*maxax[ip];
 	} 
     }
   thetaSq=Sqr(theta);
