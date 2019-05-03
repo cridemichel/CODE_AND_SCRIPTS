@@ -6052,7 +6052,6 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
    * notare che il calcolo basato sull'affinità non può essere utilizzato poiché
    * un'affinità non "conserva" la distanza tra due superfici */
 #ifdef HE_FAST_DIST 
-  printf("qui\n");
   ri[0]=rx[i];
   ri[1]=ry[i];
   ri[2]=rz[i];
@@ -6096,7 +6095,7 @@ double calcDistNeg(double t, double t1, int i, int j, double shift[3], double *r
           R[j][k1][k2] = Rj[k1][k2];
       }  
     }
-  return dist;
+  //return dist;
 #endif
   /* ==================================================== */
   na = (j < Oparams.parnumA)?0:1;
