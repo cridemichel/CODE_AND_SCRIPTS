@@ -1573,12 +1573,13 @@ double distSq2origM2d(double Alpha, double m00, double m01, double m11, double x
   double x[2], detMa;
   int i;
   detMa =-m01*m01 + (m00 + Alpha)*(m11 + Alpha);
-  x[0] =x0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha));
-  x[1] =y0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha)) ;
+  x[0] = x0*(-m01*m01 + m00*(m11 + Alpha)) + y0*(-m01*m11 + m01*(m11 + Alpha));
+  x[1] = x0*(-m00*m01 + m01*(m00 + Alpha)) + y0*(-m01*m01 + m11*(m00 + Alpha));
   for (i=0; i< 2; i++)
     x[i] /= detMa;
  return x[0]*x[0]+x[1]*x[1]; 
 }
+
 double calcfel2d(double M[2][2], double r0[2], double x[2])
 {
   int i, j;
