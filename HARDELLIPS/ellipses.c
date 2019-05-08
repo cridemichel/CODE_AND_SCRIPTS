@@ -1310,40 +1310,7 @@ double calc_norm(double *vec)
     norm += Sqr(vec[k1]);
   return sqrt(norm);
 }
-void intersectPoint2D(double Alpha, double m00, double m01, double m11,  double x0, double y0, double *sai,
-                    double *pi, double *pj)
-{
-  double d[2], xi[2], norm;
-  double x[2], detMa;
-  int i;
-  detMa = -m01*m01 + (m00+Alpha)*(m11+Alpha);
-  // -m01^2 + (m00 + \[Alpha]) (m11 + \[Alpha])
-  x[0] =x0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha));
-  x[1] =y0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha));
 
-  for (i=0; i< 2; i++)
-    x[i] /= detMa;
-  norm = calc_norm(x); 
-  for (i=0; i < 2; i++)
-    xi[i] = x[i]/norm;
-#if 0
-  for (i=0; i < 3; i++)
-    d[i] = x[i] - xi[i];
-  for (i=0; i < 3; i++)
-    d[i] *= sai[i];
-#endif
-  //printf("sai=%f %f %f norm=%f norm(d)=%f\n", sai[0], sai[1], sai[2], norm, calc_norm(d));
-  //printf("d=%f %f %f x=%f %f %f xi=%f %f %f\n", d[0], d[1], d[2], x[0], x[1], x[2], xi[0], xi[1], xi[2]);
-
-  for (i=0; i < 2; i++)
-    {
-      pi[i] = xi[i]*sai[i]; /* questo è il punto di tangenza dei due ellissoidi se traslo il secondo di un vettore pari 
-                               alla distanza */
-      pj[i] = x[i]*sai[i];
-    }
-  // ora devo calcolare il punto sull'altro ellissoide
-  //return (norm > 1.0)?(calc_norm(d)):(-calc_norm(d));
-}
 double check_overlap_polyell_2D(int i, int j, double shift[3])
 {
   const double GOLD=1.618034;
@@ -1453,15 +1420,6 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
           break;
         }
     }
-#ifdef DIST_OF_CLOSE_APPR
-  // calcola anche la distance of closest approach
-  intersectPoint2D(alpha, m00, m01, m11, x0, y0, sai, pi_HE, pj_HE);
-  for (kk1=0; kk1 < 3; kk1++)
-    {
-      docc[kk1]= r0jp[kk1] + (pi_HE[kk1]-pj_HE[kk1]);  
-    }
-  doccn=calc_norm(docc); //<==== questo è il modulo della distance of closest approach
-#endif
   dist=distSq2origM2d(alpha, m00, m01, m11, x0, y0) - 1.0;
   //printf("alpha=%.15G dist=%.15G\n", alpha, dist);
   /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
