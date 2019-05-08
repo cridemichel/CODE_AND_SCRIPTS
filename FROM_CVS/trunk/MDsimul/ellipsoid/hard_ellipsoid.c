@@ -1754,4 +1754,3 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
     return 1.0;
 }
 #endif
-

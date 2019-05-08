@@ -13,10 +13,10 @@
 
 #define XTERM   "/usr/X11R6/bin/nxterm"
 
-#define MD_HD_TMP "/home/demichel/simdat/mdtmp/"
+#define MD_HD_TMP "./simdat/mdtmp/"
 /* directory to store temporary files */ 
 
-#define MD_HD_MIS "/home/demichel/simdat/measures/" 
+#define MD_HD_MIS "./simdat/measures/" 
 /* directory to store measures files */
 
 #define MD_TAPE_TMP "/iomega/mdtmp/"

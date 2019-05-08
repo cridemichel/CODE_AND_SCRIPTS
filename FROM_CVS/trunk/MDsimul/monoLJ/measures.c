@@ -64,6 +64,11 @@ void energy(void)
   E = E + 0.5 * Sqr(s1) * OprogStatus.Q / Sqr(s) + 
     (3.0 * ((COORD_TYPE) Nm) - 3.0) * Oparams.T * log(s) + 
     0.5 * Sqr(Vol1) * OprogStatus.W / Sqr(s) + Oparams.P * Vol; 
+
+  mf = fopen(absMisHD("energy.dat"),"a");
+  fprintf(mf, "%d %.15G\n", Oparams.curStep, E);
+  fclose(mf);
+
   /* So now E is the extended hamiltonian that should be an integral of 
      motion */
   mol = 10;
