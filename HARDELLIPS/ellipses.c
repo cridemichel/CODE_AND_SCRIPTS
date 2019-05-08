@@ -235,6 +235,7 @@ double brentPW2d(double ax, double bx, double cx, double tol, double *xmin, doub
   *xmin=x; /*Never get here.*/
   return fx;
 }
+double calcfel2d(double M[2][2], double r0[2], double x[2]);
 
 double check_overlap_pw2d(int i, int j, double shift[2])
 {
@@ -260,6 +261,13 @@ double check_overlap_pw2d(int i, int j, double shift[2])
     }
   tRDiagRpw2d(i, A, DA, R[i]);
   tRDiagRpw2d(j, B, DB, R[j]);
+#if 0
+  /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
+  if (calcfel2d(A,rA,rB) < 0.0)
+    return -1.0;
+  if (calcfel2d(B,rB,rA) < 0.0)
+    return -1.0;
+#endif
 
   res = -brentPW2d(0, 0.5, 1.0, tolPW, &xmin, rA, A, rB, B);
   if (brentPWTooManyIter)
@@ -1310,7 +1318,7 @@ void intersectPoint2D(double Alpha, double m00, double m01, double m11,  double 
   int i;
   detMa = -m01*m01 + (m00+Alpha)*(m11+Alpha);
   // -m01^2 + (m00 + \[Alpha]) (m11 + \[Alpha])
-  x[0] =x0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha)) ;
+  x[0] =x0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha));
   x[1] =y0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha));
 
   for (i=0; i< 2; i++)
@@ -1467,7 +1475,7 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
 int main(int argc, char** argv)
 {
   double L, theta, shift[2], over, over2;
-  int tt, maxtrials;
+  int tt, maxtrials, algo=1; // 0 = dryrun 1=polyell 2=PW 3=both of them to check consistency
   /* 
 a1: 0.4823216982790199 b1:0.4306991794870728
 a2: 0.4730194070139193 b2:0.3599600537746439
@@ -1489,8 +1497,14 @@ shiftx,shifty = shift centro ellisse 2
     maxtrials=atoi(argv[1]);
   else
     maxtrials=10000;
+  if (argc > 2)
+    L = atof(argv[2]);
+  else
+    L = 6;
+  if (argc > 2)
+    algo=atoi(argv[3])>0?1:0;
+  printf("L=%f\n", L);
 #if 1 
-  L = 6;
   sax[0][0] = 1.0;
   sax[0][1] = 0.5;
   sax[1][0] = 1.0;
@@ -1513,20 +1527,32 @@ shiftx,shifty = shift centro ellisse 2
       R[1][1][1] =  R[1][0][0]; // k2by
       shift[0] = 0.0;
       shift[1] = 0.0;
-
-#if 0
-      over= check_overlap_polyell_2D(0, 1, shift);
-#if 0
-      over2= check_overlap_pw2d(0, 1, shift);
-      if (over*over2 < 0.0)
+//#define POLYELL
+     switch (algo) 
         {
-          printf("problem\n");
+        case 1:
+          over= check_overlap_polyell_2D(0, 1, shift);
           break;
+#if 0
+          over2= check_overlap_pw2d(0, 1, shift);
+          
+#endif
+        case 2:
+          over = check_overlap_pw2d(0, 1, shift);
+          break;
+        case 3:
+          over= check_overlap_polyell_2D(0, 1, shift);
+          over2 = check_overlap_pw2d(0, 1, shift);
+          if (over*over2 < 0.0)
+            {
+              printf("problem\n");
+              exit(1);
+            }
+          break;
+        default:
+          break;
+          // do nothin 
         }
-#endif
-#else
-      over = check_overlap_pw2d(0, 1, shift);
-#endif
     }
 #else
   sax[0][0] = 0.4823216982790199;
