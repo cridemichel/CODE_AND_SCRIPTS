@@ -1602,40 +1602,127 @@ double calcfel2d(double M[2][2], double r0[2], double x[2])
     }
   return res-1.0;
 }
-void intersectPoint2D(double Alpha, double m00, double m01, double m11,  double x0, double y0, double *sai,
-                    double *pi, double *pj)
+#if 1
+double check_overlap_polyell_2D(int i, int j, double shift[3])
 {
-  double d[2], xi[2], norm;
-  double x[2], detMa;
-  int i;
-  detMa = -m01*m01 + (m00+Alpha)*(m11+Alpha);
-  // -m01^2 + (m00 + \[Alpha]) (m11 + \[Alpha])
-  x[0] =x0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha)) ;
-  x[1] =y0*(-m01*m01 + (m00 + Alpha)*(m11 + Alpha));
-
-  for (i=0; i< 2; i++)
-    x[i] /= detMa;
-  norm = calc_norm(x); 
-  for (i=0; i < 2; i++)
-    xi[i] = x[i]/norm;
-#if 0
-  for (i=0; i < 3; i++)
-    d[i] = x[i] - xi[i];
-  for (i=0; i < 3; i++)
-    d[i] *= sai[i];
-#endif
-  //printf("sai=%f %f %f norm=%f norm(d)=%f\n", sai[0], sai[1], sai[2], norm, calc_norm(d));
-  //printf("d=%f %f %f x=%f %f %f xi=%f %f %f\n", d[0], d[1], d[2], x[0], x[1], x[2], xi[0], xi[1], xi[2]);
-
-  for (i=0; i < 2; i++)
+  const double GOLD=1.618034;
+  double Rjp[2][2], r0jp[2], ri[2], rj[2], Di[2], Dj[2], Mjp[2][2], gradj[2], xppg[2], M2I[2][2], invM2I[2][2], oax[2], theta, norm;
+  double RM[2][2], Mtmp[2][2], Mjpp[2][2], r0jpp[2], Mjp3[2][2], r0jp3[2], xp3g[2];
+  double Mip[2][2], Mipp[2][2];
+  double evec[2][2], eval[2], coeffpa[5], sx, sy, x0, y0, docc[2], doccn;
+  double sx2, sy2, sx4, sy4, sz4, x02, y02, sai[2];
+  double vt, at[2], Mi[2][2], Mj[2][2], Ri[2][2], Rj[2][2], dist, m00, m01, m11, b2d, m002, m012, m112;
+  double alpha;
+  int np, typei, typej;
+  int kk1, kk2, kk3, k1, k2, k3, ok;
+  complex double roots[4];
+ 
+  //typei = typeOfPart[i];
+  //typej = typeOfPart[j];
+  
+  /* apply affinity to reduce first ellipsoid to a sphere */
+  for (k1=0; k1 < 2; k1++)
     {
-      pi[i] = xi[i]*sai[i]; /* questo è il punto di tangenza dei due ellissoidi se traslo il secondo di un vettore pari 
-                               alla distanza */
-      pj[i] = x[i]*sai[i];
+      Di[k1]= 1.0/Sqr(sax[0][k1]);
+      Dj[k1]= 1.0/Sqr(sax[1][k1]);
+      for (k2=0; k2 < 2; k2++)
+        {
+          Ri[k1][k2] = R[i][k1][k2];
+          Rj[k1][k2] = R[j][k1][k2];
+        }
     }
-  // ora devo calcolare il punto sull'altro ellissoide
-  //return (norm > 1.0)?(calc_norm(d)):(-calc_norm(d));
+  /* sai[0] e sai[1] sono i semiassi della particella i */
+  for (k1=0; k1 < 2; k1++)
+    {
+      sai[k1] = sax[0][k1];
+    } 
+  tRDiagRqe2d(Mi, Di, Ri);
+  tRDiagRqe2d(Mj, Dj, Rj);
+  ri[0] = rx[i];
+  ri[1] = ry[i];
+  rj[0] = rx[j]+shift[0];
+  rj[1] = ry[j]+shift[1];
+
+  /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
+  if (calcfel2d(Mi,ri,rj) < 0.0)
+    return -1.0;
+  if (calcfel2d(Mj,rj,ri) < 0.0)
+    return -1.0;
+
+  //printf("coords i: %f %f %f j: %f %f %f\n", ri[0], ri[1], ri[2], rj[0], rj[1], rj[2]);
+  /* switch to ellipsoid i reference system */
+  for (kk1=0; kk1 < 2; kk1++)
+    {
+      r0jp[kk1] = 0;
+      for (kk2=0; kk2 < 2; kk2++)
+        {
+          r0jp[kk1] += R[i][kk1][kk2]*(rj[kk2]-ri[kk2]);
+          Rjp[kk1][kk2] = 0;
+          //Aip[kk1] = 0;
+          for (kk3=0; kk3 < 2; kk3++)
+            {
+              Rjp[kk1][kk2] += R[j][kk1][kk3]*R[i][kk2][kk3];
+              //Aip[kk1] += Rl[kk1][kk2]*(Ai[kk2]-Dj[j2][kk2]);
+            } 
+        }
+    }
+  //tRDiagRpw(i, Mi, DA, R[i]);
+  tRDiagRqe2d(Mjp, Dj, Rjp);
+
+  /* calculate matrix and position of ellipsoid j after application of affinity
+   * which reduces ellipsoid i to a sphere */   
+  Mjpp[0][0] = Mjp[0][0]*Sqr(sai[0]);
+  Mjpp[0][1] = Mjp[0][1]*sai[0]*sai[1];
+  //Mjpp[1][0] = Mjp[1][0]*sai[0]*sai[1];
+  Mjpp[1][1] = Mjp[1][1]*Sqr(sai[1]);
+  r0jpp[0] = r0jp[0]/sai[0];
+  r0jpp[1] = r0jp[1]/sai[1];
+  x0 = r0jpp[0];
+  y0 = r0jpp[1];
+  x02 = Sqr(x0);
+  y02 = Sqr(y0);
+  m00 = Mjpp[0][0];
+  m01 = Mjpp[0][1];
+  m11 = Mjpp[1][1];
+  m002 = Sqr(m00);
+  m012 = Sqr(m01);
+  m112 = Sqr(m11);
+  //printf("M2d={{%.15G,%.15G},{%.15G,%.15G}}\n", m00, m01, m01, m11);
+  //printf("xv02d={%.15G,%.15G}", x0, y0);
+  b2d = -1.0 + m00*x02 + 2.0*m01*x0*y0 + m11*y02;
+
+  //printf("b2d=%.15G\n", b2d);
+  coeffpa[0] = -Sqr(m012 - m00*m11)*(-b2d + m00*x02 + y0*(2*m01*x0 + m11*y0)); 
+  coeffpa[1] = -2*(m00 + m11)*(-m01*m01 + m00*m11)*(-b2d + m00*x02 + 
+   y0*(2*m01*x0 + m11*y0));
+  coeffpa[2] =b2d*(m002 - 2*m012 + 4*m00*m11 + m112) - (m002*m00 - 2*m00*m012 + 
+    4*m002*m11 + m012*m11)*x02 - 
+    2*m01*(m002 - 3*m012 + 5*m00*m11 + m112)*x0*y0 - (-2*m012*m11 + 
+    m11*m112 + m00*(m012 + 4*m112))*y02;
+  coeffpa[3] = 2*b2d*(m00 + m11) - 2*(m002 + m012)*x02 - 
+    4*m01*(m00 + m11)*x0*y0 - 2*(m012 + m112)*y02;
+  coeffpa[4] = b2d;
+  oqs_quartic_solver(coeffpa, roots);
+  for (kk1=0; kk1 < 4; kk1++)
+    {
+      //printf("root #%d=%.15G + I*(%.15G)\n", kk1, creal(roots[kk1]), cimag(roots[kk1]));
+      if (cimag(roots[kk1])==0 && creal(roots[kk1]) > 0.0)
+        {
+          alpha=creal(roots[kk1]);
+          break;
+        }
+    }
+  dist=distSq2origM2d(alpha, m00, m01, m11, x0, y0) - 1.0;
+  //printf("alpha=%.15G dist=%.15G\n", alpha, dist);
+  /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
+   * si avrà la distanza tra i due ellissoidi che si può usare nella dinamica event-driven */
+  if (dist < 0.0)
+    return -1.0;
+  else
+    return 1.0;
 }
+
+#else
 double check_overlap_polyell_2D(int i, int j, double shift[3])
 {
   const double GOLD=1.618034;
@@ -1736,15 +1823,6 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
           break;
         }
     }
-#ifdef DIST_OF_CLOSE_APPR
-  // calcola anche la distance of closest approach
-  intersectPoint2D(alpha, m00, m01, m11, x0, y0, sai, pi_HE, pj_HE);
-  for (kk1=0; kk1 < 3; kk1++)
-    {
-      docc[kk1]= r0jp[kk1] + (pi_HE[kk1]-pj_HE[kk1]);  
-    }
-  doccn=calc_norm(docc); //<==== questo è il modulo della distance of closest approach
-#endif
   dist=distSq2origM2d(alpha, m00, m01, m11, x0, y0) - 1.0;
   /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
    * si avrà la distanza tra i due ellissoidi che si può usare nella dinamica event-driven */
@@ -1753,4 +1831,5 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
   else
     return 1.0;
 }
+#endif
 #endif
