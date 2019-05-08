@@ -1,3 +1,5 @@
+#include<cmath>
+#include"hard_cylinders.H"
 #define Sqr(x) ((x)*(x))
 int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *diff)
 {
@@ -15,8 +17,8 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
 #endif
 #endif
   double diff1, diff2;
-  diff1=fabs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
-  diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
+  diff1=abs(perpcomp(P, Cip, nip)-D2); // qui D2 è il diametro del rim
+  diff2=abs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2);// qui D2 è il diametro del disco
 
   *diff=diff1+diff2;
   if (diff1 > DIST_THR*D2 || diff2 > DIST_THR*D2)
@@ -31,27 +33,24 @@ int test_for_fallback(double *P, double *Cip, double *nip, double D2, double *di
     return 0;
 #endif
 }
-double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
+template <class ntype> ntype hard_cylinder<ntype>::rimdiskone_hybrid(ntype D, ntype L, pvector<ntype,3>& Ci, pvector<ntype,3> ni, 
+                                                                     pvector<ntype,3> Dj, pvector<ntype,3> nj)
 {
   int kk1, kk2, numsol[2], nsc, fallback, solset;
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
   const double FALLBACK_THR = 1E-4;
+  pvector<ntype,3> nip[2], Cip[2];
+  pvector<complex<ntype>,4> roots;
   double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2], uy[3];
   double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
   double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
-  double Cip[2][3], nip[2][3], norm, Rl[3][3];
+  double norm, Rl[3][3];
   double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
-  //double nip04,nip14,nip24,nip03,nip13,nip23;
-
-  //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
-  //double aErcut, bErcut, nErcutx[3], nErcuty[3], nErcutz[3], rErcut[3], m00, m01, m10, m11, m002, m112, AA, BB, invm10, ev0, ev1, AA0, BB0;
-  //double fact,nErcutxp[3], nErcutyp[3], nErcutzp[3], rErcutp[3], aErcut2, bErcut2, nErcutyp12, nErcutyp22, nErcutzp12, nErcutzp22;
-  //double ia00, ia01, ia10, ia11, ia002, ia102, ia012, ia112, delta;
   double D2sq, D2, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
-  /* LAST ATTEMPT */
+  rpoly<ntype,4> oqs;
   /* se asse del rim e asse del disco sono paralleli si deve considerare un caso a parte */
   D2 = D*0.5; 
   D2sq = Sqr(D2);
@@ -78,7 +77,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	} 
     }
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-  norm = calc_norm(nip[0]);
+  norm = nip.norm();
   nip0 = nip[0][0]/norm;
   nip1 = nip[0][1]/norm;
   nip2 = nip[0][2]/norm;
@@ -88,18 +87,9 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   nip02=Sqr(nip0);
   nip12=Sqr(nip1);
   nip22=Sqr(nip2);
-#if 0
-  nip04=Sqr(nip02);
-  nip14=Sqr(nip12);
-  nip24=Sqr(nip22);
-  nip03=nip02*nip0;
-  nip13=nip12*nip1;
-  nip23=nip22*nip2;
-#endif
   Cip02=Sqr(Cip0);
   Cip12=Sqr(Cip1);
   Cip22=Sqr(Cip2);
-#if 1
   /* with some simplifications we save a bunch of FLOPS... */
   omnip02 = 1.0 - nip02;
   omnip12 = 1.0 - nip12;
@@ -107,27 +97,6 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   nip1nip2 = nip1*nip2;
   nip0nip2 = nip0*nip2;
   nip0nip1 = nip0*nip1;
-#ifdef LDLT_LOSSOFSIG_FIX
-  coeffEr[0] = omnip12;
-  coeffEr[1] = omnip22;
-  coeffEr[2] = -2.0*nip1nip2;
-  loft[0] =  Cip02*omnip02;
-  loft[1] = Cip12*omnip12;
-  loft[2] = Cip22*omnip22; 
-  loft[3] = -2.0*Cip0*Cip1*nip0nip1; 
-  loft[4] = -2.0*Cip0*Cip2*nip0nip2;
-  loft[5] = -2.0* Cip1*Cip2*nip1nip2;
-  loft[6] = -D2sq;
-  coeffEr[3]= NeumaierSum(loft, 7);
-  loft[0] = Cip2*nip1nip2;
-  loft[1] = Cip0*nip0nip1; 
-  loft[2] = -Cip1*omnip12;
-  coeffEr[4] = 2.0*NeumaierSum(loft,3);
-  loft[0] = Cip0*nip0nip2; 
-  loft[1] = Cip1*nip1nip2;
-  loft[2] = - Cip2*omnip22;
-  coeffEr[5] = 2.0*NeumaierSum(loft,3);
-#else
   coeffEr[0] = omnip12;
   coeffEr[1] = omnip22;
   coeffEr[2] = -2.0*nip1nip2;  
@@ -135,80 +104,6 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 								    Cip1*Cip2*nip1nip2) - D2sq;
   coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
   coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
-#endif
-#elif 0
-  coeffEr[0] = 1 - 2*nip12 + nip02*nip12 + nip14 + 
-    nip12*nip22;
-  coeffEr[1] = 1 - 2*nip22 + nip02*nip22 + 
-    nip12*nip22 + nip24;
-  coeffEr[2] = -4*nip1*nip2 + 2*nip02*nip1*nip2 + 2*nip13*nip2 + 
-    2*nip1*nip23;
-  coeffEr[3] = Cip02 + Cip12 + Cip22 - D2sq - 
-    2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1 - 
-    2*Cip12*nip12 + Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 + Cip12*nip14 - 
-    4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2 - 4*Cip1*Cip2*nip1*nip2 + 2*Cip1*Cip2*nip02*nip1*nip2 + 
-    2*Cip0*Cip2*nip0*nip12*nip2 + 2*Cip1*Cip2*nip13*nip2 - 2*Cip22*nip22 + Cip02*nip02*nip22 + 
-    Cip22*nip02*nip22 + 2*Cip0*Cip1*nip0*nip1*nip22 + Cip12*nip12*nip22 + Cip22*nip12*nip22 + 
-    2*Cip0*Cip2*nip0*nip23 + 2*Cip1*Cip2*nip1*nip23 + Cip22*nip24;
-  coeffEr[4] = -2*Cip1 + 4*Cip0*nip0*nip1 - 2*Cip0*nip03*nip1 + 
-    4*Cip1*nip12 - 2*Cip1*nip02*nip12 - 2*Cip0*nip0*nip13 - 2*Cip1*nip14 + 4*Cip2*nip1*nip2 - 
-    2*Cip2*nip02*nip1*nip2 - 2*Cip2*nip13*nip2 - 2*Cip0*nip0*nip1*nip22 - 2*Cip1*nip12*nip22 - 
-    2*Cip2*nip1*nip23;
-  coeffEr[5] = -2*Cip2 + 4*Cip0*nip0*nip2 - 2*Cip0*nip03*nip2 + 
-    4*Cip1*nip1*nip2 - 2*Cip1*nip02*nip1*nip2 - 2*Cip0*nip0*nip12*nip2 - 2*Cip1*nip13*nip2 + 
-    4*Cip2*nip22 - 2*Cip2*nip02*nip22 - 2*Cip2*nip12*nip22 - 2*Cip0*nip0*nip23 - 2*Cip1*nip1*nip23 
-    - 2*Cip2*nip24;
-#else
-  /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-
-  coeffEr[0] = 1.0 + ( -2*nip12 + nip14 + nip12*nip22) + nip02*nip12;
-  coeffEr[1] = 1.0 + ( -2*nip22 + nip12*nip22 + nip24) + nip02*nip22;
-  coeffEr[2] = 2*nip02*nip1*nip2 + (- 4*nip1*nip2 + 2*nip13*nip2 + 
-				    2*nip1*nip23);
-
-  coeffEr[3] = 
-    (- 2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1+ 
-     Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 - 4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2
-     + 2*Cip1*Cip2*nip02*nip1*nip2 + 2*Cip0*Cip2*nip0*nip12*nip2 + Cip02*nip02*nip22 + 
-     Cip22*nip02*nip22 + 2*Cip0*Cip1*nip0*nip1*nip22 + 2*Cip0*Cip2*nip0*nip23 ) 
-    + Cip02 + Cip12 + Cip22 - Sqr(D2)  - 
-    2*Cip12*nip12  + Cip12*nip14 - 4*Cip1*Cip2*nip1*nip2  + 2*Cip1*Cip2*nip13*nip2 - 2*Cip22*nip22  + Cip12*nip12*nip22 
-    + Cip22*nip12*nip22  + 2*Cip1*Cip2*nip1*nip23 + Cip22*nip24;
-
-  coeffEr[4] =
-    (4*Cip0*nip0*nip1 - 2*Cip0*nip03*nip1 +  
-     - 2*Cip1*nip02*nip12 - 2*Cip0*nip0*nip13
-     - 2*Cip2*nip02*nip1*nip2 - 2*Cip0*nip0*nip1*nip22 ) 
-    - 2*Cip1 + 4*Cip1*nip12  - 2*Cip1*nip14 + 4*Cip2*nip1*nip2 - 2*Cip2*nip13*nip2 - 2*Cip1*nip12*nip22 - 
-    2*Cip2*nip1*nip23;
-
-  coeffEr[5] = 
-    (4*Cip0*nip0*nip2 - 2*Cip0*nip03*nip2 - 2*Cip1*nip02*nip1*nip2 - 2*Cip0*nip0*nip12*nip2 - 2*Cip2*nip02*nip22
-     - 2*Cip0*nip0*nip23 ) -2*Cip2 + 4*Cip1*nip1*nip2  - 2*Cip1*nip13*nip2 + 
-    4*Cip2*nip22  - 2*Cip2*nip12*nip22 - 2*Cip1*nip1*nip23 - 2*Cip2*nip24;
-
-#endif
-  /* check ellipse */
-#if 0
-  /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-  double cq[3], x, lam, solq[2], p[3];
-  int numsol;
-  lam = -Cip0/nip0;
-  x = Cip1 + lam*nip1;
-  cq[0] = coeffEr[3]+coeffEr[4]*x+coeffEr[0]*x*x;
-  cq[1] = coeffEr[5]+coeffEr[2]*x;
-  cq[2] = coeffEr[1];
-  solve_quadratic(cq, &numsol, solq);
-  p[0] = 0.0;
-  p[1] = x;
-  p[2] = solq[0];
-  if (fabs(perpcomp(p, Cip, nip) - D2) > 3E-8)
-    {
-      printf("coeff quad=%.16G %.16G %.16G\n", cq[2], cq[1], cq[0]);
-      printf("distance punto ellipse axis=%.16G\n", perpcomp(p, Cip, nip));
-      printf("nip.njp=%.15G lam=%.15G\n", nip0, lam);
-    }
-#endif
   /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
   coeffEr[0] *= D2sq;
   coeffEr[1] *= D2sq; 
@@ -230,40 +125,11 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   c52 = Sqr(c5);
   //xC=yC=0;
 #ifndef MC_EXCHG_QUART_SOL
-#ifdef LDLT_LOSSOFSIG_FIX
-  loft[0] = c02; 
-  loft[1] = -2*c0*c1;
-  loft[2] = c12;
-  loft[3] = c22;
-  coeff[4] = NeumaierSum(loft,4);
-  loft[0] = 2*c2*c4;
-  loft[1] = - 2*c0*c5;
-  loft[2] = 2*c1*c5;
-  coeff[3] = NeumaierSum(loft,3);
-  loft[0] = -2*c02;
-  loft[1] = 2*c0*c1;
-  loft[2] = -c22;
-  loft[3] = - 2*c0*c3;
-  loft[4] = 2*c1*c3;
-  loft[5] = c42; 
-  loft[6] = c52;
-  coeff[2] = NeumaierSum(loft,7);
-  loft[0] = -2*c2*c4; 
-  loft[1] = 2*c0*c5;
-  loft[2] = 2*c3*c5;
-  coeff[1] = NeumaierSum(loft,3);
-  loft[0] = c02;
-  loft[1] = 2*c0*c3;
-  loft[2] = c32;
-  loft[3] = -c42;
-  coeff[0] = NeumaierSum(loft,4);
-#else
   coeff[4] = c02 - 2*c0*c1 + c12 + c22;
   coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
   coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
   coeff[1] = -2*c2*c4 + 2*c0*c5 + 2*c3*c5;
   coeff[0] = c02 + 2*c0*c3 + c32 - c42;
-#endif
 #else
   coeff[4] = c02 - 2*c0*c1 + c12 + c22;
   coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
@@ -277,99 +143,31 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
     }
   else
-    solve_quartic(coeff, &(numsol[0]), solqua);
-#if 0
-  if (numsol==1)
     {
-      printf("(%.15G)*x^4+(%.15G)*x^3+(%.15G)*x^2+(%.15G)*x+(%.15G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
-      printf("{%.15G,%.15G,%.15G,%.15G,%.15G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
-      printf("sol=%.15G\n", solqua[0]);
-      printf("BOH\n");
+      oqs.set_coeff(coeff);
+      oqs.find_roots(roots);
+      numsol[0]=0;
+      for (kk1=0; kk1 < 4; kk1++)
+        {
+          if (imag(roots[kk1])==0)
+            { 
+              solqua[numsol[0]]=real(roots[kk1]);
+              numsol[0]++;
+            }
+        }
+      //solve_quartic(coeff, &(numsol[0]), solqua);
     }
-#endif
+  // 08/05/2019: SONO ARRIVATO QUI <===============================================================================================
   discard_spurious(solqua, &(numsol[0]));
 
-  //solve_fourth_deg(coeff, &numsol, solqua);
   /* ora assegno a solec[][] e calcolo x */
-#if 0
-  if (numsol > 1)
-    {
-      printf("PRIMA solqua=%.15G %.15G\n", solqua[0], solqua[1]);
-      qsort(solqua, numsol, sizeof(double), compare_func);
-      //printf("numsol=%d\n", numsol);
-      //printf("DOPO solqua=%.15G %.15G\n", solqua[0], solqua[1]);
-    }
-#endif
   /* use bisection newton-raphson to refine solutions */
-#if 0
-  if (numsol > 2)
-    {
-      printf("PRIMA solqua(sorted)= ");
-      for (kk1=0; kk1 < numsol; kk1++)
-	printf(" %.15G ", solqua[kk1]);
-      printf("\n");
-    }
-#endif
-#if 0
-  for (kk1=0; kk1 < numsol; kk1++)
-    {
-      double xg;
-
-      if (kk1==0)
-	x1b = -1.1; /* le soluzioni devono essere tra -1 e 1 */
-      else
-	x1b = (solqua[kk1-1]+solqua[kk1])*0.5;
-      if (kk1==numsol-1)
-	x2b = 1.1;
-      else 
-	x2b = (solqua[kk1+1]+solqua[kk1])*0.5;
-      xg=solqua[kk1];
-#if 0
-      if ((kk1 == 0 && xg < -1)
-	  ||(kk1==numsol-1 && xg > 1))
-	solqua[kk1]=rtsafe(coeff, xg, x1b, x2b, 1E-12, 0);
-      else
-#endif
-	solqua[kk1]=rtsafe(coeff, xg, x1b, x2b, 1E-12, 1);
-    }
-#endif
-#if 0
-  printf("DOPO solqua(sorted)= ");
-  for (kk1=0; kk1 < numsol; kk1++)
-    printf(" %.15G ", solqua[kk1]);
-  printf("\n");
-#endif
-  //if (numsol > 0)
-  //printf("numsol=%d\n", numsol);
   fallback = 0;
   for (kk1=0; kk1 < numsol[0]; kk1++)
     {
       temp = c4 + c2*solqua[kk1];
-#ifdef LDLT_LOSSOFSIG_FIX
-      loft[0] = -c0;
-      loft[1] = -c3;
-      loft[2] = -c5*solqua[kk1];
-      loft[3] = c0*Sqr(solqua[kk1]);
-      loft[4] =-c1*Sqr(solqua[kk1]);
-      solec[kk1][0] = NeumaierSum(loft,5)/temp;
-#else
       solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
-#endif
       solec[kk1][1] = solqua[kk1];
-#if 0
-      temp = c5 + c2*solqua[kk1];
-      solec[kk1][0] = solqua[kk1];
-      solec[kk1][1] = (-c1 - c3 - c4*solqua[kk1] + (c1 - c0)*Sqr(solqua[kk1]))/temp; 
-#endif     
-      //printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
-#if 0
-      if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-	{
-	  printf("solec[%d]=%.16G %.16G temp=%.15G\n", kk1, solec[kk1][0], solec[kk1][1], temp);
-	  printf("coeff=%.15G %.15G %.15G %.15G %.15G %.15G\n", c0, c1, c2, c3, c4, c5);
-	  printf("numeratore=%.16G\n", -c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]));
-	}
-#endif
       /* NOTA: siccome le solzuioni sono tali che |x| < 1 e |y| < 1 se temp è molto minore di 1 vuole dire 
        * anche il denominatore lo è quindi sto dividendo due numeri piccoli con conseguenti errori numerici 
        * per cui meglio se risolvo la quartica in x. */
@@ -405,11 +203,13 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       if (diff[0][kk1] > maxdiff[0] || kk1==0)
 	maxdiff[0] = diff[0][kk1];  
     }
+#if 0
   if (tinyimagGBL)
     {
       //printf("qui\n");
       fallback=2;// 2 vuol dire che solset=0 non ha soluzioni reali quindi se ci sono soluzioni usa il fallback e basta
     }
+#endif
   solset=0;
   if (fallback)
     {
@@ -429,13 +229,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       store_bump(iGbl,jGbl);
 #endif
 
-#if 0
-      for (kk1=0; kk1 < 3; kk1++)
-	uy[kk1] = D2*Rl[1][kk1];
-      versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 2); 
-#else
       rotate_axes_on_plane(Rl);
-#endif
       for (kk1=0; kk1 < 3; kk1++)
 	{
 	  nip[1][kk1] = 0;
@@ -468,7 +262,6 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       Cip02=Sqr(Cip0);
       Cip12=Sqr(Cip1);
       Cip22=Sqr(Cip2);   
-#if 1
       omnip02 = 1.0 - nip02;
       omnip12 = 1.0 - nip12;
       omnip22 = 1.0 - nip22;
@@ -483,60 +276,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
       coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
 
-#elif 0
-      coeffEr[0] = 1 - 2*nip12 + nip02*nip12 + nip14 + 
-	nip12*nip22;
-      coeffEr[1] = 1 - 2*nip22 + nip02*nip22 + 
-	nip12*nip22 + nip24;
-      coeffEr[2] = -4*nip1*nip2 + 2*nip02*nip1*nip2 + 2*nip13*nip2 + 
-	2*nip1*nip23;
-      coeffEr[3] = Cip02 + Cip12 + Cip22 - D2sq - 
-	2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1 - 
-	2*Cip12*nip12 + Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 + Cip12*nip14 - 
-	4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2 - 4*Cip1*Cip2*nip1*nip2 + 2*Cip1*Cip2*nip02*nip1*nip2 + 
-	2*Cip0*Cip2*nip0*nip12*nip2 + 2*Cip1*Cip2*nip13*nip2 - 2*Cip22*nip22 + Cip02*nip02*nip22 + 
-	Cip22*nip02*nip22 + 2*Cip0*Cip1*nip0*nip1*nip22 + Cip12*nip12*nip22 + Cip22*nip12*nip22 + 
-	2*Cip0*Cip2*nip0*nip23 + 2*Cip1*Cip2*nip1*nip23 + Cip22*nip24;
-      coeffEr[4] = -2*Cip1 + 4*Cip0*nip0*nip1 - 2*Cip0*nip03*nip1 + 
-	4*Cip1*nip12 - 2*Cip1*nip02*nip12 - 2*Cip0*nip0*nip13 - 2*Cip1*nip14 + 4*Cip2*nip1*nip2 - 
-	2*Cip2*nip02*nip1*nip2 - 2*Cip2*nip13*nip2 - 2*Cip0*nip0*nip1*nip22 - 2*Cip1*nip12*nip22 - 
-	2*Cip2*nip1*nip23;
-      coeffEr[5] = -2*Cip2 + 4*Cip0*nip0*nip2 - 2*Cip0*nip03*nip2 + 
-	4*Cip1*nip1*nip2 - 2*Cip1*nip02*nip1*nip2 - 2*Cip0*nip0*nip12*nip2 - 2*Cip1*nip13*nip2 + 
-	4*Cip2*nip22 - 2*Cip2*nip02*nip22 - 2*Cip2*nip12*nip22 - 2*Cip0*nip0*nip23 - 2*Cip1*nip1*nip23 
-	- 2*Cip2*nip24;
-#else
-      /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-
-      coeffEr[0] = 1.0 + ( -2*nip12 + nip14 + nip12*nip22) + nip02*nip12;
-      coeffEr[1] = 1.0 + ( -2*nip22 + nip12*nip22 + nip24) + nip02*nip22;
-      coeffEr[2] = 2*nip02*nip1*nip2 + (- 4*nip1*nip2 + 2*nip13*nip2 + 
-					2*nip1*nip23);
-
-      coeffEr[3] = 
-	(- 2*Cip02*nip02 + Cip02*nip04 - 4*Cip0*Cip1*nip0*nip1 + 2*Cip0*Cip1*nip03*nip1+ 
-	 Cip02*nip02*nip12 + Cip12*nip02*nip12 + 2*Cip0*Cip1*nip0*nip13 - 4*Cip0*Cip2*nip0*nip2 + 2*Cip0*Cip2*nip03*nip2
-	 + 2*Cip1*Cip2*nip02*nip1*nip2 + 2*Cip0*Cip2*nip0*nip12*nip2 + Cip02*nip02*nip22 + 
-	 Cip22*nip02*nip22 + 2*Cip0*Cip1*nip0*nip1*nip22 + 2*Cip0*Cip2*nip0*nip23 ) 
-	+ Cip02 + Cip12 + Cip22 - Sqr(D2)  - 
-	2*Cip12*nip12  + Cip12*nip14 - 4*Cip1*Cip2*nip1*nip2  + 2*Cip1*Cip2*nip13*nip2 - 2*Cip22*nip22  + Cip12*nip12*nip22 
-	+ Cip22*nip12*nip22  + 2*Cip1*Cip2*nip1*nip23 + Cip22*nip24;
-
-      coeffEr[4] =
-	(4*Cip0*nip0*nip1 - 2*Cip0*nip03*nip1 +  
-	 - 2*Cip1*nip02*nip12 - 2*Cip0*nip0*nip13
-	 - 2*Cip2*nip02*nip1*nip2 - 2*Cip0*nip0*nip1*nip22 ) 
-	- 2*Cip1 + 4*Cip1*nip12  - 2*Cip1*nip14 + 4*Cip2*nip1*nip2 - 2*Cip2*nip13*nip2 - 2*Cip1*nip12*nip22 - 
-	2*Cip2*nip1*nip23;
-
-      coeffEr[5] = 
-	(4*Cip0*nip0*nip2 - 2*Cip0*nip03*nip2 - 2*Cip1*nip02*nip1*nip2 - 2*Cip0*nip0*nip12*nip2 - 2*Cip2*nip02*nip22
-	 - 2*Cip0*nip0*nip23 ) -2*Cip2 + 4*Cip1*nip1*nip2  - 2*Cip1*nip13*nip2 + 
-	4*Cip2*nip22  - 2*Cip2*nip12*nip22 - 2*Cip1*nip1*nip23 - 2*Cip2*nip24;
-
-#endif
       /* check ellipse */
-
       /* applico un'omotetia per ridurre la circonferenza del disco a quella unitaria */	
       coeffEr[0] *= D2sq;
       coeffEr[1] *= D2sq; 
@@ -557,13 +297,6 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
       c42 = Sqr(c4);
       c52 = Sqr(c5);
 
-#if 0
-      coeff[4] = c02 - 2*c0*c1 + c12 + c22;
-      coeff[3] = 2*c0*c4 - 2*c1*c4 + 2*c2*c5;
-      coeff[2] = 2*c0*c1 - 2*c12 - c22 + 2*c0*c3 - 2*c1*c3 + c42 + c52;
-      coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
-      coeff[0] = c12 + 2*c1*c3 + c32 - c52;
-#endif
       coeff[4] = c02 - 2*c0*c1 + c12 + c22;
       coeff[3] = 2*c2*c4 - 2*c0*c5 + 2*c1*c5;
       coeff[2] = -2*c02 + 2*c0*c1 - c22 - 2*c0*c3 + 2*c1*c3 + c42 + c52;
@@ -575,7 +308,9 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	  return test_overlap_parall_cyl(Ci, ni, Dj, nj, L, D, D);
 	}
       else
-	solve_quartic(coeff, &(numsol[1]), solqua);
+        {
+          solve_quartic(coeff, &(numsol[1]), solqua);
+        }
       discard_spurious(solqua, &(numsol[1]));
 #ifdef MC_QUART_VERBOSE
       printf("falling back [#%ld] type=%d numsol=%d %d\n", numfb++,fallback, numsol[0], numsol[1]);
@@ -596,14 +331,6 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 	    }
 	  solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
 	  solec[kk1][1] = solqua[kk1];
-	  //printf("fallback:");
-	  //test_solution_xy(solec[kk1], &(diffxy[1][kk1]));
-#if 0
-	  if ((iGbl==469 || iGbl==38) && (jGbl==469 || jGbl==38))
-	    {
-	      printf("[fallback] solec[%d]=%.16G %.16G temp=%.15G\n", kk1, solec[kk1][0], solec[kk1][1], temp);
-	    }
-#endif
 	}
       sumdiff[1] = maxdiff[1]=0;
       for (kk1=0; kk1 < numsol[1]; kk1++)
