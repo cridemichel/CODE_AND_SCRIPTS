@@ -19,6 +19,15 @@ template <class ntype> class hardcyl;
 template <class ntype>
 ntype overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
 #endif
+template <class U>
+int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, U& diff);
+
+template <class U>
+void rotate_axes_on_plane(pmat3<U>& RR);
+
+template <class U> 
+U perpcomp(pvec3<U> V, pvec3<U> C, pvec3<U> n);
+ 
 template <class ntype>
 class hardcyl
 {
@@ -33,10 +42,9 @@ class hardcyl
   template <class U>
   friend U test_overlap_parall_cyl(class hardcyl<U> A, class hardcyl<U> B, int wd)
     {
-      int kk;
       U DjCini, normDjUi;
       pvec3<U> DjCi, Ui, DjUi;
-      DjCi[kk] = (B.disk[wd]+B.shift) - (A.r+A.shift);
+      DjCi = (B.disk[wd]+B.shift) - (A.r+A.shift);
       //normDjCi = calc_norm(DjCi);
       DjCini = DjCi*A.n;
 
@@ -49,13 +57,14 @@ class hardcyl
       else
         return 1.0;
     }
-  int test_for_fallback(pvec3<ntype> P, pvec3<ntype> Cip, pvec3<ntype> nip, ntype D2i, ntype D2j, 
-                        ntype& diff)
+  template <class U>
+  friend int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, 
+                        U& diff)
     {
-      const double DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
-      double diff1, diff2;
-      diff1=fabs(perpcomp(P, Cip, nip)-D2i); // qui D2 è il diametro del rim
-      diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2j);// qui D2 è il diametro del disco
+      const U DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
+      U diff1, diff2;
+      diff1=abs(perpcomp(P, Cip, nip)-D2i); // qui D2 è il diametro del rim
+      diff2=abs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2j);// qui D2 è il diametro del disco
 
       diff=diff1+diff2;
       if (diff1 > DIST_THR*D2i || diff2 > DIST_THR*D2j)
@@ -63,19 +72,21 @@ class hardcyl
       else
         return 0;
     }
-  friend ntype perpcomp(pvec3<ntype> V, pvec3<ntype> C, pvec3<ntype> n)
+  template <class U> 
+  friend U perpcomp(pvec3<U> V, pvec3<U> C, pvec3<U> n)
     {
-      pvec3<ntype> dsc, dscperp;
-      ntype sp;
+      pvec3<U> dsc, dscperp;
+      U sp;
       dsc = V - C; 
       sp = dsc*n;
       dscperp = dsc-sp*n;
       return abs(dscperp);
     }
-  friend void rotate_axes_on_plane(pmat3<ntype>& RR)
+  template <class U>
+  friend void rotate_axes_on_plane(pmat3<U>& RR)
     {
-      pmat3<ntype> Rin, OmegaSq, Omega, M;
-      double ox, oy, oz, theta, thetaSq, sinw, cosw;
+      pmat3<U> Rin, OmegaSq, Omega, M;
+      U ox, oy, oz, theta, thetaSq, sinw, cosw;
 
       ox = RR[0][0];
       oy = RR[0][1];
@@ -275,7 +286,8 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   ntype omnip02, omnip12, omnip22;
   ntype D2isq, D2i, D2jsq, D2j, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
   pvector<ntype,3> nip[2], Cip[2];
-  pmatrixq<ntype,3> Rl, dsc, dscperp;
+  pmatrixq<ntype,3> Rl;
+  pvector<ntype,3> dsc, dscperp;
   pvector<ntype,5> coeff;
   pvec3<ntype> solarr[2][4];
   /* rim of A and disk[wd] of B */
@@ -392,7 +404,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       solarr[0][kk1][0] = 0.0;
       solarr[0][kk1][1] = D2j*solec[kk1][0];
       solarr[0][kk1][2] = D2j*solec[kk1][1];
-      if (test_for_fallback(solarr[0][kk1], Cip[0], nip[0], D2i, D2j, &(diff[0][kk1])))
+      if (test_for_fallback(solarr[0][kk1], Cip[0], nip[0], D2i, D2j, diff[0][kk1]))
 	{
 	  fallback=1;
 #if 0
@@ -422,7 +434,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
     {
       rotate_axes_on_plane(Rl);
       nip[1] = Rl*A.n;
-      Cip[1] = Rl*(A.r+A.shift-(B.disk+B.shift));
+      Cip[1] = Rl*(A.r+A.shift-(B.disk[wd]+B.shift));
       /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
       ntype normv= abs(nip[1]);
       nip0 = nip[1][0]/normv;
@@ -577,7 +589,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 	  solarr[1][kk1][0] = 0.0;
 	  solarr[1][kk1][1] = D2j*solec[kk1][0];
 	  solarr[1][kk1][2] = D2j*solec[kk1][1];
-	  test_for_fallback(solarr[1][kk1], Cip[1], nip[1], D2i, D2j, &(diff[1][kk1]));
+	  test_for_fallback(solarr[1][kk1], Cip[1], nip[1], D2i, D2j, diff[1][kk1]);
 	  sumdiff[1] += diff[1][kk1];
 	  if (diff[1][kk1] > maxdiff[1] || kk1==0)
 	    maxdiff[1] = diff[1][kk1];  
@@ -597,10 +609,10 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   for (kk1=0; kk1 < numsol[solset]; kk1++)
     {
       dsc = solarr[solset][kk1] - Cip[solset];
-      if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2i, D2j, &tmp)) 
+      if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2i, D2j, tmp)) 
 	{
 	  printf("# %d numsol=%d %d ===================== <<<< \n", kk1, numsol[0], numsol[1]);
-	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[solset][kk1]));
+	  printf("distanza punto-centro disk: %.15G\n", solarr[solset][kk1].norm());
 	  printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[solset][kk1], Cip[solset], nip[solset]));
 
 	  if (kk1 < numsol[1-solset])
