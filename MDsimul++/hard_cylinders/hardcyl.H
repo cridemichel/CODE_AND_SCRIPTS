@@ -1,14 +1,21 @@
-#include "./pmatrix.H"
-#include "./rpoly.H"
-#include "./pmatrix.H"
-#include "./particle.H"
+#include "../mdlib/pmatrix.H"
+#include "../mdlib/rpoly.H"
+#include "../mdlib/pmatrix.H"
 template <class ntype>
 using pvec3=pvector<ntype,3>;
 template <class ntype>
 using pmat3=pmatrixq<ntype,3>;
 #define Sqr(x) ((x)*(x))
+
+#if 0
 template <class ntype>
-class hardcyl: public particle<ntype>
+class particle
+{
+
+};
+#endif
+template <class ntype>
+class hardcyl
 {
   friend ntype rimrim(class hardcyl<ntype> A, class hardcyl<ntype> B);
   friend ntype diskdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
@@ -31,14 +38,15 @@ class hardcyl: public particle<ntype>
       else
         return 1.0;
     }
-  int test_for_fallback(pvec3<ntype> P, pvec3<ntype> Cip, pvec3<ntype> nip, ntype D2i, ntype D2j, ntype *diff)
+  int test_for_fallback(pvec3<ntype> P, pvec3<ntype> Cip, pvec3<ntype> nip, ntype D2i, ntype D2j, 
+                        ntype& diff)
     {
       const double DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
       double diff1, diff2;
       diff1=fabs(perpcomp(P, Cip, nip)-D2i); // qui D2 è il diametro del rim
       diff2=fabs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2j);// qui D2 è il diametro del disco
 
-      *diff=diff1+diff2;
+      diff=diff1+diff2;
       if (diff1 > DIST_THR*D2i || diff2 > DIST_THR*D2j)
         return 1;
       else
@@ -93,7 +101,7 @@ public:
   pvector<ntype,3> disk[2];
   pvector<ntype,3> n, r;
   pvector<ntype,3> shift;
-  virtual friend double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
+  friend double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
   pvector<ntype,3> update_disks(void)
     {
       ntype Lh=0.5*L;

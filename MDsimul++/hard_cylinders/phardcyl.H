@@ -1,6 +1,6 @@
-#include "./pmatrix.H"
-#include "./rpoly.H"
-#include "./pmatrix.H"
+#include "../mdlib/pmatrix.H"
+#include "../mdlib/rpoly.H"
+#include "../mdlib/pmatrix.H"
 #include "./hardcyl.H"
 template <class ntype>
 using pvec3=pvector<ntype,3>;
