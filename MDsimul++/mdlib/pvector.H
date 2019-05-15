@@ -102,7 +102,7 @@ template <class ntype, int NT> class pvecdyns {
 public:
   constexpr static int dynamic = true;
   static const int N;
-  ntype (*v); 
+  ntype *v; 
   // copy assignment
   pvecdyns<ntype,NT>& operator=(const pvecdyns<ntype,NT>& v1)
     {
@@ -156,7 +156,7 @@ template <class ntype, int NT> class pvecdynp {
   //int nr, nc;
 public:
   constexpr static int dynamic = true;
-  ntype (*v); 
+  ntype *v; 
   int N;
   bool dealloc=true;
   // copy assignment
@@ -515,7 +515,7 @@ public:
       return v[i];
     }
   // scalar product
-  inline ntype dot(const pvector<ntype,NT>& v1)
+  inline ntype dot(const pvector<ntype,NT>& v1) const
     {
       int i;
       ntype sum=0;
@@ -526,7 +526,7 @@ public:
       return sum;
     }
   // norm 
-  inline double norm()
+  inline double norm() const
     {
       return (*this).dot(*this);
     }
@@ -607,6 +607,50 @@ public:
 	  }
 #endif
       }
+  ntype ranf(void)
+    {
+      return drand48();
+    }
+  void random_box(void)
+    {
+      for (auto i=0; i < N; i++)
+        v[i] = ranf()-0.5;
+    }
+  void random_orient(void)
+    {
+      if (N==1)
+        {
+          v[0] = 1.0;
+        }
+      else if (N == 2)
+        {
+          ntype theta=ranf()*2.0*M_PI;
+          v[0] = cos(theta);
+          v[1] = sin(theta);
+        }
+      else if (N==3)
+        {
+          ntype  xisq, xi1, xi2, xi;
+          xisq = 1.0;
+
+          while (xisq >= 1.0)
+            {
+              xi1  = 1.0 - 2.0*drand48();
+              xi2  = 1.0 - 2.0*drand48();
+              xisq = xi1 * xi1 + xi2 * xi2;
+            }
+
+          xi = sqrt (abs(1.0 - xisq));
+          v[0] = 2.0 * xi1 * xi;
+          v[1] = 2.0 * xi2 * xi;
+          v[2] = 1.0 - 2.0 * xisq;
+        }
+      else
+        {
+          cout << "random orientation for N > 3 not implemented yet\n";
+          exit(1);
+        }
+    }
 
   void show(void)
     {
