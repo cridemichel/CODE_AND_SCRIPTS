@@ -1,6 +1,5 @@
 #include "../mdlib/pmatrix.H"
 #include "../mdlib/rpoly.H"
-#include "../mdlib/pmatrix.H"
 template <class ntype>
 using pvec3=pvector<ntype,3>;
 template <class ntype>
@@ -14,23 +13,35 @@ class particle
 
 };
 #endif
+#if 0
+template <class ntype> class hardcyl;
+
+template <class ntype>
+ntype overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
+#endif
 template <class ntype>
 class hardcyl
 {
-  friend ntype rimrim(class hardcyl<ntype> A, class hardcyl<ntype> B);
-  friend ntype diskdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
-  friend ntype rimdisk(class hardcyl<ntype> A, class hardcyl<ntype> B);
-  friend ntype test_overlap_parall_cyl(class hardcyl<ntype> A, class hardcyl<ntype> B)
+  int ii;
+  template <class U>
+  friend U rimrim(class hardcyl<U> A, class hardcyl<U> B);
+  template <class U>
+  friend U diskdisk(class hardcyl<U> A, class hardcyl<U> B);
+  template <class U>
+  friend U rimdisk(class hardcyl<U> A, class hardcyl<U> B);
+
+  template <class U>
+  friend U test_overlap_parall_cyl(class hardcyl<U> A, class hardcyl<U> B, int wd)
     {
       int kk;
-      double DjCini, normDjUi;
-      pvec3<ntype> DjCi, Ui, DjUi;
-      DjCi[kk] = (B.disk+B.shift) - (A.r+A.shift);
+      U DjCini, normDjUi;
+      pvec3<U> DjCi, Ui, DjUi;
+      DjCi[kk] = (B.disk[wd]+B.shift) - (A.r+A.shift);
       //normDjCi = calc_norm(DjCi);
       DjCini = DjCi*A.n;
 
       Ui = (A.r+A.shift) + DjCini*A.n;
-      DjUi = B.disk+B.shift - Ui;
+      DjUi = B.disk[wd]+B.shift - Ui;
       normDjUi = abs(DjUi);
 
       if (normDjUi <= 0.5*(A.D+B.D) && abs(DjCini) <= A.L*0.5)
@@ -101,8 +112,15 @@ public:
   pvector<ntype,3> disk[2];
   pvector<ntype,3> n, r;
   pvector<ntype,3> shift;
-  friend double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
-  pvector<ntype,3> update_disks(void)
+  //templated function overlap is a friend of class hardcyl
+  //note that we if we use the following syntax
+  //friend ntype overlap (class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift);
+  //the compiler will not instantiate overlap when instatiating the class and we will get a linker error
+  //since it is a friend function and not a method!
+  template <class U>
+  friend U overlap (class hardcyl<U> A, class hardcyl<U> B, pvector<U,3> shift);
+
+  void update_disks(void)
     {
       ntype Lh=0.5*L;
       disk[0] = r+Lh*n;
@@ -126,7 +144,7 @@ public:
      }
 };
 template <class ntype>
-double rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
+ntype rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
 {
   ntype lambdai, lambdaj, ninj;
   ntype CiCjni, CiCjnj, detA; 
@@ -152,7 +170,7 @@ double rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
   return 0;
 }
 template <class ntype>
-double diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
+ntype diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
 {
   int j1, j2, kk; 
   ntype sp, normCiCj, Q1;
@@ -253,7 +271,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   ntype tmp, sp, solec[4][2], solqua[4], solquad[2];
   ntype c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
   ntype diff[2][4], maxdiff[2], sumdiff[2];
-  ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
+  ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp, normv;
   ntype omnip02, omnip12, omnip22;
   ntype D2isq, D2i, D2jsq, D2j, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
   pvector<ntype,3> nip[2], Cip[2];
@@ -277,10 +295,10 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   Cip[0] = Rl*((A.r+A.shift)-(B.disk[wd]+B.shift));
 
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-  norm = abs(nip[0]);
-  nip0 = nip[0][0]/norm;
-  nip1 = nip[0][1]/norm;
-  nip2 = nip[0][2]/norm;
+  normv = abs(nip[0]);
+  nip0 = nip[0][0]/normv;
+  nip1 = nip[0][1]/normv;
+  nip2 = nip[0][2]/normv;
   Cip0 = Cip[0][0];
   Cip1 = Cip[0][1];
   Cip2 = Cip[0][2];
@@ -339,7 +357,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   if (coeff[4]==0)
     {
       /* cilindri paralleli */
-      return test_overlap_parall_cyl(A, B);
+      return test_overlap_parall_cyl(A, B, wd);
     }
   else
     {
@@ -403,16 +421,13 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   if (fallback)
     {
       rotate_axes_on_plane(Rl);
-      for (kk1=0; kk1 < 3; kk1++)
-	{
-          nip[1][kk1] = Rl*A.n;
-          Cip[1][kk1] = Rl*(A.r+A.shift-(B.disk+B.shift));
-	}
+      nip[1] = Rl*A.n;
+      Cip[1] = Rl*(A.r+A.shift-(B.disk+B.shift));
       /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-      norm = abs(nip[1]);
-      nip0 = nip[1][0]/norm;
-      nip1 = nip[1][1]/norm;
-      nip2 = nip[1][2]/norm;
+      ntype normv= abs(nip[1]);
+      nip0 = nip[1][0]/normv;
+      nip1 = nip[1][1]/normv;
+      nip2 = nip[1][2]/normv;
       Cip0 = Cip[1][0];
       Cip1 = Cip[1][1];
       Cip2 = Cip[1][2];
@@ -531,7 +546,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
       if (coeff[4]==0)
 	{
 	  /* cilindri paralleli */
-	  return test_overlap_parall_cyl(A, B);
+	  return test_overlap_parall_cyl(A, B, wd);
 	}
       else
 	solve_quartic(coeff, &(numsol[1]), solqua);
@@ -655,13 +670,14 @@ ntype rimdisk(hardcyl<ntype> A, hardcyl<ntype> B)
   return 0;
 }
 template <class ntype>
-double overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift)
+ntype overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift)
 {
   pvec3<ntype> CiCj, pv;
   ntype sp, perpc, parac;
   A.shift << 0,0,0;
   bool ret;
   B.shift = shift;
+  A.ii =0;
   //numcallsRD++;
   /* if cyls are parallel is simpler... */
   if (1.0-abs(A.n*B.n) == 0)
