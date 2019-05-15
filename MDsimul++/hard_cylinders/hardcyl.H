@@ -182,7 +182,7 @@ ntype diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
   if (A.n==B.n)
     {
       /* special case of collinear cylinders (parallel disks) */
-      normCiCj = calc_norm(CiCj);
+      normCiCj = CiCj.norm();
       for (kk=0; kk < 3; kk++)
 	VV[kk] = CiCj[kk]/normCiCj;
 
