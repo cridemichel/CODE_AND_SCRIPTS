@@ -21,6 +21,49 @@ ntype overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> s
 #endif
 template <class U>
 int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, U& diff);
+template <class ntype>
+void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni, 
+                        pvector <ntype,3> Dj, pvector<ntype,3> nj, 
+                        pmatrixq<ntype,3> R, ntype D, pvector<ntype,3> Tj, 
+                        int MAXITS)
+{
+  int k, its;
+  ntype DjCini, AiDjnj, ragg;
+  pvector<ntype,3> u, dsc, DjCi, Ai, AiDj, Tnew, VV, dscperp, dscpara, TnCi;
+  /* first row vector */
+  for (k=0; k < 3; k++)
+    R[0][k] = nj[k];
+
+  /* N.B. Questa viene utilizzata in fallback e faccio un ulteriore step dell'algorito di Ibarra semplificato per
+   * determinare l'asse y del riferimenti del disco (l'asse x è l'asse perpendicolare
+   * al disco e l'asse z si ottiene con il prodotto vettore dell'asse x e y) */
+  for (its = 0; its < MAXITS; its++)
+    {
+      DjCi = Dj - Ci;
+      //normDjCi = DjCi.norm();
+      DjCini = DjCi.dot(ni);
+
+      Ai = Ci + DjCini*ni;
+      AiDj = Ai - Dj; 
+      AiDjnj = AiDj.dot(nj);
+      VV = AiDj - AiDjnj*nj;
+      //for (kk1=0; kk1 < 3; kk1++)
+      //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
+      ragg = VV.norm();
+      VV = (1.0/ragg)*VV;
+      Tj = (D*0.5)*VV;
+    }
+
+  for(k=0;k<3;k++)
+    {
+      R[1][k] = VV[k];
+      //R[1][k] = VV[k];
+      //TnCi[k] = Tnew[k]-Ci[k];
+    }
+  u=nj^VV;
+  for (k=0; k < 3 ; k++)
+    R[2][k] = u[k];
+}
 
 template <class U>
 void rotate_axes_on_plane(pmat3<U>& RR);
@@ -33,14 +76,14 @@ class hardcyl
 {
   int ii;
   template <class U>
-  friend U rimrim(class hardcyl<U> A, class hardcyl<U> B);
+  friend U rimrim(class hardcyl<U>& A, class hardcyl<U>& B);
   template <class U>
-  friend U diskdisk(class hardcyl<U> A, class hardcyl<U> B);
+  friend U diskdisk(class hardcyl<U>& A, class hardcyl<U>& B);
   template <class U>
-  friend U rimdisk(class hardcyl<U> A, class hardcyl<U> B);
+  friend U rimdisk(class hardcyl<U>& A, class hardcyl<U>& B);
 
   template <class U>
-  friend U test_overlap_parall_cyl(class hardcyl<U> A, class hardcyl<U> B, int wd)
+  friend U test_overlap_parall_cyl(class hardcyl<U>& A, class hardcyl<U>& B, int wd)
     {
       U DjCini, normDjUi;
       pvec3<U> DjCi, Ui, DjUi;
@@ -86,14 +129,14 @@ class hardcyl
   friend void rotate_axes_on_plane(pmat3<U>& RR)
     {
       pmat3<U> Rin, OmegaSq, Omega, M;
-      U ox, oy, oz, theta, thetaSq, sinw, cosw;
+      U ox, oy, oz, theta, sinw, cosw;
 
       ox = RR[0][0];
       oy = RR[0][1];
       oz = RR[0][2];
       Rin=RR;
       theta = M_PI/4.0;
-      thetaSq=Sqr(theta);
+      //thetaSq=Sqr(theta);
       sinw = sin(theta);
       cosw = (1.0 - cos(theta));
       Omega[0][0] = 0;
@@ -129,8 +172,17 @@ public:
   //the compiler will not instantiate overlap when instatiating the class and we will get a linker error
   //since it is a friend function and not a method!
   template <class U>
-  friend U overlap (class hardcyl<U> A, class hardcyl<U> B, pvector<U,3> shift);
-
+  friend U overlap (class hardcyl<U>& A, class hardcyl<U>& B, pvector<U,3>& shift);
+  void random_orient(void)
+    {
+      n.random_orient();
+      //update_disks();
+    }
+  void random_box(ntype Lbox)
+    {
+      r.random_box();
+      r = Lbox*r;
+    }
   void update_disks(void)
     {
       ntype Lh=0.5*L;
@@ -155,7 +207,7 @@ public:
      }
 };
 template <class ntype>
-ntype rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
+ntype rimrim(hardcyl<ntype>& A, hardcyl<ntype>& B)
 {
   ntype lambdai, lambdaj, ninj;
   ntype CiCjni, CiCjnj, detA; 
@@ -181,12 +233,12 @@ ntype rimrim(hardcyl<ntype> A, hardcyl<ntype> B)
   return 0;
 }
 template <class ntype>
-ntype diskdisk(hardcyl<ntype> A, hardcyl<ntype> B)
+ntype diskdisk(hardcyl<ntype>& A, hardcyl<ntype>& B)
 {
   int j1, j2, kk; 
   ntype sp, normCiCj, Q1;
   pvector <ntype,3> CiCj, VV, niN, njN, PjDj, assex, Pi, N, Pj, PiPj, PiDi;
-  ntype DiN, DjN, Djni, Djnj, Dini, normN;
+  ntype DiN, DjN, Djnj, Dini, normN;
   ntype normNSq, normPiPj, Q2, normPiDi, normPjDj;
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   CiCj = A.r - (B.r + B.shift);
@@ -276,18 +328,18 @@ void solve_quartic(pvector<ntype,5> coeff, int *numsol, ntype *solqua)
 
 }
 template <class ntype>
-ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
+ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 {
   int kk1, numsol[2], fallback, solset;
-  ntype tmp, sp, solec[4][2], solqua[4], solquad[2];
+  ntype tmp, sp, solec[4][2], solqua[4];
   ntype c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
   ntype diff[2][4], maxdiff[2], sumdiff[2];
   ntype nip02,nip12,nip22,Cip02,Cip12,Cip22, temp, normv;
   ntype omnip02, omnip12, omnip22;
   ntype D2isq, D2i, D2jsq, D2j, Cip0, Cip1, Cip2, nip0, nip1 , nip2, nip1nip2, nip0nip2, nip0nip1; 
-  pvector<ntype,3> nip[2], Cip[2];
+  pvector<ntype,3> nip[2], Cip[2], Ci;
   pmatrixq<ntype,3> Rl;
-  pvector<ntype,3> dsc, dscperp;
+  pvector<ntype,3> dsc, dscperp, uy;
   pvector<ntype,5> coeff;
   pvec3<ntype> solarr[2][4];
   /* rim of A and disk[wd] of B */
@@ -299,8 +351,9 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
 #else
-  //uy = B.disk[wd];
-  //versor_to_R_alt_fb(Ci, ni, Dj, nj, Rl, D, uy, 1); 
+  uy = B.disk[wd];
+  // verificare se D è di B o A!!! 
+  versor_to_R_alt_fb(A.r+A.shift, A.n, B.disk[wd], B.n, Rl, B.D, uy, 1); 
   //versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
 #endif
   nip[0] = Rl*A.n;
@@ -654,7 +707,7 @@ ntype rimdiskone(hardcyl<ntype> A, hardcyl<ntype> B, int wd)
   return 1;  
 }
 template <class ntype>
-ntype rimdisk(hardcyl<ntype> A, hardcyl<ntype> B)
+ntype rimdisk(hardcyl<ntype>& A, hardcyl<ntype>& B)
 {
   ntype sp, perpdist[2];
   pvec3<ntype> DjCi;
@@ -682,14 +735,15 @@ ntype rimdisk(hardcyl<ntype> A, hardcyl<ntype> B)
   return 0;
 }
 template <class ntype>
-ntype overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> shift)
+ntype overlap(class hardcyl<ntype>& A, class hardcyl<ntype>& B, pvector<ntype,3>& shift)
 {
   pvec3<ntype> CiCj, pv;
   ntype sp, perpc, parac;
   A.shift << 0,0,0;
-  bool ret;
+  ntype ret;
   B.shift = shift;
   A.ii =0;
+  //cout << "checking overlap\n";
   //numcallsRD++;
   /* if cyls are parallel is simpler... */
   if (1.0-abs(A.n*B.n) == 0)
@@ -706,10 +760,17 @@ ntype overlap(class hardcyl<ntype> A, class hardcyl<ntype> B, pvector<ntype,3> s
         return 1.0;
     }
   if ((ret=diskdisk(A,B))!=0)
-   return ret; 
+    {
+      return ret;
+    } 
   if ((ret=rimrim(A,B))!=0)
-   return ret; 
+    {
+      return ret;
+    }
+
   if ((ret=rimdisk(A,B))!=0)
-   return ret; 
+    {
+      return ret;
+    } 
   return 1.0;
 }
