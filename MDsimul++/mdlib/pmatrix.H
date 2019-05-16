@@ -579,6 +579,7 @@ public:
   // solve the linear system (*this)*x = b (b is replaced by x)
   // if b==NULL then returns just the inverse of (*this)
 
+  int maxdigits=std::numeric_limits<ntype>::digits10-1;
   using pvec = pvector<ntype,NT>;
   template <class T=pvec>
     pmatrixq<ntype,NT> gaussj(typename  std::conditional< std::is_same<T,pvec>::value, T&, int>::type b) const
@@ -2125,6 +2126,10 @@ public:
         }
       return v;
     }
+  void set_show_digits(int p)
+    {
+      maxdigits=p;
+    }
 
   void show(const char* str)
     {
@@ -2137,7 +2142,7 @@ public:
           cout << "{";
           for (j=0; j < N; j++)
             { 
-              cout << setprecision(std::numeric_limits<ntype>::digits10-1) << m[i][j];
+              cout << setprecision(maxdigits-1) << m[i][j];
               if (j < N-1)
                 cout << ",";
             }

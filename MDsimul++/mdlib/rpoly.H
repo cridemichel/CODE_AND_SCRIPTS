@@ -402,6 +402,11 @@ public:
     {
       show(NULL);
     }
+
+  void set_show_digits(int p)
+    {
+      maxdigits=p;
+    }
   void show(const char* str)
     {
       int i;

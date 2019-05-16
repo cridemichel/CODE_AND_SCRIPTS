@@ -656,6 +656,7 @@ public:
     {
       show(NULL);
     }
+
   void show(const char* str)
     {
       int i;
@@ -666,11 +667,7 @@ public:
       cout << "{";
       for (i=0; i < N; i++)
 	{
-#if 1
-	  cout << setprecision(32) << v[i];
-#else
           cout << setprecision(maxdigits-1) << v[i];
-#endif
           if (i < N-1)
 	    cout << ",";
 	}
