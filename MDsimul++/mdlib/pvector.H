@@ -526,9 +526,9 @@ public:
       return sum;
     }
   // norm 
-  inline double norm() const
+  inline ntype norm() const
     {
-      return (*this).dot(*this);
+      return sqrt((*this).dot(*this));
     }
   // cross product
   inline pvector<ntype,NT> cross(const pvector<ntype,NT>& v1)
@@ -666,8 +666,12 @@ public:
       cout << "{";
       for (i=0; i < N; i++)
 	{
-	  cout << setprecision(maxdigits-1) << v[i];
-	  if (i < N-1)
+#if 1
+	  cout << setprecision(32) << v[i];
+#else
+          cout << setprecision(maxdigits-1) << v[i];
+#endif
+          if (i < N-1)
 	    cout << ",";
 	}
       cout << "}\n";
