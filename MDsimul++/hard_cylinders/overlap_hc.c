@@ -1984,10 +1984,12 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
   coeff[0] = c12 + 2*c1*c3 + c32 - c52;
 #endif
+#if 0
   printf("coeff[C]=");
   for (kk1=0; kk1 < 5; kk1++)
     printf(" %.15G ", coeff[kk1]);
   printf("\n");
+#endif
   if (coeff[4]==0)
     {
       /* cilindri paralleli */
@@ -2983,7 +2985,7 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 #endif 
 	  if (normDjUi > D)
             {
-              printf("[C] qui\n");
+              //printf("[C] qui\n");
               continue;
             }
 	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 

@@ -449,7 +449,7 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
   coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
   coeff[0] = c12 + 2*c1*c3 + c32 - c52;
 #endif
-  coeff.show("[C++] quartic coeff=");
+  //coeff.show("[C++] quartic coeff=");
   if (coeff[4]==0)
     {
       /* cilindri paralleli */
