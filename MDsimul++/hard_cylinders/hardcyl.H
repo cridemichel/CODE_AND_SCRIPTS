@@ -24,7 +24,7 @@ int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, U& d
 template <class ntype>
 void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni, 
                         pvector <ntype,3> Dj, pvector<ntype,3> nj, 
-                        pmatrixq<ntype,3> R, ntype D, pvector<ntype,3> Tj, 
+                        pmatrixq<ntype,3>& R, ntype D, pvector<ntype,3> Tj, 
                         int MAXITS)
 {
   int k, its;
@@ -49,8 +49,11 @@ void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni,
       VV = AiDj - AiDjnj*nj;
       //for (kk1=0; kk1 < 3; kk1++)
       //dscpara[kk1] = dscperp[kk1] - Dj[kk1];
-      ragg = VV.norm();
-      VV = (1.0/ragg)*VV;
+      //VV.show("VV=");
+      ragg = 1.0/VV.norm();
+      //for (kk1=0; kk1 < 3; kk1++)
+      VV = ragg*VV;
+      //cout << "boh=" << VV.norm() << "\n";
       Tj = (D*0.5)*VV;
     }
 
@@ -61,6 +64,9 @@ void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni,
       //TnCi[k] = Tnew[k]-Ci[k];
     }
   u=nj^VV;
+  //cout << "norm(VV)=" << VV.norm() << "\n";
+  //cout << "norm(u)=" << u.norm() << "nj.u=" << nj.dot(u) << "\n";
+ 
   for (k=0; k < 3 ; k++)
     R[2][k] = u[k];
 }
@@ -104,7 +110,7 @@ class hardcyl
   friend int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, 
                         U& diff)
     {
-      const U DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
+      const U DIST_THR=1E-9;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
       U diff1, diff2;
       diff1=abs(perpcomp(P, Cip, nip)-D2i); // qui D2 è il diametro del rim
       diff2=abs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2j);// qui D2 è il diametro del disco
@@ -310,27 +316,50 @@ ntype diskdisk(hardcyl<ntype>& A, hardcyl<ntype>& B)
   return 0;
 }
 template <class ntype>
-void solve_quartic(pvector<ntype,5> coeff, int *numsol, ntype *solqua)
+void discard_spurious(ntype *solqua, int *numsol)
+{
+  /* each solution x must be such that |x| <= 1 */
+  int k, nsol;
+  const ntype EPS=1E-9;
+  ntype solL[4];
+  nsol=0;
+  for (k=0; k < *numsol; k++)
+    solL[k] = solqua[k];
+  for (k=0; k < *numsol; k++)
+    {
+      if (fabsl(solL[k]) < 1.0+EPS)
+	{
+	  solqua[nsol] = solL[k];
+	  nsol++;
+	}
+    }
+  //printf("numsol=%d nsol=%d\n", *numsol, nsol);
+  *numsol = nsol;
+}
+template <class ntype>
+void solve_quartic(pvector<ntype,5>& coeff, int *numsol, ntype *solqua)
 {
   int k;
   rpoly<ntype,4> rp;
   pvector<complex<ntype>,4> roots;
   rp.set_coeff(coeff);
   rp.find_roots(roots);
+
+  *numsol=0;
   for (k=0; k < 4; k++)
     {
+      //cout << "k=" << k << "\n";
       if (imag(roots[k])==0)
 	{
 	  solqua[*numsol] = real(roots[k]);
 	  (*numsol)++;
 	}
     }
-
 }
 template <class ntype>
 ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 {
-  int kk1, numsol[2], fallback, solset;
+  int kk1, numsol[2]={0,0}, fallback, solset;
   ntype tmp, sp, solec[4][2], solqua[4];
   ntype c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
   ntype diff[2][4], maxdiff[2], sumdiff[2];
@@ -351,16 +380,17 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 #if 0
   versor_to_R(nj[0], nj[1], nj[2], Rl);
 #else
-  uy = B.disk[wd];
+  uy = B.disk[wd]+B.shift;
+  //uy.show("uy");
   // verificare se D è di B o A!!! 
-  versor_to_R_alt_fb(A.r+A.shift, A.n, B.disk[wd], B.n, Rl, B.D, uy, 1); 
+  versor_to_R_alt_fb(A.r+A.shift, A.n, B.disk[wd]+B.shift, B.n, Rl, B.D, uy, 1); 
   //versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
 #endif
   nip[0] = Rl*A.n;
+  //(Rl*Rl.transp()).show("R");
   Cip[0] = Rl*((A.r+A.shift)-(B.disk[wd]+B.shift));
-
   /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-  normv = abs(nip[0]);
+  normv = nip[0].norm();
   nip0 = nip[0][0]/normv;
   nip1 = nip[0][1]/normv;
   nip2 = nip[0][2]/normv;
@@ -430,8 +460,10 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
     }
   //discard_spurious(solqua, &(numsol[0]));
   fallback = 0;
+
   for (kk1=0; kk1 < numsol[0]; kk1++)
     {
+      //  cout << "solqua[" << kk1 << "]=" << solqua[kk1] << "\n";
       temp = c4 + c2*solqua[kk1];
       solec[kk1][0] = (-c0 - c3 - c5*solqua[kk1] + (c0 - c1)*Sqr(solqua[kk1]))/temp;
       solec[kk1][1] = solqua[kk1];
@@ -448,6 +480,8 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 	  fallback=1;
 	}
     }
+  
+  //cout << "numsol[0]=" << numsol[0] << "\n";
   /* ora trovo i 5 coefficienti della quartica c4*x^4+c3*x^3....*/
   sumdiff[0] = maxdiff[0] = 0;
   for (kk1=0; kk1 < numsol[0]; kk1++)
@@ -489,7 +523,7 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
       nip[1] = Rl*A.n;
       Cip[1] = Rl*(A.r+A.shift-(B.disk[wd]+B.shift));
       /* ora trovo i 6 coefficienti dell'ellisse del rim (c0*x^2 + c1*y^2 + c2*xy + c3 + c4*x + c5*y=0)*/
-      ntype normv= abs(nip[1]);
+      ntype normv= nip[1].norm();
       nip0 = nip[1][0]/normv;
       nip1 = nip[1][1]/normv;
       nip2 = nip[1][2]/normv;
