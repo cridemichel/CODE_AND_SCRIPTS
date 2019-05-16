@@ -13,11 +13,15 @@ double diamHC=2.0, lengthHC=2.0;
 //#define USEGSL
 #define GAUSS
 #define HC_FAST
+#define MC_QUART_HYBRID 
 #define EULER_ROT
 #define MCGAMMA
 #define PRINC_AXES
 #define QUASIMC
 #define SOBOL_LL /* use long long to have MAXBIT=60! */
+#ifndef CMPLX
+#define CMPLX(x,y) ((x)+I*(y))
+#endif
 #ifdef USEGSL
 #include <gsl/gsl_qrng.h>
 #endif
@@ -1980,6 +1984,10 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
   coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
   coeff[0] = c12 + 2*c1*c3 + c32 - c52;
 #endif
+  printf("coeff[C]=");
+  for (kk1=0; kk1 < 5; kk1++)
+    printf(" %.15G ", coeff[kk1]);
+  printf("\n");
   if (coeff[4]==0)
     {
       /* cilindri paralleli */
@@ -2974,8 +2982,10 @@ double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], 
 	    }
 #endif 
 	  if (normDjUi > D)
-	    continue;
-
+            {
+              printf("[C] qui\n");
+              continue;
+            }
 	  /* NOTE: in Ibarra et al. Mol. Phys. 33, 505 (2007) 
 	     there is some mess about following conditions:
 	     The second and third condition on right column of page 514 
@@ -3087,13 +3097,21 @@ double calcDistNegHCopt(void)
   if (L >= D) // prolate
     {
       if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
-	return ret;
-
+        {
+          printf("[C] diskdisk\n");
+          return ret;
+        }
       if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
-	return ret;
-
+        {
+          printf("[C] rimrim\n");
+          return ret;
+        }
       if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
-	return ret;
+        {
+          printf("[C] rimdisk\n");
+          return ret;
+        }
+      printf("[C] no overlap\n");
      }
   else // oblate
     {
@@ -5425,3 +5443,4 @@ int main(int argc, char**argv)
   gsl_qrng_free(qsob);
 #endif
 }
+#endif

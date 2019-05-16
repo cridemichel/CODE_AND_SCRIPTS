@@ -449,6 +449,7 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
   coeff[1] = 2*c1*c4 + 2*c3*c4 - 2*c2*c5;
   coeff[0] = c12 + 2*c1*c3 + c32 - c52;
 #endif
+  coeff.show("[C++] quartic coeff=");
   if (coeff[4]==0)
     {
       /* cilindri paralleli */
@@ -698,39 +699,39 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
       dsc = solarr[solset][kk1] - Cip[solset];
       if (test_for_fallback(solarr[solset][kk1], Cip[solset], nip[solset], D2i, D2j, tmp)) 
 	{
-	  printf("# %d numsol=%d %d ===================== <<<< \n", kk1, numsol[0], numsol[1]);
-	  printf("distanza punto-centro disk: %.15G\n", solarr[solset][kk1].norm());
-	  printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[solset][kk1], Cip[solset], nip[solset]));
+	  printf("[C++] # %d numsol=%d %d ===================== <<<< \n", kk1, numsol[0], numsol[1]);
+	  printf("[C++] distanza punto-centro disk: %.15G\n", solarr[solset][kk1].norm());
+	  printf("[C++] distanz punto-asse rim=%.15G\n", perpcomp(solarr[solset][kk1], Cip[solset], nip[solset]));
 
 	  if (kk1 < numsol[1-solset])
 	    {
-	      printf("DISCARDED SOLSET [%d]\n", 1-solset);
-	      printf("distanza punto-centro disk: %.15G\n", abs(solarr[1-solset][kk1]));
-	      printf("distanz punto-asse rim=%.15G\n", perpcomp(solarr[1-solset][kk1], Cip[1-solset], nip[1-solset]));
+	      printf("[C++] DISCARDED SOLSET [%d]\n", 1-solset);
+	      printf("[C++] distanza punto-centro disk: %.15G\n", abs(solarr[1-solset][kk1]));
+	      printf("[C++] distanza punto-asse rim=%.15G\n", perpcomp(solarr[1-solset][kk1], Cip[1-solset], nip[1-solset]));
 	    }
 #ifdef MC_QUART_VERBOSE
-	  printf("distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
-	  printf("numsol=%d fallback=%d\n", numsol[solset], fallback);
-	  print_vec("ni=",ni);
-	  print_vec("nj=",nj);
-	  printf("c02=%.15G c0=%.15G c1=%.15G c12=%.15G c22=%.15G\n", c02, c0, c1, c12, c22);
-	  printf("c4=%.15G c5=%.15G\n", c4, c5);
-	  printf("solec[%d]=%.15G\n", kk1, solqua[kk1]);
-	  printf("coeffEr=%.16G %.16G %.16G %.16G %.16G %.16G\n", coeffEr[0], coeffEr[1], coeffEr[2], coeffEr[3], coeffEr[4],
+	  printf("[C++] distanza punto-centro disksq: %.15G D2^2=%.15G\n", calc_norm(solarr[solset][kk1]), Sqr(D2));
+	  printf("[C++] numsol=%d fallback=%d\n", numsol[solset], fallback);
+	  print_vec("[C++] ni=",ni);
+	  print_vec("[C++] nj=",nj);
+	  printf("[C++] c02=%.15G c0=%.15G c1=%.15G c12=%.15G c22=%.15G\n", c02, c0, c1, c12, c22);
+	  printf("[C++] c4=%.15G c5=%.15G\n", c4, c5);
+	  printf("[C++] solec[%d]=%.15G\n", kk1, solqua[kk1]);
+	  printf("[C++] coeffEr=%.16G %.16G %.16G %.16G %.16G %.16G\n", coeffEr[0], coeffEr[1], coeffEr[2], coeffEr[3], coeffEr[4],
 		 coeffEr[5]);
 	  //solve_quadratic(coeff, &numsol2, solquad);
 	  //if (numsol2> 0)
 	  //printf("solqua=%.15G %.15G\n", solquad[0], solquad[1]); 
-	  printf("solqua[%d]=%.15G\n", kk1, solqua[kk1]);
-	  printf("ni.nj=%.15G\n", scalProd(ni,nj));
-	  printf("(%.18G)*x^4+(%.18G)*x^3+(%.18G)*x^2+(%.18G)*x+(%.18G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
-	  printf("{%.18G,%.18G,%.18G,%.18G,%.18G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
-	  printf("quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
+	  printf("[C++] solqua[%d]=%.15G\n", kk1, solqua[kk1]);
+	  printf("[C++] ni.nj=%.15G\n", scalProd(ni,nj));
+	  printf("[C++] (%.18G)*x^4+(%.18G)*x^3+(%.18G)*x^2+(%.18G)*x+(%.18G)\n", coeff[4], coeff[3], coeff[2], coeff[1], coeff[0]);
+	  printf("[C++]{%.18G,%.18G,%.18G,%.18G,%.18G}\n", coeff[0], coeff[1], coeff[2], coeff[3], coeff[4]);
+	  printf("[C++] quart(sol)=%.15G\n", coeff[4]*Sqr(solqua[kk1])*Sqr(solqua[kk1])+
 		 coeff[3]*Sqr(solqua[kk1])*solqua[kk1] + coeff[2]*Sqr(solqua[kk1])+
 		 coeff[1]*solqua[kk1]+coeff[0]);
-	  printf("temp=%.15G\n", temp);
+	  printf("[C++] temp=%.15G\n", temp);
 #endif
-	  printf("# %d >>>> =====================  \n", kk1);
+	  printf("[C++] # %d >>>> =====================  \n", kk1);
 	}
       sp = dsc*nip[solset];
       if (abs(sp) < A.L*0.5)
@@ -743,29 +744,51 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 template <class ntype>
 ntype rimdisk(hardcyl<ntype>& A, hardcyl<ntype>& B)
 {
-  ntype sp, perpdist[2];
+  ntype sp[2], perpdist[2];
   pvec3<ntype> DjCi;
+  ntype DjCini;
   int whichdisk;
   /* choose the disk closest to cyl axis */
   DjCi = B.disk[0] - A.r;
-  sp = DjCi*A.n;
-  perpdist[0]=abs(DjCi - sp*A.n);
+  sp[0] = DjCi*A.n;
+  perpdist[0]=(DjCi - sp[0]*A.n).norm();
   DjCi = B.disk[1] - A.r;
-  sp = DjCi*A.n;
-  perpdist[1]=abs(DjCi - sp*A.n);
+  sp[1] = DjCi*A.n;
+  perpdist[1]=(DjCi - sp[1]*A.n).norm();
   whichdisk=(perpdist[0]<perpdist[1])?0:1;
-  if (perpdist[whichdisk] <= 0.5*(A.D+B.D) && rimdiskone(A, B, whichdisk) < 0.0)
+  DjCini=sp[whichdisk];
+  //Ui = A.r + DjCini*A.n;
+  //normDjUi = perpdist
+
+  if (perpdist[whichdisk] < 0.5*A.D && abs(DjCini) <= 0.5*A.L)
     return -1;
+
+  if ( !(perpdist[whichdisk] > 0.5*(A.D+B.D)) &&
+       !(perpdist[whichdisk] < 0.5*A.D && abs(DjCini) > 0.5*A.L) )
+    {
+    
+      if (rimdiskone(A, B, whichdisk) < 0.0)
+        return -1;
+    }
   /* choose the disk closest to cyl axis */
   DjCi = A.disk[0] - B.r;
-  sp = DjCi*B.n;
-  perpdist[0]=abs(DjCi - sp*B.n);
+  sp[0] = DjCi*B.n;
+  perpdist[0]=(DjCi - sp[0]*B.n).norm();
   DjCi = A.disk[1] - B.r;
-  sp = DjCi*B.n;
-  perpdist[1]=abs(DjCi - sp*B.n);
+  sp[1] = DjCi*B.n;
+  perpdist[1]=(DjCi - sp[1]*B.n).norm();
   whichdisk=(perpdist[0]<perpdist[1])?0:1;
-  if (perpdist[whichdisk] <= 0.5*(A.D+B.D) && rimdiskone(B, A, whichdisk) < 0.0)
+  DjCini = sp[whichdisk];
+
+  if (perpdist[whichdisk] < 0.5*B.D && abs(DjCini) <= 0.5*B.L)
     return -1;
+
+  if ( !(perpdist[whichdisk] > 0.5*(A.D+B.D)) &&
+       !(perpdist[whichdisk] < 0.5*B.D && abs(DjCini) > 0.5*B.L) )
+    {
+      if (rimdiskone(B, A, whichdisk) < 0.0)
+        return -1;
+    }
   return 0;
 }
 template <class ntype>
