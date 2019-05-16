@@ -110,7 +110,7 @@ class hardcyl
   friend int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, 
                         U& diff)
     {
-      const U DIST_THR=1E-9;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
+      const U DIST_THR=5E-13;// old value 5.0E-13 -- NOTA 22/02/18 con il nuovo quartic solver ci si può spingere a 5E-14 volendo!
       U diff1, diff2;
       diff1=abs(perpcomp(P, Cip, nip)-D2i); // qui D2 è il diametro del rim
       diff2=abs(sqrt(Sqr(P[1])+Sqr(P[2]))-D2j);// qui D2 è il diametro del disco
