@@ -24,7 +24,7 @@ int test_for_fallback(pvec3<U> P, pvec3<U> Cip, pvec3<U> nip, U D2i, U D2j, U& d
 template <class ntype>
 void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni, 
                         pvector <ntype,3> Dj, pvector<ntype,3> nj, 
-                        pmatrixq<ntype,3>& R, ntype D, pvector<ntype,3> Tj, 
+                        pmatrixq<ntype,3>& R, ntype Diamj, pvector<ntype,3> Tj, 
                         int MAXITS)
 {
   int k, its;
@@ -34,7 +34,7 @@ void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni,
   for (k=0; k < 3; k++)
     R[0][k] = nj[k];
 
-  /* N.B. Questa viene utilizzata in fallback e faccio un ulteriore step dell'algorito di Ibarra semplificato per
+  /* N.B. In questa routine faccio un ulteriore step dell'algorito di Ibarra semplificato per
    * determinare l'asse y del riferimenti del disco (l'asse x è l'asse perpendicolare
    * al disco e l'asse z si ottiene con il prodotto vettore dell'asse x e y) */
   for (its = 0; its < MAXITS; its++)
@@ -54,7 +54,7 @@ void versor_to_R_alt_fb(pvector<ntype,3> Ci,  pvector<ntype,3> ni,
       //for (kk1=0; kk1 < 3; kk1++)
       VV = ragg*VV;
       //cout << "boh=" << VV.norm() << "\n";
-      Tj = (D*0.5)*VV;
+      Tj = (Diamj*0.5)*VV;
     }
 
   for(k=0;k<3;k++)
@@ -320,6 +320,8 @@ void discard_spurious(ntype *solqua, int *numsol)
 {
   /* each solution x must be such that |x| <= 1 */
   int k, nsol;
+  // N.B. questo valore sembra andar bene ma forse potrebbe anche
+  // essere aumentato (e.g. 1E-7)
   const ntype EPS=1E-9;
   ntype solL[4];
   nsol=0;
@@ -346,10 +348,12 @@ void solve_quartic(pvector<ntype,5>& coeff, int *numsol, ntype *solqua)
   rp.find_roots(roots);
 
   //roots.show("[C++]roots=");
+  //rp.show("pol[x_]=");
   *numsol=0;
   for (k=0; k < 4; k++)
     {
       //cout << "k=" << k << "\n";
+      //cout << "p(" << roots[k] << "=" << rp.evalpoly(roots[k]) << "\n";
       if (imag(roots[k])==0)
 	{
 	  solqua[*numsol] = real(roots[k]);
@@ -383,7 +387,6 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 #else
   uy = B.disk[wd]+B.shift;
   //uy.show("uy");
-  // verificare se D è di B o A!!! 
   versor_to_R_alt_fb(A.r+A.shift, A.n, B.disk[wd]+B.shift, B.n, Rl, B.D, uy, 1); 
   //versor_to_R_alt(Ci, ni, Dj, nj, Rl, D); 
 #endif
@@ -460,7 +463,14 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
     {
       solve_quartic(coeff, &(numsol[0]), solqua);
     }
+  //cout << "numsol prima=" << numsol[0] << "\n";
+  
+  // N.B. Questa routine scarta tutte le soluzioni reali con modulo significativamente// maggiore di 1. Può infatti accadere in doppia precisione che si abbiano
+  // delle soluzioni complesse con parte immaginaria molto piccola che risultano
+  // come due soluzioni reali. Queste soluzioni avendo modulo molto maggiore di 
+  // 1 possono quindi essere scartate. 
   discard_spurious(solqua, &(numsol[0]));
+  //cout << "numsol dopo=" << numsol[0] << "\n";
   fallback = 0;
 
   for (kk1=0; kk1 < numsol[0]; kk1++)
