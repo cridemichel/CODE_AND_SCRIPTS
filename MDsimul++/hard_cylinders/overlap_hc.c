@@ -3098,20 +3098,20 @@ double calcDistNegHCopt(void)
     {
       if ((ret=diskdisk(D, L, Di, Ci, ni, Dj, Cj, nj)) != 0.0)
         {
-          printf("[C] diskdisk\n");
+          //printf("[C] diskdisk\n");
           return ret;
         }
       if ((ret=rimrim(D, L, Ci, ni, Cj, nj)) != 0.0)
         {
-          printf("[C] rimrim\n");
+          //printf("[C] rimrim\n");
           return ret;
         }
       if ((ret=rimdisk(D, L, Ci, ni, Di, Dj, Cj, nj)) != 0.0)
         {
-          printf("[C] rimdisk\n");
+          //printf("[C] rimdisk\n");
           return ret;
         }
-      printf("[C] no overlap\n");
+      //printf("[C] no overlap\n");
      }
   else // oblate
     {

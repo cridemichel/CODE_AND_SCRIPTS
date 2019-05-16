@@ -748,7 +748,8 @@ ntype rimdisk(hardcyl<ntype>& A, hardcyl<ntype>& B)
   pvec3<ntype> DjCi;
   ntype DjCini;
   int whichdisk;
-  /* choose the disk closest to cyl axis */
+  /* We check overlap between the two disks of B and rim of A */
+  /* choose the disk of B closest to axis of cylinder A */
   DjCi = B.disk[0] - A.r;
   sp[0] = DjCi*A.n;
   perpdist[0]=(DjCi - sp[0]*A.n).norm();
@@ -770,7 +771,8 @@ ntype rimdisk(hardcyl<ntype>& A, hardcyl<ntype>& B)
       if (rimdiskone(A, B, whichdisk) < 0.0)
         return -1;
     }
-  /* choose the disk closest to cyl axis */
+  /* Swapped A and B, i.e. we check overlap between the two disks of A and rim of B */
+  /* choose the disk of A closest to axis of cylinder B */
   DjCi = A.disk[0] - B.r;
   sp[0] = DjCi*B.n;
   perpdist[0]=(DjCi - sp[0]*B.n).norm();
