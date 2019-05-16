@@ -327,7 +327,7 @@ void discard_spurious(ntype *solqua, int *numsol)
     solL[k] = solqua[k];
   for (k=0; k < *numsol; k++)
     {
-      if (fabsl(solL[k]) < 1.0+EPS)
+      if (abs(solL[k]) < 1.0+EPS)
 	{
 	  solqua[nsol] = solL[k];
 	  nsol++;
@@ -345,6 +345,7 @@ void solve_quartic(pvector<ntype,5>& coeff, int *numsol, ntype *solqua)
   rp.set_coeff(coeff);
   rp.find_roots(roots);
 
+  //roots.show("[C++]roots=");
   *numsol=0;
   for (k=0; k < 4; k++)
     {
@@ -459,7 +460,7 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
     {
       solve_quartic(coeff, &(numsol[0]), solqua);
     }
-  //discard_spurious(solqua, &(numsol[0]));
+  discard_spurious(solqua, &(numsol[0]));
   fallback = 0;
 
   for (kk1=0; kk1 < numsol[0]; kk1++)
@@ -489,11 +490,19 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
+      //printf("[C++]solec[%d]=%.32G %.32G\n", kk1, solec[kk1][0], solec[kk1][1]);
       solarr[0][kk1][0] = 0.0;
       solarr[0][kk1][1] = D2j*solec[kk1][0];
       solarr[0][kk1][2] = D2j*solec[kk1][1];
       if (test_for_fallback(solarr[0][kk1], Cip[0], nip[0], D2i, D2j, diff[0][kk1]))
 	{
+#if 0
+          A.r.show("rA=");
+          A.n.show("nA=");
+          B.r.show("rB=");
+          B.n.show("nB=");
+          exit(-1);
+#endif
 	  fallback=1;
 #if 0
 	  printf("distanza punto-centro disk: %.15G\n", calc_norm(solarr[0][kk1]));
@@ -650,7 +659,7 @@ ntype rimdiskone(hardcyl<ntype>& A, hardcyl<ntype>& B, int wd)
 	}
       else
 	solve_quartic(coeff, &(numsol[1]), solqua);
-      //discard_spurious(solqua, &(numsol[1]));
+      discard_spurious(solqua, &(numsol[1]));
 #ifdef MC_QUART_VERBOSE
       printf("falling back [#%ld] type=%d numsol=%d %d\n", numfb++,fallback, numsol[0], numsol[1]);
 #endif

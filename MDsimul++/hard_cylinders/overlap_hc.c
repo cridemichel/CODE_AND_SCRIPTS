@@ -1519,6 +1519,7 @@ void wrap_oqs_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 #endif
   for (k=0; k < 4; k++)
     {
+      //printf("[C] root #%d=%.32G %.32G\n", creal(csol[k]), cimag(csol[k]));
       if (cimag(csol[k])==0)
 	{
 	  solqua[*numsol] = creal(csol[k]);
@@ -1987,7 +1988,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 #if 0
   printf("coeff[C]=");
   for (kk1=0; kk1 < 5; kk1++)
-    printf(" %.15G ", coeff[kk1]);
+    printf(" %.32G ", coeff[kk1]);
   printf("\n");
 #endif
   if (coeff[4]==0)
@@ -1997,8 +1998,9 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
     }
   else
     solve_quartic(coeff, &(numsol[0]), solqua);
+  //printf("[C]numsol=%d\n", numsol[0]);
   discard_spurious(solqua, &(numsol[0]));
-
+  //printf("[C]after numsol=%d\n", numsol[0]);
   //solve_fourth_deg(coeff, &numsol, solqua);
   /* ora assegno a solec[][] e calcolo x */
   fallback = 0;
@@ -2021,6 +2023,7 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
     {
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
+      //printf("[C]solec[%d]=%.32G %.32G\n", kk1, solec[kk1][0], solec[kk1][1]);
       solarr[0][kk1][0] = 0.0;
       solarr[0][kk1][1] = D2*solec[kk1][0];
       solarr[0][kk1][2] = D2*solec[kk1][1];
