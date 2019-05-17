@@ -1780,9 +1780,9 @@ public:
       if (N > NMAXMUL) 
         {
           if constexpr ( std::is_same<ntype, double>::value)
-            wrap_dgemv('n', &(v2.v[0]), &(m[0][0]), &(v1.v[0]), N);
+            wrap_dgemv('n', &(v2.v[0]), &(m1.m[0][0]), &(v1.v[0]), N);
           else if constexpr ( std::is_same<ntype, float>::value)
-            wrap_sgemv('n', &(v2.m[0][0]), &(m[0][0]), &(v1.v[0]), N);
+            wrap_sgemv('n', &(v2.m[0][0]), &(m1.m[0][0]), &(v1.v[0]), N);
           else
             {
               v2.v[i]=0;
