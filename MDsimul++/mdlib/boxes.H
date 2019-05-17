@@ -22,8 +22,15 @@ public:
   // it is needed othwewise compiler consider following overlap not related to the overlap
   // function defined below
   friend ntype overlap<> (box<ntype>& A, box<ntype>& B);
-  pvector<ntype,3> r, sax;
+  pvector<ntype,3> r, sax, shift;
   pmatrixq<ntype,3> R;
+  box()
+    {
+      r << 0,0,0;
+      R << 1,0,0,0,1,0,0,0,1;
+      sax << 1,1,1;
+      shift << 0,0,0;
+    }
 
 };
 
@@ -41,7 +48,7 @@ ntype overlap(box<ntype>& A, box<ntype>& B)
     }
   EA = A.sax;
   EB = B.sax;
-  DD = A.r - B.r;
+  DD = (A.r+A.shift) - (B.r+B.shift);
   /* axis C0+s*A0 */
   for (k=0; k < 3; k++) 
     {
@@ -102,7 +109,7 @@ ntype overlap(box<ntype>& A, box<ntype>& B)
     return 1.0;
 
   /* axis C0+s*B2 */
-  RR = abs(BB[2],DD);
+  RR = abs(BB[2]*DD);
   R0 = EA[0]*fabscij[0][2]+EA[1]*fabscij[1][2]+EA[2]*fabscij[2][2];
   // R0 = EA*fabscij.col(2);
   R01 = R0 + EB[2];
