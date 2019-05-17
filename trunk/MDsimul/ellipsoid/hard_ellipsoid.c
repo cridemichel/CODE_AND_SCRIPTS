@@ -1617,14 +1617,14 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
   int kk1, kk2, kk3, k1, k2, k3, ok;
   complex double roots[4];
  
-  //typei = typeOfPart[i];
-  //typej = typeOfPart[j];
+  typei = typeOfPart[i];
+  typej = typeOfPart[j];
   
   /* apply affinity to reduce first ellipsoid to a sphere */
   for (k1=0; k1 < 2; k1++)
     {
-      Di[k1]= 1.0/Sqr(sax[0][k1]);
-      Dj[k1]= 1.0/Sqr(sax[1][k1]);
+      Di[k1]= 1.0/Sqr(typesArr[typei].sax[k1]);
+      Dj[k1]= 1.0/Sqr(typesArr[typej].sax[k1]);
       for (k2=0; k2 < 2; k2++)
         {
           Ri[k1][k2] = R[i][k1][k2];
@@ -1634,10 +1634,10 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
   /* sai[0] e sai[1] sono i semiassi della particella i */
   for (k1=0; k1 < 2; k1++)
     {
-      sai[k1] = sax[0][k1];
+      sai[k1] = typesArr[typei].sax[k1];
     } 
-  tRDiagRqe2d(Mi, Di, Ri);
-  tRDiagRqe2d(Mj, Dj, Rj);
+  tRDiagRqe2d(i,Mi, Di, Ri);
+  tRDiagRqe2d(j,Mj, Dj, Rj);
   ri[0] = rx[i];
   ri[1] = ry[i];
   rj[0] = rx[j]+shift[0];
@@ -1667,7 +1667,7 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
         }
     }
   //tRDiagRpw(i, Mi, DA, R[i]);
-  tRDiagRqe2d(Mjp, Dj, Rjp);
+  tRDiagRqe2d(j,Mjp, Dj, Rjp);
 
   /* calculate matrix and position of ellipsoid j after application of affinity
    * which reduces ellipsoid i to a sphere */   
