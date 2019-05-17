@@ -11,7 +11,10 @@ int main (int argc, char **argv)
 {
   hardell<double> A, B;
   long long int tt;
-  double Lbox, ov=0.0, ovc, ovcpp, shift[2]={0.0,0.0};
+#if DEBUG_HE
+  double ovc, shift[2]={0.0,0.0};
+#endif
+  double Lbox, ov=0.0, ovcpp;
   if (argc==1)
     {
       printf("ok argc=0\n");

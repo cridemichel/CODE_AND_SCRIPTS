@@ -8,6 +8,16 @@ template <class ntype>
 class box 
 {
 public:
+  void random_orient(void)
+    {
+      R.random();
+    }
+  void random_box(ntype Lbox)
+    {
+      r.random_box();
+      r = Lbox*r;
+    }
+
   // < > means that we are a specialization of overlap is a friend function 
   // it is needed othwewise compiler consider following overlap not related to the overlap
   // function defined below

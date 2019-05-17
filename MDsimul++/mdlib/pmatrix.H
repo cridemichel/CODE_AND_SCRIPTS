@@ -581,6 +581,26 @@ public:
 
   int maxdigits=std::numeric_limits<ntype>::digits10-1;
   using pvec = pvector<ntype,NT>;
+
+  void random(void)
+    {
+      // build a random matrix where the three rows define an orthogonal random reference system,
+      // i.e. the matrix is orthogonal (R.transp()=R.inv())
+      pvector<ntype,3> n[3];
+      n[0].random_orient();
+      n[1] << 0,1,0;
+      if (n[1]==n[0])
+        {
+          n[1] << 1,0,0;
+        }
+      n[1] = n[1] - (n[1]*n[0])*n[0];
+      n[1] = (1.0/n[1].norm())*n[1];
+      n[2] = n[0]^n[1];
+      for (auto k=0; k < 3; k++)
+        {
+          set_row(k,n[k]);
+        }
+    }
   template <class T=pvec>
     pmatrixq<ntype,NT> gaussj(typename  std::conditional< std::is_same<T,pvec>::value, T&, int>::type b) const
       {
@@ -2119,6 +2139,16 @@ public:
         }
       return v;
     }
+  void set_col(int i, pvector<ntype,NT>& v)
+    {
+      int j;
+      if constexpr (NT < 0)
+        v.allocate(N); 
+      for (j=0; j < N; j++)
+        {
+          m[j][i] = v[j];
+        }
+    }
   // get i-th row vector 
   pvector<ntype,NT> row(int i)
     {
@@ -2131,6 +2161,16 @@ public:
           v[j] = m[i][j];
         }
       return v;
+    }
+  void set_row(int i, pvector<ntype,NT>& v)
+    {
+      int j;
+      if constexpr (NT < 0)
+        v.allocate(N); 
+      for (j=0; j < N; j++)
+        {
+          m[i][j] = v[j];
+        }
     }
   void set_show_digits(int p)
     {
