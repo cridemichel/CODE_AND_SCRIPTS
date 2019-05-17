@@ -57,10 +57,14 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
   /* apply affinity to reduce first ellipsoid to a sphere */
   Di << 1.0/Sqr(A.a), 0, 0, 1.0/Sqr(A.b);
   Dj << 1.0/Sqr(B.a), 0, 0, 1.0/Sqr(B.b);
+  //Di.show("Di");
+  //Dj.show("Dj"); 
   for (k1=0; k1 < 2; k1++)
     {
       Ri[0][k1] = A.na[k1];
-      Rj[1][k1] = A.nb[k1];
+      Ri[1][k1] = A.nb[k1];
+      Rj[0][k1] = B.na[k1];
+      Rj[1][k1] = B.nb[k1];
     }
   /* sai[0] e sai[1] sono i semiassi della particella i */
   sai[0] = A.a;
@@ -71,18 +75,25 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
   rj = B.r+B.shift;
 
   /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
+  //cout << "[C++]quiii\n";
   auto rji = rj-ri;
   auto rij = (-1.0)*rji;
-  if ((rji*Mi)*rji-1.0 < 0.0)
-    return -1.0;
-  if ((rij*Mj)*rij-1.0 < 0.0)
-    return -1.0;
-
+  //cout << "A:" << rji*(Mi*rji)-1.0 << " B: " << (rji*Mi)*rji-1.0 << "\n";
+  if (rji*(Mi*rji)-1.0 < 0.0)
+    {
+      //cout << "[C++]qui1\n";
+      return -1.0;
+    }
+  if (rij*(Mj*rij)-1.0 < 0.0)
+    {
+      //cout << "[C++]qui2\n";
+      return -1.0;
+    }
   /* switch to ellipsoid i reference system */
   r0jp = Ri*rji;
   Rjp = Rj*Ri.transp();
   Mjp = Rjp.transp()*Dj*Rjp;
-
+  //Mjp.show("Mjp=");
   /* calculate matrix and position of ellipsoid j after application of affinity
    * which reduces ellipsoid i to a sphere */   
   Mjpp[0][0] = Mjp[0][0]*Sqr(sai[0]);
@@ -124,6 +135,7 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
           break;
         }
     }
+  //cout << setprecision(16) << "[C++] alpha=" << alpha << "\n";
   auto detMa =-m01*m01 + (m00 + alpha)*(m11 + alpha);
   x[0] = x0*(-m01*m01 + m00*(m11 + alpha)) + y0*(-m01*m11 + m01*(m11 + alpha));
   x[1] = x0*(-m00*m01 + m01*(m00 + alpha)) + y0*(-m01*m01 + m11*(m00 + alpha));

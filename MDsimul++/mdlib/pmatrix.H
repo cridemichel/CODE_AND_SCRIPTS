@@ -1769,7 +1769,7 @@ public:
         return v2;
     }
   // transpose of v1 times m1
-  friend pvector<ntype,NT> operator *(const pvector<ntype,NT> v1, const pmatrixq<ntype,NT>& m1) 
+  friend pvector<ntype,NT> operator *(const pvector<ntype,NT>& v1, const pmatrixq<ntype,NT>& m1) 
     {
       int i, j;
       pvector <ntype,NT> v2;
@@ -1785,16 +1785,22 @@ public:
             wrap_sgemv('n', &(v2.m[0][0]), &(m1.m[0][0]), &(v1.v[0]), N);
           else
             {
-              v2.v[i]=0;
-              for (j=0; j < N; j++)
-                v2.v[i] += v1.v[j]*m1.m[j][i];
+              for (i=0; i < N; i++)
+                {
+                  v2.v[i]=0;
+                  for (j=0; j < N; j++)
+                    v2.v[i] += v1.v[j]*m1.m[j][i];
+                }
             }
         }
       else
         {
-          v2.v[i]=0;
-          for (j=0; j < N; j++)
-            v2.v[i] += v1.v[j]*m1.m[j][i];
+          for (i=0; i < N; i++)
+            {
+              v2.v[i]=0;
+              for (j=0; j < N; j++)
+                v2.v[i] += v1.v[j]*m1.m[j][i];
+            }
         }
 #else	
       for (i=0; i < N; i++)

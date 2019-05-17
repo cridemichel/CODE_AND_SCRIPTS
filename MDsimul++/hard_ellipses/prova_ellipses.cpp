@@ -4,6 +4,7 @@ extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
 #ifdef DEBUG_HE
 extern "C" {
   double check_overlap_pw2d(int i, int j, double *shift);
+  double check_overlap_polyell_2D(int i, int j, double *shift);
 };
 #endif
 int main (int argc, char **argv)
@@ -15,6 +16,7 @@ int main (int argc, char **argv)
     {
       printf("ok argc=0\n");
     }
+  srand48(2);
   A.a = 1.0;
   A.b = 2.0;
   B.a = 1.0;
@@ -45,9 +47,11 @@ int main (int argc, char **argv)
       sax[1][0] = B.a;
       sax[1][1] = B.b;
 
-      ovc=check_overlap_pw2d(0,1,shift);
+      //ovc=check_overlap_pw2d(0,1,shift);
+      ovc=check_overlap_polyell_2D(0,1,shift);
       if (ovc*ovcpp < 0)
         {
+          printf("ovc=%f ovcpp=%f\n", ovc, ovcpp);
           B.r.show("rB=");
           B.na.show("naB=");
           B.nb.show("nbB=");

@@ -1356,7 +1356,6 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
     return -1.0;
   if (calcfel2d(Mj,rj,ri) < 0.0)
     return -1.0;
-
   //printf("coords i: %f %f %f j: %f %f %f\n", ri[0], ri[1], ri[2], rj[0], rj[1], rj[2]);
   /* switch to ellipsoid i reference system */
   for (kk1=0; kk1 < 2; kk1++)
@@ -1376,7 +1375,7 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
     }
   //tRDiagRpw(i, Mi, DA, R[i]);
   tRDiagRqe2d(Mjp, Dj, Rjp);
-
+  //printf("[C]Mjp=%.15G %.15G %.15G %.15G\n", Mjp[0][0],Mjp[0][1],Mjp[1][0],Mjp[1][1]);
   /* calculate matrix and position of ellipsoid j after application of affinity
    * which reduces ellipsoid i to a sphere */   
   Mjpp[0][0] = Mjp[0][0]*Sqr(sai[0]);
@@ -1420,6 +1419,7 @@ double check_overlap_polyell_2D(int i, int j, double shift[3])
           break;
         }
     }
+  //printf("[C] alpha=%.16G\n",alpha);
   dist=distSq2origM2d(alpha, m00, m01, m11, x0, y0) - 1.0;
   //printf("alpha=%.15G dist=%.15G\n", alpha, dist);
   /* trasformando tramite l'affinità inversa i punti che individuano la distanza tra sfera ed ellissoide
