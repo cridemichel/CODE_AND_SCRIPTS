@@ -44,21 +44,21 @@ public:
 template <class ntype>
 ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
 {
-  ntype Di[2], Dj[2], theta, norm, x0, y0, alpha;
+  ntype x0, y0, alpha;
   pvector <ntype,5> coeffpa;
   ntype x02, y02, sai[2];
   ntype vt, at[2], dist, m00, m01, m11, b2d, m002, m012, m112;
   pvector<ntype,2> r0jpp, r0jp, ri, rj, x;
-  pmatrixq<ntype,2> Mi, Mj, Ri, Rj, Rjp, Mjp, Mjpp, Mtmp, RM, invM2I;
+  pmatrixq<ntype,2> Di, Dj, Mi, Mj, Ri, Rj, Rjp, Mjp, Mjpp, Mtmp, RM, invM2I;
   pvector<complex<ntype>,4> roots;
   rpoly<ntype,4> quartic;
   int kk1, k1;
  
   /* apply affinity to reduce first ellipsoid to a sphere */
+  Di << 1.0/Sqr(A.a), 0, 0, 1.0/Sqr(A.b);
+  Dj << 1.0/Sqr(B.a), 0, 0, 1.0/Sqr(B.b);
   for (k1=0; k1 < 2; k1++)
     {
-      Di[k1]= 1.0/A.a;
-      Dj[k1]= 1.0/A.b;
       Ri[0][k1] = A.na[k1];
       Rj[1][k1] = A.nb[k1];
     }
@@ -72,7 +72,7 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
 
   /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
   auto rji = rj-ri;
-  auto rij = -rji;
+  auto rij = (-1.0)*rji;
   if ((rji*Mi)*rji-1.0 < 0.0)
     return -1.0;
   if ((rij*Mj)*rij-1.0 < 0.0)
