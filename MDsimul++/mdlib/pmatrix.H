@@ -586,19 +586,43 @@ public:
     {
       // build a random matrix where the three rows define an orthogonal random reference system,
       // i.e. the matrix is orthogonal (R.transp()=R.inv())
-      pvector<ntype,3> n[3];
-      n[0].random_orient();
-      n[1] << 0,1,0;
-      if (n[1]==n[0])
+      if (N == 2)
         {
-          n[1] << 1,0,0;
+          pvector<ntype,2> n[2];
+          n[0].random_orient();
+          n[1] << 0,1;
+          if (n[1]==n[0])
+            {
+              n[1] << 1,0;
+            }
+          n[1] = n[1] - (n[1]*n[0])*n[0];
+          n[1] = (1.0/n[1].norm())*n[1];
+          for (auto k=0; k < 2; k++)
+            {
+              set_row(k,n[k]);
+            }
         }
-      n[1] = n[1] - (n[1]*n[0])*n[0];
-      n[1] = (1.0/n[1].norm())*n[1];
-      n[2] = n[0]^n[1];
-      for (auto k=0; k < 3; k++)
+      else if (N == 3)
         {
-          set_row(k,n[k]);
+          pvector<ntype,3> n[3];
+          n[0].random_orient();
+          n[1] << 0,1,0;
+          if (n[1]==n[0])
+            {
+              n[1] << 1,0,0;
+            }
+          n[1] = n[1] - (n[1]*n[0])*n[0];
+          n[1] = (1.0/n[1].norm())*n[1];
+          n[2] = n[0]^n[1];
+          for (auto k=0; k < 3; k++)
+            {
+              set_row(k,n[k]);
+            }
+        }
+      else
+        {
+          cout << "Random Matrix for N > 3 not yet implemented yet!\n";
+          exit(0);
         }
     }
   template <class T=pvec>

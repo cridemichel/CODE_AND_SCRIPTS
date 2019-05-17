@@ -1,4 +1,5 @@
 #include "./boxes.H"
+#define DEBUG_ALGO
 double scalProd(double *A, double *B)
 {
   int kk;
@@ -222,9 +223,9 @@ int main(int argc, char **argv)
 #if defined(DEBUG_ALGO) 
       //cout << "C++ overlap tested\n";
 
-      if (calcDistBox(B1.r.v, B1.sax.v, B1.R.m, B2.r.v, B2.sax.v, B2.R.m) < 0.0)
-        ov+=1.0;
-#if 0
+     cov=calcDistBox(B1.r.v, B1.sax.v, B1.R.m, B2.r.v, B2.sax.v, B2.R.m);
+     //cout << "cov="  << cov << " cppov=" << cppov << "\n";
+#if 1
       if (cov*cppov < 0)
         {
           cout << "we have a problem\n";
