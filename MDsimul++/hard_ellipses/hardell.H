@@ -14,7 +14,31 @@ public:
   pvector<ntype,2> shift;
   template <class U>
     friend U overlap (class hardell<U>& A, class hardell<U>& B, pvector<U,2>& shift);
-
+  void random_orient(void)
+    {
+      na.random_orient();
+      nb << 0,1;
+      if (nb==na)
+        {
+          nb << 1,0;
+        }
+      nb = nb - (nb*na)*na;
+      nb = (1.0/nb.norm())*nb;
+    }
+  void random_box(ntype Lbox)
+    {
+      r.random_box();
+      r = Lbox*r;
+    }
+  hardell()
+    {
+      na << 1,0;
+      nb << 0,1;
+      shift << 0,0;
+      a =1;
+      b =2;
+      r << 0,0;
+    }
 };
 
 template <class ntype>
