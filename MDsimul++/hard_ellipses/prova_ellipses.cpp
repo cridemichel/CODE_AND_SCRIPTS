@@ -1,6 +1,6 @@
 #include "./hardell.H"
 extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
-#define DEBUG_HE
+//#define DEBUG_HE
 #ifdef DEBUG_HE
 extern "C" {
   double check_overlap_pw2d(int i, int j, double *shift);
@@ -49,6 +49,7 @@ int main (int argc, char **argv)
 
       //ovc=check_overlap_pw2d(0,1,shift);
       ovc=check_overlap_polyell_2D(0,1,shift);
+#if 1
       if (ovc*ovcpp < 0)
         {
           printf("ovc=%f ovcpp=%f\n", ovc, ovcpp);
@@ -57,6 +58,7 @@ int main (int argc, char **argv)
           B.nb.show("nbB=");
           exit(0);
         }
+#endif
 #endif
     }
 }
