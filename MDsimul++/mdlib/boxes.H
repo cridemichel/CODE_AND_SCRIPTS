@@ -97,7 +97,7 @@ template <class ntype> ntype overlap(rectangle<ntype>& A, rectangle<ntype>& B)
   if (RR > R01)
     return 1.0;
   /* axis C0+s*A1 */
-  for (k=0; k < 3; k++) 
+  for (k=0; k < 2; k++) 
     {
       cij[1][k] = AA[1]*BB[k];
       fabscij[1][k] = abs(cij[1][k]);

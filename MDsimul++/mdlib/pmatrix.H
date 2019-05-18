@@ -586,9 +586,15 @@ public:
     {
       // build a random matrix where the three rows define an orthogonal random reference system,
       // i.e. the matrix is orthogonal (R.transp()=R.inv())
+      //cout << "MATR N=" << N << "\n";
       if (N == 2)
         {
-          pvector<ntype,2> n[2];
+          pvector<ntype,NT> n[2];
+          if constexpr (NT < 0)
+            {
+              for (auto k=0; k < N; k++)
+                n[k].allocate(N);
+            }
           n[0].random_orient();
           n[1] << 0,1;
           if (n[1]==n[0])
@@ -604,7 +610,13 @@ public:
         }
       else if (N == 3)
         {
-          pvector<ntype,3> n[3];
+          pvector<ntype,NT> n[3];
+          if constexpr (NT < 0)
+            {
+              for (auto k=0; k < N; k++)
+                n[k].allocate(N);
+            }
+          
           n[0].random_orient();
           n[1] << 0,1,0;
           if (n[1]==n[0])
