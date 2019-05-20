@@ -68,6 +68,8 @@ int main (int argc, char **argv)
   r = 2.0*A.a;
   for (tr=0; tr < NUMR; tr++)
     {
+      cout << "r=" << r << "\n";
+      ov=0.0;
       for (tt=0; tt < ttmax; tt++)
         {
           B.random_orient();
@@ -76,7 +78,8 @@ int main (int argc, char **argv)
 #if 1
           theta=2.0*M_PI*drand48();
           //dr = 2.0*(A.b-A.a); 
-          B.r = r;
+
+          B.r << r*cos(theta), r*sin(theta);
 #else
           B.random_box(Lbox);
 #endif
@@ -126,13 +129,14 @@ int main (int argc, char **argv)
 #endif
 #endif
         }
-      veff[tr] = Lbox*Lbox*ov/((double)tt);
+      veff[tr] = ov/((double)tt);
       r += dr;
     }
   cout << "veff=\n";
   r = 2.0*A.a;
   for (auto i=0; i < NUMR; i++)
     {
+      veff[i] = -log(veff[i]);
       cout << setprecision(16) << r << " " << veff[i] << "\n";
       r+=dr;
     } 
