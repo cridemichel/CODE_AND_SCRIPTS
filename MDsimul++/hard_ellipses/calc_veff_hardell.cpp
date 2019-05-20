@@ -1,8 +1,8 @@
 #include "./hardell.H"
 #include "../mdlib/boxes.H"
 extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
-#define DEBUG_HE
-//#define USE_BBOX
+//#define DEBUG_HE
+#define USE_BBOX
 #ifdef DEBUG_HE
 extern "C" {
   double check_overlap_pw2d(int i, int j, double *shift);
@@ -68,7 +68,7 @@ int main (int argc, char **argv)
   r = r0 = 2.0*A.a+dr*0.5;
   for (tr=0; tr < NUMR; tr++)
     {
-      cout << ">>r=" << r << "\n";
+      cout << "r=" << r << "\n";
       ov=0.0;
       for (tt=0; tt < ttmax; tt++)
         {
@@ -126,7 +126,6 @@ int main (int argc, char **argv)
               ov+=1.0;
             }
 //          else
-            cout << "qui\n";
 #if 0
           if (ovc*ovcpp < 0)
             {
