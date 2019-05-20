@@ -15,21 +15,40 @@ int main (int argc, char **argv)
   rectangle<double> rectA, rectB; 
 #endif
   hardell<double> A, B;
-  long long int tt;
+  long long int tt, ttmax;
+  int tr, NUMR=30;
 #if DEBUG_HE
   double ovc, shift[2]={0.0,0.0};
 #endif
-  double Lbox, ov=0.0, ovcpp;
+  double X0, Lbox, ov=0.0, ovcpp, theta, dr, r;
+  vector<double> veff;
+
   if (argc==1)
     {
       printf("ok argc=0\n");
     }
+
+  if (argc>=4)
+    NUMR = atoi(argv[3]);
+ 
+  veff.resize(NUMR); 
+  if (argc>=3)
+    X0 = atof(argv[2]);
+  else 
+    X0 = 2.0;
   srand48(2);
-  A.a = 1.0;
-  A.b = 2.0;
-  B.a = 1.0;
-  B.b = 2.0;
-  Lbox = 10.0;
+#if 1 
+  A.a = 0.5;
+  A.b = X0*A.a;
+#else
+  A.a = 0.5;
+  A.b = 0.5;
+#endif
+  A.na << 1,0;
+  A.nb << 0,1;
+  B.a = 0.5;
+  B.b = X0*A.a;
+  Lbox = 1.0001*(max(B.a,B.b)+max(A.a,A.b))*2.0;
 
 #ifdef USE_BBOX
   rectA.r = A.r;
@@ -40,55 +59,82 @@ int main (int argc, char **argv)
   rectB.sax[0] = B.a;
   rectB.sax[1] = B.b;
 #endif
-  for (tt=0; tt < atof(argv[1]); tt++)
+  if (argc >= 2)
+    ttmax=atoi(argv[1]);
+  else
+    ttmax = 1000000;
+  dr = (A.b-A.a)/((double) NUMR);
+  cout << "dr = " << dr << "\n";
+  r = 2.0*A.a;
+  for (tr=0; tr < NUMR; tr++)
     {
-      B.random_orient();
-      B.random_box(Lbox);
-#ifdef USE_BBOX
-      rectB.r = B.r;
-      rectB.R.set_row(0,B.na);
-      rectB.R.set_row(1,B.nb);
-      if (overlap(rectA,rectB) < 0.0)
+      for (tt=0; tt < ttmax; tt++)
         {
+          B.random_orient();
+          //B.na << 1,0;
+          //B.nb << 0,1;
+#if 1
+          theta=2.0*M_PI*drand48();
+          //dr = 2.0*(A.b-A.a); 
+          B.r = r;
+#else
+          B.random_box(Lbox);
+#endif
+#ifdef USE_BBOX
+          rectB.r = B.r;
+          rectB.R.set_row(0,B.na);
+          rectB.R.set_row(1,B.nb);
+          if (overlap(rectA,rectB) < 0.0)
+            {
+              if ((ovcpp=overlap(A,B)) < 0.0)
+                ov+=1.0;
+            }
+#else
           if ((ovcpp=overlap(A,B)) < 0.0)
             ov+=1.0;
-        }
-#else
-      if ((ovcpp=overlap(A,B)) < 0.0)
-        ov+=1.0;
 #endif
 #ifdef DEBUG_HE
-      rx[0] = A.r[0];
-      ry[0] = A.r[1];
-      R[0][0][0] = A.na[0];
-      R[0][0][1] = A.na[1];
-      R[0][1][0] = A.nb[0];
-      R[0][1][1] = A.nb[1];
-      sax[0][0] = A.a;
-      sax[0][1] = A.b;
+          rx[0] = A.r[0];
+          ry[0] = A.r[1];
+          R[0][0][0] = A.na[0];
+          R[0][0][1] = A.na[1];
+          R[0][1][0] = A.nb[0];
+          R[0][1][1] = A.nb[1];
+          sax[0][0] = A.a;
+          sax[0][1] = A.b;
 
-      rx[1] = B.r[0];
-      ry[1] = B.r[1];
-      R[1][0][0] = B.na[0];
-      R[1][0][1] = B.na[1];
-      R[1][1][0] = B.nb[0];
-      R[1][1][1] = B.nb[1];
-      sax[1][0] = B.a;
-      sax[1][1] = B.b;
+          rx[1] = B.r[0];
+          ry[1] = B.r[1];
+          R[1][0][0] = B.na[0];
+          R[1][0][1] = B.na[1];
+          R[1][1][0] = B.nb[0];
+          R[1][1][1] = B.nb[1];
+          sax[1][0] = B.a;
+          sax[1][1] = B.b;
 
-      //ovc=check_overlap_pw2d(0,1,shift);
-      ovc=check_overlap_polyell_2D(0,1,shift);
+          //ovc=check_overlap_pw2d(0,1,shift);
+          ovc=check_overlap_polyell_2D(0,1,shift);
 #if 1
-      if (ovc*ovcpp < 0)
-        {
-          printf("ovc=%f ovcpp=%f\n", ovc, ovcpp);
-          B.r.show("rB=");
-          B.na.show("naB=");
-          B.nb.show("nbB=");
-          exit(0);
+          if (ovc*ovcpp < 0)
+            {
+              printf("ovc=%f ovcpp=%f\n", ovc, ovcpp);
+              B.r.show("rB=");
+              B.na.show("naB=");
+              B.nb.show("nbB=");
+              exit(0);
+            }
+#endif
+#endif
         }
-#endif
-#endif
+      veff[tr] = Lbox*Lbox*ov/((double)tt);
+      r += dr;
     }
-  cout << setprecision(16) << "excluded surface=" << Lbox*Lbox*ov/((double)tt) << "\n";
+  cout << "veff=\n";
+  r = 2.0*A.a;
+  for (auto i=0; i < NUMR; i++)
+    {
+      cout << setprecision(16) << r << " " << veff[i] << "\n";
+      r+=dr;
+    } 
+  //cout << setprecision(16) << "excluded surface=" << Lbox*Lbox*ov/((double)tt) << "\n";
 }
