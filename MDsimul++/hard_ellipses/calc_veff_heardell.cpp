@@ -17,10 +17,10 @@ int main (int argc, char **argv)
   hardell<double> A, B;
   long long int tt, ttmax;
   int tr, NUMR=30;
-#if DEBUG_HE
+#ifdef DEBUG_HE
   double ovc, shift[2]={0.0,0.0};
 #endif
-  double X0, Lbox, ov=0.0, ovcpp, theta, dr, r;
+  double X0, Lbox, ov=0.0, theta, dr, r, r0;
   vector<double> veff;
 
   if (argc==1)
@@ -63,9 +63,9 @@ int main (int argc, char **argv)
     ttmax=atoi(argv[1]);
   else
     ttmax = 1000000;
-  dr = (A.b-A.a)/((double) NUMR);
+  dr = 2.0*(A.b-A.a)/((double) NUMR);
   cout << "dr = " << dr << "\n";
-  r = 2.0*A.a;
+  r = r0 = 2.0*A.a+dr*0.5;
   for (tr=0; tr < NUMR; tr++)
     {
       cout << "r=" << r << "\n";
@@ -84,18 +84,44 @@ int main (int argc, char **argv)
           B.random_box(Lbox);
 #endif
 #ifdef USE_BBOX
+#ifdef DEBUG_HE
           rectB.r = B.r;
           rectB.R.set_row(0,B.na);
           rectB.R.set_row(1,B.nb);
-          if (overlap(rectA,rectB) < 0.0)
-            {
-              if ((ovcpp=overlap(A,B)) < 0.0)
-                ov+=1.0;
-            }
+          rx[0] = A.r[0];
+          ry[0] = A.r[1];
+          R[0][0][0] = A.na[0];
+          R[0][0][1] = A.na[1];
+          R[0][1][0] = A.nb[0];
+          R[0][1][1] = A.nb[1];
+          sax[0][0] = A.a;
+          sax[0][1] = A.b;
+
+          rx[1] = B.r[0];
+          ry[1] = B.r[1];
+          R[1][0][0] = B.na[0];
+          R[1][0][1] = B.na[1];
+          R[1][1][0] = B.nb[0];
+          R[1][1][1] = B.nb[1];
+          sax[1][0] = B.a;
+          sax[1][1] = B.b;
+
+
+          if (check_overlap_polyell_2D(0,1,shift) < 0.0)
+          
+#endif
+            if (overlap(rectA,rectB) < 0.0)
+              {
+                if (overlap(A,B) > 0.0)
+                  ov+=1.0;
+              }
+            else 
+              ov+=1.0;
 #else
           if ((ovcpp=overlap(A,B)) < 0.0)
             ov+=1.0;
 #endif
+#if 0
 #ifdef DEBUG_HE
           rx[0] = A.r[0];
           ry[0] = A.r[1];
@@ -128,12 +154,13 @@ int main (int argc, char **argv)
             }
 #endif
 #endif
+#endif
         }
       veff[tr] = ov/((double)tt);
       r += dr;
     }
   cout << "veff=\n";
-  r = 2.0*A.a;
+  r = r0;
   for (auto i=0; i < NUMR; i++)
     {
       veff[i] = -log(veff[i]);
