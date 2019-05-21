@@ -56,6 +56,10 @@ class mcsim {
   ofstream snapfile, restorefile;
   vector<rectangle<double>> rect; 
   vector<hardell<double>> he;
+  void build_LL(void)
+    {
+
+    }
 public:
   params<ntype> pars;
   void init(void)
@@ -87,22 +91,51 @@ public:
     }
   void run(void)
     {
+      long long int tt;
+      for (tt=0; tt < pars.steps; tt++)
+        {
 
 
+        } 
     }
   void restart(void)
     {
-
+      build_LL();
     }
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
       switch (type)
         {
         case 0:
-          break;
+            {
+              int i=0, ix, iy, maxix, maxiy;
+              maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
+              for (ix = 0; ix < maxix; ix++)
+                for (iy = 0; iy < maxiy; iy++)
+                  {
+                    he[i].r << 0,0;
+                    he[i].na << 1,0;
+                    he[i].nb << 0,1;
+                    rect[i].r = he[i].r;
+                    rect[i].R.set_row(0,he[i].na);
+                    rect[i].R.set_row(1,he[i].nb);
+                    i++;
+                    if (i==pars.N)
+                      break;
+                  }
+              break;
+            }
+        case 1:
+            {
+              // triangular to be implemented
+              break;
+            }
         default:
-          break;
+            {
+
+            }
         }
+      build_LL();
     }
   void read_pars(const char *fn)
     {
