@@ -27,15 +27,16 @@ int main (int argc, char **argv)
   vector<double> veff;
   ifstream parfile;
   ofstream snapfile, restorefile;
-  
+  params<double> pars; 
   if (argc==1)
     {
       printf("ok argc=0\n");
     }
   // read simulation parameters first
   parfile.open("heparams.asc");
-  parfile >> params.N;
-
+  parfile >> pars.N;
+  parfile >> pars.L[0];
+  parfile >> pars.L[1];
   if (argc>=4)
     NUMR = atoi(argv[3]);
  
@@ -53,8 +54,8 @@ int main (int argc, char **argv)
   Lbox = 1.0001*(max(B.a,B.b)+max(A.a,A.b))*2.0;
 
 #ifdef USE_BBOX
-  rectA.r = A.r;
-  rectA.sax[0] = A.a;
+  rect.r = A.r;
+  rect.sax[0] = A.a;
   rectA.sax[1] = A.b;
   rectA.R.set_row(0,A.na);
   rectA.R.set_row(1,A.nb);
