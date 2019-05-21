@@ -1,5 +1,8 @@
 #include "./hardell.H"
 #include "../mdlib/boxes.H"
+#include "./mcsim_hardell.H"
+#include <iostream>
+#include <fstream>
 extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
 //#define DEBUG_HE
 #define USE_BBOX
@@ -12,9 +15,9 @@ extern "C" {
 int main (int argc, char **argv)
 {
 #ifdef USE_BBOX
-  rectangle<double> rectA, rectB; 
+  vector<rectangle<double>> rect; 
 #endif
-  hardell<double> A, B;
+  vector<hardell<double>> he;
   long long int tt, ttmax;
   int tr, NUMR=30;
 #ifdef DEBUG_HE
@@ -22,32 +25,31 @@ int main (int argc, char **argv)
 #endif
   double X0, Lbox, ov=0.0, theta, dr, r, r0;
   vector<double> veff;
-
+  ifstream parfile;
+  ofstream snapfile, restorefile;
+  
   if (argc==1)
     {
       printf("ok argc=0\n");
     }
+  // read simulation parameters first
+  parfile.open("heparams.asc");
+  parfile >> params.N;
 
   if (argc>=4)
     NUMR = atoi(argv[3]);
  
   veff.resize(NUMR); 
+   
   if (argc>=3)
     X0 = atof(argv[2]);
   else 
     X0 = 2.0;
   srand48(2);
-#if 1 
-  A.a = 0.5;
-  A.b = X0*A.a;
-#else
-  A.a = 0.5;
-  A.b = 0.5;
-#endif
-  A.na << 1,0;
-  A.nb << 0,1;
-  B.a = 0.5;
-  B.b = X0*A.a;
+  he.a = 0.5;
+  he.b = X0*A.a;
+  he.na << 1,0;
+  he.nb << 0,1;
   Lbox = 1.0001*(max(B.a,B.b)+max(A.a,A.b))*2.0;
 
 #ifdef USE_BBOX
