@@ -1,24 +1,14 @@
-
 #include "./mcsim_hardell.H"
-#include <time.h>
-extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
-//#define DEBUG_HE
-#define USE_BBOX
-#ifdef DEBUG_HE
-extern "C" {
-  double check_overlap_pw2d(int i, int j, double *shift);
-  double check_overlap_polyell_2D(int i, int j, double *shift);
-};
-#endif
 int main (int argc, char **argv)
 {
   mcsim<double> heMC;
-  if (argc==1)
-    {
-      printf("ok argc=0\n");
-    }
   heMC.read_pars("hepars.asc");
   heMC.init();
+  if (argc > 1 && atoi(argv[1])==1)
+    heMC.restart();
+  else
+    heMC.createconf(0);
+
   heMC.run();
 
 #if 0

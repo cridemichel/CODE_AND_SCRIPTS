@@ -4,6 +4,7 @@
 #include<fstream>
 #include "./hardell.H"
 #include "../mdlib/boxes.H"
+#include <time.h>
 template<class ntype>
 class params
 {
