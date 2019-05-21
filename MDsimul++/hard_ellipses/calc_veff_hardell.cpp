@@ -64,11 +64,11 @@ int main (int argc, char **argv)
   else
     ttmax = 1000000;
   dr = 2.0*(A.b-A.a)/((double) NUMR);
-  cout << "dr = " << dr << "\n";
+  //cout << "dr = " << dr << "\n";
   r = r0 = 2.0*A.a+dr*0.5;
   for (tr=0; tr < NUMR; tr++)
     {
-      cout << "r=" << r << "\n";
+      //cout << "r=" << r << "\n";
       ov=0.0;
       for (tt=0; tt < ttmax; tt++)
         {
@@ -141,7 +141,7 @@ int main (int argc, char **argv)
       veff[tr] = ov/((double)tt);
       r += dr;
     }
-  cout << "veff=\n";
+  //cout << "veff=\n";
   r = r0;
   for (auto i=0; i < NUMR; i++)
     {
