@@ -15,6 +15,11 @@ class params
     {
       filename.assign(fn);
       parfile.open(filename.c_str());
+      if (parfile.fail())
+        {
+          cout << "Parameters file named '" << fn << "' not found, exiting...\n";
+          exit(0);
+        }
     }
   void fclose(void)
     {

@@ -3,17 +3,29 @@ int main (int argc, char **argv)
 {
   mcsim<double> heMC;
   //heMC.read_pars("hepars.asc");
-  auto simtype=atoi(argv[1]);
-  if (argc > 1 || simtype!=0)
+  int simtype;
+  if (argc > 1)
+    simtype = atoi(argv[1]);
+  else simtype=0;
+  switch (simtype)
     {
-      if (simtype==1)
-        heMC.restart();
-      else 
-        heMC.readconf(heMC.pars.iniconf);
-    }
-  else
-    heMC.createconf(0);
-
+    case 1:
+        {
+          heMC.restart();
+          break;
+        }
+    case 2:
+        {
+          heMC.readconf(heMC.pars.iniconf);
+          break;
+        }
+    default:
+        {
+          heMC.createconf(0);
+          break;
+        }
+     }
+  cout << "qui #steps="<< heMC.pars.steps <<"\n";
   heMC.run();
 #if 0
 #ifdef USE_BBOX
