@@ -17,7 +17,7 @@ class mcsim {
   ifstream inicfile;
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
-  linked_cell_lists<ntype,hardell<ntype>> heLL;
+  linked_cell_lists<hardell<ntype>,rectangle<ntype>> heLL;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -63,18 +63,37 @@ class mcsim {
           return 1;
         } 
     }
+  void mcmotion(int ip)
+    {
+      random_move(ip);
+      // check overlap by using LL here!
+
+    }
+  void move_box(void)
+    {
+
+    }
   void save_snap(int tt)
     {
-      
+      if (tt%5000==0)
+        {
+
+        }
     }
   void save_restore(int tt)
     {
+      if (tt%5000==0)
+        {
 
+        }
     }
   void save_measures(int tt)
     {
       // save observables, e.g. energy, volume, pressure, etc...
-
+      if (tt%5000==0)
+        {
+      
+        }
     }
 public:
   const char *parsfile="hepars.asc";
@@ -116,9 +135,17 @@ public:
       int ntot, ran, i;
       for (tt=0; tt < pars.steps; tt++)
         {
-          for (i=0; i < pars.parnum; i++)
-            {
+          ntot=pars.parnum;
+          if (pars.simtype==1) //NPT
+            ntot+=1;
 
+          for (i=0; i < ntot; i++)
+            {
+              ran = (int) (ntot*ranf());
+              if (ran < pars.parnum)
+                mcmotion(ran);
+              else 
+                move_box();
             } 
           // save snapshots and backup file 
           save_snap(tt);

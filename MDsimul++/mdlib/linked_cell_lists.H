@@ -2,10 +2,12 @@
 #include "../mdlib/pvector.H"
 using namespace std;
 // particles is the particle type, e.g. hardell<double>, hardcyl<double>, etc.
-template <class ntype, class particles>
+template <class particles, class rectangles>
 class linked_cell_lists
 {
+  using ntype = typename particles::numtype;
   vector<particles>* part;
+  vector<rectangles> *rect;
   pvector<int,-1> inCell[3];
   pvector<int,-1> cellList;
   int parnum;
