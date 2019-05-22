@@ -87,12 +87,6 @@ public:
           value.sax[0] = pars.a;
           value.sax[1] = pars.b;
         } 
-#if 0 // move elsewhere
-      rect.r = he.r;
-      rectA.R.set_row(0,A.na);
-      rectA.R.set_row(1,A.nb);
-#endif
- 
     }
   void run(void)
     {
@@ -106,6 +100,12 @@ public:
   void restart(void)
     {
       build_LL();
+    }
+  void update_rect(int i)
+    {
+      rect[i].r = he[i].r;
+      rect[i].R.set_row(0,he[i].na);
+      rect[i].R.set_row(1,he[i].nb);
     }
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
@@ -121,9 +121,7 @@ public:
                     he[i].r << 0,0;
                     he[i].na << 1,0;
                     he[i].nb << 0,1;
-                    rect[i].r = he[i].r;
-                    rect[i].R.set_row(0,he[i].na);
-                    rect[i].R.set_row(1,he[i].nb);
+                    update_rect(i);
                     i++;
                     if (i==pars.N)
                       break;
@@ -146,5 +144,4 @@ public:
     {
       pars.read(fn);
     }
-
 };
