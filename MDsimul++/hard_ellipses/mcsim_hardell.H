@@ -67,7 +67,10 @@ class mcsim {
     {
       random_move(ip);
       // check overlap by using LL here!
-
+      if (heLL.check_overlap(ip)==true)
+        {
+          // reject move
+        }
     }
   void move_box(void)
     {

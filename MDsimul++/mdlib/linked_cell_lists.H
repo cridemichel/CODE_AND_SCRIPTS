@@ -35,6 +35,24 @@ class linked_cell_lists
       /* Eliminazione di evIdA dalla lista della cella n-esima */
       cellList[n] = cellList[i];
     }
+  
+  bool overlap_two(int na, int n, pvector<ntype,2> shift)
+    {
+      auto rectA = (*rect)[na];
+      auto rectB = (*rect)[n];
+      auto A = (*part)[na];
+      auto B = (*part)[n];
+      rectA.shift << 0,0;
+      rectB.shift = shift;
+      A.shift << 0, 0;
+      B.shift = shift; 
+      if (overlap(rectA,rectB) < 0.0)
+        {
+          if (overlap(A,B) < 0.0)
+            return true;
+        }
+      return false;
+    }
 public:
   linked_cell_lists(vector<particles>* P, pvector<ntype,2>& boxsize)
     {
@@ -54,6 +72,82 @@ public:
       for (k=0; k < 3; k++)
         inCell[k].allocate(parnum);
       cellList.allocate(parnum+cellsx*cellsy*cellsz);
+    }
+  
+  bool check_overlap(int n)
+    {
+      int kk, nb, k, iZ, jZ, iX, jX, iY, jY, n, na;
+      int cellRangeT[6];
+      double shift[3];
+      na=ip;
+      nb=-1;
+      for (kk = 0;  kk < 3; kk++)
+        {
+          cellRange[2*kk]   = - 1;
+          cellRange[2*kk+1] =   1;
+        }
+      for (k = 0; k < 6; k++) cellRangeT[k] = cellRange[k];
+
+      for (iZ = cellRangeT[4]; iZ <= cellRangeT[5]; iZ++) 
+        {
+          jZ = inCell[2][na] + iZ;    
+          shift[2] = 0.;
+          /* apply periodico boundary condition along z if gravitational
+           * fiels is not present */
+          if (jZ == -1) 
+            {
+              jZ = cellsz - 1;    
+              shift[2] = - L[2];
+            } 
+          else if (jZ == cellsz) 
+            {
+              jZ = 0;    
+              shift[2] = L[2];
+            }
+
+          for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+            {
+              jY = inCell[1][na] + iY;    
+              shift[1] = 0.0;
+              if (jY == -1) 
+                {
+                  jY = cellsy - 1;    
+                  shift[1] = -L[1];
+                } 
+              else if (jY == cellsy) 
+                {
+                  jY = 0;    
+                  shift[1] = L[1];
+                }
+              for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+                {
+                  jX = inCell[0][na] + iX;    
+                  shift[0] = 0.0;
+                  if (jX == -1) 
+                    {
+                      jX = cellsx - 1;    
+                      shift[0] = - L[0];
+                    } 
+                  else if (jX == cellsx) 
+                    {
+                      jX = 0;   
+                      shift[0] = L[0];
+                    }
+                  n = (jZ *cellsy + jY) * cellsx + jX + Oparams.parnum;
+                  for (n = cellList[n]; n > -1; n = cellList[n]) 
+                    {
+                      if (n != na && n != nb && (nb >= -1 || n < na)) 
+                        {
+                          if (overlap_two(na, n, shift)<0.0)
+                            {
+                              return true;
+                            }
+                        }
+                    } 
+                }
+            }
+        }
+      return false;
     }
   void update_LL(int n)
     {
