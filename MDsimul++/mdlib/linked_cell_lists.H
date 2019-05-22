@@ -2,6 +2,7 @@
 #include "../mdlib/pvector.H"
 using namespace std;
 // particles is the particle type, e.g. hardell<double>, hardcyl<double>, etc.
+// rectangles are used as preliminary check of overlap (by using the separating axis theorem)
 template <class particles, class rectangles>
 class linked_cell_lists
 {
