@@ -34,6 +34,10 @@ class linked_cell_lists
 public:
   linked_cell_lists(vector<particles>* P, pvector<ntype,2>& boxsize)
     {
+      init(P,boxsize);    
+    }
+  void init(vector<particles>* P, pvector<ntype,2>& boxsize)
+    {
       int k;
       part = P;
       L = boxsize;
@@ -42,6 +46,7 @@ public:
       for (k=0; k < 3; k++)
         inCell[k].allocate(part);
       cellList.allocate(parnum+cellsx*cellsy*cellsz);
+
     }
   void update_LL(int n)
     {
