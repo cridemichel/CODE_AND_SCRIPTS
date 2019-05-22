@@ -56,6 +56,16 @@ public:
       parfile >> L[1];
       fclose();
     }
+  void write_state(void)
+    {
+      // write full state to ascii file
+    }
+  void read_state(void)
+    {
+      // write full state to ascii file
+    }
+
+
 };
 
 
