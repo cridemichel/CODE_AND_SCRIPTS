@@ -54,18 +54,19 @@ class linked_cell_lists_2d
       return false;
     }
 public:
-  linked_cell_lists_2d(vector<particles>* P, pvector<ntype,2>& boxsize)
+  linked_cell_lists_2d(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize)
     {
-      init(P,boxsize);    
+      init(P,R,boxsize);    
     }
   linked_cell_lists_2d()
     {
       L[0]=L[1]=-1.0;
     }
-  void init(vector<particles>* P, pvector<ntype,2>& boxsize)
+  void init(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize)
     {
       int k;
       part = P;
+      rect = R;
       L = boxsize;
       L2 = (1.0/2.0)*boxsize;
       parnum=part->size();
@@ -73,7 +74,17 @@ public:
         inCell[k].allocate(parnum);
       cellList.allocate(parnum+cellsx*cellsy);
     }
-  
+  void updnumcells(pvector<ntype,2> Lb)
+    {
+      cellsx = L[0] / Oparams.rcut;
+      cellsy = L[1] / Oparams.rcut;
+      if (cellsx*cellsy*cellsz > cxini*cyini*czini)
+        {
+          cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
+        } 
+    }
+
+    } 
   bool check_overlap(int ip)
     {
       int kk, nb, iX, jX, iY, jY, n, na;

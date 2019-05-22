@@ -422,7 +422,23 @@ public:
 	    return v2;
 	}
     }
-
+  // *= for pvectors
+  inline pvector<ntype,NT> operator *= (const ntype& param)
+    {
+      int i;
+      for (i=0; i < N; i++)
+	v[i] *= param;
+      return *this;
+    }
+  // /= for pvectors
+  inline pvector<ntype,NT> operator /= (const ntype& param)
+    {
+      int i;
+      for (i=0; i < N; i++)
+	v[i] /= param;
+      return *this;
+    }
+  
   // += for pvectors 
   inline pvector<ntype,NT> operator += (const pvector<ntype,NT>& param)
     {
@@ -443,7 +459,7 @@ public:
 #ifndef VEC_LAZY_EVAL
   // used if lazyned is completely disabled
   // vec times scalar
-  inline pvector<ntype,NT> operator *(const double& param) 
+  inline pvector<ntype,NT> operator *(const ntype& param) 
     {
       int i;
       pvector<ntype,NT> lv;
@@ -458,7 +474,7 @@ public:
 	return lv;
     }
 #endif
-  inline pvector<ntype,NT> vecscal(const double& param) const
+  inline pvector<ntype,NT> vecscal(const ntype& param) const
     {
       int i;
       pvector<ntype,NT> lv;

@@ -18,6 +18,8 @@ class mcsim {
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> heLL;
+  pvector<ntype,2> rold;
+  pvector<ntype,2> naold, nbold;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -33,7 +35,7 @@ class mcsim {
     }
   void init_LL(void)
     {
-      heLL.init(&he,pars.L);
+      heLL.init(&he,&rect,pars.L);
     }
   void build_LL(void)
     {
@@ -70,20 +72,106 @@ class mcsim {
           return 1;
         } 
     }
+  void store_coord(int ip)
+    {
+      rold = he[ip].r;
+      naold = he[ip].na;
+      nbold = he[ip].nb;
+    }
+  void restore_coord(int ip)
+    {
+      he[ip].r = rold;
+      he[ip].na = naold;
+      he[ip].nb = nbold;
+    }
   void mcmotion(int ip)
     {
+      store_coord(ip);
       random_move(ip);
       // check overlap by using LL here!
       pbc(ip);
       heLL.update_LL(ip);
       if (heLL.check_overlap(ip)==true)
         {
+          restore_coord(ip);
+          heLL.update_LL(ip);
           // reject move
         }
     }
   void move_box(void)
     {
       //NPT volume move
+      int i, ii;
+      pvector<ntype,2> L2;
+      ntype nn;
+      ntype vo, lnvn, vn, Lfact, enn, eno, arg, delv=0.0;
+      vo = pars.L[0]*pars.L[1]*pars.L[2];
+      lnvn = log(vo) + (ranf()-0.5)*state.vmax;
+      vn = exp(lnvn);
+      Lfact = pow(vn/vo,1.0/3.0);
+
+      pars.L[0] *= Lfact;
+      L2 = pars.L*0.5;
+
+      for (i=0; i < pars.parnum; i++)
+        {
+          he[i].r *= Lfact;
+          pbc(i);
+        }
+      update_numcells();
+#ifdef MC_STORELL
+      store_ll_mc();
+#endif
+      heLL.build();
+      for (i=0; i < pars.parnum; i++)
+        {
+          if (heLL.check_overlap(i)==true)
+            {
+              /* move rejected restore old positions */
+              L /= Lfact;
+              L2 = L*0.5;
+              for (ii=0; ii < pars.parnum; ii++)
+                {
+                  he[ii].r /= Lfact;
+                  pbc(ii);
+                }
+              //volrejMC++;
+              update_numcells();
+#ifdef MC_STORELL
+              restore_ll_mc();
+#else
+              heLL.build();
+#endif
+              return;
+            }
+        }
+
+      arg = -(1.0/pars.T)*(par.P*(vn-vo)-(pars.parnum+1)*log(vn/vo)*pars.T);
+      if (ranf() > exp(arg))
+        {
+          /* move rejected restore old positions */
+          L[0] /= Lfact;
+          L[1] /= Lfact;
+          L[2] /= Lfact;
+          L2[0] = L[0]*0.5;
+          L2[1] = L[1]*0.5;
+          L2[2] = L[2]*0.5;
+
+          for (i=0; i < Oparams.parnum; i++)
+            {
+              rx[i] /= Lfact;
+              ry[i] /= Lfact;
+              rz[i] /= Lfact; 
+              pbc(i);
+            }
+          //volrejMC++;
+          update_numcells();
+#ifdef MC_STORELL
+          restore_ll_mc();
+#else
+          rebuildLinkedList();
+#endif
+        }
     }
   void save_snap(int tt)
     {
@@ -110,6 +198,7 @@ class mcsim {
 public:
   const char *parsfile="hepars.asc";
   params<ntype> pars;
+  simstate<ntype> state;
   mcsim()
     {
       read_pars(parsfile);

@@ -32,7 +32,6 @@ public:
   int& N=parnum;// reference declarations are aliases!
   pvector<ntype,2> L; // box
   pvector<ntype,2> M; // linked list cells 
-  long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
   params()
     {
       N=1000;
@@ -56,6 +55,16 @@ public:
       parfile >> L[1];
       fclose();
     }
+  
+};
+
+template <class ntype> 
+class simstate 
+{
+public:
+  long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
+  long long int curstep;
+  ntype deltra, delrot, vmax;
   void write_state(void)
     {
       // write full state to ascii file
@@ -64,8 +73,6 @@ public:
     {
       // write full state to ascii file
     }
-
-
 };
 
 
