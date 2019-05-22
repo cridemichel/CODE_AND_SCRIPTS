@@ -9,11 +9,28 @@
 #include "./params.H"
 template <class ntype>
 class mcsim {
+  ntype ranf(void)
+    {
+      return drand48();
+    }
   ofstream snapfile, restorefile;
   ifstream inicfile;
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
   linked_cell_lists<ntype,hardell<ntype>> heLL;
+  void update_all_rect(void)
+    {
+      for (auto i=0; i < pars.parnum; i++)
+        {
+          update_rect(i);
+        }
+    }
+  void update_rect(int i)
+    {
+      rect[i].r = he[i].r;
+      rect[i].R.set_row(0,he[i].na);
+      rect[i].R.set_row(1,he[i].nb);
+    }
   void init_LL(void)
     {
       heLL.init(&he,pars.L);
@@ -21,6 +38,43 @@ class mcsim {
   void build_LL(void)
     {
       heLL.build();
+    }
+  void read_pars(const char *fn)
+    {
+      if (fn==nullptr)
+        pars.read(parsfile);
+      else
+        pars.read(fn);
+    }
+  int random_move(int ip) // return move type 0=tra 1=rot
+    {
+      ntype p;
+      p=ranf();
+      if (p <= 0.5)
+        {
+          he[ip].tra_move(ip);
+          update_rect(ip);
+          return 0;
+        }
+      else
+        {
+          he[ip].rot_move(ip);
+          update_rect(ip);
+          return 1;
+        } 
+    }
+  void save_snap(int tt)
+    {
+      
+    }
+  void save_restore(int tt)
+    {
+
+    }
+  void save_measures(int tt)
+    {
+      // save observables, e.g. energy, volume, pressure, etc...
+
     }
 public:
   const char *parsfile="hepars.asc";
@@ -59,10 +113,18 @@ public:
   void run(void)
     {
       long long int tt;
+      int ntot, ran, i;
       for (tt=0; tt < pars.steps; tt++)
         {
-          //cout << "nothing to do\n";
-        } 
+          for (i=0; i < pars.parnum; i++)
+            {
+
+            } 
+          // save snapshots and backup file 
+          save_snap(tt);
+          save_restore(tt);
+          save_measures(tt);
+        }
     }
   void restart(void)
     {
@@ -74,19 +136,7 @@ public:
       // read ascii iniconf here 
       inicfile.close();
     }
-  void update_all_rect(void)
-    {
-      for (auto i=0; i < pars.parnum; i++)
-        {
-          update_rect(i);
-        }
-    }
-  void update_rect(int i)
-    {
-      rect[i].r = he[i].r;
-      rect[i].R.set_row(0,he[i].na);
-      rect[i].R.set_row(1,he[i].nb);
-    }
+ 
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
       switch (type)
@@ -120,11 +170,5 @@ public:
         }
       build_LL();
     }
-  void read_pars(const char *fn)
-    {
-      if (fn==nullptr)
-        pars.read(parsfile);
-      else
-        pars.read(fn);
-    }
+  
 };
