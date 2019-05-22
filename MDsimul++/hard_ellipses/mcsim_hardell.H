@@ -4,6 +4,7 @@
 #include<fstream>
 #include "./hardell.H"
 #include "../mdlib/boxes.H"
+#include "../mdlib/linked_cell_lists.H"
 #include <time.h>
 template<class ntype>
 class params
@@ -54,12 +55,16 @@ public:
 template <class ntype>
 class mcsim {
   ofstream snapfile, restorefile;
-  vector<rectangle<double>> rect; 
-  vector<hardell<double>> he;
- 
+  vector<rectangle<ntype>> rect; 
+  vector<hardell<ntype>> he;
+  linked_cell_lists<ntype,vector<hardell<ntype>>> heLL;
+  void init_LL(void)
+    {
+      heLL.init(&he,pars.L);
+    }
   void build_LL(void)
     {
-
+      heLL.build();
     }
 public:
   params<ntype> pars;
@@ -67,12 +72,11 @@ public:
     {
       rect.resize(pars.N);
       he.resize(pars.N); 
-
+      init_LL();
       if (pars.seed > 0)
         srand48(pars.seed);
       else
         srand48(time(NULL));
-
       for(auto &value: he) 
         {
           value.a = pars.a;
