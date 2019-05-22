@@ -17,7 +17,7 @@ class mcsim {
   ifstream inicfile;
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
-  linked_cell_lists<hardell<ntype>,rectangle<ntype>> heLL;
+  linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> heLL;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
