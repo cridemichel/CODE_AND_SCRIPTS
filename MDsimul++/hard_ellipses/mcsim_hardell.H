@@ -46,6 +46,13 @@ class mcsim {
       else
         pars.read(fn);
     }
+  void pbc(int ip)
+    {
+      pvector<ntype,2> L2, delr;
+      L2 = 0.5*pars.L;
+      delr << pars.L[0]*rint(he[ip].r[0]/pars.L[0]), pars.L[1]*rint(he[ip].r[1]/pars.L[1]);
+      he[ip].r = he[ip].r - delr;
+    }
   int random_move(int ip) // return move type 0=tra 1=rot
     {
       ntype p;
@@ -67,6 +74,8 @@ class mcsim {
     {
       random_move(ip);
       // check overlap by using LL here!
+      pbc(ip);
+      heLL.update_LL(ip);
       if (heLL.check_overlap(ip)==true)
         {
           // reject move
@@ -74,7 +83,7 @@ class mcsim {
     }
   void move_box(void)
     {
-
+      //NPT volume move
     }
   void save_snap(int tt)
     {
