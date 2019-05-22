@@ -6,59 +6,7 @@
 #include "../mdlib/boxes.H"
 #include "../mdlib/linked_cell_lists.H"
 #include <time.h>
-template<class ntype>
-class params
-{
-  ifstream parfile;
-  string filename;
-  void fopen(const char *fn)
-    {
-      filename.assign(fn);
-      parfile.open(filename.c_str());
-      if (parfile.fail())
-        {
-          cout << "Parameters file named '" << fn << "' not found, exiting...\n";
-          exit(0);
-        }
-    }
-  void fclose(void)
-    {
-      parfile.close();
-    }
-public:
-  string iniconf; // configurazione iniziale da leggere
-  long long int steps;
-  int simtype;
-  int seed;// -1 means random seed 
-  ntype a, b;
-  int N; // number of particles
-  pvector<ntype,2> L; // box
-  pvector<ntype,2> M; // linked list cells 
-  params()
-    {
-      N=1000;
-      L[0]=L[1]=L[2]=10.0;
-      simtype = 0; // 0=NTV; 1=NPT; 2=gran canonico
-      seed=0;
-    }
-
-  void read(const char *fn)
-    {
-      // read simulation parameters first
-      fopen(fn);
-      parfile >> simtype;
-      parfile >> iniconf;
-      parfile >> steps;
-      parfile >> seed;
-      parfile >> a;// a semi-axis
-      parfile >> b;// b semi-axis
-      parfile >> N;
-      parfile >> L[0];
-      parfile >> L[1];
-      fclose();
-    }
-};
-
+#include "./params.H"
 template <class ntype>
 class mcsim {
   ofstream snapfile, restorefile;
@@ -113,7 +61,7 @@ public:
       long long int tt;
       for (tt=0; tt < pars.steps; tt++)
         {
-          cout << "nothing to do\n";
+          //cout << "nothing to do\n";
         } 
     }
   void restart(void)

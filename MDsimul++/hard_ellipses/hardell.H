@@ -8,6 +8,10 @@ using pmat3=pmatrixq<ntype,3>;
 template <class ntype>
 class hardell 
 {
+  ntype ranf(void)
+    {
+      return drand48();
+    }
 public:
   ntype a, b; //semiaxes
   pvector<ntype,2> na, nb, r;//na nb versori degli assi e r centro di massa 
@@ -25,6 +29,24 @@ public:
         }
       nb = nb - (nb*na)*na;
       nb = (1.0/nb.norm())*nb;
+    }
+  void tra_move(ntype del)
+    {
+      ntype dx, dy;
+      dx = del*(ranf()-0.5);
+      dy = del*(ranf()-0.5);
+      r[0]+= dx;
+      r[1]+= dy;
+    }
+  void rot_move(ntype dth)
+    {
+      pmatrixq<ntype,2> M;// 2d rotation matrix where dth is the rotation angle 
+      ntype costh = cos(dth), sinth=sin(dth);
+      M << costh, -sinth, sinth, costh;
+      na = M*na;
+      nb = M*nb;      
+      na.normalize();
+      nb.normalize();
     }
   void random_box(ntype Lbox)
     {

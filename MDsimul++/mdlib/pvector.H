@@ -295,7 +295,11 @@ public:
       // un puntatore è un iteratore!
       return v+N;
     }
-
+  void normalize(void)
+    {
+      ntype invn=1.0/norm();
+      *this = invn*(*this);  
+    }
   void set_show_digits(int p)
     {
       maxdigits=p;
