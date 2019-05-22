@@ -56,6 +56,7 @@ class mcsim {
   ofstream snapfile, restorefile;
   vector<rectangle<double>> rect; 
   vector<hardell<double>> he;
+ 
   void build_LL(void)
     {
 
