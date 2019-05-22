@@ -1,6 +1,7 @@
 #include<vector>
 #include "../mdlib/pvector.H"
 using namespace std;
+// particles is the particle type, e.g. hardell<double>, hardcyl<double>, etc.
 template <class ntype, class particles>
 class linked_cell_lists
 {
@@ -36,6 +37,10 @@ public:
     {
       init(P,boxsize);    
     }
+  linked_cell_lists()
+    {
+      L[0]=L[1]=-1.0;
+    }
   void init(vector<particles>* P, pvector<ntype,2>& boxsize)
     {
       int k;
@@ -44,9 +49,8 @@ public:
       L2 = (1.0/2.0)*boxsize;
       parnum=part->size();
       for (k=0; k < 3; k++)
-        inCell[k].allocate(part);
+        inCell[k].allocate(parnum);
       cellList.allocate(parnum+cellsx*cellsy*cellsz);
-
     }
   void update_LL(int n)
     {

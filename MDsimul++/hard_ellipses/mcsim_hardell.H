@@ -21,6 +21,7 @@ class params
       parfile.close();
     }
 public:
+  string iniconf; // configurazione iniziale da leggere
   long long int steps;
   int simtype;
   int seed;// -1 means random seed 
@@ -41,6 +42,7 @@ public:
       // read simulation parameters first
       fopen(fn);
       parfile >> simtype;
+      parfile >> iniconf;
       parfile >> steps;
       parfile >> seed;
       parfile >> a;// a semi-axis
@@ -55,9 +57,10 @@ public:
 template <class ntype>
 class mcsim {
   ofstream snapfile, restorefile;
+  ifstream inicfile;
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
-  linked_cell_lists<ntype,vector<hardell<ntype>>> heLL;
+  linked_cell_lists<ntype,hardell<ntype>> heLL;
   void init_LL(void)
     {
       heLL.init(&he,pars.L);
@@ -67,7 +70,19 @@ class mcsim {
       heLL.build();
     }
 public:
+  const char *parsfile="hepars.asc";
   params<ntype> pars;
+  mcsim()
+    {
+      read_pars(parsfile);
+      init();
+    }
+  mcsim(const char* fn)
+    {
+      read_pars(fn);
+      init();
+    }
+
   void init(void)
     {
       rect.resize(pars.N);
@@ -93,13 +108,25 @@ public:
       long long int tt;
       for (tt=0; tt < pars.steps; tt++)
         {
-
-
+          cout << "nothing to do\n";
         } 
     }
   void restart(void)
     {
       build_LL();
+    }
+  void readconf(string& icn)
+    {
+      inicfile.open(icn.c_str());
+      // read ascii iniconf here 
+      inicfile.close();
+    }
+  void update_all_rect(void)
+    {
+      for (auto i=0; i < pars.parnum; i++)
+        {
+          update_rect(i);
+        }
     }
   void update_rect(int i)
     {
@@ -142,6 +169,9 @@ public:
     }
   void read_pars(const char *fn)
     {
-      pars.read(fn);
+      if (fn==nullptr)
+        pars.read(parsfile);
+      else
+        pars.read(fn);
     }
 };

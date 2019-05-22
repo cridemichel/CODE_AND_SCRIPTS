@@ -2,10 +2,15 @@
 int main (int argc, char **argv)
 {
   mcsim<double> heMC;
-  heMC.read_pars("hepars.asc");
-  heMC.init();
-  if (argc > 1 && atoi(argv[1])==1)
-    heMC.restart();
+  //heMC.read_pars("hepars.asc");
+  auto simtype=atoi(argv[1]);
+  if (argc > 1 || simtype!=0)
+    {
+      if (simtype==1)
+        heMC.restart();
+      else 
+        heMC.readconf(heMC.pars.iniconf);
+    }
   else
     heMC.createconf(0);
 

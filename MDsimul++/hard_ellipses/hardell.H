@@ -12,6 +12,7 @@ public:
   ntype a, b; //semiaxes
   pvector<ntype,2> na, nb, r;//na nb versori degli assi e r centro di massa 
   pvector<ntype,2> shift;
+  using numtype = ntype;// useful trait to remove template ntype parameter from linked_cell_lists class
   template <class U>
     friend U overlap (class hardell<U>& A, class hardell<U>& B, pvector<U,2>& shift);
   void random_orient(void)
