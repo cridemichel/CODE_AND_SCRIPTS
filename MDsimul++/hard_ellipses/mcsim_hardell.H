@@ -188,14 +188,14 @@ class mcsim {
       // save observables, e.g. energy, volume, pressure, etc...
       if (tt!=0 && tt%pars.savemeas==0)
         {
-          of << tt << " " << pars.L[0]*pars.L[1] << "\n";
+          of << tt << " " << setprecision(16) << pars.L[0]*pars.L[1] << "\n";
         }
       of.close();
       of.open("phi.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
       if (tt!=0 && tt%pars.savemeas==0)
         {
-          of << tt << " " << pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) << "\n";
+          of << tt << " " << setprecision(16) << pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) << "\n";
         }
       of.close();
    
