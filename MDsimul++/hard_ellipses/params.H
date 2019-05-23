@@ -34,6 +34,7 @@ public:
   pvector<ntype,2> M; // linked list cells 
   ntype rcut;
   ntype P, T, deltra, delrot, vmax;
+  int savemeas;
   params()
     {
       N=1000;
@@ -45,7 +46,8 @@ public:
       vmax=0.001;
       delrot = 0.3;
       deltra = 0.1;
-  }
+      savemeas=50000;
+    }
 
   void read(const char *fn)
     {
@@ -65,6 +67,7 @@ public:
       parfile >> deltra;
       parfile >> delrot;
       parfile >> vmax;
+      parfile >> savemeas;
       fclose();
     }
   

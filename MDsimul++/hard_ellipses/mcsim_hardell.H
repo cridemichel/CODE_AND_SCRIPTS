@@ -17,7 +17,7 @@ class mcsim {
   ifstream inicfile;
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
-  linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> heLL;
+  linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
   void update_all_rect(void)
@@ -35,11 +35,11 @@ class mcsim {
     }
   void init_LL(void)
     {
-      heLL.init(&he,&rect,pars.L,pars.rcut);
+      ellLL.init(&he,&rect,pars.L,pars.rcut);
     }
   void build_LL(void)
     {
-      heLL.build();
+      ellLL.build();
     }
   void read_pars(const char *fn)
     {
@@ -90,11 +90,11 @@ class mcsim {
       random_move(ip);
       // check overlap by using LL here!
       pbc(ip);
-      heLL.update_LL(ip);
-      if (heLL.check_overlap(ip)==true)
+      ellLL.update_LL(ip);
+      if (ellLL.check_overlap(ip)==true)
         {
           restore_coord(ip);
-          heLL.update_LL(ip);
+          ellLL.update_LL(ip);
           // reject move
         }
     }
@@ -113,6 +113,7 @@ class mcsim {
       //cout << "Lfact=" << Lfact << "\n";
       pars.L *= Lfact;
       L2 = 0.5*pars.L;
+      //ellLL.store();
       //cout << "Lnew=" << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.parnum; i++)
         {
@@ -120,18 +121,11 @@ class mcsim {
           update_rect(i);
           pbc(i);
         }
-      //cout << "qui1\n";
-      heLL.update_numcells(pars.L);
-      //cout << "qui2\n";
-#ifdef MC_STORELL
-      store_ll_mc();
-#endif
-      heLL.build();
+      ellLL.update_numcells(pars.L);
+      ellLL.build();
       for (i=0; i < pars.parnum; i++)
         {
-          //cout << "i=" << i << "\n"; 
-          //he[i].r.show("r");
-          if (heLL.check_overlap(i)==true)
+          if (ellLL.check_overlap(i)==true)
             {
               /* move rejected restore old positions */
               pars.L /= Lfact;
@@ -143,12 +137,8 @@ class mcsim {
                   pbc(ii);
                 }
               //volrejMC++;
-              heLL.update_numcells(pars.L);
-#ifdef MC_STORELL
-              restore_ll_mc();
-#else
-              heLL.build();
-#endif
+              ellLL.update_numcells(pars.L);
+              build_LL();
               return;
             }
         }
@@ -165,12 +155,8 @@ class mcsim {
               pbc(i);
             }
           //volrejMC++;
-          heLL.update_numcells(pars.L);
-#ifdef MC_STORELL
-          restore_ll_mc();
-#else
+          ellLL.update_numcells(pars.L);
           build_LL();
-#endif
         }
     }
   void save_snap(int tt)
@@ -200,14 +186,14 @@ class mcsim {
       ofstream of;
       of.open("v.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
-      if (tt!=0 && tt%5000==0)
+      if (tt!=0 && tt%pars.savemeas==0)
         {
           of << tt << " " << pars.L[0]*pars.L[1] << "\n";
         }
       of.close();
       of.open("phi.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
-      if (tt!=0 && tt%5000==0)
+      if (tt!=0 && tt%pars.savemeas==0)
         {
           of << tt << " " << pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) << "\n";
         }
@@ -262,7 +248,7 @@ public:
           ntot=pars.parnum;
           if (pars.simtype==1) //NPT
             ntot+=1;
-          heLL.set_ini_numcells();
+          ellLL.set_ini_numcells();
           for (i=0; i < ntot; i++)
             {
               //cout << "step #" << tt << " i=" << i << "\n";
