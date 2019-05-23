@@ -250,11 +250,11 @@ public:
               else 
                 {
                   move_box();
-                  if (tt%100==0)
+                  if (tt!=0 && tt%1000==0)
                     {
-                      for (auto ii=0; ii < pars.parnum; ii++)
-                        cout << he[ii].r[0] << " " << he[ii].r[1] << "\n";
-                      //cout << pars.L[0]*pars.L[1] << "\n";
+                      //for (auto ii=0; ii < pars.parnum; ii++)
+                        //cout << he[ii].r[0] << " " << he[ii].r[1] << "\n";
+                      cout << pars.L[0]*pars.L[1] << "\n";
                     }
                 }
             } 

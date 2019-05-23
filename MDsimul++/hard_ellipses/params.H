@@ -42,7 +42,7 @@ public:
       seed=0;
       T=1.0;
       P=10.0;
-      vmax=0.00001;
+      vmax=0.001;
       delrot = 0.3;
       deltra = 0.1;
   }
