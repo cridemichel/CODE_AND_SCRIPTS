@@ -110,7 +110,7 @@ class mcsim {
       vn = exp(lnvn);
       //cout << "vo=" << vo << " vn=" << vn << " vmax=" << state.vmax << "\n";
       Lfact = pow(vn/vo,1.0/2.0);
-      cout << "Lfact=" << Lfact << "\n";
+      //cout << "Lfact=" << Lfact << "\n";
       pars.L *= Lfact;
       L2 = 0.5*pars.L;
       //cout << "Lnew=" << pars.L[0] << " " << pars.L[1] << "\n";
@@ -137,6 +137,7 @@ class mcsim {
               for (ii=0; ii < pars.parnum; ii++)
                 {
                   he[ii].r /= Lfact;
+                  update_rect(ii);
                   pbc(ii);
                 }
               //volrejMC++;
@@ -250,7 +251,11 @@ public:
                 {
                   move_box();
                   if (tt%100==0)
-                    cout << pars.L[0]*pars.L[1] << "\n";
+                    {
+                      for (auto ii=0; ii < pars.parnum; ii++)
+                        cout << he[ii].r[0] << " " << he[ii].r[1] << "\n";
+                      //cout << pars.L[0]*pars.L[1] << "\n";
+                    }
                 }
             } 
           // save snapshots and backup file 
