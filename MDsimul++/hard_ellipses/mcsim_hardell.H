@@ -208,7 +208,6 @@ public:
     {
       rect.resize(pars.N);
       he.resize(pars.N);
-      init_LL();
       if (pars.seed > 0)
         srand48(pars.seed);
       else
@@ -223,6 +222,8 @@ public:
           value.sax[0] = pars.a;
           value.sax[1] = pars.b;
         } 
+      pars.rcut = 2.0*max(pars.a,pars.b);
+      init_LL();
     }
   void run(void)
     {
@@ -236,6 +237,7 @@ public:
           heLL.set_ini_numcells();
           for (i=0; i < ntot; i++)
             {
+              cout << "step #" << tt << " i=" << i << "\n";
               ran = (int) (ntot*ranf());
               if (ran < pars.parnum)
                 mcmotion(ran);

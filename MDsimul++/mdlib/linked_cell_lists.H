@@ -70,11 +70,13 @@ public:
       part = P;
       rect = R;
       rcut = rc;
+      L = boxsize;
       cellsx = L[0] / rcut;
       cellsy = L[1] / rcut;
-       L = boxsize;
+      //cout << "L=" << L[0] << L[1] << " rcut=" << rcut << "\n";
       L2 = (1.0/2.0)*boxsize;
       parnum=part->size();
+      //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
       for (k=0; k < 3; k++)
         inCell[k].allocate(parnum);
       cellList.allocate(parnum+cellsx*cellsy);
