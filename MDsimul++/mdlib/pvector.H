@@ -674,7 +674,23 @@ public:
           exit(1);
         }
     }
+  pvector<ntype,NT> orto(void)
+    {
+      pvector<ntype,NT> vt;
 
+      if constexpr (NT < 0)
+        {
+          vt.allocate(N);
+        }
+      vt << 0,1;
+      if (vt==(*this))
+        {
+          vt << 1,0;
+        }
+      vt = vt - (vt*(*this))*(*this);
+      vt = (1.0/vt.norm())*vt;
+      return vt;
+    }         
   void show(void)
     {
       show(NULL);

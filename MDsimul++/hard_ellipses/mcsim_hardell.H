@@ -296,8 +296,8 @@ public:
                     {
                       he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
                       //he[i].r.show("r");
-                      he[i].na << 1,0;
-                      he[i].nb << 0,1;
+                      he[i].na.random_orient();
+                      he[i].nb = he[i].na.orto();
                       update_rect(i);
                       i++;
                       //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
