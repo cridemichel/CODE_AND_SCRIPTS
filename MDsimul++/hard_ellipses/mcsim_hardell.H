@@ -61,13 +61,13 @@ class mcsim {
       p=ranf();
       if (p <= 0.5)
         {
-          he[ip].tra_move(ip);
+          he[ip].tra_move(pars.deltra);
           update_rect(ip);
           return 0;
         }
       else
         {
-          he[ip].rot_move(ip);
+          he[ip].rot_move(pars.delrot);
           update_rect(ip);
           return 1;
         } 
@@ -106,17 +106,18 @@ class mcsim {
       ntype nn;
       ntype vo, lnvn, vn, Lfact, enn, eno, arg, delv=0.0;
       vo = pars.L[0]*pars.L[1];
-      lnvn = log(vo) + (ranf()-0.5)*state.vmax;
+      lnvn = log(vo) + (ranf()-0.5)*pars.vmax;
       vn = exp(lnvn);
       //cout << "vo=" << vo << " vn=" << vn << " vmax=" << state.vmax << "\n";
-      Lfact = pow(vn/vo,1.0/3.0);
-
+      Lfact = pow(vn/vo,1.0/2.0);
+      cout << "Lfact=" << Lfact << "\n";
       pars.L *= Lfact;
       L2 = 0.5*pars.L;
-
+      //cout << "Lnew=" << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.parnum; i++)
         {
           he[i].r *= Lfact;
+          update_rect(i);
           pbc(i);
         }
       heLL.update_numcells(pars.L);
@@ -126,6 +127,8 @@ class mcsim {
       heLL.build();
       for (i=0; i < pars.parnum; i++)
         {
+          //cout << "i=" << i << "\n"; 
+          //he[i].r.show("r");
           if (heLL.check_overlap(i)==true)
             {
               /* move rejected restore old positions */
@@ -146,7 +149,6 @@ class mcsim {
               return;
             }
         }
-
       arg = -(1.0/pars.T)*(pars.P*(vn-vo)-(pars.parnum+1)*log(vn/vo)*pars.T);
       if (ranf() > exp(arg))
         {
@@ -225,6 +227,8 @@ public:
         } 
       pars.rcut = 2.0*max(pars.a,pars.b);
       init_LL();
+      cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
+      cout << "P= " << pars.P << " T=" << pars.T << "\n";
     }
   void run(void)
     {
@@ -245,7 +249,8 @@ public:
               else 
                 {
                   move_box();
-                  //cout << pars.L[0]*pars.L[1] << "\n";
+                  if (tt%100==0)
+                    cout << pars.L[0]*pars.L[1] << "\n";
                 }
             } 
           // save snapshots and backup file 
@@ -277,11 +282,13 @@ public:
               dx = pars.L[0]/((ntype)maxix);
               dy = pars.L[1]/((ntype)maxiy);
               x=y=0;
+              cout << "dx=" << dx << " dy=" << dy << "\n";
               for (ix = 0; ix < maxix; ix++)
                 {
                   for (iy = 0; iy < maxiy; iy++)
                     {
-                      he[i].r << x,y;
+                      he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
+                      //he[i].r.show("r");
                       he[i].na << 1,0;
                       he[i].nb << 0,1;
                       update_rect(i);
@@ -294,6 +301,7 @@ public:
                         }
                       y += dy;
                     }
+                  y=0;
                   x += dx;
                 }
               break;

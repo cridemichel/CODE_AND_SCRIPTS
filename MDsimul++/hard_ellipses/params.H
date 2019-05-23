@@ -33,7 +33,7 @@ public:
   pvector<ntype,2> L; // box
   pvector<ntype,2> M; // linked list cells 
   ntype rcut;
-  ntype P, T;
+  ntype P, T, deltra, delrot, vmax;
   params()
     {
       N=1000;
@@ -42,7 +42,10 @@ public:
       seed=0;
       T=1.0;
       P=10.0;
-    }
+      vmax=0.00001;
+      delrot = 0.3;
+      deltra = 0.1;
+  }
 
   void read(const char *fn)
     {
@@ -57,6 +60,11 @@ public:
       parfile >> N;
       parfile >> L[0];
       parfile >> L[1];
+      parfile >> P;
+      parfile >> T;
+      parfile >> deltra;
+      parfile >> delrot;
+      parfile >> vmax;
       fclose();
     }
   
@@ -68,7 +76,7 @@ class simstate
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
   long long int curstep;
-  ntype deltra, delrot, vmax;
+  //ntype deltra, delrot, vmax;
   void write_state(void)
     {
       // write full state to ascii file
@@ -79,9 +87,6 @@ public:
     }
   simstate ()
     {
-      vmax=0.00001;
-      delrot = 0.3;
-      deltra = 0.1;
     }
 };
 
