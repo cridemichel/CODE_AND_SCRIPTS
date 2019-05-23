@@ -187,13 +187,22 @@ class mcsim {
 
         }
     }
+  void init_measures(void)
+    {
+      ofstream of;
+      of.open("v.dat", ios::trunc);
+      of.close();
+    }
   void save_measures(int tt)
     {
+      ofstream of;
+      of.open("v.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
-      if (tt%5000==0)
+      if (tt!=0 && tt%5000==0)
         {
-      
+          of << tt << " " << pars.L[0]*pars.L[1] << "\n";
         }
+      of.close();
     }
 public:
   const char *parsfile="hepars.asc";
@@ -232,6 +241,7 @@ public:
       init_LL();
       cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       cout << "P= " << pars.P << " T=" << pars.T << "\n";
+      init_measures();
     }
   void run(void)
     {
@@ -252,12 +262,6 @@ public:
               else 
                 {
                   move_box();
-                  if (tt!=0 && tt%1000==0)
-                    {
-                      //for (auto ii=0; ii < pars.parnum; ii++)
-                        //cout << he[ii].r[0] << " " << he[ii].r[1] << "\n";
-                      cout << pars.L[0]*pars.L[1] << "\n";
-                    }
                 }
             } 
           // save snapshots and backup file 
