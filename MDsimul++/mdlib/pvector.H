@@ -216,13 +216,18 @@ public:
     }
   void resize(int NN)
     {
-      pvecdynp<ntype,NT> vt = new ntype[NN];
+      //pvecdynp<ntype,NT> vt;
+      ntype *vt;
+      //vt.allocate(NN);
+      vt = new ntype[NN];
       // initialize with all elements and 0 if larger
       for (auto i=0; i < NN; i++)
 	vt[i] = (i < N)?v[i]:0.0;
       delete [] v;
       N=NN;
-      v = vt;
+      for (auto i=0; i < NN; i++)
+	v[i] = (i < N)?vt[i]:0.0;
+      //v = vt;
     }
   pvecdynp(int NN)
     {
