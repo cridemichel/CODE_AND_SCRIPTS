@@ -218,7 +218,6 @@ public:
     {
       //pvecdynp<ntype,NT> vt;
       ntype *vt;
-      //vt.allocate(NN);
       vt = new ntype[NN];
       // initialize with all elements and 0 if larger
       for (auto i=0; i < NN; i++)

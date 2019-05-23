@@ -207,7 +207,7 @@ public:
   void init(void)
     {
       rect.resize(pars.N);
-      he.resize(pars.N); 
+      he.resize(pars.N);
       init_LL();
       if (pars.seed > 0)
         srand48(pars.seed);
@@ -275,8 +275,9 @@ public:
                     he[i].nb << 0,1;
                     update_rect(i);
                     i++;
+                    //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
                     if (i==pars.N)
-                      break;
+                      return;
                   }
               break;
             }

@@ -21,11 +21,12 @@ int main (int argc, char **argv)
         }
     default:
         {
+          //cout << "N=" << heMC.pars.N << "\n";
           heMC.createconf(0);
           break;
         }
      }
-  cout << "qui #steps="<< heMC.pars.steps <<"\n";
+  //cout << "qui #steps="<< heMC.pars.steps <<"\n";
   heMC.run();
 #if 0
 #ifdef USE_BBOX
