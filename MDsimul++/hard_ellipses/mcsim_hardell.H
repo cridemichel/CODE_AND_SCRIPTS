@@ -192,6 +192,8 @@ class mcsim {
       ofstream of;
       of.open("v.dat", ios::trunc);
       of.close();
+      of.open("phi.dat", ios::trunc);
+      of.close();
     }
   void save_measures(int tt)
     {
@@ -203,6 +205,14 @@ class mcsim {
           of << tt << " " << pars.L[0]*pars.L[1] << "\n";
         }
       of.close();
+      of.open("phi.dat",ios::app);
+      // save observables, e.g. energy, volume, pressure, etc...
+      if (tt!=0 && tt%5000==0)
+        {
+          of << tt << " " << pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) << "\n";
+        }
+      of.close();
+   
     }
 public:
   const char *parsfile="hepars.asc";
