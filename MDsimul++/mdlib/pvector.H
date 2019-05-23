@@ -224,6 +224,7 @@ public:
 	vt[i] = (i < N)?v[i]:0.0;
       delete [] v;
       N=NN;
+      v=vt;
       for (auto i=0; i < NN; i++)
 	v[i] = (i < N)?vt[i]:0.0;
       //v = vt;

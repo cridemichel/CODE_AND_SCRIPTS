@@ -120,7 +120,9 @@ class mcsim {
           update_rect(i);
           pbc(i);
         }
+      //cout << "qui1\n";
       heLL.update_numcells(pars.L);
+      //cout << "qui2\n";
 #ifdef MC_STORELL
       store_ll_mc();
 #endif
