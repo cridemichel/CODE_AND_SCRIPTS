@@ -35,7 +35,7 @@ class mcsim {
     }
   void init_LL(void)
     {
-      heLL.init(&he,&rect,pars.L);
+      heLL.init(&he,&rect,pars.L,pars.rcut);
     }
   void build_LL(void)
     {
@@ -111,14 +111,14 @@ class mcsim {
       Lfact = pow(vn/vo,1.0/3.0);
 
       pars.L[0] *= Lfact;
-      L2 = pars.L*0.5;
+      L2 = 0.5*pars.L;
 
       for (i=0; i < pars.parnum; i++)
         {
           he[i].r *= Lfact;
           pbc(i);
         }
-      update_numcells();
+      heLL.update_numcells(pars.L);
 #ifdef MC_STORELL
       store_ll_mc();
 #endif
@@ -128,15 +128,15 @@ class mcsim {
           if (heLL.check_overlap(i)==true)
             {
               /* move rejected restore old positions */
-              L /= Lfact;
-              L2 = L*0.5;
+              pars.L /= Lfact;
+              L2 = 0.5*pars.L;
               for (ii=0; ii < pars.parnum; ii++)
                 {
                   he[ii].r /= Lfact;
                   pbc(ii);
                 }
               //volrejMC++;
-              update_numcells();
+              heLL.update_numcells(pars.L);
 #ifdef MC_STORELL
               restore_ll_mc();
 #else
@@ -146,30 +146,24 @@ class mcsim {
             }
         }
 
-      arg = -(1.0/pars.T)*(par.P*(vn-vo)-(pars.parnum+1)*log(vn/vo)*pars.T);
+      arg = -(1.0/pars.T)*(pars.P*(vn-vo)-(pars.parnum+1)*log(vn/vo)*pars.T);
       if (ranf() > exp(arg))
         {
           /* move rejected restore old positions */
-          L[0] /= Lfact;
-          L[1] /= Lfact;
-          L[2] /= Lfact;
-          L2[0] = L[0]*0.5;
-          L2[1] = L[1]*0.5;
-          L2[2] = L[2]*0.5;
+          pars.L /= Lfact;
+          L2 = 0.5*pars.L;
 
-          for (i=0; i < Oparams.parnum; i++)
+          for (i=0; i < pars.parnum; i++)
             {
-              rx[i] /= Lfact;
-              ry[i] /= Lfact;
-              rz[i] /= Lfact; 
+              he[i].r /= Lfact;
               pbc(i);
             }
           //volrejMC++;
-          update_numcells();
+          heLL.update_numcells(pars.L);
 #ifdef MC_STORELL
           restore_ll_mc();
 #else
-          rebuildLinkedList();
+          build_LL();
 #endif
         }
     }
@@ -239,7 +233,7 @@ public:
           ntot=pars.parnum;
           if (pars.simtype==1) //NPT
             ntot+=1;
-
+          heLL.set_ini_numcells();
           for (i=0; i < ntot; i++)
             {
               ran = (int) (ntot*ranf());

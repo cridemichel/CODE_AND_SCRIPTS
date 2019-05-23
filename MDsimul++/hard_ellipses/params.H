@@ -32,6 +32,8 @@ public:
   int& N=parnum;// reference declarations are aliases!
   pvector<ntype,2> L; // box
   pvector<ntype,2> M; // linked list cells 
+  ntype rcut;
+  ntype P, T;
   params()
     {
       N=1000;
