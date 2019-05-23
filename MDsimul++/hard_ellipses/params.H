@@ -40,6 +40,8 @@ public:
       L[0]=L[1]=10.0;
       simtype = 0; // 0=NTV; 1=NPT; 2=gran canonico
       seed=0;
+      T=1.0;
+      P=10.0;
     }
 
   void read(const char *fn)
