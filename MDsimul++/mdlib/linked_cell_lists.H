@@ -10,10 +10,14 @@ class linked_cell_lists_2d
   vector<particles>* part;
   vector<rectangles> *rect;
   pvector<int,-1> inCell[2];
-  pvector<int,-1> cellList;
+  pvector<int,-1> cellList, cellListBak;
   int parnum;
   pvector<ntype,2> L, L2;// box size
+  pvector<ntype,2> Lbak, L2bak;
   int cellsx, cellsy;
+  int cellsxBak, cellsyBak;
+  int parnumBak;
+  pvector<int,-1> inCellBak[2];
   int cxini, cyini;
   ntype rcut;
   void insert_in_new_cell(int i)
@@ -82,8 +86,12 @@ public:
       parnum=part->size();
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
       for (k=0; k < 2; k++)
-        inCell[k].allocate(parnum);
+        {
+          inCell[k].allocate(parnum);
+          inCellBak[k].allocate(parnum);
+        }
       cellList.allocate(parnum+cellsx*cellsy);
+      cellListBak.allocate(parnum+cellsx*cellsy);
     }
   void set_ini_numcells(void)
     {
@@ -100,9 +108,42 @@ public:
         {
           //cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
           cellList.resize(parnum+cellsx*cellsy);
+          cellListBak.resize(parnum+cellsx*cellsy);
         } 
     }
-
+  void store(void)
+    {
+      parnumBak=parnum;
+      Lbak=L;
+      L2bak=L2;
+      cellsxBak = cellsx;
+      cellsyBak = cellsy;
+      for (auto k=0; k < parnum + cellsx*cellsy; k++)
+        {
+          cellListBak[k] = cellList[k];
+        }
+      for (auto i=0; i < parnum; i++)
+        {
+          inCellBak[0][i] = inCell[0][i];
+          inCellBak[1][i] = inCell[1][i];
+        }
+    }
+  void restore(void)
+    {
+      L2=L2bak;
+      L=Lbak;
+      cellsx = cellsxBak;
+      cellsy = cellsyBak; 
+      for (auto k=0; k < parnum + cellsx*cellsy; k++)
+        {
+          cellList[k] = cellListBak[k];
+        }
+      for (auto i=0; i < parnum; i++)
+        {
+          inCell[0][i] = inCellBak[0][i];
+          inCell[1][i] = inCellBak[1][i];
+        }
+    }
   bool check_overlap(int ip)
     {
       int kk, nb, iX, jX, iY, jY, n, na;

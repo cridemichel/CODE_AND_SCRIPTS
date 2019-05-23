@@ -70,7 +70,6 @@ public:
       parfile >> savemeas;
       fclose();
     }
-  
 };
 
 template <class ntype> 
