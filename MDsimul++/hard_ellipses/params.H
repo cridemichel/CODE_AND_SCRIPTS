@@ -37,7 +37,7 @@ public:
   params()
     {
       N=1000;
-      L[0]=L[1]=L[2]=10.0;
+      L[0]=L[1]=10.0;
       simtype = 0; // 0=NTV; 1=NPT; 2=gran canonico
       seed=0;
     }
@@ -74,6 +74,12 @@ public:
   void read_state(void)
     {
       // write full state to ascii file
+    }
+  simstate ()
+    {
+      vmax=0.00001;
+      delrot = 0.3;
+      deltra = 0.1;
     }
 };
 

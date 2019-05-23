@@ -105,12 +105,13 @@ class mcsim {
       pvector<ntype,2> L2;
       ntype nn;
       ntype vo, lnvn, vn, Lfact, enn, eno, arg, delv=0.0;
-      vo = pars.L[0]*pars.L[1]*pars.L[2];
+      vo = pars.L[0]*pars.L[1];
       lnvn = log(vo) + (ranf()-0.5)*state.vmax;
       vn = exp(lnvn);
+      //cout << "vo=" << vo << " vn=" << vn << " vmax=" << state.vmax << "\n";
       Lfact = pow(vn/vo,1.0/3.0);
 
-      pars.L[0] *= Lfact;
+      pars.L *= Lfact;
       L2 = 0.5*pars.L;
 
       for (i=0; i < pars.parnum; i++)
@@ -242,7 +243,10 @@ public:
               if (ran < pars.parnum)
                 mcmotion(ran);
               else 
-                move_box();
+                {
+                  move_box();
+                  //cout << pars.L[0]*pars.L[1] << "\n";
+                }
             } 
           // save snapshots and backup file 
           save_snap(tt);

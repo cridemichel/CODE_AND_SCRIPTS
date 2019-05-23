@@ -51,8 +51,12 @@ class linked_cell_lists_2d
       if (overlap(rectA,rectB) < 0.0)
         {
           if (overlap(A,B) < 0.0)
-            return true;
+            {
+              //cout << "true\n";
+              return true;
+            }
         }
+      //cout << "false\n";
       return false;
     }
 public:
