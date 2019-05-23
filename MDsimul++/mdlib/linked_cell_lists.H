@@ -77,7 +77,7 @@ public:
       L2 = (1.0/2.0)*boxsize;
       parnum=part->size();
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
-      for (k=0; k < 3; k++)
+      for (k=0; k < 2; k++)
         inCell[k].allocate(parnum);
       cellList.allocate(parnum+cellsx*cellsy);
     }

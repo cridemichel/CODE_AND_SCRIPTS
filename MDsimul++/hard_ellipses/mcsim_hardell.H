@@ -237,7 +237,7 @@ public:
           heLL.set_ini_numcells();
           for (i=0; i < ntot; i++)
             {
-              cout << "step #" << tt << " i=" << i << "\n";
+              //cout << "step #" << tt << " i=" << i << "\n";
               ran = (int) (ntot*ranf());
               if (ran < pars.parnum)
                 mcmotion(ran);
@@ -267,20 +267,31 @@ public:
         {
         case 0:
             {
+              ntype dx, dy, x, y;
               int i=0, ix, iy, maxix, maxiy;
-              maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
+              maxix = maxiy = ceil(sqrt(((ntype) pars.N)))+1; 
+              dx = pars.L[0]/((ntype)maxix);
+              dy = pars.L[1]/((ntype)maxiy);
+              x=y=0;
               for (ix = 0; ix < maxix; ix++)
-                for (iy = 0; iy < maxiy; iy++)
-                  {
-                    he[i].r << 0,0;
-                    he[i].na << 1,0;
-                    he[i].nb << 0,1;
-                    update_rect(i);
-                    i++;
-                    //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
-                    if (i==pars.N)
-                      return;
-                  }
+                {
+                  for (iy = 0; iy < maxiy; iy++)
+                    {
+                      he[i].r << x,y;
+                      he[i].na << 1,0;
+                      he[i].nb << 0,1;
+                      update_rect(i);
+                      i++;
+                      //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
+                      if (i==pars.N)
+                        {
+                          build_LL();
+                          return;
+                        }
+                      y += dy;
+                    }
+                  x += dx;
+                }
               break;
             }
         case 1:
@@ -293,7 +304,6 @@ public:
 
             }
         }
-      build_LL();
     }
   
 };
