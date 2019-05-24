@@ -27,35 +27,46 @@ int main (int argc, char **argv)
   double X0, ov=0.0, theta, dr, r, r0;
   //double Lbox;
   bool justoner=false;
-  int ir; 
+  int ir=0; 
   vector<double> veff;
-
+  double veff1;
   if (argc==1)
     {
-      printf("ok argc=0\n");
+      printf("calc_veff_hardell <trials> <X0> <NUMR> <ir> <savett>\n");
+      exit(1);
     }
+  if (argc >= 2)
+    ttmax=atoi(argv[1]);
+  else
+    ttmax = 1000000;
 
+   if (argc>=3)
+    X0 = atof(argv[2]);
+  else 
+    X0 = 2.0;
+  
   if (argc>=4)
     NUMR = atoi(argv[3]);
  
   veff.resize(NUMR); 
-  if (argc>=3)
-    X0 = atof(argv[2]);
-  else 
-    X0 = 2.0;
-  if (argc >=4)
+  if (argc >=5)
     {
       justoner=true;
-      ir = atoi(argv[3]);
+      ir = atoi(argv[4]);
     }
   else
     {
       ir=0;
       justoner =  false;
     }
-  if (argc >= 5)
+  if (ir < 0 || ir >= NUMR)
     {
-      savett=atoll(argv[4]);
+      cout << "ir[=" << ir << "] must be in the range [0," << NUMR << ")\n";
+      exit(1);
+    }
+  if (argc >= 6)
+    {
+      savett=atoll(argv[5]);
     }
   srand48(time(0));
   A.a = 0.5;
@@ -75,19 +86,17 @@ int main (int argc, char **argv)
   rectB.sax[0] = B.a;
   rectB.sax[1] = B.b;
 #endif
-  if (argc >= 2)
-    ttmax=atoi(argv[1]);
-  else
-    ttmax = 1000000;
   dr = 2.0*(A.b-A.a)/((double) NUMR);
-  //cout << "dr = " << dr << "\n";
+  cout << "dr = " << dr << "\n";
+  cout << "NUMR=" << NUMR << " doing just ir=" << ir << "\n"; 
+  cout << "ttmax=" << ttmax << " savett=" << savett << "\n";
   r = r0 = 2.0*A.a+dr*0.5;
   if (justoner)
     {
       of.open(ofn, ios::trunc);
       of.close();  
     }
-  for (tr=ir; (tr < NUMR)||(justoner==true && tr < ir+1); tr++)
+  for (tr=ir; (tr < NUMR)&&(justoner==true && tr < ir+1); tr++)
     {
       //cout << "r=" << r << "\n";
       cout << "doing just ir=" << ir << "\n";
@@ -147,7 +156,7 @@ int main (int argc, char **argv)
             {
               ov+=1.0;
             }
-//          else
+          //else
 #if 0
           if (ovc*ovcpp < 0)
             {
@@ -159,20 +168,24 @@ int main (int argc, char **argv)
             }
 #endif
 #endif
+          if (justoner==true && (tt % savett == 0))
+            {
+              if (tt > 0)
+                {
+                  veff1 = ov/((double)tt);
+                  of.open(ofn,ios::app);
+                  of << tt << " " << setprecision(16) << -log(veff1) << "\n";
+                  of.close();
+                }
+            }
         }
-      veff[tr] = ov/((double)tt);
-      if (justoner==true && (tt % savett == 0))
-        {
-          of.open(ofn);
-          of << tt << setprecision(16) << -log(veff[tr]) << "\n";
-          of.close();
-        }
-  
+      if (justoner==false)
+        veff[tr] = ov/((double)tt);
       r += dr;
     }
   //cout << "veff=\n";
   r = r0;
-  if  (justoner==false)
+  if (justoner==false)
     {
       for (auto i=0; i < NUMR; i++)
         {
