@@ -67,10 +67,10 @@ public:
 template <class ntype>
 ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
 {
-  ntype x0, y0, alpha;
+  ntype x0, y0, alpha=-1.0;
   pvector <ntype,5> coeffpa;
   ntype x02, y02, sai[2];
-  ntype vt, at[2], dist, m00, m01, m11, b2d, m002, m012, m112;
+  ntype dist, m00, m01, m11, b2d, m002, m012, m112;
   pvector<ntype,2> r0jpp, r0jp, ri, rj, x;
   pmatrixq<ntype,2> Di, Dj, Mi, Mj, Ri, Rj, Rjp, Mjp, Mjpp, Mtmp, RM, invM2I;
   pvector<complex<ntype>,4> roots;
@@ -157,6 +157,11 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
           alpha=real(roots[kk1]);
           break;
         }
+    }
+  if (alpha==-1)
+    {
+      cout << "[ERROR] no suitable solution of quartic found! Exiting...\n";
+      exit(1);
     }
   //cout << setprecision(16) << "[C++] alpha=" << alpha << "\n";
   auto detMa =-m01*m01 + (m00 + alpha)*(m11 + alpha);

@@ -2087,7 +2087,7 @@ bool laguer_cmplx_mod(cmplx &x, pvector<cmplx,N> roots, int iac)
      vector<int> k, kt;
      ntype sigma, ukc, vkc, maxt, t;
      Point p;
-     int q, i, j;
+     int q, i;
      for (i = 0; i <= n; i++)
        {
          p.x=ntype(i);

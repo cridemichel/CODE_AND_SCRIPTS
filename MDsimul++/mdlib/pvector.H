@@ -280,7 +280,7 @@ template <class ntype,int NT> using pvecbase = typename std::conditional<(NT>vec
 template <class ntype,int NT=-1> class pvector : public pvecbase<ntype,NT>, vecpars {
   //int vsize;
 #ifdef VEC_COMMA_INIT
-  unsigned int curidx;
+  unsigned int curidx=0;
 #endif
 public:
   using pvecbase<ntype,NT>::v;
@@ -396,10 +396,13 @@ public:
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] + v1.v[i];
 
-	  if (N > NMAX)
-	    return std::move(v2);
-	  else
-	    return v2;
+          // N.B. local variable are automatically moved by compiler
+	  // if more efficient (c++11) hence std::move is not necessary
+	  // and it can prevent compiler optimizations
+	  //if (N > NMAX)
+	  //  return std::move(v2);
+	  //else
+          return v2;
 	}
     }
   inline pvector<ntype,NT> subtraction(const pvector<ntype,NT>& v1) const
@@ -419,10 +422,13 @@ public:
 	    v2.allocate(N);
 	  for (i=0; i < N; i++)
 	    v2.v[i] = v[i] - v1.v[i];
-	  if (N > NMAX)
-	    return std::move(v2);
-	  else
-	    return v2;
+	  // N.B. local variable are automatically moved by compiler
+	  // if more efficient (c++11) hence std::move is not necessary
+	  // and it can prevent compiler optimizations
+	  //if (N > NMAX)
+	  //  return std::move(v2);
+	  //else
+          return v2;
 	}
     }
   // *= for pvectors
@@ -471,10 +477,10 @@ public:
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
 
-      if (N > NMAX)
-	return std::move(lv);
-      else
-	return lv;
+      //if (N > NMAX)
+      //return std::move(lv);
+      //else
+      return lv;
     }
 #endif
   inline pvector<ntype,NT> vecscal(const ntype& param) const
@@ -485,10 +491,10 @@ public:
 	lv.allocate(N);
       for (i=0; i < N; i++)
 	lv.v[i] = v[i]*param;
-      if (N > NMAX)
-	return std::move(lv);
-      else
-	return lv;
+      //if (N > NMAX)
+	//return std::move(lv);
+      //else
+      return lv;
     }
 #ifdef VEC_COMMA_INIT
   /* NOTE: comma operator has the lowest priority among operators 
@@ -527,10 +533,10 @@ public:
       for (i=0; i < N; i++)
 	lv.v[i] = v.v[i]*param;
 
-      if (N > NMAX)
-	return std::move(lv);
-      else
-	return lv;
+      //if (N > NMAX)
+      //return std::move(lv);
+      //else
+      return lv;
     }
 #endif
   inline ntype& operator[](const int& i)

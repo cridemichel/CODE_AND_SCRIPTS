@@ -101,23 +101,42 @@ class mcsim {
   void move_box(void)
     {
       //NPT volume move
-      int i, ii;
+      int i, ii, dir=0;
       pvector<ntype,2> L2;
-      ntype nn;
-      ntype vo, lnvn, vn, Lfact, enn, eno, arg, delv=0.0;
+      ntype vo, lnvn, vn, Lfact, arg;
+      if (pars.simtype==2)
+        {
+          dir=3*ranf();
+        }
       vo = pars.L[0]*pars.L[1];
       lnvn = log(vo) + (ranf()-0.5)*pars.vmax;
       vn = exp(lnvn);
       //cout << "vo=" << vo << " vn=" << vn << " vmax=" << state.vmax << "\n";
-      Lfact = pow(vn/vo,1.0/2.0);
-      //cout << "Lfact=" << Lfact << "\n";
-      pars.L *= Lfact;
-      L2 = 0.5*pars.L;
+      if (pars.simtype==2)
+        {
+          Lfact = vn/vo;
+          pars.L[dir] *= Lfact;
+          L2[dir] = 0.5*pars.L[dir];
+        }
+      else
+        {
+          Lfact = pow(vn/vo,1.0/2.0);
+          //cout << "Lfact=" << Lfact << "\n";
+          pars.L *= Lfact;
+          L2 = 0.5*pars.L;
+        }
       //ellLL.store();
       //cout << "Lnew=" << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.parnum; i++)
         {
-          he[i].r *= Lfact;
+          if (pars.simtype==2)
+            {
+              he[i].r[dir] *= Lfact;
+            }
+          else
+            {
+              he[i].r *= Lfact;
+            }
           update_rect(i);
           pbc(i);
         }
@@ -128,11 +147,22 @@ class mcsim {
           if (ellLL.check_overlap(i)==true)
             {
               /* move rejected restore old positions */
-              pars.L /= Lfact;
-              L2 = 0.5*pars.L;
+              if (pars.simtype==2)
+                {
+                  pars.L[dir] /= Lfact;
+                  L2[dir] = 0.5*pars.L[dir];
+                }
+              else
+                {
+                  pars.L /= Lfact;
+                  L2 = 0.5*pars.L;
+                }
               for (ii=0; ii < pars.parnum; ii++)
                 {
-                  he[ii].r /= Lfact;
+                  if (pars.simtype==2)
+                    he[ii].r[dir] /= Lfact;
+                  else 
+                    he[ii].r /= Lfact;
                   update_rect(ii);
                   pbc(ii);
                 }
@@ -146,12 +176,22 @@ class mcsim {
       if (ranf() > exp(arg))
         {
           /* move rejected restore old positions */
-          pars.L /= Lfact;
-          L2 = 0.5*pars.L;
-
+          if (pars.simtype==2)
+            {
+              pars.L[dir] /= Lfact;
+              L2[dir] = 0.5*pars.L[dir];
+            }
+          else
+            {
+              pars.L /= Lfact;
+              L2 = 0.5*pars.L;
+            }
           for (i=0; i < pars.parnum; i++)
             {
-              he[i].r /= Lfact;
+              if (pars.simtype==2)
+                he[i].r[dir] /= Lfact;
+              else
+                he[i].r /= Lfact;
               pbc(i);
             }
           //volrejMC++;

@@ -946,10 +946,10 @@ public:
               {
                 m2.m[i][j] = m[i][j] + m1.m[i][j];
               }
-          if (N > NMAX)
-            return std::move(m2);
-          else
-            return m2;
+          //if (N > NMAX)
+          //  return std::move(m2);
+          //else
+          return m2;
         }
     }
   inline pmatrixq<ntype,NT> subtraction(const pmatrixq<ntype,NT>& m1) const
@@ -988,10 +988,13 @@ public:
                 (const_cast<pmatrixq<ntype,NT>&>(m2))[i][j] = m[i][j] - (const_cast<pmatrixq<ntype,NT>&>(m1))[i][j];
 #endif
               }
-          if (N > NMAX)
-            return std::move(m2);
-          else 
-            return m2;
+          // N.B. local variable are automatically moved by compiler
+	  // if more efficient (c++11) hence std::move is not necessary
+	  // and it can prevent compiler optimizations
+          //if (N > NMAX)
+          //  return std::move(m2);
+          //else 
+          return m2;
         }
     }
 
@@ -1669,10 +1672,10 @@ public:
       for (i=0; i < N; i++)
         for (j=0; j < N; j++)
           m1[i][j] = m[i][j]*param;
-      if (N > NMAX)
-        return std::move(m1);
-      else 
-        return m1;
+      //if (N > NMAX)
+      //  return std::move(m1);
+      //else 
+      return m1;
     }
 #endif
   inline pmatrixq<ntype,NT> operator *(const double& param) 
@@ -1819,10 +1822,10 @@ public:
             v2.v[i] += m[i][j]*v1.v[j];
         }
 #endif
-      if (N > vecpars::NMAX)
-        return std::move(v2);
-      else
-        return v2;
+      //if (N > vecpars::NMAX)
+      //  return std::move(v2);
+      //else
+      return v2;
     }
   // transpose of v1 times m1
   friend pvector<ntype,NT> operator *(const pvector<ntype,NT>& v1, const pmatrixq<ntype,NT>& m1) 
@@ -1866,10 +1869,10 @@ public:
             v2.v[i] += v1.v[j]*m1.m[j][i];
         }
 #endif
-      if (N > vecpars::NMAX)
-        return std::move(v2);
-      else
-        return v2;
+      //if (N > vecpars::NMAX)
+      //  return std::move(v2);
+      //else
+      return v2;
     }
   inline ntype* operator[](const int& i)
     {
@@ -2137,10 +2140,10 @@ public:
                     }
                 }
             }
-          if (N > NMAX)
-            return std::move(m2);
-          else
-            return m2;
+          //if (N > NMAX)
+          //  return std::move(m2);
+          //else
+          return m2;
         }
     }
   // transpose
