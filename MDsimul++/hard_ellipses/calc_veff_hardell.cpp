@@ -1,3 +1,5 @@
+#include<iostream>
+#include<fstream>
 #include "./hardell.H"
 #include "../mdlib/boxes.H"
 extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
@@ -11,16 +13,21 @@ extern "C" {
 #endif
 int main (int argc, char **argv)
 {
+  ofstream of;
+  const char *ofn="veff_vs_tt.dat";
 #ifdef USE_BBOX
   rectangle<double> rectA, rectB; 
 #endif
   hardell<double> A, B;
-  long long int tt, ttmax;
+  long long int tt, ttmax, savett=10000;
   int tr, NUMR=30;
 #ifdef DEBUG_HE
   double shift[2]={0.0,0.0};
 #endif
   double X0, Lbox, ov=0.0, theta, dr, r, r0;
+
+  bool justoner=false;
+  int ir; 
   vector<double> veff;
 
   if (argc==1)
@@ -36,14 +43,23 @@ int main (int argc, char **argv)
     X0 = atof(argv[2]);
   else 
     X0 = 2.0;
-  srand48(2);
-#if 1 
+  if (argc >=4)
+    {
+      justoner=true;
+      ir = atoi(argv[3]);
+    }
+  else
+    {
+      ir=0;
+      justoner =  false;
+    }
+  if (argc >= 5)
+    {
+      savett=atoll(argv[4]);
+    }
+  srand48(time(0));
   A.a = 0.5;
   A.b = X0*A.a;
-#else
-  A.a = 0.5;
-  A.b = 0.5;
-#endif
   A.na << 1,0;
   A.nb << 0,1;
   B.a = 0.5;
@@ -66,9 +82,15 @@ int main (int argc, char **argv)
   dr = 2.0*(A.b-A.a)/((double) NUMR);
   //cout << "dr = " << dr << "\n";
   r = r0 = 2.0*A.a+dr*0.5;
-  for (tr=0; tr < NUMR; tr++)
+  if (justoner)
+    {
+      of.open(ofn, ios::trunc);
+      of.close();  
+    }
+  for (tr=ir; (tr < NUMR)||(justoner==true && tr < ir+1); tr++)
     {
       //cout << "r=" << r << "\n";
+      cout << "doing just ir=" << ir << "\n";
       ov=0.0;
       for (tt=0; tt < ttmax; tt++)
         {
@@ -139,15 +161,25 @@ int main (int argc, char **argv)
 #endif
         }
       veff[tr] = ov/((double)tt);
+      if (justoner==true && tt %% savett == 0)
+        {
+          of.open(ofn);
+          of << tt << setprecision(16) << -log(veff[tr]) << "\n";
+          of.close();
+        }
+  
       r += dr;
     }
   //cout << "veff=\n";
   r = r0;
-  for (auto i=0; i < NUMR; i++)
+  if  (justoner==false)
     {
-      veff[i] = -log(veff[i]);
-      cout << setprecision(16) << r << " " << veff[i] << "\n";
-      r+=dr;
-    } 
+      for (auto i=0; i < NUMR; i++)
+        {
+          veff[i] = -log(veff[i]);
+          cout << setprecision(16) << r << " " << veff[i] << "\n";
+          r+=dr;
+        } 
+    }
   //cout << setprecision(16) << "excluded surface=" << Lbox*Lbox*ov/((double)tt) << "\n";
 }
