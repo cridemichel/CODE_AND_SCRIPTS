@@ -24,8 +24,8 @@ int main (int argc, char **argv)
 #ifdef DEBUG_HE
   double shift[2]={0.0,0.0};
 #endif
-  double X0, Lbox, ov=0.0, theta, dr, r, r0;
-
+  double X0, ov=0.0, theta, dr, r, r0;
+  //double Lbox;
   bool justoner=false;
   int ir; 
   vector<double> veff;
@@ -64,7 +64,7 @@ int main (int argc, char **argv)
   A.nb << 0,1;
   B.a = 0.5;
   B.b = X0*A.a;
-  Lbox = 1.0001*(max(B.a,B.b)+max(A.a,A.b))*2.0;
+  //Lbox = 1.0001*(max(B.a,B.b)+max(A.a,A.b))*2.0;
 
 #ifdef USE_BBOX
   rectA.r = A.r;
@@ -161,7 +161,7 @@ int main (int argc, char **argv)
 #endif
         }
       veff[tr] = ov/((double)tt);
-      if (justoner==true && tt %% savett == 0)
+      if (justoner==true && (tt % savett == 0))
         {
           of.open(ofn);
           of << tt << setprecision(16) << -log(veff[tr]) << "\n";
