@@ -5,6 +5,7 @@
 extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
 //#define DEBUG_HE
 #define USE_BBOX
+//#define FLUSH_BUF
 #ifdef DEBUG_HE
 extern "C" {
   double check_overlap_pw2d(int i, int j, double *shift);
@@ -90,7 +91,8 @@ int main (int argc, char **argv)
   cout << "dr = " << dr << "\n";
   cout << "NUMR=" << NUMR << " doing just ir=" << ir << "\n"; 
   cout << "ttmax=" << ttmax << " savett=" << savett << "\n";
-  r = r0 = 2.0*A.a+dr*0.5;
+  r = r0 = 2.0*A.a+dr*0.5+dr*ir;
+  cout << setprecision(16) << "r=" << r << "\n"; 
   if (justoner)
     {
       of.open(ofn, ios::trunc);
@@ -175,13 +177,18 @@ int main (int argc, char **argv)
                   veff1 = ov/((double)tt);
                   of.open(ofn,ios::app);
                   of << tt << " " << setprecision(16) << -log(veff1) << "\n";
+#ifdef FLUSH_BUF
+                  of.flush();
+#endif
                   of.close();
                 }
             }
         }
       if (justoner==false)
-        veff[tr] = ov/((double)tt);
-      r += dr;
+        {
+          veff[tr] = ov/((double)tt);
+          r += dr;
+        }
     }
   //cout << "veff=\n";
   r = r0;
