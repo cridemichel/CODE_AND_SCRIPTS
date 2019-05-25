@@ -10,7 +10,7 @@
 #include<cstring>
 #include "pvector.H"
 #define OPT_INV
-#define MAT_USE_LAPACK
+#define MAT_USE_LAPACK //N.B. le lapack usano il multithreading che non è compatibile con MOSIX 
 #define MAT_COMMA_INIT
 //#define LAZY_MUL
 //N.B. Lazy evaluation of matrix multiplication has not been fully implemented yet

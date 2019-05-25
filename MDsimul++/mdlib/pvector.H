@@ -9,7 +9,7 @@
 using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
-#define USE_LAPACK
+#define USE_LAPACK //N.B. le lapack usano il multithreading che non è compatibile con MOSIX 
 #define VEC_COMMA_INIT
 #ifdef USE_LAPACK
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
