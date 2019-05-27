@@ -13,7 +13,8 @@ class mcsim {
     {
       return drand48();
     }
-  ofstream snapfile, restorefile;
+  fstream snapfile;
+  fstream restorefile;
   ifstream inicfile;
   char sfn[512], rfn[512];
   vector<rectangle<ntype>> rect; 
@@ -81,9 +82,9 @@ class mcsim {
   void read_pars(const char *fn)
     {
       if (fn==nullptr)
-        pars.read(parsfile);
+        pars.readpars(parsfilestr);
       else
-        pars.read(fn);
+        pars.readpars(fn);
     }
   void pbc(int ip)
     {
@@ -246,7 +247,18 @@ class mcsim {
           build_LL();
         }
     }
-  void write_coords(ofstream& o)
+  void read_coords(fstream& i)
+    {
+      for (auto ip=0; ip < pars.parnum; ip++)
+        {
+          // save axis a
+          i >> he[ip].r[0];
+          i >> he[ip].r[1];
+          i >> he[ip].na[0];
+          i >> he[ip].na[1];
+        }
+    }
+  void write_coords(fstream& o)
     {
       for (auto i=0; i < pars.parnum; i++)
         {
@@ -270,7 +282,7 @@ class mcsim {
       if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
         {
           w = (~w)&1;
-          sprintf(rfn, "restart-%ud", w);
+          sprintf(rfn, "restart-%u", w);
           restorefile.open(rfn);
           state.write(restorefile);
           write_coords(restorefile);
@@ -305,21 +317,18 @@ class mcsim {
       of.close();
    
     }
-public:
-  const char *parsfile="hepars.asc";
-  params<ntype> pars;
-  simstate<ntype> state;
-  mcsim()
+  void outinfo(long long int tt)
     {
-      read_pars(parsfile);
-      init();
+      if (tt> 0 && tt % pars.outsteps == 0)
+        {
+          cout << "steps=" << tt << "\n";
+          cout << "tra acceptance=" << traaccept << " [ deltra=" << pars.deltra << " ]\n";
+          cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
+          if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
+            cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
+ 
+        } 
     }
-  mcsim(const char* fn)
-    {
-      read_pars(fn);
-      init();
-    }
-
   void init(void)
     {
       rect.resize(pars.N);
@@ -344,6 +353,22 @@ public:
       cout << "P= " << pars.P << " T=" << pars.T << "\n";
       init_measures();
     }
+
+public:
+  const char *parsfilestr="hepars.asc";
+  params<ntype> pars;
+  simstate<ntype> state;
+  mcsim()
+    {
+      read_pars(parsfilestr);
+      init();
+    }
+  mcsim(const char* fn)
+    {
+      read_pars(fn);
+      init();
+    }
+
   void run(void)
     {
       long long int tt;
@@ -375,22 +400,17 @@ public:
           outinfo(tt);
         }
     }
-  void outinfo(long long int tt)
-    {
-      if (tt> 0 && tt % pars.outsteps == 0)
-        {
-          cout << "steps=" << tt << "\n";
-          cout << "tra acceptance=" << traaccept << " [ deltra=" << pars.deltra << " ]\n";
-          cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
-          if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
-            cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
- 
-        } 
-    }
+  
   // read restart file
-  void restart(void)
+  void restart(char *rfn)
     {
+      restorefile.open(rfn);
+      pars.read(restorefile);
+      state.read(restorefile);
+      read_coords(restorefile);
+      restorefile.close();
       build_LL();
+
     }
   void readconf(string& icn)
     {

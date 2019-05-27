@@ -59,7 +59,55 @@ public:
       resetaccept = 10000;
       resetacceptVol = 10000;
    }
-  void read(const char *fn)
+  void write(fstream& o)
+    {
+      o << simtype;
+      o << iniconf;
+      o << steps;
+      o << seed;
+      o << a;// a semi-axis
+      o << b;// b semi-axis
+      o << N;
+      o << L[0];
+      o << L[1];
+      o << P;
+      o << T;
+      o << deltra;
+      o << delrot;
+      o << vmax;
+      o << savemeas;
+      o << savesnap;
+      o << saverest;
+      o << adjsteps;
+      o << outsteps;
+      o << resetaccept;
+      o << resetacceptVol;
+    }
+  void read(fstream& i)
+    {
+      i >> simtype;
+      i >> iniconf;
+      i >> steps;
+      i >> seed;
+      i >> a;// a semi-axis
+      i >> b;// b semi-axis
+      i >> N;
+      i >> L[0];
+      i >> L[1];
+      i >> P;
+      i >> T;
+      i >> deltra;
+      i >> delrot;
+      i >> vmax;
+      i >> savemeas;
+      i >> savesnap;
+      i >> saverest;
+      i >> adjsteps;
+      i >> outsteps;
+      i >> resetaccept;
+      i >> resetacceptVol;
+    }
+  void readpars(const char *fn)
     {
       std::size_t found;
       fstream pft;
@@ -85,27 +133,7 @@ public:
         }
       fclose();
       pft.seekg(ios::beg);
-      pft >> simtype;
-      pft >> iniconf;
-      pft >> steps;
-      pft >> seed;
-      pft >> a;// a semi-axis
-      pft >> b;// b semi-axis
-      pft >> N;
-      pft >> L[0];
-      pft >> L[1];
-      pft >> P;
-      pft >> T;
-      pft >> deltra;
-      pft >> delrot;
-      pft >> vmax;
-      pft >> savemeas;
-      pft >> savesnap;
-      pft >> saverest;
-      pft >> adjsteps;
-      pft >> outsteps;
-      pft >> resetaccept;
-      pft >> resetacceptVol;
+      read(pft); 
       pft.close();
       remove(fnt);// remove temporary file
     }
@@ -121,7 +149,7 @@ public:
   //long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
-  void write(ofstream& o)
+  void write(fstream& o)
     {
       // write full state to ascii file
       o << trarej << " " << rotrej << " " << totrej << "\n";
@@ -130,7 +158,7 @@ public:
       o << curStep << " " << "\n";
     }
 
-  void read(ifstream& i)
+  void read(fstream& i)
     {
       // read full state from ascii file
       i >> trarej;
