@@ -325,10 +325,9 @@ class mcsim {
       // save observables, e.g. energy, volume, pressure, etc...
       if (tt!=0 && tt%pars.savemeas==0)
         {
-          of << tt << " " << setprecision(16) << pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) << "\n";
+          of << tt << " " << setprecision(16) << calc_phi() << "\n";
         }
       of.close();
-   
     }
   void outinfo(long long int tt)
     {
@@ -382,6 +381,10 @@ public:
     {
       read_pars(fn);
       init();
+    }
+  ntype calc_phi()
+    {
+      return pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) ;
     }
 
   void run(void)
@@ -449,7 +452,7 @@ public:
             {
               ntype dx, dy, x, y;
               int i=0, ix, iy, maxix, maxiy;
-              maxix = maxiy = ceil(sqrt(((ntype) pars.N)))+1; 
+              maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
               dx = pars.L[0]/((ntype)maxix);
               dy = pars.L[1]/((ntype)maxiy);
               x=y=0;

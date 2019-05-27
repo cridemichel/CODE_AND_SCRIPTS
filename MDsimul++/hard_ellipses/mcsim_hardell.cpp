@@ -41,6 +41,7 @@ int main (int argc, char **argv)
           break;
         }
      }
+  cout << "initial phi=" << heMC.calc_phi() << "\n";
   //cout << "qui #steps="<< heMC.pars.steps <<"\n";
   heMC.run();
 #if 0
