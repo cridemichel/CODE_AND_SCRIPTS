@@ -281,6 +281,7 @@ class mcsim {
       static unsigned int w=0;
       if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
         {
+          cout << "qui\n";
           w = (~w)&1;
           sprintf(rfn, "restart-%u", w);
           restorefile.open(rfn);
@@ -376,6 +377,7 @@ public:
     {
       long long int tt;
       int ntot, ran, i;
+      cout << "saverest=" << pars.saverest << "\n";
       for (tt=0; tt < pars.steps; tt++)
         {
           state.curStep=tt;
