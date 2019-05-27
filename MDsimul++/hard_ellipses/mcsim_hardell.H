@@ -36,7 +36,8 @@ class mcsim {
       acceptance=((ntype)(state.totmoves-state.totrej))/state.totmoves;
       traaccept = ((ntype)(state.tramoves-state.trarej))/state.tramoves;
       rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
-      volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
+      if (pars.simtype==1 || pars.simtype==2)
+        volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
       if (pars.adjsteps < 0 || pars.curStep <= pars.adjsteps)
         { 
           if (pars.targetAccept > 0.0 && state.curStep % pars.resetaccept==0)
@@ -53,15 +54,17 @@ class mcsim {
                 pars.deltra = avL*0.1;
               if (pars.delrot > 3.14)
                 pars.delrot = 3.14;
+              state.totrej=state.trarej=state.rotrej=state.totmoves=state.rotmoves=state.tramoves=0;
             }
 
-          if (pars.targetAcceptVol > 0.0 && state.volmoves > 0     
+          if ((pars.simtype==1 || pars.simtype==2) && pars.targetAcceptVol > 0.0 && state.volmoves > 0     
               && (state.curStep % pars.resetacceptVol==0))
             {
               if (volaccept > pars.targetAcceptVol)
                 pars.vmax *= 1.1;
               else
                 pars.vmax /= 1.1;
+              state.volmoves=state.volrej=0;
             }
         } 
     }
@@ -435,6 +438,7 @@ public:
       // read ascii iniconf here 
       read_coords(inicfile);
       inicfile.close();
+      build_LL();
     }
  
   void createconf(int type)

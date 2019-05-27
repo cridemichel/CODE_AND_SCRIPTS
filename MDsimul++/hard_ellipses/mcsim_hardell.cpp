@@ -3,7 +3,6 @@ int main (int argc, char **argv)
 {
   char *rf;
   mcsim<double> heMC;
-  //heMC.read_pars("hepars.asc");
   int simtype;
   if (argc >= 1)
     simtype = atoi(argv[1]);
