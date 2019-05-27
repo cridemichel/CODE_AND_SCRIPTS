@@ -23,7 +23,7 @@ int main (int argc, char **argv)
     {
     case 1:
         {
-          cout << "Restarting from file " << string(rf);
+          cout << "Restarting from file " << string(rf) << "\n";;
           heMC.restart(rf);
           cout << " step = " << heMC.iniStep << "\n";
           break;

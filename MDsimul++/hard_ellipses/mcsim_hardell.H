@@ -256,6 +256,10 @@ class mcsim {
           i >> he[ip].r[1];
           i >> he[ip].na[0];
           i >> he[ip].na[1];
+          he[ip].nb = he[ip].na.orto();
+          he[ip].a = pars.a;
+          he[ip].b = pars.b;
+          update_rect(ip);
         }
     }
   void write_coords(fstream& o)
@@ -354,12 +358,11 @@ class mcsim {
       cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       cout << "P= " << pars.P << " T=" << pars.T << "\n";
       init_measures();
-      remove("restart-0");
-      remove("restart-1");
+      iniStep=0;
     }
 
 public:
-  long long int iniStep=0;
+  long long int iniStep;
   const char *parsfilestr="hepars.asc";
   params<ntype> pars;
   simstate<ntype> state;
@@ -416,6 +419,8 @@ public:
       pars.curStep = state.curStep;
       read_coords(restorefile);
       restorefile.close();
+      //cout << "state.curStep=" << state.curStep << "\n";
+      cout << "semi-axes=" << pars.a << " " << pars.b << "\n";
       iniStep = pars.curStep;
       build_LL();
     }
@@ -449,6 +454,8 @@ public:
                       //he[i].r.show("r");
                       he[i].na.random_orient();
                       he[i].nb = he[i].na.orto();
+                      he[i].a = pars.a;
+                      he[i].b = pars.b;
                       update_rect(i);
                       i++;
                       //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
