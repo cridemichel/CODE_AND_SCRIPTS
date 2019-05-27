@@ -414,13 +414,17 @@ public:
             ntot+=1;
           ellLL.set_ini_numcells();
 
-          check_overlap_debug();
+          cout << ">>>tt=" << tt << "\n";
+          //check_overlap_debug();
+          //exit(1);
           for (i=0; i < ntot; i++)
             {
-              //cout << "step #" << tt << " i=" << i << "\n";
+              cout << "step #" << tt << " i=" << i << "ntot=" << ntot << "\n";
               ran = (int) (ntot*ranf());
               if (ran < pars.parnum)
-                mcmotion(ran);
+                {
+                  mcmotion(ran);
+                }
               else 
                 {
                   move_box();
@@ -469,6 +473,7 @@ public:
               ntype dx, dy, x, y;
               int i=0, ix, iy, maxix, maxiy;
               maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
+              cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
               dx = pars.L[0]/((ntype)maxix);
               dy = pars.L[1]/((ntype)maxiy);
               x=y=0;

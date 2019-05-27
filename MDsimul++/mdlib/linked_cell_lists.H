@@ -57,8 +57,8 @@ class linked_cell_lists_2d
           if (overlap(A,B) < 0.0)
             {
               //cout << "true\n";
-              A.show("A");
-              B.show("B");
+              //A.show("A");
+              //B.show("B");
               return true;
             }
         }
