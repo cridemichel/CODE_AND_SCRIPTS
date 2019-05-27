@@ -429,7 +429,7 @@ public:
                   move_box();
                 }
             } 
-          check_overlap_debug();
+          //check_overlap_debug();
           calc_acceptance_and_adjust();
           // save snapshots and backup file 
           save_snap(tt);
