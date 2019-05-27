@@ -23,7 +23,6 @@ class mcsim {
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
   ntype acceptance, traaccept, rotaccept, volaccept;
-  long long int iniStep=0;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -280,6 +279,7 @@ class mcsim {
   void save_restart(long long int tt)
     {
       static unsigned int w=0;
+      state.curStep = tt;
       if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
         {
           sprintf(rfn, "restart-%u", w);
@@ -359,6 +359,7 @@ class mcsim {
     }
 
 public:
+  long long int iniStep=0;
   const char *parsfilestr="hepars.asc";
   params<ntype> pars;
   simstate<ntype> state;
@@ -412,6 +413,7 @@ public:
       restorefile.open(rfn);
       pars.read(restorefile);
       state.read(restorefile);
+      pars.curStep = state.curStep;
       read_coords(restorefile);
       restorefile.close();
       iniStep = pars.curStep;

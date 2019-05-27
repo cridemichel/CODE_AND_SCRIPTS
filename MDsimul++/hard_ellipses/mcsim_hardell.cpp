@@ -23,17 +23,21 @@ int main (int argc, char **argv)
     {
     case 1:
         {
+          cout << "Restarting from file " << string(rf);
           heMC.restart(rf);
+          cout << " step = " << heMC.iniStep << "\n";
           break;
         }
     case 2:
         {
+          cout << "Using snapshot " << heMC.pars.iniconf << " as initial configuration\n";
           heMC.readconf(heMC.pars.iniconf);
           break;
         }
     default:
         {
           //cout << "N=" << heMC.pars.N << "\n";
+          cout << "Creating initial conf\n";
           heMC.createconf(0);
           break;
         }
