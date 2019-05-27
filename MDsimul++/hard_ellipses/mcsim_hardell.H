@@ -37,7 +37,7 @@ class mcsim {
       volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
       if (pars.adjsteps < 0 || pars.curStep <= pars.adjsteps)
         { 
-          if (pars.targetAccept > 0.0 && state.curStep % state.resetaccept==0)
+          if (pars.targetAccept > 0.0 && state.curStep % pars.resetaccept==0)
             {
               if (traaccept > pars.targetAccept)
                 pars.deltra *= 1.1;
@@ -59,7 +59,7 @@ class mcsim {
             }
 
           if (pars.targetAcceptVol > 0.0 && state.volmoves > 0     
-              && (state.curStep % state.resetacceptVol==0))
+              && (state.curStep % pars.resetacceptVol==0))
             {
               if (volaccept > pars.targetAcceptVol)
                 pars.vmax *= 1.1;
@@ -366,9 +366,10 @@ public:
       if (tt> 0 && tt % pars.outsteps == 0)
         {
           cout << "steps=" << tt << "\n";
-          cout << "acceptance tra=" << traaccept << " rot=" << rotaccept << "\n";
-          if (pars.simtype==1 || pars.simtype==2)
-            cout << "vol acceptance=" << volaccept << "\n";
+          cout << "tra acceptance=" << traaccept << " [ deltra=" << pars.deltra << " ]\n";
+          cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
+          if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
+            cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << "\n";
  
         } 
     }

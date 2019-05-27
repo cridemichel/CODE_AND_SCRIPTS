@@ -37,7 +37,7 @@ public:
   int savemeas;
   int curStep;
   ntype targetAccept, targetAcceptVol;
-  long long int adjsteps, outsteps; 
+  long long int adjsteps, outsteps, resetaccept, resetacceptVol; 
   char fnt[256];
   params()
     {
@@ -54,7 +54,9 @@ public:
       targetAcceptVol=0.5;
       targetAccept=0.5;
       adjsteps = 0;
-    }
+      resetaccept = 10000;
+      resetacceptVol = 10000;
+   }
   void read(const char *fn)
     {
       std::size_t found;
@@ -98,6 +100,8 @@ public:
       pft >> savemeas;
       pft >> adjsteps;
       pft >> outsteps;
+      pft >> resetaccept;
+      pft >> resetacceptVol;
       pft.close();
       remove(fnt);// remove temporary file
     }
@@ -108,9 +112,9 @@ class simstate
 {
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
-  long long int volmoves=0, volrej;
+  long long int volmoves=0, volrej=0;
   long long int curStep, adjsteps;
-  long long int resetaccept=0, resetacceptVol=0;
+  //long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
   void write_state(void)
@@ -123,8 +127,6 @@ public:
     }
   simstate ()
     {
-      resetaccept = 10000;
-      resetacceptVol = 10000;
     }
 };
 
