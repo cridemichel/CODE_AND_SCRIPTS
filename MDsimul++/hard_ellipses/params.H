@@ -117,17 +117,31 @@ class simstate
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
   long long int volmoves=0, volrej=0;
-  long long int curStep, adjsteps;
+  long long int curStep;
   //long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
-  void write_state(void)
+  void write_state(ofstream o)
     {
       // write full state to ascii file
+      o << trarej << " " << rotrej << " " << totrej << "\n";
+      o << totmoves << " " << tramoves << " " << rotmoves << "\n";
+      o << volmoves << " " << volrej << "\n";
+      o << curStep << " " << "\n";
     }
-  void read_state(void)
+
+  void read_state(ifstream i)
     {
-      // write full state to ascii file
+      // read full state from ascii file
+      i >> trarej;
+      i >> rotrej;
+      i >> totrej;
+      i >> totmoves;
+      i >> tramoves;
+      i >> rotmoves;
+      i >> volmoves;
+      i >> volrej;
+      i >> curStep;
     }
   simstate ()
     {
