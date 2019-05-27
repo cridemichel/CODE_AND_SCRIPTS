@@ -415,7 +415,6 @@ public:
           ellLL.set_ini_numcells();
 
           cout << ">>>tt=" << tt << "\n";
-          //check_overlap_debug();
           //exit(1);
           for (i=0; i < ntot; i++)
             {
@@ -430,6 +429,7 @@ public:
                   move_box();
                 }
             } 
+          check_overlap_debug();
           calc_acceptance_and_adjust();
           // save snapshots and backup file 
           save_snap(tt);
@@ -438,6 +438,7 @@ public:
           //output
           outinfo(tt);
         }
+
       save_snap_str("cnf-final");
     }
   
