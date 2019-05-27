@@ -251,7 +251,7 @@ class mcsim {
       for (auto i=0; i < pars.parnum; i++)
         {
           // save axis a
-          snapfile << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
+          o << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
         }
     } 
   void save_snap(long long int tt)
@@ -266,17 +266,18 @@ class mcsim {
     }
   void save_restore(long long int tt)
     {
-      static int w=0;
+      static unsigned int w=0;
       if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
         {
           w = (~w)&1;
-          sprintf(rfn, "restart-%d", w);
+          sprintf(rfn, "restart-%ud", w);
           restorefile.open(rfn);
           state.save(restorefile);
           write_coords(restorefile);
           restorefile.close();
         }
     }
+  
   void init_measures(void)
     {
       ofstream of;
@@ -386,6 +387,7 @@ public:
  
         } 
     }
+  // read restart file
   void restart(void)
     {
       build_LL();
