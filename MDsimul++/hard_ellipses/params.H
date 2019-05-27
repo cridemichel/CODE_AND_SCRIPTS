@@ -61,27 +61,27 @@ public:
    }
   void write(fstream& o)
     {
-      o << simtype;
-      o << iniconf;
-      o << steps;
-      o << seed;
-      o << a;// a semi-axis
-      o << b;// b semi-axis
-      o << N;
-      o << L[0];
-      o << L[1];
-      o << P;
-      o << T;
-      o << deltra;
-      o << delrot;
-      o << vmax;
-      o << savemeas;
-      o << savesnap;
-      o << saverest;
-      o << adjsteps;
-      o << outsteps;
-      o << resetaccept;
-      o << resetacceptVol;
+      o << simtype << " ";
+      o << iniconf << " ";
+      o << steps << " ";
+      o << seed << " ";
+      o << a << " ";// a semi-axis
+      o << b << " ";// b semi-axis
+      o << N << " ";
+      o << L[0] << " ";
+      o << L[1] << "\n";
+      o << P << " ";
+      o << T << " ";
+      o << deltra << " ";
+      o << delrot << " ";
+      o << vmax << "\n";
+      o << savemeas << " ";
+      o << savesnap << " ";
+      o << saverest << "\n";
+      o << adjsteps << " ";
+      o << outsteps << "\n";
+      o << resetaccept << " ";
+      o << resetacceptVol << "\n";
     }
   void read(fstream& i)
     {
