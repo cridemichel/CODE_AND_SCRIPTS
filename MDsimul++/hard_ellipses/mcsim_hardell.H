@@ -23,6 +23,7 @@ class mcsim {
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
   ntype acceptance, traaccept, rotaccept, volaccept;
+  long long int iniStep=0;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -377,7 +378,7 @@ public:
       long long int tt;
       int ntot, ran, i;
       //cout << "saverest=" << pars.saverest << "\n";
-      for (tt=0; tt < pars.steps; tt++)
+      for (tt=iniStep; tt < pars.steps; tt++)
         {
           state.curStep=tt;
           ntot=pars.parnum;
@@ -413,8 +414,8 @@ public:
       state.read(restorefile);
       read_coords(restorefile);
       restorefile.close();
+      iniStep = pars.curStep;
       build_LL();
-
     }
   void readconf(string& icn)
     {

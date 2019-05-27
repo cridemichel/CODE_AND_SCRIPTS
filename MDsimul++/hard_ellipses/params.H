@@ -35,7 +35,7 @@ public:
   ntype rcut;
   ntype P, T, deltra, delrot, vmax;
   long long int savemeas, savesnap, saverest;
-  int curStep;
+  long long int curStep;
   ntype targetAccept, targetAcceptVol;
   long long int adjsteps, outsteps, resetaccept, resetacceptVol; 
   char fnt[256];
@@ -58,6 +58,7 @@ public:
       adjsteps = 0;
       resetaccept = 10000;
       resetacceptVol = 10000;
+      curStep=0;
    }
   void write(fstream& o)
     {
