@@ -20,6 +20,7 @@ class mcsim {
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
+  ntype acceptance, traaccept, rotaccept, volaccept;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -29,8 +30,8 @@ class mcsim {
     }
   void calc_acceptance_and_adjust(void)
     {
-      ntype avL, acceptance, traaccept, rotaccept, volaccept;
-      if (pars.adjstepsMC < 0 || pars.curStep <= pars.adjsteps)
+      ntype avL;
+      if (pars.adjsteps < 0 || pars.curStep <= pars.adjsteps)
         { 
           if (pars.targetAccept > 0.0 && state.curStep % state.resetaccept==0)
             {
@@ -39,9 +40,10 @@ class mcsim {
               rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
 
               if (traaccept > pars.targetAccept)
-                pars.delta *= 1.1;
+                pars.deltra *= 1.1;
               else
-                pars.delta /= 1.1;
+                pars.deltra /= 1.1;
+#if 0
               if (state.restrmove==0)
                 {
                   if (rotaccept > pars.targetAccept)
@@ -49,16 +51,17 @@ class mcsim {
                   else
                     pars.deltor /= 1.1;
                 }
+#endif
               if (pars.deltra > (avL=pow(pars.L[0]*pars.L[1],1.0/2.0))*0.1)
                 pars.deltra = avL*0.1;
               if (pars.delrot > 3.14)
-                state.delrot = 3.14;
+                pars.delrot = 3.14;
             }
 
           if (pars.targetAcceptVol > 0.0 && state.volmoves > 0     
               && (state.curStep % state.resetacceptVol==0))
             {
-              volaccept = ((ntype)(state.volmoves-state.state.volrej))/state.volmoves;
+              volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
               if (volaccept > pars.targetAcceptVol)
                 pars.vmax *= 1.1;
               else
@@ -345,7 +348,16 @@ public:
           save_snap(tt);
           save_restore(tt);
           save_measures(tt);
+          //output
+          outinfo(tt);
         }
+    }
+  void outinfo(long long int tt)
+    {
+      if (tt % pars.outsteps == 0)
+        {
+          cout << "acceptance tra=" << traaccept << " rot=" << rotaccept << "\n";
+        } 
     }
   void restart(void)
     {

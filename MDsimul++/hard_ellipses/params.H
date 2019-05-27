@@ -37,7 +37,7 @@ public:
   int savemeas;
   int curStep;
   ntype targetAccept, targetAcceptVol;
-  long long int adjsteps; 
+  long long int adjsteps, outsteps; 
   params()
     {
       N=1000;
@@ -59,6 +59,7 @@ public:
     {
       // read simulation parameters first
       fopen(fn);
+      
       parfile >> simtype;
       parfile >> iniconf;
       parfile >> steps;
@@ -75,6 +76,7 @@ public:
       parfile >> vmax;
       parfile >> savemeas;
       parfile >> adjsteps;
+      parfile >> outsteps;
       fclose();
     }
 };
@@ -85,7 +87,7 @@ class simstate
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
   long long int volmoves=0, volrej;
-  long long int curstep, adjsteps;
+  long long int curStep, adjsteps;
   long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
