@@ -270,14 +270,18 @@ class mcsim {
           o << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
         }
     } 
+  void save_snap_str(const char *s)
+    {
+      snapfile.open(s, ios::out|ios::trunc);
+      write_coords(snapfile);
+      snapfile.close();
+    }
   void save_snap(long long int tt)
     {
       if (pars.savesnap > 0 && tt > 0 && tt % pars.savesnap == 0)
         {
           sprintf(sfn, "cnf-%lld", tt);
-          snapfile.open(sfn, ios::out|ios::trunc);
-          write_coords(snapfile);
-          snapfile.close();
+          save_snap_str(sfn); 
         }
     }
   void save_restart(long long int tt)
@@ -408,6 +412,7 @@ public:
           //output
           outinfo(tt);
         }
+      save_snap_str("cnf-final");
     }
   
   // read restart file
