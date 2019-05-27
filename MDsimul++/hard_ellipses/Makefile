@@ -25,4 +25,4 @@ veff: calc_veff_hardell.cpp $(HEADERS)
 #gcc-9 -c ellipses.c -O3
 #g++-9 -lm -llapack -lblas prova_ellipses.o  ellipses.o -o testhe
 clean:
-	rm -fr calc_veff_hardell mcsim_hardell
+	rm -fr calc_veff_hardell mcsim_hardell *.o
