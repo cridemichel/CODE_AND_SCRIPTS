@@ -31,14 +31,14 @@ class mcsim {
   void calc_acceptance_and_adjust(void)
     {
       ntype avL;
+      acceptance=((ntype)(state.totmoves-state.totrej))/state.totmoves;
+      traaccept = ((ntype)(state.tramoves-state.trarej))/state.tramoves;
+      rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
+      volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
       if (pars.adjsteps < 0 || pars.curStep <= pars.adjsteps)
         { 
           if (pars.targetAccept > 0.0 && state.curStep % state.resetaccept==0)
             {
-              acceptance=((ntype)(state.totmoves-state.totrej))/state.totmoves;
-              traaccept = ((ntype)(state.tramoves-state.trarej))/state.tramoves;
-              rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
-
               if (traaccept > pars.targetAccept)
                 pars.deltra *= 1.1;
               else
@@ -61,7 +61,6 @@ class mcsim {
           if (pars.targetAcceptVol > 0.0 && state.volmoves > 0     
               && (state.curStep % state.resetacceptVol==0))
             {
-              volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
               if (volaccept > pars.targetAcceptVol)
                 pars.vmax *= 1.1;
               else
@@ -366,7 +365,11 @@ public:
     {
       if (tt> 0 && tt % pars.outsteps == 0)
         {
+          cout << "steps=" << tt << "\n";
           cout << "acceptance tra=" << traaccept << " rot=" << rotaccept << "\n";
+          if (pars.simtype==1 || pars.simtype==2)
+            cout << "vol acceptance=" << volaccept << "\n";
+ 
         } 
     }
   void restart(void)
