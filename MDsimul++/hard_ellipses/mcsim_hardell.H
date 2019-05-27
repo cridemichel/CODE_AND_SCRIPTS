@@ -15,7 +15,7 @@ class mcsim {
     }
   fstream snapfile;
   fstream restorefile;
-  ifstream inicfile;
+  fstream inicfile;
   char sfn[512], rfn[512];
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
@@ -276,7 +276,7 @@ class mcsim {
           snapfile.close();
         }
     }
-  void save_restore(long long int tt)
+  void save_restart(long long int tt)
     {
       static unsigned int w=0;
       if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
@@ -284,6 +284,7 @@ class mcsim {
           w = (~w)&1;
           sprintf(rfn, "restart-%u", w);
           restorefile.open(rfn);
+          pars.write(restorefile);
           state.write(restorefile);
           write_coords(restorefile);
           restorefile.close();
@@ -352,6 +353,8 @@ class mcsim {
       cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       cout << "P= " << pars.P << " T=" << pars.T << "\n";
       init_measures();
+      remove("restart-0");
+      remove("restart-1");
     }
 
 public:
@@ -394,7 +397,7 @@ public:
           calc_acceptance_and_adjust();
           // save snapshots and backup file 
           save_snap(tt);
-          save_restore(tt);
+          save_restart(tt);
           save_measures(tt);
           //output
           outinfo(tt);
@@ -414,8 +417,9 @@ public:
     }
   void readconf(string& icn)
     {
-      inicfile.open(icn.c_str());
+      inicfile.open(icn.c_str(),ios::in);
       // read ascii iniconf here 
+      read_coords(inicfile);
       inicfile.close();
     }
  
