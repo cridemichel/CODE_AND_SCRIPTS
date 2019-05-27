@@ -101,16 +101,19 @@ class mcsim {
     {
       ntype p;
       p=ranf();
+      state.totmoves++;
       if (p <= 0.5)
         {
           he[ip].tra_move(pars.deltra);
           update_rect(ip);
+          state.tramoves++; 
           return 0;
         }
       else
         {
           he[ip].rot_move(pars.delrot);
           update_rect(ip);
+          state.rotmoves++;
           return 1;
         } 
     }
@@ -129,7 +132,7 @@ class mcsim {
   void mcmotion(int ip)
     {
       store_coord(ip);
-      random_move(ip);
+      auto movetype=random_move(ip);
       // check overlap by using LL here!
       pbc(ip);
       ellLL.update_LL(ip);
@@ -137,6 +140,11 @@ class mcsim {
         {
           restore_coord(ip);
           ellLL.update_LL(ip);
+          if (movetype==0)
+            state.trarej++;
+          else if (movetype==1)
+            state.rotrej++;
+          state.totrej++;
           // reject move
         }
     }
@@ -146,6 +154,7 @@ class mcsim {
       int i, ii, dir=0;
       pvector<ntype,2> L2;
       ntype vo, lnvn, vn, Lfact, arg;
+      state.volmoves++;
       if (pars.simtype==2)
         {
           dir=3*ranf();
@@ -211,6 +220,7 @@ class mcsim {
               //volrejMC++;
               ellLL.update_numcells(pars.L);
               build_LL();
+              state.volrej++;
               return;
             }
         }
@@ -354,7 +364,7 @@ public:
     }
   void outinfo(long long int tt)
     {
-      if (tt % pars.outsteps == 0)
+      if (tt> 0 && tt % pars.outsteps == 0)
         {
           cout << "acceptance tra=" << traaccept << " rot=" << rotaccept << "\n";
         } 
@@ -383,6 +393,7 @@ public:
               dy = pars.L[1]/((ntype)maxiy);
               x=y=0;
               cout << "dx=" << dx << " dy=" << dy << "\n";
+              //pars.L.show("box");
               for (ix = 0; ix < maxix; ix++)
                 {
                   for (iy = 0; iy < maxiy; iy++)

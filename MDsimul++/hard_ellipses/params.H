@@ -38,6 +38,7 @@ public:
   int curStep;
   ntype targetAccept, targetAcceptVol;
   long long int adjsteps, outsteps; 
+  char fnt[256];
   params()
     {
       N=1000;
@@ -54,30 +55,51 @@ public:
       targetAccept=0.5;
       adjsteps = 0;
     }
-
   void read(const char *fn)
     {
-      // read simulation parameters first
+      std::size_t found;
+      fstream pft;
+      string line;
       fopen(fn);
-      
-      parfile >> simtype;
-      parfile >> iniconf;
-      parfile >> steps;
-      parfile >> seed;
-      parfile >> a;// a semi-axis
-      parfile >> b;// b semi-axis
-      parfile >> N;
-      parfile >> L[0];
-      parfile >> L[1];
-      parfile >> P;
-      parfile >> T;
-      parfile >> deltra;
-      parfile >> delrot;
-      parfile >> vmax;
-      parfile >> savemeas;
-      parfile >> adjsteps;
-      parfile >> outsteps;
+      sprintf(fnt, "%s.tmp", fn);
+      pft.open(fnt, ios::trunc|ios::out|ios::in);
+      if (pft.is_open())
+        {
+          while ( getline (parfile,line) )
+            {
+              found=line.find_first_of("#");
+              if (found==std::string::npos)
+                {
+                  pft << line << "\n";
+                }
+            }
+        }
+      else
+        {
+          cout << "[ERROR] Error in opening file " << fnt << "\n";
+          exit(0);
+        }
       fclose();
+      pft.seekg(ios::beg);
+      pft >> simtype;
+      pft >> iniconf;
+      pft >> steps;
+      pft >> seed;
+      pft >> a;// a semi-axis
+      pft >> b;// b semi-axis
+      pft >> N;
+      pft >> L[0];
+      pft >> L[1];
+      pft >> P;
+      pft >> T;
+      pft >> deltra;
+      pft >> delrot;
+      pft >> vmax;
+      pft >> savemeas;
+      pft >> adjsteps;
+      pft >> outsteps;
+      pft.close();
+      remove(fnt);// remove temporary file
     }
 };
 
