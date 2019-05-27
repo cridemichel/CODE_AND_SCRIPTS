@@ -63,7 +63,36 @@ public:
       r << 0,0;
     }
 };
+#ifdef USE_C_ROUTINES
+extern double R[2][2][2], rx[2], ry[2], rz[2], sax[2][2];
+extern "C" {
+  double check_overlap_pw2d(int i, int j, double *shift);
+  double check_overlap_polyell_2D(int i, int j, double *shift);
+};
+template <class ntype>
+ntype overlap(class hardell<ntype>& A, class hardell<ntype>& B)
+{
+  ntype shift[2];
+  rx[0] = A.r[0];
+  ry[0] = A.r[1];
+  R[0][0][0] = A.na[0];
+  R[0][0][1] = A.na[1];
+  R[0][1][0] = A.nb[0];
+  R[0][1][1] = A.nb[1];
+  sax[0][0] = A.a;
+  sax[0][1] = A.b;
 
+  rx[1] = B.r[0];
+  ry[1] = B.r[1];
+  R[1][0][0] = B.na[0];
+  R[1][0][1] = B.na[1];
+  R[1][1][0] = B.nb[0];
+  R[1][1][1] = B.nb[1];
+  sax[1][0] = B.a;
+  sax[1][1] = B.b;
+  return check_overlap_pw2d(0,1,shift);
+}
+#else
 template <class ntype>
 ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
 {
@@ -176,3 +205,4 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
   else
     return 1.0;
 }
+#endif
