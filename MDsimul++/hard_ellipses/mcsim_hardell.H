@@ -147,6 +147,18 @@ class mcsim {
           // reject move
         }
     }
+  void check_overlap_debug(void) 
+    { 
+      int i;
+      for (i=0; i < pars.parnum; i++)
+        {
+          if (ellLL.check_overlap(i)==true)
+            {
+              cout << "step #" <<  pars.curStep << "boh overlap i=" << i << "\n";
+              exit(1);
+            }
+        }
+    }
   void move_box(void)
     {
       //NPT volume move
@@ -196,7 +208,7 @@ class mcsim {
 
       for (i=0; i < pars.parnum; i++)
         {
-          if (ellLL.check_overlap(i)==true)
+          if (ellLL.check_overlap(i,-2)==true)
             {
               /* move rejected restore old positions */
               if (pars.simtype==2)
@@ -347,7 +359,7 @@ class mcsim {
     {
       rect.resize(pars.N);
       he.resize(pars.N);
-      if (pars.seed > 0)
+      if (pars.seed >= 0)
         srand48(pars.seed);
       else
         srand48(time(NULL));
@@ -401,6 +413,8 @@ public:
           if (pars.simtype==1) //NPT
             ntot+=1;
           ellLL.set_ini_numcells();
+
+          check_overlap_debug();
           for (i=0; i < ntot; i++)
             {
               //cout << "step #" << tt << " i=" << i << "\n";

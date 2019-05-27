@@ -4,7 +4,7 @@ int main (int argc, char **argv)
   char *rf;
   mcsim<double> heMC;
   int simtype;
-  if (argc >= 1)
+  if (argc >= 2)
     simtype = atoi(argv[1]);
   else simtype=0;
   
@@ -13,7 +13,7 @@ int main (int argc, char **argv)
       cout << "You have to supply the filename of the restart file\n";
       exit(0);
     }
-  if (argc >= 2)
+  if (argc >= 3)
     rf = argv[2];
   else
     rf = nullptr;

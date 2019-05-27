@@ -57,6 +57,8 @@ class linked_cell_lists_2d
           if (overlap(A,B) < 0.0)
             {
               //cout << "true\n";
+              A.show("A");
+              B.show("B");
               return true;
             }
         }
@@ -144,20 +146,19 @@ public:
           inCell[1][i] = inCellBak[1][i];
         }
     }
-  bool check_overlap(int ip)
+  bool check_overlap(int ip, int nb=-1)
     {
-      int kk, nb, iX, jX, iY, jY, n, na;
+      int kk, iX, jX, iY, jY, n, na;
       int cellRange[4];
       pvector<ntype,2> shift;
       na=ip;
-      nb=-1;
       for (kk = 0;  kk < 2; kk++)
         {
           cellRange[2*kk]   = - 1;
           cellRange[2*kk+1] =   1;
         }
 
-      for (iY = cellRange[2]; iY <= cellRange[3]; iY ++) 
+      for (iY = cellRange[2]; iY <= cellRange[3]; iY++) 
         {
           jY = inCell[1][na] + iY;    
           shift[1] = 0.0;
@@ -171,7 +172,7 @@ public:
               jY = 0;    
               shift[1] = L[1];
             }
-          for (iX = cellRange[0]; iX <= cellRange[1]; iX ++) 
+          for (iX = cellRange[0]; iX <= cellRange[1]; iX++) 
             {
               jX = inCell[0][na] + iX;    
               shift[0] = 0.0;
@@ -192,6 +193,7 @@ public:
                     {
                       if (overlap_two(na, n, shift)==true)
                         {
+                          //cout << "overlap found na=" << na << " n=" << n << "\n";
                           return true;
                         }
                     }
