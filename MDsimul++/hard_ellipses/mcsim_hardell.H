@@ -246,7 +246,7 @@ class mcsim {
           build_LL();
         }
     }
-  void write_coords(ofstream o)
+  void write_coords(ofstream& o)
     {
       for (auto i=0; i < pars.parnum; i++)
         {
@@ -272,7 +272,7 @@ class mcsim {
           w = (~w)&1;
           sprintf(rfn, "restart-%ud", w);
           restorefile.open(rfn);
-          state.save(restorefile);
+          state.write(restorefile);
           write_coords(restorefile);
           restorefile.close();
         }

@@ -121,7 +121,7 @@ public:
   //long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
-  void write_state(ofstream o)
+  void write(ofstream& o)
     {
       // write full state to ascii file
       o << trarej << " " << rotrej << " " << totrej << "\n";
@@ -130,7 +130,7 @@ public:
       o << curStep << " " << "\n";
     }
 
-  void read_state(ifstream i)
+  void read(ifstream& i)
     {
       // read full state from ascii file
       i >> trarej;
