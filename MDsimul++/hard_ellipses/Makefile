@@ -1,5 +1,7 @@
 CXX=g++-9
+CC=gcc-9
 CXXFLAGS=-O3 -Wall -std=c++17#-g 
+CFLAGS=-O3 #-Wall
 MDLIB=../mdlib
 HEADERS=$(MDLIB)/pvector.H $(MDLIB)/pmatrix.H $(MDLIB)/rpoly.H $(MDLIB)/boxes.H 
 LDFLAGS=-lm -llapack -lblas #-g
@@ -8,6 +10,15 @@ all: mcsim veff
 
 mcsim: mcsim_hardell.cpp $(HEADERS) $(MDLIB)/linked_cell_lists.H
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o mcsim_hardell mcsim_hardell.cpp 
+
+ellipses_c: ellipses.c
+	$(CC) $(CFLAGS) -c ellipses.c 
+
+ellipses_cpp: mcsim_hardell.cpp $(HEADERS) $(MDLIB)/linked_cell_lists.H 
+	$(CXX) $(CXXFLAGS) -DUSE_C_ROUTINES -c mcsim_hardell.cpp 
+
+mcsimc: ellipses_c ellipses_cpp 
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o mcsim_hardell mcsim_hardell.o ellipses.o
 
 veff: calc_veff_hardell.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o calc_veff_hardell calc_veff_hardell.cpp 
