@@ -43,15 +43,10 @@ class mcsim {
                 pars.deltra *= 1.1;
               else
                 pars.deltra /= 1.1;
-#if 0
-              if (state.restrmove==0)
-                {
-                  if (rotaccept > pars.targetAccept)
-                    pars.delrot *= 1.1;
-                  else
-                    pars.deltor /= 1.1;
-                }
-#endif
+              if (rotaccept > pars.targetAccept)
+                pars.delrot *= 1.1;
+              else
+                pars.delrot /= 1.1;
               if (pars.deltra > (avL=pow(pars.L[0]*pars.L[1],1.0/2.0))*0.1)
                 pars.deltra = avL*0.1;
               if (pars.delrot > 3.14)
@@ -369,7 +364,7 @@ public:
           cout << "tra acceptance=" << traaccept << " [ deltra=" << pars.deltra << " ]\n";
           cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
-            cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << "\n";
+            cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
  
         } 
     }
