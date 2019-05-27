@@ -170,7 +170,7 @@ class mcsim {
         }
       else
         {
-          Lfact = pow(vn/vo,1.0/2.0);
+          Lfact = pow(vn/vo,0.5);
           //cout << "Lfact=" << Lfact << "\n";
           pars.L *= Lfact;
           L2 = 0.5*pars.L;
@@ -192,6 +192,8 @@ class mcsim {
         }
       ellLL.update_numcells(pars.L);
       ellLL.build();
+      //cout << "Lfact=" << Lfact << "\n";
+
       for (i=0; i < pars.parnum; i++)
         {
           if (ellLL.check_overlap(i)==true)
