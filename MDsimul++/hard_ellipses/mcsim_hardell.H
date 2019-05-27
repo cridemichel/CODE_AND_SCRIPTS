@@ -15,6 +15,7 @@ class mcsim {
     }
   ofstream snapfile, restorefile;
   ifstream inicfile;
+  char sfn[512];
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
@@ -245,14 +246,22 @@ class mcsim {
           build_LL();
         }
     }
-  void save_snap(int tt)
+  
+  void save_snap(long long int tt)
     {
-      if (tt%5000==0)
+      if (pars.savesnap > 0 && tt > 0 && tt % pars.savesnap == 0)
         {
-
+          sprintf(sfn, "cnf-%lld", tt);
+          snapfile.open(sfn, ios::out|ios::trunc);
+          for (auto i=0; i < pars.parnum; i++)
+            {
+              // save axis a
+              snapfile << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
+            }
+          snapfile.close();
         }
     }
-  void save_restore(int tt)
+  void save_restore(long long int tt)
     {
       if (tt%5000==0)
         {
@@ -267,7 +276,7 @@ class mcsim {
       of.open("phi.dat", ios::trunc);
       of.close();
     }
-  void save_measures(int tt)
+  void save_measures(long long int tt)
     {
       ofstream of;
       of.open("v.dat",ios::app);
