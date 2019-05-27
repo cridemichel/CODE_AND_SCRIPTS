@@ -27,6 +27,45 @@ class mcsim {
           update_rect(i);
         }
     }
+  void calc_acceptance_and_adjust(void)
+    {
+      ntype avL, acceptance, traaccept, rotaccept, volaccept;
+      if (pars.adjstepsMC < 0 || pars.curStep <= pars.adjsteps)
+        { 
+          if (pars.targetAccept > 0.0 && state.curStep % state.resetaccept==0)
+            {
+              acceptance=((ntype)(state.totmoves-state.totrej))/state.totmoves;
+              traaccept = ((ntype)(state.tramoves-state.trarej))/state.tramoves;
+              rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
+
+              if (traaccept > pars.targetAccept)
+                pars.delta *= 1.1;
+              else
+                pars.delta /= 1.1;
+              if (state.restrmove==0)
+                {
+                  if (rotaccept > pars.targetAccept)
+                    pars.delrot *= 1.1;
+                  else
+                    pars.deltor /= 1.1;
+                }
+              if (pars.deltra > (avL=pow(pars.L[0]*pars.L[1],1.0/2.0))*0.1)
+                pars.deltra = avL*0.1;
+              if (pars.delrot > 3.14)
+                state.delrot = 3.14;
+            }
+
+          if (pars.targetAcceptVol > 0.0 && state.volmoves > 0     
+              && (state.curStep % state.resetacceptVol==0))
+            {
+              volaccept = ((ntype)(state.volmoves-state.state.volrej))/state.volmoves;
+              if (volaccept > pars.targetAcceptVol)
+                pars.vmax *= 1.1;
+              else
+                pars.vmax /= 1.1;
+            }
+        } 
+    }
   void update_rect(int i)
     {
       rect[i].r = he[i].r;
@@ -285,6 +324,7 @@ public:
       int ntot, ran, i;
       for (tt=0; tt < pars.steps; tt++)
         {
+          state.curStep=tt;
           ntot=pars.parnum;
           if (pars.simtype==1) //NPT
             ntot+=1;
@@ -300,6 +340,7 @@ public:
                   move_box();
                 }
             } 
+          calc_acceptance_and_adjust();
           // save snapshots and backup file 
           save_snap(tt);
           save_restore(tt);
