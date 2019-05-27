@@ -15,7 +15,7 @@ class mcsim {
     }
   ofstream snapfile, restorefile;
   ifstream inicfile;
-  char sfn[512];
+  char sfn[512], rfn[512];
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
@@ -246,26 +246,35 @@ class mcsim {
           build_LL();
         }
     }
-  
+  void write_coords(ofstream o)
+    {
+      for (auto i=0; i < pars.parnum; i++)
+        {
+          // save axis a
+          snapfile << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
+        }
+    } 
   void save_snap(long long int tt)
     {
       if (pars.savesnap > 0 && tt > 0 && tt % pars.savesnap == 0)
         {
           sprintf(sfn, "cnf-%lld", tt);
           snapfile.open(sfn, ios::out|ios::trunc);
-          for (auto i=0; i < pars.parnum; i++)
-            {
-              // save axis a
-              snapfile << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
-            }
+          write_coords(snapfile);
           snapfile.close();
         }
     }
   void save_restore(long long int tt)
     {
-      if (tt%5000==0)
+      static int w=0;
+      if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
         {
-
+          w = (~w)&1;
+          sprintf(rfn, "restart-%d", w);
+          restorefile.open(rfn);
+          state.save(restorefile);
+          write_coords(restorefile);
+          restorefile.close();
         }
     }
   void init_measures(void)

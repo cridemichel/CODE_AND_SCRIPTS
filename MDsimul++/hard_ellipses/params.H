@@ -34,7 +34,7 @@ public:
   pvector<ntype,2> M; // linked list cells 
   ntype rcut;
   ntype P, T, deltra, delrot, vmax;
-  long long int savemeas, savesnap;
+  long long int savemeas, savesnap, saverest;
   int curStep;
   ntype targetAccept, targetAcceptVol;
   long long int adjsteps, outsteps, resetaccept, resetacceptVol; 
@@ -52,6 +52,7 @@ public:
       deltra = 0.1;
       savemeas=50000;
       savesnap=0;
+      saverest=0;
       targetAcceptVol=0.5;
       targetAccept=0.5;
       adjsteps = 0;
@@ -100,6 +101,7 @@ public:
       pft >> vmax;
       pft >> savemeas;
       pft >> savesnap;
+      pft >> saverest;
       pft >> adjsteps;
       pft >> outsteps;
       pft >> resetaccept;
