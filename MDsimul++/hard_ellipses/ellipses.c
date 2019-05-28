@@ -134,7 +134,7 @@ double brentPW2d(double ax, double bx, double cx, double tol, double *xmin, doub
 { 
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
-  const double ZEPSBR=1E-20;
+  const double ZEPSBR=1E-14;
   double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   brentPWTooManyIter=0;

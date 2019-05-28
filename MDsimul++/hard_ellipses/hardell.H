@@ -107,6 +107,7 @@ ntype overlap(class hardell<ntype>& A, class hardell<ntype>& B)
   sax[1][1] = B.b;
   shift[0] = B.shift[0];
   shift[1] = B.shift[1];
+  //return check_overlap_polyell_2D(0, 1, shift);
   return check_overlap_pw2d(0,1,shift);
 }
 #else
