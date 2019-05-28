@@ -3,7 +3,7 @@
 using namespace std;
 // particles is the particle type, e.g. hardell<double>, hardcyl<double>, etc.
 // rectangles are used as preliminary check of overlap (by using the separating axis theorem)
-template <class particles, class rectangles>
+template <class particles, class rectangles, bool boxes=true>
 class linked_cell_lists_2d
 {
   using ntype = typename particles::numtype;
@@ -52,20 +52,30 @@ class linked_cell_lists_2d
       rectB.shift = shift;
       A.shift << 0, 0;
       B.shift = shift; 
-      if (overlap(rectA,rectB) < 0.0)
+      if constexpr (boxes==false)
         {
           if (overlap(A,B) < 0.0)
             {
-              //cout << "true\n";
-#if 0
-              if (na==40||n==40)
-                {
-                  cout << "na=" << na << " n" << n << "\n";
-                  A.show(">>>A");
-                  B.show(">>>B");
-                }
-#endif
               return true;
+            }
+        }
+      else
+        {
+          if (overlap(rectA,rectB) < 0.0)
+            {
+              if (overlap(A,B) < 0.0)
+                {
+                  //cout << "true\n";
+#if 0
+                  if (na==40||n==40)
+                    {
+                      cout << "na=" << na << " n" << n << "\n";
+                      A.show(">>>A");
+                      B.show(">>>B");
+                    }
+#endif
+                  return true;
+                }
             }
         }
       //cout << "false\n";
