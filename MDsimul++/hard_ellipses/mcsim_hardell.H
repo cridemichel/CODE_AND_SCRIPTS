@@ -130,7 +130,21 @@ class mcsim {
     }
   void mcmotion(int ip)
     {
+      cout << "attempt to move ip=" << ip << "\n";
       store_coord(ip);
+#if 1
+      if (ellLL.check_overlap(ip)==true)
+        {
+          cout << "prima boh ip=" << ip << "\n";
+          exit(0);
+        }
+#endif
+
+      he[ip].r.show("prima r=");
+      he[ip].shift.show("prima shift="); 
+      he[ip].na.show("na=");
+      he[ip].nb.show("na=");
+            
       auto movetype=random_move(ip);
       // check overlap by using LL here!
       pbc(ip);
@@ -138,14 +152,27 @@ class mcsim {
       if (ellLL.check_overlap(ip)==true)
         {
           restore_coord(ip);
+          update_rect(ip);
           ellLL.update_LL(ip);
+          //cout << "incell=" << ellLL.inCell[0][ip] << " " << ellLL.inCell[1][ip] << "\n";
           if (movetype==0)
             state.trarej++;
           else if (movetype==1)
             state.rotrej++;
           state.totrej++;
+          if (ellLL.check_overlap(ip)==true)
+            {
+              he[ip].r.show("dopo r="); 
+              he[ip].shift.show("dopo shift="); 
+              he[ip].na.show("na=");
+              he[ip].nb.show("na=");
+              cout << "boh ip=" << ip << "\n";
+              //exit(0);
+            }
           // reject move
         }
+        
+      cout << "attempt to move ip=" << ip << "END\n";
     }
   void check_overlap_debug(void) 
     { 
