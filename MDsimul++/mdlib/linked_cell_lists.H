@@ -9,6 +9,7 @@ class linked_cell_lists_2d
   using ntype = typename particles::numtype;
   vector<particles>* part;
   vector<rectangles> *rect;
+  pvector<int,-1> inCell[2];
   pvector<int,-1> cellList, cellListBak;
   int parnum;
   pvector<ntype,2> L, L2;// box size
@@ -65,8 +66,6 @@ class linked_cell_lists_2d
       return false;
     }
 public:
-
-  pvector<int,-1> inCell[2];
   linked_cell_lists_2d(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize)
     {
       init(P,R,boxsize);    
