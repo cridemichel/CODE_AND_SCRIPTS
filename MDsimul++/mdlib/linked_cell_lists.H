@@ -57,8 +57,14 @@ class linked_cell_lists_2d
           if (overlap(A,B) < 0.0)
             {
               //cout << "true\n";
-              //A.show("A");
-              //B.show("B");
+#if 0
+              if (na==40||n==40)
+                {
+                  cout << "na=" << na << " n" << n << "\n";
+                  A.show(">>>A");
+                  B.show(">>>B");
+                }
+#endif
               return true;
             }
         }

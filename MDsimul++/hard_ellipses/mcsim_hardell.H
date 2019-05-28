@@ -104,6 +104,7 @@ class mcsim {
       if (p <= 0.5)
         {
           he[ip].tra_move(pars.deltra);
+          pbc(ip);
           update_rect(ip);
           state.tramoves++; 
           return 0;
@@ -111,6 +112,7 @@ class mcsim {
       else
         {
           he[ip].rot_move(pars.delrot);
+          pbc(ip);
           update_rect(ip);
           state.rotmoves++;
           return 1;
@@ -130,9 +132,9 @@ class mcsim {
     }
   void mcmotion(int ip)
     {
-      cout << "attempt to move ip=" << ip << "\n";
+      //cout << "attempt to move ip=" << ip << "\n";
       store_coord(ip);
-#if 1
+#if 0
       if (ellLL.check_overlap(ip)==true)
         {
           cout << "prima boh ip=" << ip << "\n";
@@ -140,14 +142,15 @@ class mcsim {
         }
 #endif
 
+#if 0
       he[ip].r.show("prima r=");
       he[ip].shift.show("prima shift="); 
       he[ip].na.show("na=");
       he[ip].nb.show("na=");
-            
+#endif       
       auto movetype=random_move(ip);
       // check overlap by using LL here!
-      pbc(ip);
+      //pbc(ip);
       ellLL.update_LL(ip);
       if (ellLL.check_overlap(ip)==true)
         {
@@ -160,6 +163,7 @@ class mcsim {
           else if (movetype==1)
             state.rotrej++;
           state.totrej++;
+#if 0
           if (ellLL.check_overlap(ip)==true)
             {
               he[ip].r.show("dopo r="); 
@@ -167,12 +171,13 @@ class mcsim {
               he[ip].na.show("na=");
               he[ip].nb.show("na=");
               cout << "boh ip=" << ip << "\n";
-              //exit(0);
+              exit(0);
             }
+#endif
           // reject move
         }
         
-      cout << "attempt to move ip=" << ip << "END\n";
+      //cout << "attempt to move ip=" << ip << "END\n";
     }
   void check_overlap_debug(void) 
     { 
@@ -441,11 +446,11 @@ public:
             ntot+=1;
           ellLL.set_ini_numcells();
 
-          cout << ">>>tt=" << tt << "\n";
+          //cout << ">>>tt=" << tt << "\n";
           //exit(1);
           for (i=0; i < ntot; i++)
             {
-              cout << "step #" << tt << " i=" << i << "ntot=" << ntot << "\n";
+              //cout << "step #" << tt << " i=" << i << "ntot=" << ntot << "\n";
               ran = (int) (ntot*ranf());
               if (ran < pars.parnum)
                 {
