@@ -601,11 +601,10 @@ public:
       cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
       u1 << 1,0;
       u2 << -0.5,sqrt(3.0)/2.0;
-      fact = 1.0001;
       sig = 2.0*pars.b;
       exfact = 2.0*pars.a;
-      dx = sig*fact;
-      dy = sig*fact;
+      dx = sig;
+      dy = sig;
       phim = M_PI/(sqrt(3.0)*2.0);
       cout << setprecision(16) << "phi max=" << phim << "\n";
       Ls[0] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
@@ -631,7 +630,7 @@ public:
                   continue;
                 }
 
-              cerr << he[i].r[0] << " " << he[i].r[1] << "\n";
+              //cerr << he[i].r[0] << " " << he[i].r[1] << "\n";
               if (randorient==true)
                 {
                   //he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
@@ -674,13 +673,19 @@ public:
             pars.L[1]=he[i].r[1]+2.0*pars.b;
         }
       cout << "L= " << pars.L[0] << " " << pars.L[1] << "\n";
+      ntype phiT = 0.875;
+      auto phi=calc_phi();
+
+      fact = sqrt(phi/phiT); 
+      cout << "phi=" << phi << " fact=" << fact << "\n"; 
       for (i=0; i < pars.N; i++)
         { 
           he[i].r -= 0.5*pars.L;
+          he[i].r *=fact;
           update_rect(i);
-          //he[i].r *=1.005;
           //he[i].show("mah");
         }
+      pars.L *= fact;
       //cout << "quiqui\n";
       ellLL.update_numcells(pars.L);
       build_LL();
