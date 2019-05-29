@@ -587,7 +587,6 @@ public:
           //x += dx;
         }
     }
-
   void place_on_triang_lattice(bool randorient=false)
     { 
       ntype dx, dy, sig,exfact;
