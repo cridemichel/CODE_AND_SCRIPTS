@@ -122,6 +122,7 @@ public:
       L2 = 0.5*L;
       cellsx = L[0] / rcut;
       cellsy = L[1] / rcut;
+      //cout << "cells new=" << cellsx << " " << cellsy << " cells old= " << cxini << " " << cyini << "\n";
       if (cellsx*cellsy > cxini*cyini)
         {
           //cellList = realloc(cellList, sizeof(int)*(cellsx*cellsy*cellsz+Oparams.parnum));
@@ -251,11 +252,12 @@ public:
       for (j = 0; j < cellsx*cellsy + parnum; j++)
         cellList[j] = -1;
       /* -1 vuol dire che non c'è nessuna particella nella cella j-esima */
-
       for (n = 0; n < parnum; n++)
         {
           inCell[0][n] =  ((*part)[n].r[0] + L2[0]) * cellsx / L[0];
           inCell[1][n] =  ((*part)[n].r[1] + L2[1]) * cellsy / L[1];
+          //if (inCell[0][n] >= cellsx || inCell[1][n] >= cellsy)
+            //cout << "incell di " << n << " =" << inCell[0][n] << " " << inCell[1][n] << "\n"; 
           j = inCell[1][n]*cellsx + 
             inCell[0][n] + parnum;
           cellList[n] = cellList[j];

@@ -91,8 +91,8 @@ class mcsim {
     }
   void pbc(int ip)
     {
-      pvector<ntype,2> L2, delr;
-      L2 = 0.5*pars.L;
+      pvector<ntype,2> delr;
+      //L2 = 0.5*pars.L;
       delr << pars.L[0]*rint(he[ip].r[0]/pars.L[0]), pars.L[1]*rint(he[ip].r[1]/pars.L[1]);
       he[ip].r = he[ip].r - delr;
     }
@@ -179,19 +179,7 @@ class mcsim {
         
       //cout << "attempt to move ip=" << ip << "END\n";
     }
-  void check_overlap_debug(void) 
-    { 
-      int i;
-      for (i=0; i < pars.parnum; i++)
-        {
-          if (ellLL.check_overlap(i,-2,true)==true)
-            {
-              cout << "step #" <<  pars.curStep << " boh overlap i=" << i << "\n";
-              save_snap_str("cnf-final");
-              exit(1);
-            }
-        }
-    }
+  
   void move_box(void)
     {
       //NPT volume move
@@ -203,6 +191,17 @@ class mcsim {
         {
           dir=3*ranf();
         }
+#if 0
+      for (ii=0; ii < pars.parnum; ii++)
+        {
+          if (ellLL.check_overlap(ii)==true)
+            {
+              cout << "prima boh ip=" << ii << "\n";
+              exit(0);
+            }
+        }
+#endif
+  
       vo = pars.L[0]*pars.L[1];
       lnvn = log(vo) + (ranf()-0.5)*pars.vmax;
       vn = exp(lnvn);
@@ -217,10 +216,14 @@ class mcsim {
         {
           Lfact = pow(vn/vo,0.5);
           //cout << "Lfact=" << Lfact << "\n";
+#if 0
+          if (Lfact < 1.0)
+            return;
+#endif
           pars.L *= Lfact;
           L2 = 0.5*pars.L;
         }
-      //ellLL.store();
+     //ellLL.store();
       //cout << "Lnew=" << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.parnum; i++)
         {
@@ -232,8 +235,8 @@ class mcsim {
             {
               he[i].r *= Lfact;
             }
-          update_rect(i);
           pbc(i);
+          update_rect(i);
         }
       ellLL.update_numcells(pars.L);
       ellLL.build();
@@ -241,7 +244,7 @@ class mcsim {
 
       for (i=0; i < pars.parnum; i++)
         {
-          if (ellLL.check_overlap(i,-2)==true)
+          if (ellLL.check_overlap(i)==true)
             {
               /* move rejected restore old positions */
               if (pars.simtype==2)
@@ -260,12 +263,23 @@ class mcsim {
                     he[ii].r[dir] /= Lfact;
                   else 
                     he[ii].r /= Lfact;
-                  update_rect(ii);
                   pbc(ii);
+                  update_rect(ii);
                 }
               //volrejMC++;
               ellLL.update_numcells(pars.L);
               build_LL();
+#if 0
+              for (ii=0; ii < pars.parnum; ii++)
+                {
+                  if (ellLL.check_overlap(ii)==true)
+                    {
+                      cout << "Lfact=" << Lfact << "\n";
+                      cout << "dopo boh ip=" << ii << "\n";
+                      exit(0);
+                    }
+                }
+#endif
               state.volrej++;
               return;
             }
@@ -436,7 +450,20 @@ public:
     {
       return pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) ;
     }
-
+  void check_overlap_debug(void) 
+    { 
+      int i;
+      cout << "Checking overlap\n";
+      for (i=0; i < pars.parnum; i++)
+        {
+          if (ellLL.check_overlap(i,-2,true)==true)
+            {
+              cout << "step #" <<  pars.curStep << " boh overlap i=" << i << "\n";
+              save_snap_str("cnf-final");
+              exit(1);
+            }
+        }
+    }
   void run(void)
     {
       long long int tt;
@@ -574,7 +601,7 @@ public:
       cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
       u1 << 1,0;
       u2 << -0.5,sqrt(3.0)/2.0;
-      fact = 1.00001;
+      fact = 1.0001;
       sig = 2.0*pars.b;
       exfact = 2.0*pars.a;
       dx = sig*fact;
@@ -588,6 +615,8 @@ public:
       cout << "dx=" << dx << " dy=" << dy << "\n";
       cout << "a=" << pars.a << " b=" << pars.b << "\n";
       //pars.L.show("box");
+
+      ellLL.set_ini_numcells();
       for (ix = -3*maxix; ix < 3*maxix; ix++)
         {
           for (iy = -3*maxiy; iy < 3*maxiy; iy++)
@@ -602,7 +631,7 @@ public:
                   continue;
                 }
 
-              //cout << he[i].r[0] << " " << he[i].r[1] << "\n";
+              cerr << he[i].r[0] << " " << he[i].r[1] << "\n";
               if (randorient==true)
                 {
                   //he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
@@ -617,7 +646,6 @@ public:
                 }
               he[i].a = pars.a;
               he[i].b = pars.b;
-              update_rect(i);
               i++;
               //cout << "i=" << i << " pars.N="<< pars.N <<"\n";
               if (i==pars.N)
@@ -632,6 +660,11 @@ public:
           if (fine==true)
             break;
         }
+      if (i < pars.N)
+        {
+          cout << "Placed only " << i << " particles out of " << pars.N << "\n";
+          exit(1); 
+        }
       pars.L << 0,0;
       for (i=0; i < pars.N; i++)
         {
@@ -644,8 +677,13 @@ public:
       for (i=0; i < pars.N; i++)
         { 
           he[i].r -= 0.5*pars.L;
+          update_rect(i);
+          //he[i].r *=1.005;
+          //he[i].show("mah");
         }
-        //cout << "quiqui\n";
+      //pars.L *=1.005;
+      //cout << "quiqui\n";
+      ellLL.update_numcells(pars.L);
       build_LL();
     }
   void createconf(int type)
@@ -655,12 +693,14 @@ public:
         case 0:
             {
               place_on_square_lattice(false);  
+              check_overlap_debug();
               break;
             }
         case 1:
             {
               place_on_triang_lattice();
               check_overlap_debug();
+              cout << "no overlap in initial conf\n";
               break;
             }
         default:

@@ -24,6 +24,7 @@ int main (int argc, char **argv)
         {
           cout << "Restarting from file " << string(rf) << "\n";;
           heMC.restart(rf);
+          heMC.check_overlap_debug();
           cout << " step = " << heMC.iniStep << "\n";
           break;
         }
@@ -31,6 +32,7 @@ int main (int argc, char **argv)
         {
           cout << "Using snapshot " << heMC.pars.iniconf << " as initial configuration\n";
           heMC.readconf(heMC.pars.iniconf);
+          heMC.check_overlap_debug();
           break;
         }
     default:

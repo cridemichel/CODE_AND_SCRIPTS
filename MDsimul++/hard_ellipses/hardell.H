@@ -124,6 +124,17 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
   rpoly<ntype,4> quartic;
   int kk1, k1;
  
+  // speciale cases
+  // two spheres
+  if (A.a==A.b && B.a==B.b)
+    {
+      auto rij = A.r-(B.r+B.shift);
+      if (rij*rij < (A.a+B.a)*(A.a+B.a))
+        return -1.0;
+      else
+        return 1.0;
+    }
+
   /* apply affinity to reduce first ellipsoid to a sphere */
   Di << 1.0/Sqr(A.a), 0, 0, 1.0/Sqr(A.b);
   Dj << 1.0/Sqr(B.a), 0, 0, 1.0/Sqr(B.b);
@@ -149,12 +160,12 @@ ntype overlap (class hardell<ntype>& A, class hardell<ntype>& B)
   auto rji = rj-ri;
   auto rij = (-1.0)*rji;
   //cout << "A:" << rji*(Mi*rji)-1.0 << " B: " << (rji*Mi)*rji-1.0 << "\n";
-  if (rji*(Mi*rji)-1.0 < 0.0)
+  if (rji*(Mi*rji)-1.0 <= 0.0)
     {
       //cout << "[C++]qui1\n";
       return -1.0;
     }
-  if (rij*(Mj*rij)-1.0 < 0.0)
+  if (rij*(Mj*rij)-1.0 <= 0.0)
     {
       //cout << "[C++]qui2\n";
       return -1.0;
