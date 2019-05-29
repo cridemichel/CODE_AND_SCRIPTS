@@ -12,7 +12,7 @@
 double R[2][2][2];
 double rx[2], ry[2], rz[2], sax[2][2];
 /* perram wertheim overlap ellissoidi */
-void tRDiagRpw2d(int i, double M[2][2], double D[2], double Ri[2][2])
+void tRDiagRpw2d(double M[2][2], double D[2], double Ri[2][2])
 {
   int k1, k2, k3;
   double Di[2][2];
@@ -134,7 +134,7 @@ double brentPW2d(double ax, double bx, double cx, double tol, double *xmin, doub
 { 
   int iter, ITMAXBR=100;
   const double CGOLD=0.3819660;
-  const double ZEPSBR=1E-14;
+  const double ZEPSBR=1E-20;
   double a,b,d=0.0,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm;
   double e=0.0, fuold;
   brentPWTooManyIter=0;
@@ -259,8 +259,8 @@ double check_overlap_pw2d(int i, int j, double shift[2])
       DA[k1]= 1.0/Sqr(sax[i][k1]);
       DB[k1]= 1.0/Sqr(sax[j][k1]);
     }
-  tRDiagRpw2d(i, A, DA, R[i]);
-  tRDiagRpw2d(j, B, DB, R[j]);
+  tRDiagRpw2d(A, DA, R[i]);
+  tRDiagRpw2d(B, DB, R[j]);
 #if 0
   /* verifico che il centro di i non appartenga a j e viceversa come check preliminare */
   if (calcfel2d(A,rA,rB) < 0.0)

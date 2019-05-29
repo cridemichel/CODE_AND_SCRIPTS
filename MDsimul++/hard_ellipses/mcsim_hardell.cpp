@@ -37,7 +37,7 @@ int main (int argc, char **argv)
         {
           //cout << "N=" << heMC.pars.N << "\n";
           cout << "Creating initial conf\n";
-          heMC.createconf(0);
+          heMC.createconf(1);
           break;
         }
      }

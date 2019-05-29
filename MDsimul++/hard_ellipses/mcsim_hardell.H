@@ -184,9 +184,10 @@ class mcsim {
       int i;
       for (i=0; i < pars.parnum; i++)
         {
-          if (ellLL.check_overlap(i)==true)
+          if (ellLL.check_overlap(i,-2,true)==true)
             {
-              cout << "step #" <<  pars.curStep << "boh overlap i=" << i << "\n";
+              cout << "step #" <<  pars.curStep << " boh overlap i=" << i << "\n";
+              save_snap_str("cnf-final");
               exit(1);
             }
         }
@@ -499,50 +500,166 @@ public:
       inicfile.close();
       build_LL();
     }
- 
+  void place_on_square_lattice(bool maxphi=true)
+    { 
+      ntype dx, dy;
+      pvector<ntype,2> u1, u2, fact;
+      //ntype x, y;
+      int i=0, ix, iy, maxix, maxiy;
+      maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
+      cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
+      u1 << 1,0;
+      u2 << 0,1;
+      fact << pars.a,pars.b;
+      fact *= 2.0;
+      if (maxphi==true)
+        {
+          pars.L[0] = maxix*fact[0];
+          pars.L[1] = maxiy*fact[1];
+          dx = fact[0];
+          dy = fact[1];
+        }
+      else
+        {
+          dx = pars.L[0]/((ntype)maxix);
+          dy = pars.L[1]/((ntype)maxiy);
+        }
+      //x=y=0;
+      cout << "dx=" << dx << " dy=" << dy << "\n";
+      //pars.L.show("box");
+      for (ix = 0; ix < maxix; ix++)
+        {
+          for (iy = 0; iy < maxiy; iy++)
+            {
+              //he[i].r.show("r");
+              he[i].r = (ix*dx)*u1 + (iy*dy)*u2 - 0.5*pars.L;
+              if (maxphi==false)
+                {
+                  //he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
+                  he[i].na.random_orient();
+                  he[i].nb = he[i].na.orto();
+                }
+              else
+                {
+                  he[i].na << 1,0;
+                  he[i].nb << 0,1;
+                }
+              he[i].a = pars.a;
+              he[i].b = pars.b;
+              update_rect(i);
+              i++;
+              //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
+              if (i==pars.N)
+                {
+                  build_LL();
+                  return;
+                }
+              //y += dy;
+            }
+          //y=0;
+          //x += dx;
+        }
+    }
+
+  void place_on_triang_lattice(bool randorient=false)
+    { 
+      ntype dx, dy, sig,exfact;
+      pvector<ntype,2> u1, u2, Ls;
+      ntype fact, phim;
+      //ntype x, y;
+      bool fine=false;
+      int i=0, ix, iy, maxix, maxiy;
+      // assum pars.a > pars.b 
+      maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
+      cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
+      u1 << 1,0;
+      u2 << -0.5,sqrt(3.0)/2.0;
+      fact = 1.00001;
+      sig = 2.0*pars.b;
+      exfact = 2.0*pars.a;
+      dx = sig*fact;
+      dy = sig*fact;
+      phim = M_PI/(sqrt(3.0)*2.0);
+      Ls[0] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
+      Ls[1] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
+      cout << "Ls = " << Ls[0] << " " << Ls[1] << "\n";
+      //x=y=0;
+      cout << "dx=" << dx << " dy=" << dy << "\n";
+      cout << "a=" << pars.a << " b=" << pars.b << "\n";
+      //pars.L.show("box");
+      for (ix = -3*maxix; ix < 3*maxix; ix++)
+        {
+          for (iy = -3*maxiy; iy < 3*maxiy; iy++)
+            {
+              //he[i].r.show("r");
+              //cout << "ix=" << ix << " iy=" << iy << "\n";
+              he[i].r = (ix*dx)*u1 + (iy*dy)*u2;
+              he[i].r[0] *= exfact;
+              if (he[i].r[0] <  0 || he[i].r[0] >= Ls[0]
+                  || he[i].r[1] < 0 || he[i].r[1] >= Ls[1])
+                {
+                  continue;
+                }
+
+              //cout << he[i].r[0] << " " << he[i].r[1] << "\n";
+              if (randorient==true)
+                {
+                  //he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
+                  he[i].na.random_orient();
+                  he[i].nb = he[i].na.orto();
+                }
+              else
+                {
+                  //he[i].r[maxax] *= fact;
+                  he[i].na << 1,0;
+                  he[i].nb << 0,1;
+                }
+              he[i].a = pars.a;
+              he[i].b = pars.b;
+              update_rect(i);
+              i++;
+              //cout << "i=" << i << " pars.N="<< pars.N <<"\n";
+              if (i==pars.N)
+                {
+                  fine=true;
+                  break;
+                }
+              //y += dy;
+            }
+          //y=0;
+          //x += dx;
+          if (fine==true)
+            break;
+        }
+      pars.L << 0,0;
+      for (i=0; i < pars.N; i++)
+        {
+          if (i==0 || he[i].r[0]+2.0*pars.a > pars.L[0])
+            pars.L[0]=he[i].r[0]+2.0*pars.a;
+          if (i==0 || he[i].r[1]+2.0*pars.b > pars.L[1])
+            pars.L[1]=he[i].r[1]+2.0*pars.b;
+        }
+
+      for (i=0; i < pars.N; i++)
+        { 
+          he[i].r -= 0.5*pars.L;
+        }
+        //cout << "quiqui\n";
+      build_LL();
+    }
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
       switch (type)
         {
         case 0:
             {
-              ntype dx, dy, x, y;
-              int i=0, ix, iy, maxix, maxiy;
-              maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
-              cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
-              dx = pars.L[0]/((ntype)maxix);
-              dy = pars.L[1]/((ntype)maxiy);
-              x=y=0;
-              cout << "dx=" << dx << " dy=" << dy << "\n";
-              //pars.L.show("box");
-              for (ix = 0; ix < maxix; ix++)
-                {
-                  for (iy = 0; iy < maxiy; iy++)
-                    {
-                      he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
-                      //he[i].r.show("r");
-                      he[i].na.random_orient();
-                      he[i].nb = he[i].na.orto();
-                      he[i].a = pars.a;
-                      he[i].b = pars.b;
-                      update_rect(i);
-                      i++;
-                      //cout << "i=" << i << "pars.N="<< pars.N <<"\n";
-                      if (i==pars.N)
-                        {
-                          build_LL();
-                          return;
-                        }
-                      y += dy;
-                    }
-                  y=0;
-                  x += dx;
-                }
+              place_on_square_lattice(false);  
               break;
             }
         case 1:
             {
-              // triangular to be implemented
+              place_on_triang_lattice();
+              check_overlap_debug();
               break;
             }
         default:

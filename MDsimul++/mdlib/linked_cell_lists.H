@@ -162,7 +162,7 @@ public:
           inCell[1][i] = inCellBak[1][i];
         }
     }
-  bool check_overlap(int ip, int nb=-1)
+  bool check_overlap(int ip, int nb=-1, bool debug=false)
     {
       int kk, iX, jX, iY, jY, n, na;
       int cellRange[4];
@@ -209,6 +209,17 @@ public:
                     {
                       if (overlap_two(na, n, shift)==true)
                         {
+                          if (debug==true)
+                            {
+                              (*part)[na].r.show("rA=");
+                              (*part)[na].na.show("nA=");
+                              (*part)[na].nb.show("nA=");
+                              (*part)[n].r.show("rB=");
+                              (*part)[n].na.show("nB=");
+                              (*part)[n].nb.show("nB=");
+                              (*part)[na].shift.show("shiftA=");
+                              (*part)[n].shift.show("shiftB=");
+                            }
                           //cout << "overlap found na=" << na << " n=" << n << "\n";
                           return true;
                         }
