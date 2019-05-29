@@ -574,12 +574,13 @@ public:
       cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
       u1 << 1,0;
       u2 << -0.5,sqrt(3.0)/2.0;
-      fact = 1.00000000001;
+      fact = 1.00001;
       sig = 2.0*pars.b;
       exfact = 2.0*pars.a;
       dx = sig*fact;
       dy = sig*fact;
       phim = M_PI/(sqrt(3.0)*2.0);
+      cout << setprecision(16) << "phi max=" << phim << "\n";
       Ls[0] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
       Ls[1] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
       cout << "Ls = " << Ls[0] << " " << Ls[1] << "\n";
