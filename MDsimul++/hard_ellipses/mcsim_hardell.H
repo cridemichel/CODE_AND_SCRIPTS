@@ -574,7 +574,7 @@ public:
       cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
       u1 << 1,0;
       u2 << -0.5,sqrt(3.0)/2.0;
-      fact = 1.00001;
+      fact = 1.00000000001;
       sig = 2.0*pars.b;
       exfact = 2.0*pars.a;
       dx = sig*fact;
@@ -634,12 +634,12 @@ public:
       pars.L << 0,0;
       for (i=0; i < pars.N; i++)
         {
-          if (i==0 || he[i].r[0]+2.0*pars.a > pars.L[0])
-            pars.L[0]=he[i].r[0]+2.0*pars.a;
-          if (i==0 || he[i].r[1]+2.0*pars.b > pars.L[1])
-            pars.L[1]=he[i].r[1]+2.0*pars.b;
+          if (i==0 || he[i].r[0]+pars.a > pars.L[0])
+            pars.L[0]=he[i].r[0]+pars.a;
+          if (i==0 || he[i].r[1]+pars.b > pars.L[1])
+            pars.L[1]=he[i].r[1]+pars.b;
         }
-
+      cout << "L= " << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.N; i++)
         { 
           he[i].r -= 0.5*pars.L;
