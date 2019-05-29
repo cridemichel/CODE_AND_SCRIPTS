@@ -668,10 +668,10 @@ public:
       pars.L << 0,0;
       for (i=0; i < pars.N; i++)
         {
-          if (i==0 || he[i].r[0]+pars.a > pars.L[0])
-            pars.L[0]=he[i].r[0]+pars.a;
-          if (i==0 || he[i].r[1]+pars.b > pars.L[1])
-            pars.L[1]=he[i].r[1]+pars.b;
+          if (i==0 || he[i].r[0]+2.0*pars.a > pars.L[0])
+            pars.L[0]=he[i].r[0]+2.0*pars.a;
+          if (i==0 || he[i].r[1]+2.0*pars.b > pars.L[1])
+            pars.L[1]=he[i].r[1]+2.0*pars.b;
         }
       cout << "L= " << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.N; i++)
@@ -681,10 +681,10 @@ public:
           //he[i].r *=1.005;
           //he[i].show("mah");
         }
-      //pars.L *=1.005;
       //cout << "quiqui\n";
       ellLL.update_numcells(pars.L);
       build_LL();
+      //init_LL();
     }
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
