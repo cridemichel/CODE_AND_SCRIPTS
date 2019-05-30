@@ -15,7 +15,7 @@ int main(int argc, char **argv)
   if (argc >= 3)
     fy = atof(argv[2]);
 
-  heMC.expand(fx, fy, true);
+  heMC.expand(fx, fy, true, true);
   cout << "Saved conf: cnf-expanded\n";
   return 0;
 }

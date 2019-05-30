@@ -3,7 +3,7 @@ CC=gcc-9
 CXXFLAGS=-O3 -Wall -std=c++17#-g 
 CFLAGS=-O3 #-Wall
 MDLIB=../mdlib
-HEADERS=$(MDLIB)/pvector.H $(MDLIB)/pmatrix.H $(MDLIB)/rpoly.H $(MDLIB)/boxes.H 
+HEADERS=$(MDLIB)/pvector.H $(MDLIB)/pmatrix.H $(MDLIB)/rpoly.H $(MDLIB)/boxes.H ./mcsim_hardell.H 
 LDFLAGS=-lm -llapack -lblas #-g
 
 all: mcsim veff create_triang_lattice expand

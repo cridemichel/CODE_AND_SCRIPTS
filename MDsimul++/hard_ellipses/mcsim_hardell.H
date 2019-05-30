@@ -614,16 +614,23 @@ public:
           //x += dx;
         }
     }
-  void expand(ntype fx, ntype fy, bool save=true)
+  void expand(ntype fx, ntype fy, bool save=true, bool updsemiax=false)
     {
+      ellLL.set_ini_numcells();
       pars.L[0] *= fx;
       pars.L[1] *= fy;
-      ellLL.set_ini_numcells();
+      readconf(pars.iniconf);
+      cout << "expanding conf " << pars.iniconf << " by factors " << fx << " " << fy << "\n";
       for (auto i=0; i < pars.N; i++)
         {
           he[i].r[0] *= fx;
           he[i].r[1] *= fy;
           update_rect(i);
+        }
+      if (updsemiax)
+        {
+          pars.a *= fx;
+          pars.b *= fy;
         }
       ellLL.update_numcells(pars.L);
       build_LL();
@@ -659,8 +666,8 @@ public:
           cerr << "ERROR N > available lattice sites\n";
           exit(1); 
         }
-      Ls << maxix*pars.a*2.0,maxiy*pars.b*2.0;
-      cout << "Lest=" << Ls[0] << " " << Ls[1] << "\n";
+      Ls << maxix*pars.a*2.0,K*maxiy*pars.b*2.0;
+      cout << ">>>Lest=" << Ls[0] << " " << Ls[1] << "\n";
       cerr << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
       u1 << 1,0;
       u2 << 0,sqrt(3.0);
