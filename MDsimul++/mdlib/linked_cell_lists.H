@@ -212,6 +212,12 @@ public:
                         {
                           if (debug==true)
                             {
+                              (*part)[n].shift = shift;
+                              pvector<ntype,2> rij;
+                              rij = (*part)[na].r - 
+                                ((*part)[n].r + (*part)[n].shift);
+                              rij.show("rij=");
+                              cout << "dist=" << rij.norm() << "\n";
                               (*part)[na].r.show("rA=");
                               (*part)[na].na.show("nA=");
                               (*part)[na].nb.show("nA=");

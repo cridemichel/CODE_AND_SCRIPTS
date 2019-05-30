@@ -6,20 +6,37 @@ int main(int argc, char **argv)
   ntype dx, dy, sig, exfact, a, b;
   pvector<ntype,2> u1, u2, Ls, L;
   vector<hardell<ntype>> he; 
-  ntype fact, phim;
+  ntype X0, fact, phim, K;
   int N=5000;
   //ntype x, y;
   int i=0, ix, iy, maxix, maxiy;
   // assum pars.a > pars.b 
 
-  a=0.55;
+  K=sqrt(3.0);
+  a=0.5;
   b=0.5;
   he.resize(N);
   maxix = maxiy = ceil(sqrt(((ntype) (N/2)))); 
+  if (argc==1)
+    {
+      cout << "create_triang_lattice <maxix> <maxiy> <X0=a/b> <b>\n";
+      cout << "number of particles N=maxix*maxiy*2";
+      exit(1);
+    }
   if (argc >= 2)
     maxix = atoi(argv[1]);
   if (argc >= 3)
     maxiy = atoi(argv[2]);
+  if (argc >= 4)
+    X0 = atof(argv[3]);
+  else 
+    X0=1.1;
+  if (argc >= 5)
+    b = atof(argv[4]);
+  else 
+    b=1.1;
+  a = b*X0;
+
   cerr << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
   u1 << 1,0;
   u2 << 0,sqrt(3.0);
@@ -47,9 +64,10 @@ int main(int argc, char **argv)
         {
           for (iy = 0; iy < maxiy; iy++)
             {
+#if 0
               if (nl==1 && iy==maxiy-1 && ix==maxix-1)
                 break;
-              //he[i].r.show("r");
+#endif
               //cout << "ix=" << ix << " iy=" << iy << "\n";
               he[i].r = offset + (ix*dx)*u1 + (iy*dy)*u2;
               he[i].r[0] *= exfact;
@@ -67,13 +85,13 @@ int main(int argc, char **argv)
     {
       if (i==0 || he[i].r[0]+a > L[0])
         L[0]=he[i].r[0]+a;
-      if (i==0 || he[i].r[1]+b > L[1])
-        L[1]=he[i].r[1]+b;
+      if (i==0 || he[i].r[1]+b*K > L[1])
+        L[1]=he[i].r[1]+b*K;
     }
   cerr<< "L= " << L[0] << " " << L[1] << "\n";
   auto phi=N*M_PI*a*b/(L[0]*L[1]);
 
-  fact=1.0;
+  fact=1.00000001;
   cerr << "phi=" << phi << " N=" << N << "\n";
   for (i=0; i < N; i++)
     { 
@@ -82,10 +100,10 @@ int main(int argc, char **argv)
       //he[i].show("mah");
     }
   L *= fact;
-  cout << L[0] << " " << L[1] << "\n";
+  cout << N << " " << setprecision(20) << L[0] << " " << L[1] << "\n";
   for (i=0; i < N; i++)
     { 
-      cout << he[i].r[0]  << " " << he[i].r[1] << " " << he[i].na[0] << " " <<
+      cout << setprecision(20) << he[i].r[0]  << " " << he[i].r[1] << " " << he[i].na[0] << " " <<
         he[i].na[1] << "\n";
     } 
   return 0;

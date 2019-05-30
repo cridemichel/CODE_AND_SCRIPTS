@@ -313,8 +313,17 @@ class mcsim {
     }
   void read_coords(fstream& i)
     {
+      auto Nold = pars.N;
+      i >> pars.N;
       i >> pars.L[0];
       i >> pars.L[1];
+      if (pars.N != Nold)
+        {
+          rect.resize(pars.N);
+          he.resize(pars.N);
+          init_LL();
+        }
+
       for (auto ip=0; ip < pars.parnum; ip++)
         {
           // save axis a
@@ -330,6 +339,7 @@ class mcsim {
     }
   void write_coords(fstream& o)
     {
+      o << pars.N << " ";
       o << setprecision(16) << pars.L[0] << " " << pars.L[1] << "\n";
       for (auto i=0; i < pars.parnum; i++)
         {
