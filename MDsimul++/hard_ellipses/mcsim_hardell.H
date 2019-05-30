@@ -363,11 +363,11 @@ class mcsim {
   void write_coords(fstream& o)
     {
       o << pars.N << " ";
-      o << setprecision(16) << pars.L[0] << " " << pars.L[1] << " " << pars.a << " " << pars.b << "\n";
+      o << setprecision(20) << pars.L[0] << " " << pars.L[1] << " " << pars.a << " " << pars.b << "\n";
       for (auto i=0; i < pars.parnum; i++)
         {
           // save axis a
-          o << setprecision(16) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
+          o << setprecision(20) << he[i].r[0] << " " << he[i].r[1] << " " << he[i].na[0] << " " << he[i].na[1] << "\n";
         }
     } 
   void save_snap_str(const char *s)
@@ -617,9 +617,10 @@ public:
   void expand(ntype fx, ntype fy, bool save=true, bool updsemiax=false)
     {
       ellLL.set_ini_numcells();
+      readconf(pars.iniconf);
+      cout << "L=" << pars.L[0] << " " << pars.L[1] << "\n";
       pars.L[0] *= fx;
       pars.L[1] *= fy;
-      readconf(pars.iniconf);
       cout << "expanding conf " << pars.iniconf << " by factors " << fx << " " << fy << "\n";
       for (auto i=0; i < pars.N; i++)
         {
