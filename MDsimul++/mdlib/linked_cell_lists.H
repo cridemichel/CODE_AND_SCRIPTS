@@ -100,7 +100,7 @@ public:
       cellsx = L[0] / rcut;
       cellsy = L[1] / rcut;
       //cout << "L=" << L[0] << L[1] << " rcut=" << rcut << "\n";
-      L2 = (1.0/2.0)*boxsize;
+      L2 = ntype(0.5)*boxsize;
       parnum=part->size();
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
       for (k=0; k < 2; k++)
@@ -119,7 +119,7 @@ public:
   void update_numcells(pvector<ntype,2> Lb)
     {
       L = Lb;
-      L2 = 0.5*L;
+      L2 = ntype(0.5)*L;
       cellsx = L[0] / rcut;
       cellsy = L[1] / rcut;
       //cout << "cells new=" << cellsx << " " << cellsy << " cells old= " << cxini << " " << cyini << "\n";

@@ -3,7 +3,7 @@ using ntype = long double;
 int main(int argc, char **argv)
 { 
   double fx=1.0, fy=1.0;
-  mcsim<double> heMC;
+  mcsim<long double> heMC;
 
   if (argc==1)
     {
