@@ -6,8 +6,14 @@ MDLIB=../mdlib
 HEADERS=$(MDLIB)/pvector.H $(MDLIB)/pmatrix.H $(MDLIB)/rpoly.H $(MDLIB)/boxes.H 
 LDFLAGS=-lm -llapack -lblas #-g
 
-all: mcsim veff
+all: mcsim veff create_triang_lattice expand
 
+create_triang_lattice: create_triang_lattice.cpp $(HEADERS) $(MDLIB)/linked_cell_lists.H
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o create_triang_lattice create_triang_lattice.cpp 
+	
+expand: expand.cpp $(HEADERS) $(MDLIB)/linked_cell_lists.H
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o expand expand.cpp 
+	
 mcsim: mcsim_hardell.cpp $(HEADERS) $(MDLIB)/linked_cell_lists.H
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o mcsim_hardell mcsim_hardell.cpp 
 

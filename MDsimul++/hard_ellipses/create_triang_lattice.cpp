@@ -1,8 +1,23 @@
-#include "../mdlib/pvector.H"
-#include "./hardell.H"
+#include "./mcsim_hardell.H"
 using ntype = long double;
 int main(int argc, char **argv)
 { 
+  int maxix=0, maxiy=0;
+  mcsim<double> heMC;
+
+  if (argc==1)
+    {
+      cout << "create_triang_lattice <maxix> <maxiy>\n";
+      cout << "number of particles N=maxix*maxiy*2";
+      exit(1);
+    }
+  if (argc >= 2)
+    maxix = atoi(argv[1]);
+  if (argc >= 3)
+    maxiy = atoi(argv[2]);
+
+  heMC.create_triang_lattice(maxix, maxiy, true);
+#if 0
   ntype dx, dy, sig, exfact, a, b;
   pvector<ntype,2> u1, u2, Ls, L;
   vector<hardell<ntype>> he; 
@@ -71,7 +86,7 @@ int main(int argc, char **argv)
   for (auto nl=0; nl < 2; nl++)
     {
       if (nl==1)
-       offset << b, b*sqrt(3.0); 
+       offset << b,b*sqrt(3.0); 
       for (ix = 0; ix < maxix; ix++)
         {
           for (iy = 0; iy < maxiy; iy++)
@@ -118,5 +133,6 @@ int main(int argc, char **argv)
       cout << setprecision(20) << he[i].r[0]  << " " << he[i].r[1] << " " << he[i].na[0] << " " <<
         he[i].na[1] << "\n";
     } 
+#endif
   return 0;
 }

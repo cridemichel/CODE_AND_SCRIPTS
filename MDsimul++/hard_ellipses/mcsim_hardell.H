@@ -470,10 +470,12 @@ public:
       read_pars(fn);
       init();
     }
+
   ntype calc_phi()
     {
       return pars.parnum*M_PI*pars.a*pars.b/(pars.L[0]*pars.L[1]) ;
     }
+
   void check_overlap_debug(void) 
     { 
       int i;
@@ -612,6 +614,22 @@ public:
           //x += dx;
         }
     }
+  void expand(ntype fx, ntype fy, bool save=true)
+    {
+      pars.L[0] *= fx;
+      pars.L[1] *= fy;
+      ellLL.set_ini_numcells();
+      for (auto i=0; i < pars.N; i++)
+        {
+          he[i].r[0] *= fx;
+          he[i].r[1] *= fy;
+          update_rect(i);
+        }
+      ellLL.update_numcells(pars.L);
+      build_LL();
+      if (save)
+        save_snap_str("cnf-expanded");
+    }
   void create_triang_lattice(int maxix=0, int maxiy=0, bool save=true)
     {
       ntype dx, dy, sig, exfact;
@@ -622,6 +640,7 @@ public:
       int i=0, ix, iy;
       // assum pars.a > pars.b 
 
+      ellLL.set_ini_numcells();
       K=sqrt(3.0);
       if (maxix > 0 && maxiy > 0)
         {
@@ -664,7 +683,7 @@ public:
       for (auto nl=0; nl < 2 && fine==false; nl++)
         {
           if (nl==1)
-            offset << sig, sig*sqrt(3.0); 
+            offset << 0.5*sig, 0.5*sig*sqrt(3.0); 
           for (ix = 0; ix < maxix && fine==false; ix++)
             {
               for (iy = 0; iy < maxiy && fine==false; iy++)
@@ -708,7 +727,7 @@ public:
       cerr << "phi=" << phi << " N=" << pars.N << "\n";
       if (save)
         save_snap_str("cnf-trianglattice");
-      init_LL();
+      ellLL.update_numcells(pars.L);
       build_LL();
     }
 #if 0
