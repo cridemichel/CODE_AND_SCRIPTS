@@ -101,16 +101,16 @@ int main(int argc, char **argv)
         L[1]=he[i].r[1]+b*K;
     }
   cerr<< "L= " << L[0] << " " << L[1] << "\n";
-  auto phi=N*M_PI*a*b/(L[0]*L[1]);
 
   fact=1.0+1E-8;
-  cerr << "phi=" << phi << " N=" << N << "\n";
   for (i=0; i < N; i++)
     { 
       he[i].r -= 0.5L*L;
       he[i].r *=fact;
       //he[i].show("mah");
     }
+  auto phi=N*M_PI*a*b/(L[0]*L[1]);
+  cerr << "phi=" << phi << " N=" << N << "\n";
   L *= fact;
   cout << N << " " << setprecision(20) << L[0] << " " << L[1] << " " << a << " " << b << "\n";
   for (i=0; i < N; i++)

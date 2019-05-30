@@ -616,7 +616,7 @@ public:
     {
       ntype dx, dy, sig, exfact;
       pvector<ntype,2> u1, u2, Ls, L;
-      ntype X0, fact, phim, K;
+      ntype fact, phim, K;
       bool fine=false;
       //ntype x, y;
       int i=0, ix, iy;
@@ -634,6 +634,11 @@ public:
           //estimate maxix and maxiy from N
           maxiy = rint(sqrt(ntype(pars.N)*(pars.a/(K*pars.b))/2.0));
           maxix = rint(ntype(maxiy)*K*pars.b/pars.a);
+        }
+      if (pars.N > maxix*maxiy*2)
+        {
+          cerr << "ERROR N > available lattice sites\n";
+          exit(1); 
         }
       Ls << maxix*pars.a*2.0,maxiy*pars.b*2.0;
       cout << "Lest=" << Ls[0] << " " << Ls[1] << "\n";
@@ -690,21 +695,23 @@ public:
             pars.L[1]=he[i].r[1]+pars.b*K;
         }
       cerr<< "L= " << pars.L[0] << " " << pars.L[1] << "\n";
-      auto phi=calc_phi();
 
       fact=ntype(1.0+1E-8);
-      cerr << "phi=" << phi << " N=" << pars.N << "\n";
       for (i=0; i < pars.N; i++)
         { 
           he[i].r -= ntype(0.5)*pars.L;
-          he[i].r *=fact;
+          he[i].r *= fact;
+          update_rect(i);
         }
       pars.L *= fact;
+      auto phi=calc_phi();
+      cerr << "phi=" << phi << " N=" << pars.N << "\n";
       if (save)
         save_snap_str("cnf-trianglattice");
       init_LL();
       build_LL();
     }
+#if 0
   void place_on_triang_lattice(bool randorient=false)
     { 
       ntype dx, dy, sig,exfact;
@@ -808,6 +815,7 @@ public:
       build_LL();
       //init_LL();
     }
+#endif
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
       switch (type)
@@ -820,7 +828,7 @@ public:
             }
         case 1:
             {
-              place_on_triang_lattice();
+              create_triang_lattice();
               check_overlap_debug();
               cout << "no overlap in initial conf\n";
               break;
