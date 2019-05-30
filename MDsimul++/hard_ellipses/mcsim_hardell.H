@@ -317,6 +317,8 @@ class mcsim {
       i >> pars.N;
       i >> pars.L[0];
       i >> pars.L[1];
+      i >> pars.a;
+      i >> pars.b;
       if (pars.N != Nold)
         {
           rect.resize(pars.N);
@@ -340,7 +342,7 @@ class mcsim {
   void write_coords(fstream& o)
     {
       o << pars.N << " ";
-      o << setprecision(16) << pars.L[0] << " " << pars.L[1] << "\n";
+      o << setprecision(16) << pars.L[0] << " " << pars.L[1] << " " << pars.a << " " << pars.b << "\n";
       for (auto i=0; i < pars.parnum; i++)
         {
           // save axis a
@@ -479,6 +481,7 @@ public:
       long long int tt;
       int ntot, ran, i;
       //cout << "saverest=" << pars.saverest << "\n";
+      cout << "N=" << pars.parnum << " a=" << pars.a << " b=" << pars.b << "\n";
       for (tt=iniStep; tt < pars.steps; tt++)
         {
           state.curStep=tt;
@@ -678,8 +681,8 @@ public:
         {
           if (i==0 || he[i].r[0]+2.0*pars.a > pars.L[0])
             pars.L[0]=he[i].r[0]+2.0*pars.a;
-          if (i==0 || he[i].r[1]+2.0*pars.b > pars.L[1])
-            pars.L[1]=he[i].r[1]+2.0*pars.b;
+          if (i==0 || he[i].r[1]+2.0*pars.b*sqrt(3.0) > pars.L[1])
+            pars.L[1]=he[i].r[1]+2.0*pars.b*sqrt(3.0);
         }
       cout << "L= " << pars.L[0] << " " << pars.L[1] << "\n";
       ntype phiT = 0.875;

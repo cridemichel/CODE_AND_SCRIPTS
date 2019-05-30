@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   if (argc >= 5)
     b = atof(argv[4]);
   else 
-    b=1.1;
+    b=0.5;
   a = b*X0;
 
   cerr << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
   cerr<< "L= " << L[0] << " " << L[1] << "\n";
   auto phi=N*M_PI*a*b/(L[0]*L[1]);
 
-  fact=1.00000001;
+  fact=1.0+1E-8;
   cerr << "phi=" << phi << " N=" << N << "\n";
   for (i=0; i < N; i++)
     { 
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
       //he[i].show("mah");
     }
   L *= fact;
-  cout << N << " " << setprecision(20) << L[0] << " " << L[1] << "\n";
+  cout << N << " " << setprecision(20) << L[0] << " " << L[1] << " " << a << " " << b << "\n";
   for (i=0; i < N; i++)
     { 
       cout << setprecision(20) << he[i].r[0]  << " " << he[i].r[1] << " " << he[i].na[0] << " " <<
