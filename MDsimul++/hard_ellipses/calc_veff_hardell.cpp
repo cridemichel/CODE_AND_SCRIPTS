@@ -20,12 +20,12 @@ int main (int argc, char **argv)
   rectangle<double> rectA, rectB; 
 #endif
   hardell<double> A, B;
-  long long int tt, ttmax, savett=10000;
+  long long int tt, ttmax, savett=10000, ttini;
   int tr, NUMR=30;
 #ifdef DEBUG_HE
   double shift[2]={0.0,0.0};
 #endif
-  double X0, ov=0.0, theta, dr, r, r0;
+  double X0, ov=0.0, theta, dr, r, r0, ovini;
   //double Lbox;
   bool justoner=false;
   int ir=0; 
@@ -69,6 +69,24 @@ int main (int argc, char **argv)
     {
       savett=atoll(argv[5]);
     }
+  fstream checkpoint;
+  checkpoint.open("calcveff.chk");
+  if (!checkpoint.fail())
+    {
+      cout << "Checkpoint file 'calcveff.chk' found, I am gonna use it\n";
+      checkpoint >> ir;
+      checkpoint >> ttini;
+      checkpoint >> ovini;
+      checkpoint >> X0;
+      checkpoint >> NUMR;
+      checkpoint >> savett;
+      checkpoint.close(); 
+    }
+  else
+    {
+      ttini=0;
+      ovini=0;
+    }
   srand48(time(0));
   A.a = 0.5;
   A.b = X0*A.a;
@@ -98,12 +116,13 @@ int main (int argc, char **argv)
       of.open(ofn, ios::trunc);
       of.close();  
     }
+  
   for (tr=ir; (tr < NUMR)&&(justoner==true && tr < ir+1); tr++)
     {
       //cout << "r=" << r << "\n";
       cout << "doing just ir=" << ir << "\n";
-      ov=0.0;
-      for (tt=0; tt < ttmax; tt++)
+      ov=ovini;
+      for (tt=ttini; tt < ttmax; tt++)
         {
           B.random_orient();
           //B.na << 1,0;
@@ -177,11 +196,22 @@ int main (int argc, char **argv)
                   veff1 = ov/((double)tt);
                   of.open(ofn,ios::app);
                   of << tt << " " << setprecision(16) << -log(veff1) << "\n";
+                  checkpoint.open("calcveff.chk",ios::trunc|ios::out);
+                  if (justoner==true && !checkpoint.fail())
+                    {
+                      checkpoint << ir << " ";
+                      checkpoint << tt << " ";
+                      checkpoint << setprecision(20) << ov << " ";
+                      checkpoint << X0 << " ";
+                      checkpoint << NUMR << " ";
+                      checkpoint << savett << "\n";
+                      checkpoint.close();
+                    }
+                  of.close();
 #ifdef FLUSH_BUF
                   of.flush();
 #endif
-                  of.close();
-                }
+                 }
             }
         }
       if (justoner==false)
@@ -202,4 +232,5 @@ int main (int argc, char **argv)
         } 
     }
   //cout << setprecision(16) << "excluded surface=" << Lbox*Lbox*ov/((double)tt) << "\n";
+  remove("./calcveff.chk");
 }
