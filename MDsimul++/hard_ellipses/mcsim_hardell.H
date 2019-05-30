@@ -311,6 +311,19 @@ class mcsim {
           build_LL();
         }
     }
+  void assign_semiaxes(void)
+    {
+      for(auto &value: he) 
+        {
+          value.a = pars.a;
+          value.b = pars.b;
+        }
+      for(auto &value: rect) 
+        {
+          value.sax[0] = pars.a;
+          value.sax[1] = pars.b;
+        } 
+    }
   void read_coords(fstream& i)
     {
       auto Nold = pars.N;
@@ -327,19 +340,10 @@ class mcsim {
       if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
           pars.a!=aold || pars.b!=bold)
         {
-          for(auto &value: he) 
-            {
-              value.a = pars.a;
-              value.b = pars.b;
-            }
-          for(auto &value: rect) 
-            {
-              value.sax[0] = pars.a;
-              value.sax[1] = pars.b;
-            } 
+          assign_semiaxes();
           pars.rcut = 2.0*max(pars.a,pars.b);
-          rect.resize(pars.N);
           he.resize(pars.N);
+          rect.resize(pars.N);
           init_LL();
         }
 
@@ -442,16 +446,7 @@ class mcsim {
         srand48(pars.seed);
       else
         srand48(time(NULL));
-      for(auto &value: he) 
-        {
-          value.a = pars.a;
-          value.b = pars.b;
-        }
-      for(auto &value: rect) 
-        {
-          value.sax[0] = pars.a;
-          value.sax[1] = pars.b;
-        } 
+      assign_semiaxes();
       pars.rcut = 2.0*max(pars.a,pars.b);
       init_LL();
       cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
@@ -616,6 +611,99 @@ public:
           //y=0;
           //x += dx;
         }
+    }
+  void create_triang_lattice(int maxix=0, int maxiy=0, bool save=true)
+    {
+      ntype dx, dy, sig, exfact;
+      pvector<ntype,2> u1, u2, Ls, L;
+      ntype X0, fact, phim, K;
+      bool fine=false;
+      //ntype x, y;
+      int i=0, ix, iy;
+      // assum pars.a > pars.b 
+
+      K=sqrt(3.0);
+      if (maxix > 0 && maxiy > 0)
+        {
+          pars.N=maxix*maxiy*2;
+          he.resize(pars.N);
+          rect.resize(pars.N);
+        }
+      else
+        {
+          //estimate maxix and maxiy from N
+          maxiy = rint(sqrt(ntype(pars.N)*(pars.a/(K*pars.b))/2.0));
+          maxix = rint(ntype(maxiy)*K*pars.b/pars.a);
+        }
+      Ls << maxix*pars.a*2.0,maxiy*pars.b*2.0;
+      cout << "Lest=" << Ls[0] << " " << Ls[1] << "\n";
+      cerr << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
+      u1 << 1,0;
+      u2 << 0,sqrt(3.0);
+      if (pars.a < pars.b)
+        {
+          cout << "[ERROR a < b] a must be greater than b!\n";
+          exit(1);
+        }
+      sig = 2.0*pars.b;
+      exfact = 2.0*pars.a;
+      dx = sig;
+      dy = sig;
+      phim = M_PI/(sqrt(3.0)*2.0);
+      cerr << setprecision(16) << "phi max=" << phim << "\n";
+      cerr << "dx=" << dx << " dy=" << dy << "\n";
+      cerr << "a=" << pars.a << " b=" << pars.b << "\n";
+
+      pvector <ntype,2> offset;
+      offset << 0,0;
+      for (auto nl=0; nl < 2 && fine==false; nl++)
+        {
+          if (nl==1)
+            offset << sig, sig*sqrt(3.0); 
+          for (ix = 0; ix < maxix && fine==false; ix++)
+            {
+              for (iy = 0; iy < maxiy && fine==false; iy++)
+                {
+                  he[i].r = offset + (ix*dx)*u1 + (iy*dy)*u2;
+                  he[i].r[0] *= exfact;
+                  he[i].na << 1,0;
+                  he[i].nb << 0,1;
+                  he[i].a = pars.a;
+                  he[i].b = pars.b;
+                  i++;
+                  if (i >= pars.N)
+                    { 
+                      fine = true;
+                    }
+                }
+            }
+        }
+      if (pars.N < maxix*maxiy*2)
+        cout << "[WARNING] number of particles (N=" << pars.N << ") is not optimal being less than maxix*maxiy*2=" << maxix*maxiy*2 << "\n";
+      pars.N=i;
+      pars.L << 0,0;
+      for (i=0; i < pars.N; i++)
+        {
+          if (i==0 || he[i].r[0]+pars.a > pars.L[0])
+            pars.L[0]=he[i].r[0]+pars.a;
+          if (i==0 || he[i].r[1]+pars.b*K > pars.L[1])
+            pars.L[1]=he[i].r[1]+pars.b*K;
+        }
+      cerr<< "L= " << pars.L[0] << " " << pars.L[1] << "\n";
+      auto phi=calc_phi();
+
+      fact=ntype(1.0+1E-8);
+      cerr << "phi=" << phi << " N=" << pars.N << "\n";
+      for (i=0; i < pars.N; i++)
+        { 
+          he[i].r -= ntype(0.5)*pars.L;
+          he[i].r *=fact;
+        }
+      pars.L *= fact;
+      if (save)
+        save_snap_str("cnf-trianglattice");
+      init_LL();
+      build_LL();
     }
   void place_on_triang_lattice(bool randorient=false)
     { 

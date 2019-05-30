@@ -7,16 +7,22 @@ int main(int argc, char **argv)
   pvector<ntype,2> u1, u2, Ls, L;
   vector<hardell<ntype>> he; 
   ntype X0, fact, phim, K;
-  int N=5000;
+  int N=2464;
   //ntype x, y;
   int i=0, ix, iy, maxix, maxiy;
   // assum pars.a > pars.b 
 
   K=sqrt(3.0);
-  a=0.5;
+  a=0.55;
   b=0.5;
-  he.resize(N);
-  maxix = maxiy = ceil(sqrt(((ntype) (N/2)))); 
+  //maxix = maxiy = ceil(sqrt(((ntype) (N/2)))); 
+  maxiy = rint(sqrt(ntype(N)*(a/(K*b))/2.0));
+  maxix = rint(ntype(maxiy)*K*b/a);
+  cerr << "2*maxix*maxiy=" << 2*maxix*maxiy << "\n";
+  cerr << "PRIMA maxix=" << maxix << " maxiy=" << maxiy << "\n";
+  Ls << (maxix)*a*2.0,(maxiy)*K*b*2.0;
+  cerr << "PRIMA Ls=" << Ls[0] << " " << Ls[1] << "\n";
+
   if (argc==1)
     {
       cout << "create_triang_lattice <maxix> <maxiy> <X0=a/b> <b>\n";
@@ -36,6 +42,12 @@ int main(int argc, char **argv)
   else 
     b=0.5;
   a = b*X0;
+  N=maxix*maxiy*2;
+
+  he.resize(N);
+ 
+  Ls << (maxix)*a*2.0,(maxiy)*K*b*2.0;
+  cerr << "Ls=" << Ls[0] << " " << Ls[1] << "\n";
 
   cerr << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
   u1 << 1,0;
@@ -59,7 +71,7 @@ int main(int argc, char **argv)
   for (auto nl=0; nl < 2; nl++)
     {
       if (nl==1)
-       offset << 0.5, sqrt(3.0)/2.0; 
+       offset << b, b*sqrt(3.0); 
       for (ix = 0; ix < maxix; ix++)
         {
           for (iy = 0; iy < maxiy; iy++)
