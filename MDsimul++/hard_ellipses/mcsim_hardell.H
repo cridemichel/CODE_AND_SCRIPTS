@@ -314,13 +314,30 @@ class mcsim {
   void read_coords(fstream& i)
     {
       auto Nold = pars.N;
+      ntype aold, bold;
+      aold = pars.a;
+      bold = pars.b;
+      pvector<ntype,2> Lold;
+      Lold=pars.L;
       i >> pars.N;
       i >> pars.L[0];
       i >> pars.L[1];
       i >> pars.a;
       i >> pars.b;
-      if (pars.N != Nold)
+      if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
+          pars.a!=aold || pars.b!=bold)
         {
+          for(auto &value: he) 
+            {
+              value.a = pars.a;
+              value.b = pars.b;
+            }
+          for(auto &value: rect) 
+            {
+              value.sax[0] = pars.a;
+              value.sax[1] = pars.b;
+            } 
+          pars.rcut = 2.0*max(pars.a,pars.b);
           rect.resize(pars.N);
           he.resize(pars.N);
           init_LL();
