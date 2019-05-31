@@ -98,9 +98,9 @@ class mcsim {
       delr << pars.L[0]*rint(he[ip].r[0]/pars.L[0]), pars.L[1]*rint(he[ip].r[1]/pars.L[1]);
       he[ip].r = he[ip].r - delr;
       if (delr[0] != 0)
-        cross[ip][0] += -(int)copysign(1.0,delr[0]);
+        cross[ip][0] += - (int)copysign(1.0,delr[0]);
       if (delr[1] != 0)
-        cross[ip][1] += -(int)copysign(1.0,delr[1]);
+        cross[ip][1] += - (int)copysign(1.0,delr[1]);
     }
   int random_move(int ip) // return move type 0=tra 1=rot
     {
