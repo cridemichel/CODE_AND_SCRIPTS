@@ -25,6 +25,7 @@ class mcsim {
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
   ntype acceptance, traaccept, rotaccept, volaccept;
+  pvector<int,2> crossed;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -91,16 +92,22 @@ class mcsim {
       else
         pars.readpars(fn);
     }
+  void adjust_cross(int ip)
+    {
+      cross[ip] += crossed;
+    }
   void pbc(int ip)
     {
       pvector<ntype,2> delr;
       //L2 = 0.5*pars.L;
       delr << pars.L[0]*rint(he[ip].r[0]/pars.L[0]), pars.L[1]*rint(he[ip].r[1]/pars.L[1]);
       he[ip].r = he[ip].r - delr;
-      if (delr[0] != 0)
-        cross[ip][0] += - (int)copysign(1.0,delr[0]);
-      if (delr[1] != 0)
-        cross[ip][1] += - (int)copysign(1.0,delr[1]);
+      //delr.show("delr");
+      crossed << 0,0;
+      if (delr[0]!=0)
+        crossed[0] = (int)copysign(1.0,delr[0]);
+      if (delr[1]!=0)
+        crossed[1] = (int)copysign(1.0,delr[1]);
     }
   int random_move(int ip) // return move type 0=tra 1=rot
     {
@@ -139,6 +146,7 @@ class mcsim {
   void mcmotion(int ip)
     {
       //cout << "attempt to move ip=" << ip << "\n";
+      bool reject=false;
       store_coord(ip);
 #if 0
       if (ellLL.check_overlap(ip)==true)
@@ -160,6 +168,7 @@ class mcsim {
       ellLL.update_LL(ip);
       if (ellLL.check_overlap(ip)==true)
         {
+          reject=true;
           restore_coord(ip);
           update_rect(ip);
           ellLL.update_LL(ip);
@@ -182,7 +191,8 @@ class mcsim {
 #endif
           // reject move
         }
-        
+      if (!reject)
+        adjust_cross(ip); 
       //cout << "attempt to move ip=" << ip << "END\n";
     }
   
