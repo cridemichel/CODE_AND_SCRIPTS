@@ -9,9 +9,11 @@
 using namespace std;
 #define VEC_MOVE_SEMANTIC
 #define VEC_LAZY_EVAL
-#define USE_LAPACK //N.B. le lapack usano il multithreading che non è compatibile con MOSIX 
-#define VEC_COMMA_INIT
 #ifdef USE_LAPACK
+#define USE_VEC_LAPACK //N.B. le lapack usano il multithreading che non è compatibile con MOSIX 
+#endif
+#define VEC_COMMA_INIT
+#ifdef USE_VEC_LAPACK
 void wrap_dgemv(char ta, double *Y, const double *A, const double *X, int n, double alpha, double beta);
 void wrap_sgemv(char ta, float *Y, const float *A, const float *X, int n, float alpha, float beta);
 #endif
@@ -604,7 +606,7 @@ public:
       {
 	// v=alpha*m1*v1 + beta*v
 	//using pvector<ntype,NT>::v;
-#ifdef USE_LAPACK
+#ifdef USE_VEC_LAPACK
 	if (N > vecpars::NMAXMUL)
 	  {
 	    if constexpr (std::is_same<ntype, double>::value)

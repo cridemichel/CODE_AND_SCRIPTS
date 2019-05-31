@@ -49,7 +49,6 @@ int main (int argc, char **argv)
   if (argc>=4)
     NUMR = atoi(argv[3]);
  
-  veff.resize(NUMR); 
   if (argc >=5)
     {
       justoner=true;
@@ -80,6 +79,7 @@ int main (int argc, char **argv)
       checkpoint >> X0;
       checkpoint >> NUMR;
       checkpoint >> savett;
+      checkpoint >> ttmax;
       checkpoint.close(); 
     }
   else
@@ -87,6 +87,8 @@ int main (int argc, char **argv)
       ttini=0;
       ovini=0;
     }
+
+  veff.resize(NUMR); 
   srand48(time(0));
   A.a = 0.5;
   A.b = X0*A.a;
@@ -204,7 +206,8 @@ int main (int argc, char **argv)
                       checkpoint << setprecision(20) << ov << " ";
                       checkpoint << X0 << " ";
                       checkpoint << NUMR << " ";
-                      checkpoint << savett << "\n";
+                      checkpoint << savett << " ";
+                      checkpoint << ttmax << "\n";
                       checkpoint.close();
                     }
                   of.close();
