@@ -20,6 +20,7 @@ class mcsim {
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
   vector<pvector<ntype,2>> r0;
+  vector<pvector<int,2>> cross;
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
@@ -96,6 +97,10 @@ class mcsim {
       //L2 = 0.5*pars.L;
       delr << pars.L[0]*rint(he[ip].r[0]/pars.L[0]), pars.L[1]*rint(he[ip].r[1]/pars.L[1]);
       he[ip].r = he[ip].r - delr;
+      if (delr[0] != 0)
+        cross[ip][0] += -(int)copysign(1.0,delr[0]);
+      if (delr[1] != 0)
+        cross[ip][1] += -(int)copysign(1.0,delr[1]);
     }
   int random_move(int ip) // return move type 0=tra 1=rot
     {
@@ -245,7 +250,7 @@ class mcsim {
 
       for (i=0; i < pars.parnum; i++)
         {
-          if (ellLL.check_overlap(i)==true)
+          if (ellLL.check_overlap(i,-2)==true)
             {
               /* move rejected restore old positions */
               if (pars.simtype==2)
@@ -346,6 +351,7 @@ class mcsim {
           he.resize(pars.N);
           rect.resize(pars.N);
           r0.resize(pars.N);
+          cross.resize(pars.N);
           init_LL();
         }
 
@@ -433,9 +439,12 @@ class mcsim {
       // save observables, e.g. energy, volume, pressure, etc...
       ntype msd=0;
       pvector<ntype,2> dr;
+
       for (auto i=0; i < pars.N; i++)
         {
-          dr = he[i].r - r0[i];
+          dr[0] = ntype(cross[i][0])*pars.L[0];
+          dr[1] = ntype(cross[i][1])*pars.L[1];
+          dr += he[i].r - r0[i];
           msd+=dr*dr;
         }
       msd /= ntype(pars.N);
@@ -462,6 +471,7 @@ class mcsim {
       rect.resize(pars.N);
       he.resize(pars.N);
       r0.resize(pars.N);
+      cross.resize(pars.N);
       if (pars.seed >= 0)
         srand48(pars.seed);
       else
@@ -515,6 +525,7 @@ public:
       for (auto i=0; i < pars.N; i++)
         {
           r0[i] = he[i].r;
+          cross[i] << 0,0;
         }
     }
   void run(void)
