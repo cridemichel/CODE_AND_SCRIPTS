@@ -39,6 +39,7 @@ public:
   ntype targetAccept, targetAcceptVol;
   long long int adjsteps, outsteps, resetaccept, resetacceptVol; 
   char fnt[256];
+  ntype targetPhi;
   params()
     {
       N=1000;
@@ -59,6 +60,7 @@ public:
       resetaccept = 10000;
       resetacceptVol = 10000;
       curStep=0;
+      targetPhi=-1; //<= 0 means disabled
    }
   void write(fstream& o)
     {
@@ -83,6 +85,7 @@ public:
       o << outsteps << "\n";
       o << resetaccept << " ";
       o << resetacceptVol << "\n";
+      o << targetPhi << "\n";
     }
   void read(fstream& i)
     {
@@ -107,6 +110,7 @@ public:
       i >> outsteps;
       i >> resetaccept;
       i >> resetacceptVol;
+      i >> targetPhi;
     }
   void readpars(const char *fn)
     {

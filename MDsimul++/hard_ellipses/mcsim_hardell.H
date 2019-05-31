@@ -19,6 +19,7 @@ class mcsim {
   char sfn[512], rfn[512];
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
+  vector<pvector<ntype,2>> r0;
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
@@ -344,6 +345,7 @@ class mcsim {
           pars.rcut = 2.0*max(pars.a,pars.b);
           he.resize(pars.N);
           rect.resize(pars.N);
+          r0.resize(pars.N);
           init_LL();
         }
 
@@ -407,6 +409,8 @@ class mcsim {
       of.close();
       of.open("phi.dat", ios::trunc);
       of.close();
+      of.open("msd.dat", ios::trunc);
+      of.close();
     }
   void save_measures(long long int tt)
     {
@@ -423,6 +427,21 @@ class mcsim {
       if (tt!=0 && tt%pars.savemeas==0)
         {
           of << tt << " " << setprecision(16) << calc_phi() << "\n";
+        }
+      of.close();
+      of.open("msd.dat",ios::app);
+      // save observables, e.g. energy, volume, pressure, etc...
+      ntype msd=0;
+      pvector<ntype,2> dr;
+      for (auto i=0; i < pars.N; i++)
+        {
+          dr = he[i].r - r0[i];
+          msd+=dr*dr;
+        }
+      msd /= ntype(pars.N);
+      if (tt!=0 && tt%pars.savemeas==0)
+        {
+          of << tt << " " << setprecision(16) << msd << "\n";
         }
       of.close();
     }
@@ -442,6 +461,7 @@ class mcsim {
     {
       rect.resize(pars.N);
       he.resize(pars.N);
+      r0.resize(pars.N);
       if (pars.seed >= 0)
         srand48(pars.seed);
       else
@@ -490,12 +510,20 @@ public:
             }
         }
     }
+  void prepare_observables(void)
+    {
+      for (auto i=0; i < pars.N; i++)
+        {
+          r0[i] = he[i].r;
+        }
+    }
   void run(void)
     {
       long long int tt;
       int ntot, ran, i;
       //cout << "saverest=" << pars.saverest << "\n";
       cout << "N=" << pars.parnum << " a=" << pars.a << " b=" << pars.b << "\n";
+      prepare_observables();
       for (tt=iniStep; tt < pars.steps; tt++)
         {
           state.curStep=tt;
@@ -527,6 +555,8 @@ public:
           save_measures(tt);
           //output
           outinfo(tt);
+          if (pars.targetPhi > 0 && abs(calc_phi()-pars.targetPhi) < 1E-7)
+            break;
         }
 
       save_snap_str("cnf-final");

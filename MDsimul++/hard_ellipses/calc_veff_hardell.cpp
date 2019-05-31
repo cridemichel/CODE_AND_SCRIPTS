@@ -80,6 +80,7 @@ int main (int argc, char **argv)
       checkpoint >> NUMR;
       checkpoint >> savett;
       checkpoint >> ttmax;
+      checkpoint >> justoner;
       checkpoint.close(); 
     }
   else
@@ -207,7 +208,8 @@ int main (int argc, char **argv)
                       checkpoint << X0 << " ";
                       checkpoint << NUMR << " ";
                       checkpoint << savett << " ";
-                      checkpoint << ttmax << "\n";
+                      checkpoint << ttmax << " ";
+                      checkpoint << justoner << "\n";
                       checkpoint.close();
                     }
                   of.close();
