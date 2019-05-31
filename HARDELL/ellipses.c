@@ -1485,7 +1485,6 @@ shiftx,shifty = shift centro ellisse 2
       R[1][1][1] =  R[1][0][0]; // k2by
       shift[0] = 0.0;
       shift[1] = 0.0;
-//#define POLYELL
      switch (algo) 
         {
         case 1:
@@ -1509,7 +1508,7 @@ shiftx,shifty = shift centro ellisse 2
           break;
         default:
           break;
-          // do nothin 
+          // do nothing 
         }
     }
 #else
