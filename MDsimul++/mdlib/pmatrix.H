@@ -393,7 +393,7 @@ template <class ntype,int NT, int MT> class pmatrixdp {
 public:
   ntype **m=nullptr; // N riga M colonna
   ntype *pm=nullptr;
-  int N, M;
+  int N=0, M=0;
   // copy assignment
   pmatrixdp<ntype,NT,MT>& operator=(const pmatrixdp<ntype,NT,MT>& m1)
     {

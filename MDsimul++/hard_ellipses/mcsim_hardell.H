@@ -91,6 +91,8 @@ class mcsim {
         pars.readpars(parsfilestr);
       else
         pars.readpars(fn);
+      resize_vec_N();
+      init_LL();
     }
   void adjust_cross(int ip)
     {
@@ -350,8 +352,8 @@ class mcsim {
       //if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
         //  pars.a!=aold || pars.b!=bold)
       pars.rcut = 2.0*max(pars.a,pars.b);
+      resize_vec_N();
       init_LL();
-      resize_vectors();
       for (auto ip=0; ip < pars.parnum; ip++)
         {
           // save axis a
@@ -484,36 +486,28 @@ class mcsim {
  
         } 
     }
-  void resize_vectors(void)
+  void resize_vec_N(void)
     {
       int Nold = rect.size();
-      if (Nold != pars.N)
+      if (Nold < pars.N)
         {
           rect.resize(pars.N);
           he.resize(pars.N);
           r0.resize(pars.N);
           cross.resize(pars.N);
         }
-      ellLL.resize_vectors();
     }
   void init(void)
     {
-#if 0
-      rect.resize(pars.N);
-      he.resize(pars.N);
-      r0.resize(pars.N);
-      cross.resize(pars.N);
-#endif
       if (pars.seed >= 0)
         srand48(pars.seed);
       else
         srand48(time(NULL));
-      //assign_semiaxes();
-      //pars.rcut = 2.0*max(pars.a,pars.b);
-      //init_LL();
-      cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
-      cout << "P= " << pars.P << " T=" << pars.T << "\n";
-      //init_measures();
+      //cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
+      //cout << "P= " << pars.P << " T=" << pars.T << "\n";
+      pars.rcut = 2.0*max(pars.a,pars.b);
+      resize_vec_N();
+      init_LL();
       iniStep=0;
     }
 
@@ -742,7 +736,7 @@ public:
           maxiy = rint(sqrt(ntype(pars.N)*(pars.a/(K*pars.b))/2.0));
           maxix = rint(ntype(maxiy)*K*pars.b/pars.a);
         }
-      resize_vectors();
+      resize_vec_N();
       if (pars.N > maxix*maxiy*2)
         {
           cerr << "ERROR N > available lattice sites\n";
@@ -926,8 +920,8 @@ public:
 #endif
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
+      resize_vec_N();
       init_LL();
-      resize_vectors();
       init_measures();
       boot_type=0;
       switch (type)

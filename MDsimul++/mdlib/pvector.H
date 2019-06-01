@@ -103,7 +103,7 @@ template <class ntype, int NT> class pvecdyns {
   //int nr, nc;
 public:
   constexpr static int dynamic = true;
-  static const int N;
+  static const int N=NT;
   ntype *v; 
   // copy assignment
   pvecdyns<ntype,NT>& operator=(const pvecdyns<ntype,NT>& v1)
@@ -135,13 +135,14 @@ public:
       v1.v=nullptr;
     }
 #endif
+#if 0
   // constructor
   pvecdyns(int NN)
     {
-      NN=NT;
+      N=NT;
       v = new ntype[NT];
     }
-
+#endif
   // default constructor
   pvecdyns()
     {
@@ -160,7 +161,7 @@ template <class ntype, int NT> class pvecdynp {
 public:
   constexpr static int dynamic = true;
   ntype *v=nullptr; 
-  int N;
+  int N=0;
   bool dealloc=true;
   // copy assignment
   pvecdynp<ntype,NT>& operator=(const pvecdynp<ntype,NT>& v1)

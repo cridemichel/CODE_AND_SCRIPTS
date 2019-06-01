@@ -92,9 +92,10 @@ public:
     }
   void init(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize, ntype rc)
     {
-      int k;
-      part = P;
-      rect = R;
+      if (P!=nullptr)
+        part = P;
+      if (R!=nullptr)
+        rect = R;
       rcut = rc;
       L = boxsize;
       cellsx = L[0] / rcut;
@@ -104,26 +105,24 @@ public:
       parnum=part->size();
       cout << "parnum=" << parnum << "\n";
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
-      for (k=0; k < 2; k++)
-        {
-          inCell[k].allocate(parnum);
-          inCellBak[k].allocate(parnum);
-        }
-      cellList.allocate(parnum+cellsx*cellsy);
-      cellListBak.allocate(parnum+cellsx*cellsy);
+      resize_vectors();
     }
   void resize_vectors(void)
     {
       int k;
-      auto parnumold=parnum;
       parnum=part->size();
-      if (parnumold!=parnum)
+      int oldN=inCell[0].size();
+      if (oldN < parnum)
         {
           for (k=0; k < 2; k++)
             {
               inCell[k].resize(parnum);
               inCellBak[k].resize(parnum);
             }
+        }
+      int dimN = parnum+cellsx*cellsy;
+      if (cellList.size() < dimN)   
+        {
           cellList.resize(parnum+cellsx*cellsy);
           cellListBak.resize(parnum+cellsx*cellsy);
         }
