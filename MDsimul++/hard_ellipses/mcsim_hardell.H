@@ -349,8 +349,6 @@ class mcsim {
       i >> pars.L[1];
       i >> pars.a;
       i >> pars.b;
-      //if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
-        //  pars.a!=aold || pars.b!=bold)
       pars.rcut = 2.0*max(pars.a,pars.b);
       resize_vec_N();
       init_LL();
@@ -506,8 +504,8 @@ class mcsim {
       //cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       //cout << "P= " << pars.P << " T=" << pars.T << "\n";
       pars.rcut = 2.0*max(pars.a,pars.b);
-      resize_vec_N();
-      init_LL();
+      //resize_vec_N();
+      //init_LL();
       iniStep=0;
     }
 
