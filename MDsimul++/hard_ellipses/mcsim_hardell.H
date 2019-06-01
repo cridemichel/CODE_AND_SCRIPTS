@@ -356,7 +356,6 @@ class mcsim {
       if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
           pars.a!=aold || pars.b!=bold)
         {
-          assign_semiaxes();
           pars.rcut = 2.0*max(pars.a,pars.b);
           he.resize(pars.N);
           rect.resize(pars.N);
@@ -375,6 +374,8 @@ class mcsim {
           he[ip].nb = he[ip].na.orto();
           he[ip].a = pars.a;
           he[ip].b = pars.b;
+          rect[ip].sax[0] = pars.a;
+          rect[ip].sax[1] = pars.b;
           update_rect(ip);
         }
     }
