@@ -102,6 +102,7 @@ public:
       //cout << "L=" << L[0] << L[1] << " rcut=" << rcut << "\n";
       L2 = ntype(0.5)*boxsize;
       parnum=part->size();
+      cout << "parnum=" << parnum << "\n";
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
       for (k=0; k < 2; k++)
         {
@@ -110,6 +111,22 @@ public:
         }
       cellList.allocate(parnum+cellsx*cellsy);
       cellListBak.allocate(parnum+cellsx*cellsy);
+    }
+  void resize_vectors(void)
+    {
+      int k;
+      auto parnumold=parnum;
+      parnum=part->size();
+      if (parnumold!=parnum)
+        {
+          for (k=0; k < 2; k++)
+            {
+              inCell[k].resize(parnum);
+              inCellBak[k].resize(parnum);
+            }
+          cellList.resize(parnum+cellsx*cellsy);
+          cellListBak.resize(parnum+cellsx*cellsy);
+        }
     }
   void set_ini_numcells(void)
     {

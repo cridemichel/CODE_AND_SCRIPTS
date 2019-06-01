@@ -150,7 +150,8 @@ public:
   // destructor
   ~pvecdyns()
     {
-      delete[] v;
+      if (v!=nullptr)
+        delete[] v;
     }
 };	
 // template for a dynamic vector using dynamic allocation ptr (i.e. allocated with new)
@@ -158,7 +159,7 @@ template <class ntype, int NT> class pvecdynp {
   //int nr, nc;
 public:
   constexpr static int dynamic = true;
-  ntype *v; 
+  ntype *v=nullptr; 
   int N;
   bool dealloc=true;
   // copy assignment
@@ -214,7 +215,7 @@ public:
   void deallocate()
     {
       if (v!=nullptr)
-      delete [] v;
+        delete [] v;
     }
   void resize(int NN)
     {
@@ -224,7 +225,8 @@ public:
       // initialize with all elements and 0 if larger
       for (auto i=0; i < NN; i++)
 	vt[i] = (i < N)?v[i]:0.0;
-      delete [] v;
+      if (v!=nullptr)
+        delete [] v;
       N=NN;
       v=vt;
       //v = vt;
@@ -239,7 +241,8 @@ public:
     {
       if (dealloc==true)
         {
-          delete[] v;
+          if (v!=nullptr)
+            delete[] v;
         }
     }
 };

@@ -391,8 +391,8 @@ public:
 template <class ntype,int NT, int MT> class pmatrixdp {
   //int nr, nc;
 public:
-  ntype **m; // N riga M colonna
-  ntype *pm;
+  ntype **m=nullptr; // N riga M colonna
+  ntype *pm=nullptr;
   int N, M;
   // copy assignment
   pmatrixdp<ntype,NT,MT>& operator=(const pmatrixdp<ntype,NT,MT>& m1)
@@ -499,8 +499,10 @@ public:
 	  {
 	    mt[i][j] = (i < N && j < M)?m[i][j]:0.0;
 	  }
-      delete [] m;
-      delete [] pm;
+      if (m!=nullptr)
+        delete [] m;
+      if (pm!=nullptr)
+        delete [] pm;
       N=NN;
       M=MM;
       m = mt;
