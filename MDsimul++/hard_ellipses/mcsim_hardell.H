@@ -413,7 +413,7 @@ class mcsim {
     {
       static unsigned int w=0;
       state.curStep = tt;
-      if (tt > 0 && pars.saverest > 0 && tt % pars.saverest == 0)
+      if (tt != iniStep && pars.saverest > 0 && tt % pars.saverest == 0)
         {
           sprintf(rfn, "restart-%u", w);
           restorefile.open(rfn,ios::out|ios::trunc);
@@ -441,14 +441,14 @@ class mcsim {
       ofstream of;
       of.open("v.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
-      if (tt!=0 && tt%pars.savemeas==0)
+      if (tt!=iniStep && tt%pars.savemeas==0)
         {
           of << tt << " " << setprecision(16) << pars.L[0]*pars.L[1] << "\n";
         }
       of.close();
       of.open("phi.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
-      if (tt!=0 && tt%pars.savemeas==0)
+      if (tt!=iniStep && tt%pars.savemeas==0)
         {
           of << tt << " " << setprecision(16) << calc_phi() << "\n";
         }
@@ -466,7 +466,7 @@ class mcsim {
           msd+=dr*dr;
         }
       msd /= ntype(pars.N);
-      if (tt!=0 && tt%pars.savemeas==0)
+      if (tt!=iniStep && tt%pars.savemeas==0)
         {
           of << tt << " " << setprecision(16) << msd << "\n";
         }
@@ -553,8 +553,18 @@ public:
             {
               r0[i] = he[i].r;
               cross[i] << 0,0;
+              //cerr << "r(" << i << ")=" << r0[i][0] << " " << r0[i][1] << "\n"; 
             }
         }
+#if 0
+      else
+        {
+          for (auto i=0; i < pars.N; i++)
+            {
+              cerr << "r(" << i << ")=" << r0[i][0] << " " << r0[i][1] << "\n"; 
+            } 
+        }
+#endif
     }
   void run(void)
     {
