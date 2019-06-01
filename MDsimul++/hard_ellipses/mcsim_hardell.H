@@ -41,7 +41,7 @@ class mcsim {
       rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
       if (pars.simtype==1 || pars.simtype==2)
         volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
-      if (pars.adjsteps < 0 || pars.curStep <= pars.adjsteps)
+      if (pars.adjsteps >= 0 || pars.curStep <= pars.adjsteps)
         { 
           if (pars.targetAccept > 0.0 && state.curStep % pars.resetaccept==0)
             {
@@ -402,6 +402,24 @@ class mcsim {
           save_snap_str(sfn); 
         }
     }
+  void write_msd(fstream &o)
+    {
+      for (auto i=0; i < pars.N; i++)
+        {
+          o << setprecision(20) << r0[i][0] << " " << r0[i][1] << " " << cross[i][0] << " " 
+            << cross[i][1] << "\n";
+        }
+    }
+  void read_msd(fstream &is)
+    {
+      for (auto i=0; i < pars.N; i++)
+        {
+          is >> r0[i][0];
+          is >> r0[i][1];
+          is >> cross[i][0];
+          is >> cross[i][1];
+        }
+    }
   void save_restart(long long int tt)
     {
       static unsigned int w=0;
@@ -413,6 +431,7 @@ class mcsim {
           pars.write(restorefile);
           state.write(restorefile);
           write_coords(restorefile);
+          write_msd(restorefile);
           restorefile.close();
           w = (~w)&1;
         }
@@ -491,12 +510,13 @@ class mcsim {
       init_LL();
       cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       cout << "P= " << pars.P << " T=" << pars.T << "\n";
-      init_measures();
+      //init_measures();
       iniStep=0;
     }
 
 public:
   long long int iniStep;
+  int simtype; // 0=createconf 1=restart 2=read initial conf
   const char *parsfilestr="hepars.asc";
   params<ntype> pars;
   simstate<ntype> state;
@@ -532,10 +552,13 @@ public:
     }
   void prepare_observables(void)
     {
-      for (auto i=0; i < pars.N; i++)
+      if (simtype!=1)
         {
-          r0[i] = he[i].r;
-          cross[i] << 0,0;
+          for (auto i=0; i < pars.N; i++)
+            {
+              r0[i] = he[i].r;
+              cross[i] << 0,0;
+            }
         }
     }
   void run(void)
@@ -591,19 +614,23 @@ public:
       state.read(restorefile);
       pars.curStep = state.curStep;
       read_coords(restorefile);
+      read_msd(restorefile);
       restorefile.close();
       //cout << "state.curStep=" << state.curStep << "\n";
       cout << "semi-axes=" << pars.a << " " << pars.b << "\n";
       iniStep = pars.curStep;
       build_LL();
+      simtype=1; // 1=restart;
     }
   void readconf(string& icn)
     {
+      init_measures();
       inicfile.open(icn.c_str(),ios::in);
       // read ascii iniconf here 
       read_coords(inicfile);
       inicfile.close();
       build_LL();
+      simtype=2;
     }
   void place_on_square_lattice(bool maxphi=true)
     { 
@@ -896,6 +923,8 @@ public:
 #endif
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
+      init_measures();
+      simtype=2;
       switch (type)
         {
         case 0:
