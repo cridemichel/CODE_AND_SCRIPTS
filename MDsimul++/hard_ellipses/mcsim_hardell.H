@@ -724,7 +724,7 @@ public:
       int i=0, ix, iy;
       // assum pars.a > pars.b 
 
-      ellLL.set_ini_numcells();
+      //ellLL.set_ini_numcells();
       K=sqrt(3.0);
       if (maxix > 0 && maxiy > 0)
         {
@@ -810,7 +810,8 @@ public:
       cerr << "phi=" << phi << " N=" << pars.N << "\n";
       if (save)
         save_snap_str("cnf-trianglattice");
-      ellLL.update_numcells(pars.L);
+      //ellLL.update_numcells(pars.L);
+      init_LL();
       build_LL();
     }
 #if 0
