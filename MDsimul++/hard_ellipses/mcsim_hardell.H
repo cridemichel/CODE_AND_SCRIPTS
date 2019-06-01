@@ -362,7 +362,7 @@ class mcsim {
           rect.resize(pars.N);
           r0.resize(pars.N);
           cross.resize(pars.N);
-          init_LL();
+          ellLL.init(nullptr,nullptr,pars.L,pars.rcut,true);
         }
 
       for (auto ip=0; ip < pars.parnum; ip++)
