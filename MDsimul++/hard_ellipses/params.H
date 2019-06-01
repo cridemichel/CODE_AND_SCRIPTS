@@ -38,6 +38,7 @@ public:
   long long int curStep;
   ntype targetAccept, targetAcceptVol;
   long long int adjsteps, outsteps, resetaccept, resetacceptVol; 
+  ntype maxmsd;
   char fnt[256];
   ntype targetPhi;
   params()
@@ -61,7 +62,8 @@ public:
       resetacceptVol = 10000;
       curStep=0;
       targetPhi=-1; //<= 0 means disabled
-   }
+      maxmsd = -1;// equilibration
+    }
   void write(fstream& o)
     {
       o << simtype << " ";
@@ -86,6 +88,7 @@ public:
       o << resetaccept << " ";
       o << resetacceptVol << "\n";
       o << targetPhi << "\n";
+      o << maxmsd << "\n";
     }
   void read(fstream& i)
     {
@@ -111,6 +114,7 @@ public:
       i >> resetaccept;
       i >> resetacceptVol;
       i >> targetPhi;
+      i >> maxmsd;
     }
   void readpars(const char *fn)
     {

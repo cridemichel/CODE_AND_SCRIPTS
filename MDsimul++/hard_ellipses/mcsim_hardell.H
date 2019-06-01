@@ -24,7 +24,7 @@ class mcsim {
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
-  ntype acceptance, traaccept, rotaccept, volaccept;
+  ntype acceptance, traaccept, rotaccept, volaccept, msd;
   pvector<int,2> crossed;
   void update_all_rect(void)
     {
@@ -455,7 +455,7 @@ class mcsim {
       of.close();
       of.open("msd.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
-      ntype msd=0;
+      msd=0;
       pvector<ntype,2> dr;
 
       for (auto i=0; i < pars.N; i++)
@@ -507,6 +507,7 @@ class mcsim {
       //resize_vec_N();
       //init_LL();
       iniStep=0;
+      msd=0;
     }
 
 public:
@@ -606,6 +607,11 @@ public:
           outinfo(tt);
           if (pars.targetPhi > 0 && abs(calc_phi()-pars.targetPhi) < 1E-7)
             break;
+          if (pars.maxmsd > 0 && msd > pars.maxmsd)
+            {
+              cout << "Equilibration reached!\n";
+              break;
+            } 
         }
 
       save_snap_str("cnf-final");
