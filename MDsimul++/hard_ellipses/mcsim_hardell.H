@@ -516,7 +516,7 @@ class mcsim {
 
 public:
   long long int iniStep;
-  int simtype; // 0=createconf 1=restart 2=read initial conf
+  bool is_a_restart;
   const char *parsfilestr="hepars.asc";
   params<ntype> pars;
   simstate<ntype> state;
@@ -552,7 +552,7 @@ public:
     }
   void prepare_observables(void)
     {
-      if (simtype!=1)
+      if (is_a_restart==false)
         {
           for (auto i=0; i < pars.N; i++)
             {
@@ -620,7 +620,7 @@ public:
       cout << "semi-axes=" << pars.a << " " << pars.b << "\n";
       iniStep = pars.curStep;
       build_LL();
-      simtype=1; // 1=restart;
+      is_a_restart=true; 
     }
   void readconf(string& icn)
     {
@@ -630,7 +630,7 @@ public:
       read_coords(inicfile);
       inicfile.close();
       build_LL();
-      simtype=2;
+      is_a_restart=false;
     }
   void place_on_square_lattice(bool maxphi=true)
     { 
@@ -924,7 +924,7 @@ public:
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
       init_measures();
-      simtype=2;
+      is_a_restart=false;
       switch (type)
         {
         case 0:
