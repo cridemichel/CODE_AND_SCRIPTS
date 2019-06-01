@@ -342,28 +342,16 @@ class mcsim {
     }
   void read_coords(fstream& i)
     {
-      auto Nold = pars.N;
-      ntype aold, bold;
-      aold = pars.a;
-      bold = pars.b;
-      pvector<ntype,2> Lold;
-      Lold=pars.L;
       i >> pars.N;
       i >> pars.L[0];
       i >> pars.L[1];
       i >> pars.a;
       i >> pars.b;
-      if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
-          pars.a!=aold || pars.b!=bold)
-        {
-          pars.rcut = 2.0*max(pars.a,pars.b);
-          he.resize(pars.N);
-          rect.resize(pars.N);
-          r0.resize(pars.N);
-          cross.resize(pars.N);
-          ellLL.init(nullptr,nullptr,pars.L,pars.rcut,true);
-        }
-
+      //if (pars.N != Nold || Lold[0]!=pars.L[0] || Lold[1]!=pars.L[1]||
+        //  pars.a!=aold || pars.b!=bold)
+      pars.rcut = 2.0*max(pars.a,pars.b);
+      resize_vectors();
+      init_LL();
       for (auto ip=0; ip < pars.parnum; ip++)
         {
           // save axis a
@@ -496,19 +484,28 @@ class mcsim {
  
         } 
     }
-  void init(void)
+  void resize_vectors(void)
     {
       rect.resize(pars.N);
       he.resize(pars.N);
       r0.resize(pars.N);
       cross.resize(pars.N);
+    }
+  void init(void)
+    {
+#if 0
+      rect.resize(pars.N);
+      he.resize(pars.N);
+      r0.resize(pars.N);
+      cross.resize(pars.N);
+#endif
       if (pars.seed >= 0)
         srand48(pars.seed);
       else
         srand48(time(NULL));
-      assign_semiaxes();
-      pars.rcut = 2.0*max(pars.a,pars.b);
-      init_LL();
+      //assign_semiaxes();
+      //pars.rcut = 2.0*max(pars.a,pars.b);
+      //init_LL();
       cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       cout << "P= " << pars.P << " T=" << pars.T << "\n";
       //init_measures();
@@ -517,7 +514,7 @@ class mcsim {
 
 public:
   long long int iniStep;
-  bool is_a_restart;
+  int boot_type;//0=create conf 1=restart 2=read conf
   const char *parsfilestr="hepars.asc";
   params<ntype> pars;
   simstate<ntype> state;
@@ -553,7 +550,7 @@ public:
     }
   void prepare_observables(void)
     {
-      if (is_a_restart==false)
+      if (boot_type!=1) // 1=restart
         {
           for (auto i=0; i < pars.N; i++)
             {
@@ -621,7 +618,7 @@ public:
       cout << "semi-axes=" << pars.a << " " << pars.b << "\n";
       iniStep = pars.curStep;
       build_LL();
-      is_a_restart=true; 
+      boot_type=1; 
     }
   void readconf(string& icn)
     {
@@ -631,7 +628,7 @@ public:
       read_coords(inicfile);
       inicfile.close();
       build_LL();
-      is_a_restart=false;
+      boot_type=2;
     }
   void place_on_square_lattice(bool maxphi=true)
     { 
@@ -924,8 +921,10 @@ public:
 #endif
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
+      resize_vectors();
+      init_LL();
       init_measures();
-      is_a_restart=false;
+      boot_type=0;
       switch (type)
         {
         case 0:
