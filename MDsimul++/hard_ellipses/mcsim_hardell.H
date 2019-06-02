@@ -20,11 +20,12 @@ class mcsim {
   vector<rectangle<ntype>> rect; 
   vector<hardell<ntype>> he;
   vector<pvector<ntype,2>> r0;
+  vector<ntype> dth;
   vector<pvector<int,2>> cross;
   linked_cell_lists_2d<hardell<ntype>,rectangle<ntype>> ellLL;
   pvector<ntype,2> rold;
   pvector<ntype,2> naold, nbold;
-  ntype acceptance, traaccept, rotaccept, volaccept, msd;
+  ntype acceptance, traaccept, rotaccept, volaccept, msd, dth_i;
   pvector<int,2> crossed;
   void update_all_rect(void)
     {
@@ -111,6 +112,10 @@ class mcsim {
       if (delr[1]!=0)
         crossed[1] = (int)copysign(1.0,delr[1]);
     }
+  void update_rotmsd(int ip)
+    {
+      dth[ip] += dth_i;
+    }
   int random_move(int ip) // return move type 0=tra 1=rot
     {
       ntype p;
@@ -126,10 +131,12 @@ class mcsim {
         }
       else
         {
-          he[ip].rot_move(pars.delrot);
+          dth_i=he[ip].rot_move(pars.delrot);
+          //cout << "dth=" << dth_i << "\n";
           pbc(ip);
           update_rect(ip);
           state.rotmoves++;
+          //update_rotmsd(ip);    
           return 1;
         } 
     }
@@ -194,7 +201,10 @@ class mcsim {
           // reject move
         }
       if (!reject)
-        adjust_cross(ip); 
+        {
+          adjust_cross(ip);
+          update_rotmsd(ip);
+        } 
       //cout << "attempt to move ip=" << ip << "END\n";
     }
   
@@ -396,7 +406,7 @@ class mcsim {
       for (auto i=0; i < pars.N; i++)
         {
           o << setprecision(20) << r0[i][0] << " " << r0[i][1] << " " << cross[i][0] << " " 
-            << cross[i][1] << "\n";
+            << cross[i][1] << " " << dth[i] <<"\n";
         }
     }
   void read_msd(fstream &is)
@@ -407,6 +417,7 @@ class mcsim {
           is >> r0[i][1];
           is >> cross[i][0];
           is >> cross[i][1];
+          is >> dth[i];
         }
     }
   void save_restart(long long int tt)
@@ -434,6 +445,8 @@ class mcsim {
       of.open("phi.dat", ios::trunc);
       of.close();
       of.open("msd.dat", ios::trunc);
+      of.close();
+      of.open("rotmsd.dat", ios::trunc);
       of.close();
     }
   void save_measures(long long int tt)
@@ -471,6 +484,19 @@ class mcsim {
           of << tt << " " << setprecision(16) << msd << "\n";
         }
       of.close();
+      of.open("rotmsd.dat",ios::app);
+      // save observables, e.g. energy, volume, pressure, etc...
+      ntype dthtot=0;
+      for (auto i=0; i < pars.N; i++)
+        {
+          dthtot+=dth[i]*dth[i];
+        }
+      dthtot /= ntype(pars.N);
+      if (tt!=iniStep && tt%pars.savemeas==0)
+        {
+          of << tt << " " << setprecision(16) << dthtot << "\n";
+        }
+      of.close();
     }
   void outinfo(long long int tt)
     {
@@ -493,6 +519,7 @@ class mcsim {
           he.resize(pars.N);
           r0.resize(pars.N);
           cross.resize(pars.N);
+          dth.resize(pars.N);
         }
     }
   void init(void)
@@ -609,7 +636,7 @@ public:
             break;
           if (pars.maxmsd > 0 && msd > pars.maxmsd)
             {
-              cout << "Equilibration reached!\n";
+              cout << "Equilibration reached (msd=" << msd << ")\n";
               break;
             } 
         }

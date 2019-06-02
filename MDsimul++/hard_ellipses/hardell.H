@@ -53,15 +53,17 @@ public:
       r[0]+= dx;
       r[1]+= dy;
     }
-  void rot_move(ntype dth)
+  ntype rot_move(ntype dthM)
     {
       pmatrixq<ntype,2> M;// 2d rotation matrix where dth is the rotation angle 
+      ntype dth=(ranf()-0.5)*dthM;
       ntype costh = cos(dth), sinth=sin(dth);
       M << costh, -sinth, sinth, costh;
       na = M*na;
       nb = M*nb;      
       na.normalize();
       nb.normalize();
+      return dth;
     }
   void random_box(ntype Lbox)
     {
