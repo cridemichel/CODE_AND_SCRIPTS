@@ -21,6 +21,7 @@ then
 echo "Check disabled..."
 exit
 fi
+echo "Checking..."
 while [ $IR -lt 300 ]
 do
 #calc_veff_hardell <trials> <X0> <NUMR> <ir> <savett>
@@ -29,24 +30,31 @@ then
 continue
 fi
 cd ${PERC}/IR_$IR
-EN="veff_IR_$IR"
-ISRUN=`ps ax | grep $EN| grep mosrun`
+EN="veff_IR_${IR}"
+ISRUN=`ps ax | grep -e "$EN " | grep mosrun`
+#echo "ISRUN=" $ISRUN
 if [ "$ISRUN" == "" ]
 then
-echo "IR=" $IR " is not running, I will restart it"
 if [ -e "calcveff.chk" ]
 then
-nohup mosrun ./$EN $TOTT $X0 $NUMR $IR $ST > screen_$I & 
+echo "IR=" $IR " is not running, I will restart it"
+#cp ../$EXE .
+/usr/bin/nohup /bin/mosrun ./$EN $TOTT $X0 $NUMR $IR $ST >> screen_$IR & 
 IR=$[$[IR]+1]
-sleep 0.2
+sleep 0.5
 continue
 fi
 if [ ! -e "calcveff.chk" ] 
 then
-nohup mosrun ./$EN 0 >> screen_$IR & 
+#echo  "IR_" $IR " "
+FINE=`tail -n 1 veff*dat| grep 99900000000`
+if [ "$FINE" == "" ]
+then
+/usr/bin/nohup /bin/mosrun ./$EN $TOTT $X0 $NUMR $IR $ST > screen_$IR & 
 IR=$[$[IR]+1]
-sleep 0.2
+sleep 0.5
 continue
+fi
 fi
 fi
 IR=$[$[IR]+1]
