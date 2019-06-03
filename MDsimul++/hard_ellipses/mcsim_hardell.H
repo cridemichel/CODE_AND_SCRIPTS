@@ -7,7 +7,7 @@
 #include "../mdlib/linked_cell_lists.H"
 #include <time.h>
 #include "./params.H"
-/* N.B. per restart basta prendere o il file di restart ascii più recente
+/* N.B. per il restart basta prendere o il file di restart ascii più recente
  * oppure quello che ha il numero di campi maggiori calcolati così
  * NF=`awk '{numf+=NF} END {print numf}'`*/
 template <class ntype>
