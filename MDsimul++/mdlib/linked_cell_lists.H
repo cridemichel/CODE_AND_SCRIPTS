@@ -181,10 +181,9 @@ public:
           inCell[1][i] = inCellBak[1][i];
         }
     }
-  vector<int> get_neighbours(int ip)
+  void get_neighbours(int ip)
     {
       check_overlap(ip,-1,false,true);
-      return lista_vicini;
     }
   bool check_overlap(int ip, int nb=-1, bool debug=false, bool getlist=false)
     {
@@ -239,6 +238,7 @@ public:
                       if (getlist==true)
                         {
                           lista_vicini.push_back(n);
+                          (*part)[n].shift = shift;
                         }
                       else
                         {

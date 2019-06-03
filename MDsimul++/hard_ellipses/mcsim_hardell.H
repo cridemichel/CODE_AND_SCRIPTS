@@ -501,7 +501,7 @@ class mcsim {
         }
       of.close();
       if (tt!=iniStep && tt%pars.savemeas==0)
-       calc_hex_ordpar(10.0);
+       calc_hex_ordpar(3*pars.b);
     }
   void outinfo(long long int tt)
     {
@@ -998,16 +998,23 @@ public:
       vector<int> lnn;
       for (i=0; i < pars.N; i++)
         {
-          lnn=ellLL.get_neighbours(i);
-          for (auto & el: lnn)
+          ellLL.get_neighbours(i);
+          for (auto & el: ellLL.lista_vicini)
             {
-              auto d = he[i].r - he[el].r;
+              auto d = he[i].r - (he[el].r + he[el].shift);
               if (d*d < rcut*rcut)
                 {
-                  cout << "found i=" << el << "\n";
+                  //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
                 }
             }
           //cout << "fine\n";
+        }
+    }
+  void calc_transl_order(void)
+    {
+      for (auto i=0; i < pars.N; i++)
+        {
+
         }
     }
 };
