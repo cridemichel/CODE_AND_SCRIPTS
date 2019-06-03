@@ -82,6 +82,7 @@ class linked_cell_lists_2d
       return false;
     }
 public:
+  vector<int> lista_vicini;
   linked_cell_lists_2d(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize)
     {
       init(P,R,boxsize);    
@@ -106,6 +107,7 @@ public:
       cout << "parnum=" << parnum << "\n";
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
       resize_vectors();
+      lista_vicini.reserve(8);
     }
   void resize_vectors(void)
     {
@@ -179,7 +181,12 @@ public:
           inCell[1][i] = inCellBak[1][i];
         }
     }
-  bool check_overlap(int ip, int nb=-1, bool debug=false)
+  vector<int> get_neighbours(int ip)
+    {
+      check_overlap(ip,-1,false,true);
+      return lista_vicini;
+    }
+  bool check_overlap(int ip, int nb=-1, bool debug=false, bool getlist=false)
     {
       int kk, iX, jX, iY, jY, n, na;
       int cellRange[4];
@@ -190,7 +197,12 @@ public:
           cellRange[2*kk]   = - 1;
           cellRange[2*kk+1] =   1;
         }
-
+      if (getlist==true)
+        {
+          lista_vicini.clear();
+          //cout << "size=" <<lista_vicini.size()<< "\n";
+          //cout << "capacity=" << lista_vicini.capacity()<< "\n";
+        }
       for (iY = cellRange[2]; iY <= cellRange[3]; iY++) 
         {
           jY = inCell[1][na] + iY;    
@@ -224,27 +236,34 @@ public:
                 {
                   if (n != na && n != nb && (nb >= -1 || n < na)) 
                     {
-                      if (overlap_two(na, n, shift)==true)
+                      if (getlist==true)
                         {
-                          if (debug==true)
+                          lista_vicini.push_back(n);
+                        }
+                      else
+                        {
+                          if (overlap_two(na, n, shift)==true)
                             {
-                              (*part)[n].shift = shift;
-                              pvector<ntype,2> rij;
-                              rij = (*part)[na].r - 
-                                ((*part)[n].r + (*part)[n].shift);
-                              rij.show("rij=");
-                              cout << "dist=" << rij.norm() << "\n";
-                              (*part)[na].r.show("rA=");
-                              (*part)[na].na.show("nA=");
-                              (*part)[na].nb.show("nA=");
-                              (*part)[n].r.show("rB=");
-                              (*part)[n].na.show("nB=");
-                              (*part)[n].nb.show("nB=");
-                              (*part)[na].shift.show("shiftA=");
-                              (*part)[n].shift.show("shiftB=");
+                              if (debug==true)
+                                {
+                                  (*part)[n].shift = shift;
+                                  pvector<ntype,2> rij;
+                                  rij = (*part)[na].r - 
+                                    ((*part)[n].r + (*part)[n].shift);
+                                  rij.show("rij=");
+                                  cout << "dist=" << rij.norm() << "\n";
+                                  (*part)[na].r.show("rA=");
+                                  (*part)[na].na.show("nA=");
+                                  (*part)[na].nb.show("nA=");
+                                  (*part)[n].r.show("rB=");
+                                  (*part)[n].na.show("nB=");
+                                  (*part)[n].nb.show("nB=");
+                                  (*part)[na].shift.show("shiftA=");
+                                  (*part)[n].shift.show("shiftB=");
+                                }
+                              //cout << "overlap found na=" << na << " n=" << n << "\n";
+                              return true;
                             }
-                          //cout << "overlap found na=" << na << " n=" << n << "\n";
-                          return true;
                         }
                     }
                 } 

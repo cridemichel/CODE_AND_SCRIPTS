@@ -500,6 +500,8 @@ class mcsim {
           of << tt << " " << setprecision(16) << dthtot << "\n";
         }
       of.close();
+      if (tt!=iniStep && tt%pars.savemeas==0)
+       calc_hex_ordpar(10.0);
     }
   void outinfo(long long int tt)
     {
@@ -990,5 +992,22 @@ public:
             }
         }
     }
-  
+  void calc_hex_ordpar(ntype rcut)
+    {
+      int i;
+      vector<int> lnn;
+      for (i=0; i < pars.N; i++)
+        {
+          lnn=ellLL.get_neighbours(i);
+          for (auto & el: lnn)
+            {
+              auto d = he[i].r - he[el].r;
+              if (d*d < rcut*rcut)
+                {
+                  cout << "found i=" << el << "\n";
+                }
+            }
+          //cout << "fine\n";
+        }
+    }
 };
