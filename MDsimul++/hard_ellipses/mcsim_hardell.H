@@ -500,8 +500,6 @@ class mcsim {
           of << tt << " " << setprecision(16) << dthtot << "\n";
         }
       of.close();
-      if (tt!=iniStep && tt%pars.savemeas==0)
-       calc_hex_ordpar(3*pars.b);
     }
   void outinfo(long long int tt)
     {
@@ -512,7 +510,8 @@ class mcsim {
           cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
             cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
- 
+          cout << "psitra=" << calc_transl_order() << "\n";
+   
         } 
     }
   void resize_vec_N(void)
@@ -992,7 +991,7 @@ public:
             }
         }
     }
-  void calc_hex_ordpar(ntype rcut)
+  ntype calc_hex_ordpar(ntype rcut)
     {
       int i;
       vector<int> lnn;
@@ -1017,15 +1016,15 @@ public:
       psi /= (ntype)pars.N;
       return abs(psi);
     }
-  void calc_transl_order(void)
+  ntype calc_transl_order(void)
     {
-      const pvector<ntype,2> G;
+      pvector<ntype,2> G;
       complex<ntype> psi;
       psi=0;
-      G << 2.0*M_PI/pars.L[0], 2.0*M_PI/pars.L[1];
+      G << 2.0*M_PI/pars.L[0], 0;//2.0*M_PI/pars.L[1];
       for (auto i=0; i < pars.N; i++)
         {
-          psi += complex<ntype>(cos(G*he[i].r),sin(G*he[i].r));
+          psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
         }
       psi /= (ntype)pars.N;
       return abs(psi);
