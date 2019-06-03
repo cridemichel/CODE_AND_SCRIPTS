@@ -30,6 +30,7 @@ class mcsim {
   pvector<ntype,2> naold, nbold;
   ntype acceptance, traaccept, rotaccept, volaccept, msd, dth_i;
   pvector<int,2> crossed;
+  //pvector<ntype,2> b1, b2;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -510,8 +511,7 @@ class mcsim {
           cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
             cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
-          cout << "psitra=" << calc_transl_order() << "\n";
-   
+          //cout << "psitra=" << calc_transl_order() << "\n";
         } 
     }
   void resize_vec_N(void)
@@ -579,6 +579,16 @@ public:
     }
   void prepare_observables(void)
     {
+#if 0
+      // calculate primtive vectors of reciprocal lattice
+      pmatrixq<ntype, 2> R;
+      R << 0, 1, -1, 0;// 90 deg rotation matrix
+      pvector<ntype,2> a1, a2; // direct lattice primitive vectors
+      a1 << 1,0;
+      a2 << 0, sqrt(3.0);
+      b1 = 2.0*M_PI*(R*a2)/(a1*(R*a2));
+      b2 = 2.0*M_PI*(R*a1)/(a2*(R*a1));
+#endif
       if (boot_type!=1) // 1=restart
         {
           for (auto i=0; i < pars.N; i++)
@@ -991,6 +1001,7 @@ public:
             }
         }
     }
+#if 0
   ntype calc_hex_ordpar(ntype rcut)
     {
       int i;
@@ -1021,7 +1032,9 @@ public:
       pvector<ntype,2> G;
       complex<ntype> psi;
       psi=0;
-      G << 2.0*M_PI/pars.L[0], 0;//2.0*M_PI/pars.L[1];
+      //b1.show("b1");
+      //b2.show("b2");
+      G = b2;
       for (auto i=0; i < pars.N; i++)
         {
           psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
@@ -1029,4 +1042,5 @@ public:
       psi /= (ntype)pars.N;
       return abs(psi);
     }
+#endif
 };
