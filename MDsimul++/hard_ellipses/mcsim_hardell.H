@@ -996,6 +996,9 @@ public:
     {
       int i;
       vector<int> lnn;
+      ntype theta;
+      complex<ntype> psi;
+      psi=0;
       for (i=0; i < pars.N; i++)
         {
           ellLL.get_neighbours(i);
@@ -1005,16 +1008,26 @@ public:
               if (d*d < rcut*rcut)
                 {
                   //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
+                  theta=0.0;
+                  psi += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
                 }
             }
           //cout << "fine\n";
         }
+      psi /= (ntype)pars.N;
+      return abs(psi);
     }
   void calc_transl_order(void)
     {
+      const pvector<ntype,2> G;
+      complex<ntype> psi;
+      psi=0;
+      G << 2.0*M_PI/pars.L[0], 2.0*M_PI/pars.L[1];
       for (auto i=0; i < pars.N; i++)
         {
-
+          psi += complex<ntype>(cos(G*he[i].r),sin(G*he[i].r));
         }
+      psi /= (ntype)pars.N;
+      return abs(psi);
     }
 };
