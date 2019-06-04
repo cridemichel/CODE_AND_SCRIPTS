@@ -37,7 +37,7 @@ class mcsim {
   pvector<ntype,2> naold, nbold;
   ntype acceptance, traaccept, rotaccept, volaccept, msd, dth_i;
   pvector<int,2> crossed;
-  //pvector<ntype,2> b1, b2;
+  pvector<ntype,2> b1, b2;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -522,6 +522,7 @@ class mcsim {
 
           build_neighbours_list();
           cout << "psi6=" << calc_hex_ordpar() << "\n";
+          cout << "PsiT=" << calc_transl_order() << "\n";
 #if 0
           build_neighbours_list();
           cout << "<<<[tt=" << tt << "] begin neigh of i=10\n";
@@ -605,8 +606,8 @@ public:
     }
   void prepare_observables(void)
     {
-#if 0
-      // calculate primtive vectors of reciprocal lattice
+#if 1
+      // calculate primitive vectors of reciprocal lattice
       pmatrixq<ntype, 2> R;
       R << 0, 1, -1, 0;// 90 deg rotation matrix
       pvector<ntype,2> a1, a2; // direct lattice primitive vectors
@@ -1153,7 +1154,7 @@ public:
       psi=0;
       //b1.show("b1");
       //b2.show("b2");
-      G << 1,0;
+      G = b2;
       for (auto i=0; i < pars.N; i++)
         {
           psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
