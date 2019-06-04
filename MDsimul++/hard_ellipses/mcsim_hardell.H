@@ -519,6 +519,9 @@ class mcsim {
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
             cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
           //cout << "psitra=" << calc_transl_order() << "\n";
+
+          build_neighbours_list();
+          cout << "psi6=" << calc_hex_ordpar() << "\n";
 #if 0
           build_neighbours_list();
           cout << "<<<[tt=" << tt << "] begin neigh of i=10\n";
@@ -1115,7 +1118,7 @@ public:
             }
         }
     }
-  ntype calc_ordpar(ntype rcut)
+  ntype calc_hex_ordpar(ntype rcut)
     {
       int i;
       vector<int> lnn;
@@ -1128,7 +1131,7 @@ public:
             {
               auto d = he[i].r - (he[el].r + he[el].shift);
               //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
-              theta=0.0;
+              theta=arcos(d.r[0]/d.norm());//angle with x-axis
               psi += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
             }
           //cout << "fine\n";
