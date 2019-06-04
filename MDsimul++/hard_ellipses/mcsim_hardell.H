@@ -1118,7 +1118,7 @@ public:
             }
         }
     }
-  ntype calc_hex_ordpar(ntype rcut)
+  ntype calc_hex_ordpar(void)
     {
       int i;
       vector<int> lnn;
@@ -1131,7 +1131,7 @@ public:
             {
               auto d = he[i].r - (he[el].r + he[el].shift);
               //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
-              theta=arcos(d.r[0]/d.norm());//angle with x-axis
+              theta=acos(d[0]/d.norm());//angle with x-axis
               psi += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
             }
           //cout << "fine\n";
