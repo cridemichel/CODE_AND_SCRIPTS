@@ -610,11 +610,26 @@ public:
       // calculate primitive vectors of reciprocal lattice
       pmatrixq<ntype, 2> R;
       R << 0, 1, -1, 0;// 90 deg rotation matrix
-      pvector<ntype,2> a1, a2; // direct lattice primitive vectors
+#if 0
+      pvector<ntype,3> a1, a2, a3; // direct lattice primitive vectors
+      pvector<ntype,3> r1, r2;
+
+      a1 << 1,0,0;
+      a2 << -0.5, sqrt(3.0)/2.0,0;
+      a3 << 0,0,1;
+      r1 = 2.0*M_PI*a2^a3/(a1*(a2^a3));
+      r2 = 2.0*M_PI*a3^a2/(a1*(a2^a3));
+      b1[0] = r1[0];
+      b1[1] = r1[1];
+      b2[0] = r2[0];
+      b2[1] = r2[1];
+#else
+      pvector<ntype,2> a1, a2;
       a1 << 1,0;
-      a2 << 0, sqrt(3.0);
+      a2 << -0.5, sqrt(3.0)/2.0;
       b1 = 2.0*M_PI*(R*a2)/(a1*(R*a2));
       b2 = 2.0*M_PI*(R*a1)/(a2*(R*a1));
+#endif
 #endif
       if (boot_type!=1) // 1=restart
         {
@@ -1152,8 +1167,8 @@ public:
       pvector<ntype,2> G;
       complex<ntype> psi;
       psi=0;
-      //b1.show("b1");
-      //b2.show("b2");
+      b1.show("b1");
+      b2.show("b2");
       G = b2;
       for (auto i=0; i < pars.N; i++)
         {
