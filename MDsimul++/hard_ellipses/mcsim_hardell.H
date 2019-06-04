@@ -522,6 +522,9 @@ class mcsim {
 
           build_neighbours_list();
           cout << "psi6=" << calc_hex_ordpar() << "\n";
+          b1.show("b1");
+          b2.show("b2");
+     
           cout << "PsiT=" << calc_transl_order() << "\n";
 #if 0
           build_neighbours_list();
@@ -1167,8 +1170,6 @@ public:
       pvector<ntype,2> G;
       complex<ntype> psi;
       psi=0;
-      b1.show("b1");
-      b2.show("b2");
       G = b2;
       for (auto i=0; i < pars.N; i++)
         {
