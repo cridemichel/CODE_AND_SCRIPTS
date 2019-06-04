@@ -7,6 +7,7 @@
 #include "../mdlib/linked_cell_lists.H"
 #include <time.h>
 #include "./params.H"
+#define CALC_ORDPAR
 #ifdef CALC_ORDPAR
 #include "delaunay/delaunator.hpp"
 #endif
@@ -1006,10 +1007,68 @@ public:
     }
 #ifdef CALC_ORDPAR
   // it uses delaunay triangulation to get nn list
-  vector<int> get_neighbours(int ip)
+  int nextHalfedge(int e) 
+    { 
+      return (e % 3 == 2) ? e - 2 : e + 1;
+    }
+  int prevHalfedge(int e) 
+    { 
+      return (e % 3 == 0) ? e + 2 : e - 1; 
+    }
+
+  vector<vector<int>> nl;
+  struct partBB
     {
-
-
+      int nx, ny;
+      int i;
+    };
+  void build_neighbours_list(void)
+    {
+      vector<double> coords;
+      vector<struct partBB> map2i;
+      /* ogni elemento di nl è un vettore con i primi vicini */
+      int ibb=0, nx, ny, N;
+      // duplicate box along +- x and +-y to get 
+      // a total of 9 boxes, so that delaunay triangulation
+      // will account for boundary conditions
+      N=pars.N*9;
+      nl.resize(N);
+      map2i.resize(N);
+      coords.resize(N*2);
+      for (auto i=0; i < pars.N; i++)
+        {
+          for (nx=-1; nx <= 1; nx++)
+            {
+              for (ny=-1; ny <= 1; ny++)
+                {
+                  coords[2*ibb] = he[i].r[0] + nx*pars.L[0];
+                  coords[2*ibb+1] = he[i].r[1] + ny*pars.L[1];
+                  /* ibb è l'indice delle particelle nel box esteso
+                   * che ne contiene 9*pars.N */
+                  map2i[ibb].i=i;
+                  map2i[ibb].nx=nx;
+                  map2i[ibb].ny=ny;
+                  ibb++;
+                }
+            }
+        }
+      delaunator::Delaunator d(coords);
+      /* build all neighbour lists */
+      for(std::size_t i = 0; i < d.triangles.size(); i++) 
+        {
+          /* N.B. scegliendo il next si va sempre in senso orario
+           * quindi si prendono tutti i vicini in questo modo
+           * scartando i doppioni */ 
+         if (map2i[i].nx==0 && map2i[i].ny==0)
+            {
+              /*  ibb=d.triangles(nextHalfedge(i)) è l'indice della particella
+               *  successiva nel triangolo a cui appartiene i
+               *  quindi map2i[ibb] è l'indice della corrispondente particella nel box di simulazione 
+               *  */
+              ibb = d.triangles[nextHalfedge(i)];
+              nl[map2i[i]].push_back(map2i[ibb].i);
+            }
+        }
     }
   ntype calc_ordpar(ntype rcut)
     {
@@ -1020,8 +1079,7 @@ public:
       psi=0;
       for (i=0; i < pars.N; i++)
         {
-          nn = get_neighbours(i);
-          for (auto & el: ellLL.lista_vicini)
+          for (auto & el: nl[i])
             {
               auto d = he[i].r - (he[el].r + he[el].shift);
               if (d*d < rcut*rcut)
