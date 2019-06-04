@@ -52,7 +52,9 @@ class mcsim {
       traaccept = ((ntype)(state.tramoves-state.trarej))/state.tramoves;
       rotaccept = ((ntype)(state.rotmoves-state.rotrej))/state.rotmoves; 
       if (pars.simtype==1 || pars.simtype==2)
-        volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
+        {
+          volaccept = ((ntype)(state.volmoves-state.volrej))/state.volmoves;
+        }
       if (pars.adjsteps >= 0 || pars.curStep <= pars.adjsteps)
         { 
           if (pars.targetAccept > 0.0 && state.curStep % pars.resetaccept==0)
@@ -613,12 +615,18 @@ public:
       // calculate primitive vectors of reciprocal lattice
       pmatrixq<ntype, 2> R;
       R << 0, 1, -1, 0;// 90 deg rotation matrix
+      pvector<ntype,2> fact;
+      //ntype phim = M_PI/(sqrt(3.0)*2.0);
+      fact[0] = 1.0;//pars.a*2.0;
+      fact[1] = 1.0;//pars.a*2.0;
+      //ntype cur_phi=pars.N*M_PI*pars.a*pars.a/(pars.L[0]*pars.L[1]);
+      //fact *= sqrt(phim/cur_phi);
 #if 1
       pvector<ntype,3> a1, a2, a3; // direct lattice primitive vectors
       pvector<ntype,3> r1, r2;
 
-      a1 << 1,0,0;
-      a2 << -0.5, sqrt(3.0)/2.0,0;
+      a1 << fact[0],0,0;
+      a2 << -0.5*fact[0], fact[1]*sqrt(3.0)/2.0,0;
       a3 << 0,0,1;
       r1 = 2.0*M_PI*a2^a3/(a1*(a2^a3));
       r2 = 2.0*M_PI*a3^a1/(a1*(a2^a3));
@@ -628,8 +636,8 @@ public:
       b2[1] = r2[1];
 #else
       pvector<ntype,2> a1, a2;
-      a1 << 1,0;
-      a2 << -0.5, sqrt(3.0)/2.0;
+      a1 << fact[0],0;
+      a2 << -0.5*fact[0], fact[1]*sqrt(3.0)/2.0;
       b1 = 2.0*M_PI*(R*a2)/(a1*(R*a2));
       b2 = 2.0*M_PI*(R*a1)/(a2*(R*a1));
 #endif
@@ -664,7 +672,7 @@ public:
         {
           state.curStep=tt;
           ntot=pars.parnum;
-          if (pars.simtype==1) //NPT
+          if (pars.simtype==1||pars.simtype==2) //NPT
             ntot+=1;
           ellLL.set_ini_numcells();
 
@@ -1165,12 +1173,38 @@ public:
       psi /= (ntype)pars.N;
       return abs(psi);
     }
+  ntype calc_avg_dist(void)
+    {
+      ntype dist=0, Ntot=0.0;
+      for (auto i=0; i < pars.N; i++)
+        {
+          he[i].shift << 0,0;
+          for (auto & el: neigh_list[i])
+            {
+              auto d = he[i].r - he[el].r;
+              he[el].shift << pars.L[0]*rint(d[0]/pars.L[0]), pars.L[1]*rint(d[1]/pars.L[1]);
+              d = d - he[el].shift;
+              dist += d.norm();
+              Ntot+=1.0;
+            }
+        }
+      dist /= Ntot;
+      return dist;
+    }
   ntype calc_transl_order(void)
     {
       pvector<ntype,2> G;
       complex<ntype> psi;
       psi=0;
-      G = b2;
+      auto a = calc_avg_dist();
+      // 
+      // N.B. calcolo la distanza media in modo da avere
+      // un fattore per riscalare il lattice esagonale unitario
+      // usato per calcolare i vettori primitivi del reticolo 
+      // inverso b1 e b2
+      //
+      cout << "average dist=" << a << "\n";
+      G = (1.0/a)*b1;
       for (auto i=0; i < pars.N; i++)
         {
           psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
