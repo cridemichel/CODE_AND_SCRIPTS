@@ -516,6 +516,14 @@ class mcsim {
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
             cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
           //cout << "psitra=" << calc_transl_order() << "\n";
+
+          build_neighbours_list();
+          cout << "<<<begin neigh of i=10\n";
+          for (auto &e: neigh_list[10])
+            {
+              cout << "i=" << e << "\n";
+            }
+          cout << "end>>>";
         } 
     }
   void resize_vec_N(void)
@@ -1016,7 +1024,7 @@ public:
       return (e % 3 == 0) ? e + 2 : e - 1; 
     }
 
-  vector<vector<int>> nl;
+  vector<vector<int>> neigh_list;
   struct partBB
     {
       int nx, ny;
@@ -1032,7 +1040,7 @@ public:
       // a total of 9 boxes, so that delaunay triangulation
       // will account for boundary conditions
       N=pars.N*9;
-      nl.resize(N);
+      neigh_list.resize(N);
       map2i.resize(N);
       coords.resize(N*2);
       for (auto i=0; i < pars.N; i++)
@@ -1051,24 +1059,26 @@ public:
                   ibb++;
                 }
             }
+          neigh_list[i].clear();
         }
       delaunator::Delaunator d(coords);
       /* build all neighbour lists */
-      for(std::size_t i = 0; i < d.triangles.size(); i++) 
+      for(std::size_t e = 0; e < d.triangles.size(); e++) 
         {
           /* N.B. scegliendo il next si va sempre in senso orario
            * quindi si prendono tutti i vicini in questo modo
            * scartando i doppioni */ 
-         if (map2i[i].nx==0 && map2i[i].ny==0)
+         if (map2i[e].nx==0 && map2i[e].ny==0)
             {
-              /*  ibb=d.triangles(nextHalfedge(i)) è l'indice della particella
-               *  successiva nel triangolo a cui appartiene i
+              /*  ibb=d.triangles(nextHalfedge(e)) è l'indice della particella
+               *  successiva nel triangolo a cui appartiene e
                *  quindi map2i[ibb] è l'indice della corrispondente particella nel box di simulazione 
                *  */
-              ibb = d.triangles[nextHalfedge(i)];
-              nl[map2i[i]].push_back(map2i[ibb].i);
+              ibb = d.triangles[nextHalfedge(e)];
+              neigh_list[map2i[e].i].push_back(map2i[ibb].i);
             }
         }
+        cout << "QUI\n";
     }
   ntype calc_ordpar(ntype rcut)
     {
@@ -1079,7 +1089,7 @@ public:
       psi=0;
       for (i=0; i < pars.N; i++)
         {
-          for (auto & el: nl[i])
+          for (auto & el: neigh_list[i])
             {
               auto d = he[i].r - (he[el].r + he[el].shift);
               if (d*d < rcut*rcut)
@@ -1101,7 +1111,7 @@ public:
       psi=0;
       //b1.show("b1");
       //b2.show("b2");
-      G = b2;
+      G << 1,0;
       for (auto i=0; i < pars.N; i++)
         {
           psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
