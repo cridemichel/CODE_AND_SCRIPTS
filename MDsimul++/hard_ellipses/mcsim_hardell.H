@@ -610,7 +610,7 @@ public:
       // calculate primitive vectors of reciprocal lattice
       pmatrixq<ntype, 2> R;
       R << 0, 1, -1, 0;// 90 deg rotation matrix
-#if 0
+#if 1
       pvector<ntype,3> a1, a2, a3; // direct lattice primitive vectors
       pvector<ntype,3> r1, r2;
 
@@ -618,7 +618,7 @@ public:
       a2 << -0.5, sqrt(3.0)/2.0,0;
       a3 << 0,0,1;
       r1 = 2.0*M_PI*a2^a3/(a1*(a2^a3));
-      r2 = 2.0*M_PI*a3^a2/(a1*(a2^a3));
+      r2 = 2.0*M_PI*a3^a1/(a1*(a2^a3));
       b1[0] = r1[0];
       b1[1] = r1[1];
       b2[0] = r2[0];
