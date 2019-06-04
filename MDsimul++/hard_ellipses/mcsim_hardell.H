@@ -9,6 +9,9 @@
 #include "./params.H"
 #define CALC_ORDPAR
 #ifdef CALC_ORDPAR
+#define ASSUME_ORIENTED_TRIANGLES
+#endif
+#ifdef CALC_ORDPAR
 #include "delaunay/delaunator.hpp"
 #endif
 /* N.B. per il restart basta prendere o il file di restart ascii più recente
@@ -518,17 +521,17 @@ class mcsim {
           //cout << "psitra=" << calc_transl_order() << "\n";
 #if 0
           build_neighbours_list();
-          cout << "<<<begin neigh of i=10\n";
+          cout << "<<<[tt=" << tt << "] begin neigh of i=10\n";
           for (auto i=0; i < pars.N; i++)
             {
               if (neigh_list[i].size() < 6)
-                cout << "problem for nnl of i=" << i << "\n";
+                cout << "[tt=" << tt  << "problem for nnl of i=" << i << "\n";
               else
-                cout << "number of neighbours=" << neigh_list[i].size() << "\n";
+                cout << "[tt=" << tt << "] number of neighbours=" << neigh_list[i].size() << "\n";
             }
           for (auto &e: neigh_list[10])
             {
-              cout << "i=" << e << "\n";
+              cout << "[tt=" << tt << "] i=" << e << "\n";
             }
           cout << "end>>>";
 #endif
@@ -1021,7 +1024,19 @@ public:
             }
         }
     }
+
 #ifdef CALC_ORDPAR
+#ifndef ASSUME_ORIENTED_TRIANGLES
+  bool exist_in_nnl(int i, int i_to_add)
+    {
+      for (auto &e: neigh_list[i])
+        {
+          if (i_to_add==e)
+            return true;
+        }
+      return false;
+    }
+#endif
   // it uses delaunay triangulation to get nn list
   int nextHalfedge(int e) 
     { 
@@ -1044,6 +1059,9 @@ public:
       vector<struct partBB> map2i;
       /* ogni elemento di nl è un vettore con i primi vicini */
       int ibb=0, nx, ny, N, ibb_next;
+#ifndef ASSUME_ORIENTED_TRIANGLES
+      int ibb_prev;
+#endif
       // duplicate box along +- x and +-y to get 
       // a total of 9 boxes, so that delaunay triangulation
       // will account for boundary conditions
@@ -1083,8 +1101,17 @@ public:
                *  successiva nel triangolo a cui appartiene e
                *  quindi map2i[ibb_next] è l'indice della corrispondente particella nel box di simulazione 
                *  */
+#ifdef ASSUME_ORIENTED_TRIANGLES
               ibb_next = d.triangles[nextHalfedge(e)];
               neigh_list[map2i[ibb].i].push_back(map2i[ibb_next].i);
+#else
+              ibb_next = d.triangles[nextHalfedge(e)];
+              if (!exist_in_nnl(map2i[ibb].i,map2i[ibb_next].i))
+                neigh_list[map2i[ibb].i].push_back(map2i[ibb_next].i);
+              ibb_prev = d.triangles[prevHalfedge(e)];
+              if (!exist_in_nnl(map2i[ibb].i,map2i[ibb_prev].i))
+                neigh_list[map2i[ibb].i].push_back(map2i[ibb_prev].i);
+#endif
             }
         }
     }
@@ -1100,12 +1127,9 @@ public:
           for (auto & el: neigh_list[i])
             {
               auto d = he[i].r - (he[el].r + he[el].shift);
-              if (d*d < rcut*rcut)
-                {
-                  //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
-                  theta=0.0;
-                  psi += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
-                }
+              //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
+              theta=0.0;
+              psi += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
             }
           //cout << "fine\n";
         }
