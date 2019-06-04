@@ -1123,18 +1123,25 @@ public:
       int i;
       vector<int> lnn;
       ntype theta;
-      complex<ntype> psi;
+      complex<ntype> psi, psi_i;
       psi=0;
       for (i=0; i < pars.N; i++)
         {
+          he[i].shift << 0,0;
+          psi_i=0;
           for (auto & el: neigh_list[i])
             {
-              auto d = he[i].r - (he[el].r + he[el].shift);
+              auto d = he[i].r - he[el].r;
+              he[el].shift << pars.L[0]*rint(d[0]/pars.L[0]), pars.L[1]*rint(d[1]/pars.L[1]);
+              d = d - he[el].shift;
               //cout << "found i=" << el << " dd=" << d*d << " rcut*rcut=" << rcut*rcut << "\n";
               theta=acos(d[0]/d.norm());//angle with x-axis
-              psi += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
+              psi_i += complex<ntype>(cos(6.0*theta),sin(6.0*theta));
             }
+          psi_i /= (ntype)neigh_list[i].size();
+          //cout << "Nj=" << neigh_list[i].size() << "\n";
           //cout << "fine\n";
+          psi += psi_i;
         }
       psi /= (ntype)pars.N;
       return abs(psi);
