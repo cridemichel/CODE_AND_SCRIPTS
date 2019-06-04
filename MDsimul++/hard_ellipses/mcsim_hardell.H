@@ -7,6 +7,9 @@
 #include "../mdlib/linked_cell_lists.H"
 #include <time.h>
 #include "./params.H"
+#ifdef CALC_ORDPAR
+#include "delaunay/delaunator.hpp"
+#endif
 /* N.B. per il restart basta prendere o il file di restart ascii più recente
  * oppure quello che ha il numero di campi maggiori calcolati così
  * NF=`awk '{numf+=NF} END {print numf}'`*/
@@ -1001,8 +1004,14 @@ public:
             }
         }
     }
-#if 0
-  ntype calc_hex_ordpar(ntype rcut)
+#ifdef CALC_ORDPAR
+  // it uses delaunay triangulation to get nn list
+  vector<int> get_neighbours(int ip)
+    {
+
+
+    }
+  ntype calc_ordpar(ntype rcut)
     {
       int i;
       vector<int> lnn;
@@ -1011,7 +1020,7 @@ public:
       psi=0;
       for (i=0; i < pars.N; i++)
         {
-          ellLL.get_neighbours(i);
+          nn = get_neighbours(i);
           for (auto & el: ellLL.lista_vicini)
             {
               auto d = he[i].r - (he[el].r + he[el].shift);
