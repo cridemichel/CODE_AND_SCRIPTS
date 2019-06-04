@@ -516,14 +516,22 @@ class mcsim {
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
             cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
           //cout << "psitra=" << calc_transl_order() << "\n";
-
+#if 0
           build_neighbours_list();
           cout << "<<<begin neigh of i=10\n";
+          for (auto i=0; i < pars.N; i++)
+            {
+              if (neigh_list[i].size() < 6)
+                cout << "problem for nnl of i=" << i << "\n";
+              else
+                cout << "number of neighbours=" << neigh_list[i].size() << "\n";
+            }
           for (auto &e: neigh_list[10])
             {
               cout << "i=" << e << "\n";
             }
           cout << "end>>>";
+#endif
         } 
     }
   void resize_vec_N(void)
@@ -1079,7 +1087,6 @@ public:
               neigh_list[map2i[ibb].i].push_back(map2i[ibb_next].i);
             }
         }
-        cout << "QUI\n";
     }
   ntype calc_ordpar(ntype rcut)
     {
