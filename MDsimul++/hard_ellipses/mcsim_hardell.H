@@ -1035,7 +1035,7 @@ public:
       vector<double> coords;
       vector<struct partBB> map2i;
       /* ogni elemento di nl è un vettore con i primi vicini */
-      int ibb=0, nx, ny, N;
+      int ibb=0, nx, ny, N, ibb_next;
       // duplicate box along +- x and +-y to get 
       // a total of 9 boxes, so that delaunay triangulation
       // will account for boundary conditions
@@ -1068,14 +1068,15 @@ public:
           /* N.B. scegliendo il next si va sempre in senso orario
            * quindi si prendono tutti i vicini in questo modo
            * scartando i doppioni */ 
-         if (map2i[e].nx==0 && map2i[e].ny==0)
+          ibb = d.triangles[e];
+          if (map2i[ibb].nx==0 && map2i[ibb].ny==0)
             {
-              /*  ibb=d.triangles(nextHalfedge(e)) è l'indice della particella
+              /*  ibb_next=d.triangles(nextHalfedge(e)) è l'indice della particella
                *  successiva nel triangolo a cui appartiene e
-               *  quindi map2i[ibb] è l'indice della corrispondente particella nel box di simulazione 
+               *  quindi map2i[ibb_next] è l'indice della corrispondente particella nel box di simulazione 
                *  */
-              ibb = d.triangles[nextHalfedge(e)];
-              neigh_list[map2i[e].i].push_back(map2i[ibb].i);
+              ibb_next = d.triangles[nextHalfedge(e)];
+              neigh_list[map2i[ibb].i].push_back(map2i[ibb_next].i);
             }
         }
         cout << "QUI\n";
