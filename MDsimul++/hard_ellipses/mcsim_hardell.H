@@ -34,7 +34,7 @@ class mcsim {
   pvector<ntype,2> naold, nbold;
   ntype acceptance, traaccept, rotaccept, volaccept, msd, dth_i;
   pvector<int,2> crossed;
-  pvector<ntype,2> b1, b2;
+  pvector<ntype,2> b1, b2, b1r90, b2r90;
   void update_all_rect(void)
     {
       for (auto i=0; i < pars.parnum; i++)
@@ -458,6 +458,10 @@ class mcsim {
       of.close();
       of.open("rotmsd.dat", ios::trunc);
       of.close();
+      of.open("psi6.dat", ios::trunc);
+      of.close();
+      of.open("psiT.dat", ios::trunc);
+      of.close();
     }
   void save_measures(long long int tt)
     {
@@ -505,6 +509,19 @@ class mcsim {
       if (tt!=iniStep && tt%pars.savemeas==0)
         {
           of << tt << " " << setprecision(16) << dthtot << "\n";
+        }
+      of.close();
+      build_neighbours_list();
+      of.open("psi6.dat",ios::app);
+      if (tt!=iniStep && tt%pars.savemeas==0)
+        {
+          of << tt << " " << setprecision(16) << calc_hex_ordpar() << "\n";
+        }
+      of.close();
+      of.open("psiT.dat",ios::app);
+      if (tt!=iniStep && tt%pars.savemeas==0)
+        {
+          of << tt << " " << setprecision(16) << calc_transl_order() << "\n";
         }
       of.close();
     }
@@ -631,6 +648,8 @@ public:
       b1[1] = r1[1];
       b2[0] = r2[0];
       b2[1] = r2[1];
+      b1r90=R*b1;
+      b2r90=R*b2;
 #else
       pvector<ntype,2> a1, a2;
       a1 << fact[0],0;
@@ -1196,7 +1215,7 @@ public:
   ntype calc_transl_order(void)
     {
       pvector<ntype,2> G;
-      complex<ntype> psi;
+      complex<ntype> psi, psi_r0, psi_r90;
       psi=0;
       auto a = calc_avg_dist();
       // 
@@ -1207,11 +1226,25 @@ public:
       //
 #if 1
      G = (1.0/a)*b1;
+     psi_r0=0;
      for (auto i=0; i < pars.N; i++)
        {
-         psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
+         psi_r0 += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
        }
-     psi /= (ntype)pars.N;
+     // we check also recipricola lattice vector rotate by 90 deg
+     G = (1.0/a)*b1r90;
+     psi_r0 /= (ntype) pars.N;
+     psi_r90=0;
+     for (auto i=0; i < pars.N; i++)
+       {
+         psi_r90 += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
+       }
+
+     psi_r90 /= (ntype)pars.N;
+     if (abs(psi_r0) > abs(psi_r90))
+       psi=psi_r0;
+     else
+       psi=psi_r90;
      return abs(psi);     
 #else
      complex<ntype> psimax=0;
