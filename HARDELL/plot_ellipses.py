@@ -5,6 +5,7 @@ Created on Wed Jun  5 14:24:44 2019
 
 @author: demichel
 """
+import math as m
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
@@ -30,7 +31,8 @@ with open(filename) as f:
         else:
             arr=line.strip('\n').split(' ')
             x=(float(arr[0]),float(arr[1]))
-            theta=np.arccos(float(arr[2]))
+            theta=180.0*np.arccos(float(arr[2]))/m.pi
+            #print ("theta=", theta)
             ell=Ellipse(x,da,db,theta)
             ax.add_patch(ell)
         nl = nl + 1
