@@ -462,69 +462,59 @@ class mcsim {
       of.close();
       of.open("psiT.dat", ios::trunc);
       of.close();
+      of.open("nem.dat", ios::trunc);
+      of.close();
     }
   void save_measures(long long int tt)
     {
       ofstream of;
-      of.open("volume.dat",ios::app);
-      // save observables, e.g. energy, volume, pressure, etc...
-      if (tt!=iniStep && tt%pars.savemeas==0)
-        {
-          of << tt << " " << setprecision(16) << pars.L[0]*pars.L[1] << "\n";
-        }
-      of.close();
-      of.open("phi.dat",ios::app);
-      // save observables, e.g. energy, volume, pressure, etc...
-      if (tt!=iniStep && tt%pars.savemeas==0)
-        {
-          of << tt << " " << setprecision(16) << calc_phi() << "\n";
-        }
-      of.close();
-      of.open("tramsd.dat",ios::app);
-      // save observables, e.g. energy, volume, pressure, etc...
-      msd=0;
-      pvector<ntype,2> dr;
 
-      for (auto i=0; i < pars.N; i++)
-        {
-          dr[0] = ntype(cross[i][0])*pars.L[0];
-          dr[1] = ntype(cross[i][1])*pars.L[1];
-          dr += he[i].r - r0[i];
-          msd+=dr*dr;
-        }
-      msd /= ntype(pars.N);
       if (tt!=iniStep && tt%pars.savemeas==0)
         {
+          of.open("volume.dat",ios::app);
+          // save observables, e.g. energy, volume, pressure, etc...
+          of << tt << " " << setprecision(16) << pars.L[0]*pars.L[1] << "\n";
+          of.close();
+          of.open("phi.dat",ios::app);
+          // save observables, e.g. energy, volume, pressure, etc...
+          of << tt << " " << setprecision(16) << calc_phi() << "\n";
+          of.close();
+          of.open("tramsd.dat",ios::app);
+          // save observables, e.g. energy, volume, pressure, etc...
+          msd=0;
+          pvector<ntype,2> dr;
+
+          for (auto i=0; i < pars.N; i++)
+            {
+              dr[0] = ntype(cross[i][0])*pars.L[0];
+              dr[1] = ntype(cross[i][1])*pars.L[1];
+              dr += he[i].r - r0[i];
+              msd+=dr*dr;
+            }
+          msd /= ntype(pars.N);
           of << tt << " " << setprecision(16) << msd << "\n";
-        }
-      of.close();
-      of.open("rotmsd.dat",ios::app);
-      // save observables, e.g. energy, volume, pressure, etc...
-      ntype dthtot=0;
-      for (auto i=0; i < pars.N; i++)
-        {
-          dthtot+=dth[i]*dth[i];
-        }
-      dthtot /= ntype(pars.N);
-      if (tt!=iniStep && tt%pars.savemeas==0)
-        {
+          of.close();
+          of.open("rotmsd.dat",ios::app);
+          // save observables, e.g. energy, volume, pressure, etc...
+          ntype dthtot=0;
+          for (auto i=0; i < pars.N; i++)
+            {
+              dthtot+=dth[i]*dth[i];
+            }
+          dthtot /= ntype(pars.N);
           of << tt << " " << setprecision(16) << dthtot << "\n";
-        }
-      of.close();
-      if (tt!=iniStep && tt%pars.savemeas==0)
-        build_neighbours_list();
-      of.open("psi6.dat",ios::app);
-      if (tt!=iniStep && tt%pars.savemeas==0)
-        {
+          of.close();
+          build_neighbours_list();
+          of.open("psi6.dat",ios::app);
           of << tt << " " << setprecision(16) << calc_hex_ordpar() << "\n";
-        }
-      of.close();
-      of.open("psiT.dat",ios::app);
-      if (tt!=iniStep && tt%pars.savemeas==0)
-        {
+          of.close();
+          of.open("psiT.dat",ios::app);
           of << tt << " " << setprecision(16) << calc_transl_order() << "\n";
+          of.close();
+          of.open("nem.dat",ios::app);
+          of << tt << " " << setprecision(16) << calc_nem_ordpar() << "\n";
+          of.close();
         }
-      of.close();
     }
   void outinfo(long long int tt)
     {
@@ -1274,6 +1264,28 @@ public:
         }
       return abs(psimax);
 #endif
+    }
+  ntype calc_nem_ordpar(void)
+    {
+      ntype S,Q00,Q10,Q01,Q11, ev0, ev1;
+      pmatrixq<ntype,2> Q;
+      Q << 0,0,0,0;
+      for (auto i=0; i < pars.N; i++)
+        {
+          for (auto a=0; a < 2; a++)
+            for (auto b=0; a < 2; a++)
+              Q[a][b]+=he[i].na[a]*he[i].na[b]; 
+        }
+      Q00=Q[0][0];
+      Q01=Q[0][1];
+      Q10=Q[1][0];
+      Q11=Q[1][1];
+      ntype det = sqrt(Q00*Q00 + 4.0L*Q01*Q10 - 2.0L*Q00*Q11 + Q11*Q11);
+      ev0 = 0.5*(Q00 + Q11 - det);
+      ev1 = 0.5*(Q00 + Q11 + det);
+      S=max(ev0,ev1);
+      // find eigenvalues, eigenvectors here
+      return S;
     }
 #endif
 };
