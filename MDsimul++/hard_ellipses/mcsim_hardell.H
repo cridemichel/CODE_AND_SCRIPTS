@@ -1274,7 +1274,11 @@ public:
         {
           for (auto a=0; a < 2; a++)
             for (auto b=0; a < 2; a++)
-              Q[a][b]+=he[i].na[a]*he[i].na[b]; 
+              {
+                Q[a][b]+=2.0*he[i].na[a]*he[i].na[b]; 
+                if (a==b)
+                  Q[a][b]-= 1.0;
+              }
         }
       Q /= (ntype)pars.N;
       Q00=Q[0][0];
@@ -1284,6 +1288,7 @@ public:
       ntype det = sqrt(Q00*Q00 + 4.0L*Q01*Q10 - 2.0L*Q00*Q11 + Q11*Q11);
       ev0 = 0.5*(Q00 + Q11 - det);
       ev1 = 0.5*(Q00 + Q11 + det);
+      cout << "ev0=" << ev0 << " ev1=" << ev1 << "\n";
       S=max(ev0,ev1);
       // find eigenvalues, eigenvectors here
       return S;
