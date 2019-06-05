@@ -9,10 +9,6 @@
 #include "./params.H"
 #define CALC_ORDPAR
 #ifdef CALC_ORDPAR
-//non si può assumere che siano oriented è sbagliato!
-#undef ASSUME_ORIENTED_TRIANGLES
-#endif
-#ifdef CALC_ORDPAR
 #include "delaunay/delaunator.hpp"
 #endif
 /* N.B. per il restart basta prendere o il file di restart ascii più recente
@@ -1071,7 +1067,6 @@ public:
     }
 
 #ifdef CALC_ORDPAR
-#ifndef ASSUME_ORIENTED_TRIANGLES
   bool exist_in_nnl(int i, int i_to_add)
     {
       for (auto &e: neigh_list[i])
@@ -1081,7 +1076,6 @@ public:
         }
       return false;
     }
-#endif
   // it uses delaunay triangulation to get nn list
   int nextHalfedge(int e) 
     { 
@@ -1104,9 +1098,7 @@ public:
       vector<struct partBB> map2i;
       /* ogni elemento di nl è un vettore con i primi vicini */
       int ibb=0, nx, ny, N, ibb_next;
-#ifndef ASSUME_ORIENTED_TRIANGLES
       int ibb_prev;
-#endif
       // duplicate box along +- x and +-y to get 
       // a total of 9 boxes, so that delaunay triangulation
       // will account for boundary conditions
@@ -1146,17 +1138,12 @@ public:
                *  successiva nel triangolo a cui appartiene e
                *  quindi map2i[ibb_next] è l'indice della corrispondente particella nel box di simulazione 
                *  */
-#ifdef ASSUME_ORIENTED_TRIANGLES
-              ibb_next = d.triangles[nextHalfedge(e)];
-              neigh_list[map2i[ibb].i].push_back(map2i[ibb_next].i);
-#else
               ibb_next = d.triangles[nextHalfedge(e)];
               if (!exist_in_nnl(map2i[ibb].i,map2i[ibb_next].i))
                 neigh_list[map2i[ibb].i].push_back(map2i[ibb_next].i);
               ibb_prev = d.triangles[prevHalfedge(e)];
               if (!exist_in_nnl(map2i[ibb].i,map2i[ibb_prev].i))
                 neigh_list[map2i[ibb].i].push_back(map2i[ibb_prev].i);
-#endif
             }
         }
     }
