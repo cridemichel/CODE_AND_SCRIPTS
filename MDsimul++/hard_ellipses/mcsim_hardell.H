@@ -1273,7 +1273,7 @@ public:
       for (auto i=0; i < pars.N; i++)
         {
           for (auto a=0; a < 2; a++)
-            for (auto b=0; a < 2; a++)
+            for (auto b=0; b < 2; b++)
               {
                 Q[a][b]+=2.0*he[i].na[a]*he[i].na[b]; 
                 if (a==b)
