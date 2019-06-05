@@ -9,7 +9,8 @@
 #include "./params.H"
 #define CALC_ORDPAR
 #ifdef CALC_ORDPAR
-#define ASSUME_ORIENTED_TRIANGLES
+//non si può assumere che siano oriented è sbagliato!
+#undef ASSUME_ORIENTED_TRIANGLES
 #endif
 #ifdef CALC_ORDPAR
 #include "delaunay/delaunator.hpp"
@@ -660,17 +661,19 @@ public:
             } 
         }
 #endif
-#if 0
+#if 1
       build_neighbours_list();
       for (auto i=0; i < pars.N; i++)
         {
-          cout << "i=" << i <<  " [ ";
+          //cout << "i=" << i <<  " [ ";
           for (auto &e: neigh_list[i])
             {
               cout << e << " ";
             } 
-          cout << "] \n";
+          cout << "\n";
+          //cout << "] \n";
         }
+      exit(1);
 #endif
     }
   void run(void)
@@ -1107,15 +1110,15 @@ public:
       // duplicate box along +- x and +-y to get 
       // a total of 9 boxes, so that delaunay triangulation
       // will account for boundary conditions
-      N=pars.N*9;
+      N=pars.N;
       neigh_list.resize(N);
       map2i.resize(N);
       coords.resize(N*2);
       for (auto i=0; i < pars.N; i++)
         {
-          for (nx=-1; nx <= 1; nx++)
+          for (nx=0; nx <= 0; nx++)
             {
-              for (ny=-1; ny <= 1; ny++)
+              for (ny=0; ny <= 0; ny++)
                 {
                   coords[2*ibb] = he[i].r[0] + nx*pars.L[0];
                   coords[2*ibb+1] = he[i].r[1] + ny*pars.L[1];
