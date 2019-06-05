@@ -42,7 +42,7 @@ with open(filename,"r") as f:
         print ("checkin i=", pindex)
         nn=find_neighbors(pindex,tri)
         if len(nn) != len(nnmy):
-            print ("numero diverso elementi per pindex=", pindex)
+            print ("WARNING numero diverso elementi per pindex=", pindex)
             print ("nn=", nn)
             print ("nnmy=", nnmy)
             sys.exit(0)
@@ -56,7 +56,7 @@ with open(filename,"r") as f:
                         trovato=1
                         break
                     if trovato == 0:
-                        print("non trovato\n")
+                        print("WARNING non trovato\n")
                         sys.exit(0)
         pindex += 1
 print ("tutto ok!\n")                
