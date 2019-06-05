@@ -660,6 +660,18 @@ public:
             } 
         }
 #endif
+#if 0
+      build_neighbours_list();
+      for (auto i=0; i < pars.N; i++)
+        {
+          cout << "i=" << i <<  " [ ";
+          for (auto &e: neigh_list[i])
+            {
+              cout << e << " ";
+            } 
+          cout << "] \n";
+        }
+#endif
     }
   void run(void)
     {
@@ -1203,14 +1215,35 @@ public:
       // usato per calcolare i vettori primitivi del reticolo 
       // inverso b1 e b2
       //
+#if 1
+     G = (1.0/a)*b1;
+     for (auto i=0; i < pars.N; i++)
+       {
+              psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
+            }
+     psi /= (ntype)pars.N;
+     return abs(psi);     
+#else
+     complex<ntype> psimax=0;
+     pvector<ntype,2> Gp;
       cout << "average dist=" << a << "\n";
       G = (1.0/a)*b1;
-      for (auto i=0; i < pars.N; i++)
+      for (ntype theta=0; theta < 2.0*M_PI; theta+=0.1)
         {
-          psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
+          pmatrixq<ntype,2> R;
+          R << cos(theta), -sin(theta), sin(theta), cos(theta);
+          Gp = R*G;
+          psi=0;
+          for (auto i=0; i < pars.N; i++)
+            {
+              psi += complex<ntype>(ntype(cos(Gp*he[i].r)),ntype(sin(Gp*he[i].r)));
+            }
+          psi /= (ntype)pars.N;
+          if (abs(psi) >  abs(psimax))
+            psimax=psi;
         }
-      psi /= (ntype)pars.N;
-      return abs(psi);
+      return abs(psimax);
+#endif
     }
 #endif
 };
