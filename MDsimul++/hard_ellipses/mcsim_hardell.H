@@ -1219,8 +1219,8 @@ public:
      G = (1.0/a)*b1;
      for (auto i=0; i < pars.N; i++)
        {
-              psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
-            }
+         psi += complex<ntype>(ntype(cos(G*he[i].r)),ntype(sin(G*he[i].r)));
+       }
      psi /= (ntype)pars.N;
      return abs(psi);     
 #else
