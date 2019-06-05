@@ -524,8 +524,8 @@ class mcsim {
 
           build_neighbours_list();
           cout << "psi6=" << calc_hex_ordpar() << "\n";
-          b1.show("b1");
-          b2.show("b2");
+          //b1.show("b1");
+          //b2.show("b2");
      
           cout << "PsiT=" << calc_transl_order() << "\n";
 #if 0
