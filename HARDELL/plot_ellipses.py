@@ -9,15 +9,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 #import matplotlib.transforms as transforms
-#import sys
-fig, ax = plt.subplots(figsize=(6, 6))
+import sys
+fig, ax = plt.subplots(figsize=(10, 10))
 nl=0
-with open("conf") as f:
+if len(sys.argv) > 1:
+    filename=sys.argv[1]
+else:
+    filename="conf"
+with open(filename) as f:
     for line in f:
-        print ("nl=", nl)
+        #print ("nl=", nl)
         if nl == 0:
             arr=line.strip('\n').split(' ')
-            print(arr[3])
+            #print(arr[3])
             da=2.0*float(arr[3])
             db=2.0*float(arr[4])
             Lx=float(arr[1])
@@ -30,5 +34,4 @@ with open("conf") as f:
             ell=Ellipse(x,da,db,theta)
             ax.add_patch(ell)
         nl = nl + 1
-        
 plt.show()
