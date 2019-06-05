@@ -1118,19 +1118,25 @@ public:
       vector<struct partBB> map2i;
       /* ogni elemento di nl è un vettore con i primi vicini */
       int ibb=0, nx, ny, N, ibb_next;
-      int ibb_prev;
+      int ibb_prev, dn;
       // duplicate box along +- x and +-y to get 
       // a total of 9 boxes, so that delaunay triangulation
       // will account for boundary conditions
+#ifdef TEST_DELAUNAY
+      N=pars.N;
+      dn=0;
+#else
       N=pars.N*9;
+      dn=1;
+#endif
       neigh_list.resize(N);
       map2i.resize(N);
       coords.resize(N*2);
       for (auto i=0; i < pars.N; i++)
         {
-          for (nx=-1; nx <= 1; nx++)
+          for (nx=-dn; nx <= dn; nx++)
             {
-              for (ny=-1; ny <= 1; ny++)
+              for (ny=-dn; ny <= dn; ny++)
                 {
                   coords[2*ibb] = he[i].r[0] + nx*pars.L[0];
                   coords[2*ibb+1] = he[i].r[1] + ny*pars.L[1];
