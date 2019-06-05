@@ -450,11 +450,11 @@ class mcsim {
   void init_measures(void)
     {
       ofstream of;
-      of.open("v.dat", ios::trunc);
+      of.open("volume.dat", ios::trunc);
       of.close();
       of.open("phi.dat", ios::trunc);
       of.close();
-      of.open("msd.dat", ios::trunc);
+      of.open("tramsd.dat", ios::trunc);
       of.close();
       of.open("rotmsd.dat", ios::trunc);
       of.close();
@@ -466,7 +466,7 @@ class mcsim {
   void save_measures(long long int tt)
     {
       ofstream of;
-      of.open("v.dat",ios::app);
+      of.open("volume.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
       if (tt!=iniStep && tt%pars.savemeas==0)
         {
@@ -480,7 +480,7 @@ class mcsim {
           of << tt << " " << setprecision(16) << calc_phi() << "\n";
         }
       of.close();
-      of.open("msd.dat",ios::app);
+      of.open("tramsd.dat",ios::app);
       // save observables, e.g. energy, volume, pressure, etc...
       msd=0;
       pvector<ntype,2> dr;
@@ -511,7 +511,8 @@ class mcsim {
           of << tt << " " << setprecision(16) << dthtot << "\n";
         }
       of.close();
-      build_neighbours_list();
+      if (tt!=iniStep && tt%pars.savemeas==0)
+        build_neighbours_list();
       of.open("psi6.dat",ios::app);
       if (tt!=iniStep && tt%pars.savemeas==0)
         {
