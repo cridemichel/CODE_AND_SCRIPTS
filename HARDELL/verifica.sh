@@ -1,3 +1,5 @@
+#per usare questo script in mcsim_hardell va definita la macro TEST_DELAUNAY e va ricompilato
+#inoltre vanno generate delle configurazioni che si devono trovare nella stessa directory dello script
 DIR=$HOME
 for f in `ls cnf-*`
 do
