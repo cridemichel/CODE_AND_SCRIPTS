@@ -1276,6 +1276,7 @@ public:
             for (auto b=0; a < 2; a++)
               Q[a][b]+=he[i].na[a]*he[i].na[b]; 
         }
+      Q /= (ntype)pars.N;
       Q00=Q[0][0];
       Q01=Q[0][1];
       Q10=Q[1][0];
