@@ -1,31 +1,22 @@
 #!/usr/bin/env python3
 import sys
 import os
-import getpass
+import psutil
 #forse la seguente funzioe si può riscriver in maniera più portabile usando il modulo psutil
 def get_proc_cmdlines(p=''):
     allpids=[]
     allcwds=[]
     cls=[]
-    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+    pids = [pid for pid in psutil.pids()]
     for pid in pids:
-        try:
-            with open(os.path.join('/proc',pid,'loginuid'), 'r') as f:
-                uid=f.readline()
-            if int(uid) != os.getuid():
-                continue
-            with open(os.path.join('/proc', pid, 'cmdline'), 'rb') as f:
-                l=f.readline()
-                l=l.replace(b'\x00',b'\x20')
-                l2=str(l.decode('utf-8'))
-                if p in l2:
-                    #print ('qui')
-                    #print("cwd=",os.readlink(os.path.join('/proc', pid, 'cwd')))
-                    cls.append(l2)			
-                    allpids.append(pid)	
-                    allcwds.append(os.readlink(os.path.join('/proc', pid, 'cwd')))
-        except IOError: # proc has already terminated
-            pass
+        p=psutil.Process(pid)
+        uid=p.uids()[1]#effective uid
+        if uid != os.getuid():
+            continue
+        if p in p.cmdline():
+            cls.append(p.cmdline())			
+            allpids.append(p.pid)	
+            allcwds.append(p.cwd())
     return (cls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
-import getpass
+#import getpass
 #forse la seguente funzioe si può riscriver in maniera più portabile usando il modulo psutil
 def get_proc_cmdlines(p=''):
     allpids=[]
