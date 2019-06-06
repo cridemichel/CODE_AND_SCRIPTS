@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
 import sys
 import os
+import getpass
+#forse la seguente funzioe si può riscriver in maniera più portabile usando il modulo psutil
 def get_proc_cmdlines(p=''):
-    cls=[]
     allpids=[]
+    allcwds=[]
+    cls=[]
     pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
     for pid in pids:
         try:
+            with open(os.path.join('/proc',pid,'loginuid'), 'r') as f:
+                uid=f.readline()
+            if int(uid) != os.getuid():
+                continue
             with open(os.path.join('/proc', pid, 'cmdline'), 'rb') as f:
                 l=f.readline()
                 l=l.replace(b'\x00',b'\x20')
                 l2=str(l.decode('utf-8'))
                 if p in l2:
+                    #print ('qui')
+                    print("cwd=",os.readlink(os.path.join('/proc', pid, 'cwd')))
                     cls.append(l2)			
                     allpids.append(pid)	
+                    allcwds.append(os.readlink(os.path.join('/proc', pid, 'cwd')))
         except IOError: # proc has already terminated
-            continue
-    return (cls,allpids)
+            pass
+    return (cls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
         lines=f.readlines()
@@ -39,30 +49,23 @@ else:
 with open(lof) as f:
     lines=f.readlines() 
 c=0
-#return all pid obtained from commandlines containing string p
-jobs,pids=get_proc_cmdlines(cfn)
-#print("pids=",pids)
-alljobs=[]
-for e in jobs:
-    l=e.split(' ')
-		#print("process",pids[c],"=",l)
-    alljobs.append(l)
-#flatten the nested list making it a list from a nested list
-alljobs=[item for sublist in alljobs for item in sublist]
-#print ("all jobs=", alljobs)
+#return command lines, pids and absolute path 
+cls,pids,allcwds=get_proc_cmdlines(cfn)
 ok=True
-nd=0
+ndone=0
+ndead=0
+nrun=0
+#we compare absolute paths to determine if process is running
+#(we assume that each jobs has been launched from a different dir)
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
-    rn='./'+en
-    print ('rn=',rn)
-    if rn not in alljobs:
+    if bn not in allcwds:
     #print ('job ', i, ' is missing')
         dir=bn
         if os.path.exists(dir+'/cnf-final'):
-            ok=True
+            ndone+=1 
         else:
-            nd+=1
+            ndead+=1
             print('job '+ en + ' is not running and it has not finished yet!', end='')
             print(' I am restarting it...')
             f0n=bn+'/restart-0'
@@ -100,12 +103,14 @@ for l in lines:
             print('executing ', s2e)
             os.system(s2e)
             ok=False
+    else:#bn is running if here
+        nrun+=1
 if not ok:
-	print('Some jobs (#'+str(nd)+') were dead and I had to restart them!\n')
+	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
 else:
-	if c == 0:
+	if ndead == 0 and ndone == len(lines):
 		print('All done here!')
 	else:
-		print('There are '+str(c)+' jobs runnings', end='')
-		print(' and '+ str(nd) + ' regularly finished')
-		print('Total number of job is', str(nd+c))
+		print('There are '+str(nrun)+' jobs runnings', end='')
+		print(' and '+ str(ndone) + ' regularly finished')
+		print('Total number of job is', str(ndone+nrun))
