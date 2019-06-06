@@ -49,9 +49,18 @@ donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
 #argomenti per l'eseguibile in caso
 # di start o restart
 arg_start=' 2 '
-arg_restart=' 1 '
+arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
 #maximum number of running jobs 
 max_jobs=3
+# NOTES:
+# customize these functions is special args, 
+# l is an integer between 0 and the total number of jobs
+# which is equal to len(lines) (=# of lines in the file supplied 
+# as argument)
+def build_arg_start(l):
+    return arg_start
+def build_arg_restart(l,w):
+    return arg_restart[w]
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
@@ -112,6 +121,7 @@ ndead=0
 nrun=0
 #we compare absolute paths to determine if process is running
 #(we assume that each jobs has been launched from a different dir)
+nline=0
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if bn not in allcwds:
@@ -129,7 +139,7 @@ for l in lines:
             which=choose_restart(bn)
             if which == -1:
                 #no restart file, first start
-                exec=' ./'+en+arg_start
+                exec=' ./'+en+build_arg_start(nline)
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
                 s2e=prepend + exec + postpend 
@@ -137,7 +147,7 @@ for l in lines:
                 os.system(s2e)
             else:
                 #print('en=',en)
-                exec=' ./'+en+arg_restart+restart[which]
+                exec=' ./'+en+build_arg_restart(nline,which)
                 print ('exec is: '+exec)
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
@@ -147,6 +157,8 @@ for l in lines:
                 ok=False
     else:#bn is running if here
         nrun+=1
+    nline+=1
+    
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
 else:
