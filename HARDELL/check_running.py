@@ -29,6 +29,10 @@ else:
 		print('[ERROR] you did not supply an X0 and you are in the right place')
 		quit()
 	x0=b[1]
+if len(args) > 2:
+    justcheck=int(args[2])
+else:
+    justchek=1    
 #print(x0)
 c=0
 #return all pid obtained from commandlines containing string p
@@ -50,28 +54,35 @@ perc='/home/demichel/HARDELL/Veff/X0_'+str(x0)+'/'
 ok=True
 nd=0
 if not os.path.exists(perc):
-	print('dir \''+perc+'\' does not exist...\n')
-	quit()
+    print('dir \''+perc+'\' does not exist...\n')
+    quit()
 for i in range(0,300) :
-	if str(i) not in allIR:
+    if str(i) not in allIR:
 		#print ('job ', i, ' is missing')
-		dir=perc+'IR_'+str(i)
-		try:
-			with open(dir+'/veff_vs_tt.dat') as f:
-				lines=f.readlines()
-				lastline=lines[-1]
-				l=lastline.strip('\n').split(' ')
-				if l[0] != '99900000000':
-					print('job IR='+str(i)+' is not running and it has not finished yet!')
-					print('I am restarting it')
-					exec=dir+'/veff_IR_'+str(i)
-					print ('exec is: '+exec)
-					ok=False
-				else:
-					nd+=1
-		except:
-			print ('file '+dir+'/veff_vs_tt.dat'+ 'does not exist but I continue...\n')
-		continue
+        dir=perc+'IR_'+str(i)
+        try:
+            with open(dir+'/veff_vs_tt.dat') as f:
+                lines=f.readlines()
+                lastline=lines[-1]
+                l=lastline.strip('\n').split(' ')
+                if l[0] != '99900000000':
+                    print('job IR='+str(i)+' is not running and it has not finished yet!')
+                    print('I am restarting it')
+                    exec=dir+'/veff_IR_'+str(i)
+                    print ('exec is: '+exec)
+                    if justcheck == 0:
+                        os.system('/usr/bin/nohup /bin/mosrun '+ exec + '100000000000+ '+x0+
+                                  ' 300 ' + str(i) + ' 100000000')
+                    ok=False
+                else:
+                    nd+=1
+        except:
+            print ('file '+dir+'/veff_vs_tt.dat'+ 'does not exist but I continue...\n')
+            continue
+    else:
+        lll=[ l for l in allIR if l == str(i) ]
+        if len(lll) > 1:
+            print('IR=',lll,' is duplicated')
 if not ok:
 	print('Some jobs were dead and I had to restart them!\n')
 else:
