@@ -2,21 +2,21 @@
 import sys
 import os
 def get_proc_cmdlines(p=''):
-	cls=[]
-	allpids=[]
-	pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
-	for pid in pids:
-		try:
-			with open(os.path.join('/proc', pid, 'cmdline'), 'rb') as f:
-				l=f.readline()
-				l=l.replace(b'\x00',b'\x20')
-				l2=str(l.decode('utf-8'))
-			if p in l2:
-				cls.append(l2)			
-				allpids.append(pid)	
-		except IOError: # proc has already terminated
-			continue
-	return (cls,allpids)
+    cls=[]
+    allpids=[]
+    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+    for pid in pids:
+        try:
+            with open(os.path.join('/proc', pid, 'cmdline'), 'rb') as f:
+                l=f.readline()
+                l=l.replace(b'\x00',b'\x20')
+                l2=str(l.decode('utf-8'))
+                if p in l2:
+                    cls.append(l2)			
+                    allpids.append(pid)	
+        except IOError: # proc has already terminated
+            continue
+    return (cls,allpids)
 def get_num_words(fn):
     with open(fn) as f:
         lines=f.readlines()
@@ -53,35 +53,48 @@ for e in jobs:
 ok=True
 nd=0
 for l in lines:
-    bn, en=os.path.split(l)
+    bn, en=os.path.split(l.strip('\n'))
     if en not in alljobs:
     #print ('job ', i, ' is missing')
         dir=bn
-        if os.path.exists(dir+'cnf-final'):
+        if os.path.exists(dir+'/cnf-final'):
             ok=True
         else:
             print('job '+ en + ' is not running and it has not finished yet!')
             print('I am restarting it')
-            f0n=bn+'restart-0'
-            f1n=bn+'restart-0'
-            nw0=get_num_words(f0n)
-            nw1=get_num_words(f1n)
-            if nw0 > nw1:
+            f0n=bn+'/restart-0'
+            f1n=bn+'/restart-1'
+            ex0=os.path.exists(f0n)
+            ex1=os.path.exists(f1n)
+            print("ex=", ex0, ex1)
+            if ex0 == False and ex1 == False:
+                print('both restart files do not exist...I give up!')
+                continue
+            if ex0 == False: 
+                which=1
+            elif ex1 == False:
+                which=0
+            else: 
+                nw0=get_num_words(f0n)
+                nw1=get_num_words(f1n)
+                if nw0 > nw1:
                     which=0
-            elif nw1 < nw0:
-                    which=1
-            else:
-                f0 = os.path.getmtime(f0n)
-                f1 = os.path.getmtime(f1n)
-                if (f0 < f1):
+                elif nw1 < nw0:
                     which=1
                 else:
-                    which=0
-            exec=dir+en+' 1 restart-'+which
+                    f0 = os.path.getmtime(f0n)
+                    f1 = os.path.getmtime(f1n)
+                    if (f0 < f1):
+                        which=1
+                    else:
+                        which=0
+            print('en=',en)
+            exec=dir+'/'+en+' 1 restart-'+str(which)
             print ('exec is: '+exec)
+            nd+=1
             ok=False
 if not ok:
-	print('Some jobs were dead and I had to restart them!\n')
+	print('Some jobs (#'+str(nd)+') were dead and I had to restart them!\n')
 else:
 	if c == 0:
 		print('All done here!')
