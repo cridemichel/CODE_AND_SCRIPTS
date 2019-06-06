@@ -57,9 +57,9 @@ max_jobs=100
 # l is an integer between 0 and the total number of jobs
 # which is equal to len(lines) (=# of lines in the file supplied 
 # as argument)
-def build_arg_start(l):
+def build_arg_start(l,ea):
     return arg_start
-def build_arg_restart(l,w):
+def build_arg_restart(l,w,ea):
     return arg_restart[w]
 # test if simulation is finished (customize if needed)
 def sim_done(dir):
@@ -76,10 +76,10 @@ def sim_done_veff(dir):
     else:
         return False
 #build arg depending on l
-def build_arg_restart_veff(l,w):
-    return '100000000000 1.6 300 ' +str(l) + ' 100000000'
-def build_arg_start_veff(l):
-     return '100000000000 1.6 300 ' +str(l) + ' 100000000'
+def build_arg_restart_veff(l,ea,w):
+    return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
+def build_arg_start_veff(l,ea):
+     return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
 restart=['calcveff.chk']
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
@@ -126,10 +126,10 @@ if len(args) > 1:
 else:
     print('You have to supply a file with all jobs to check (with absolute paths)')
     quit()
-#if len(args) > 2:
-#    cfn=args[2] #common patter in exec filenames
-#else:
-#    cfn=''
+if len(args) > 2:
+    extra_args=args[2] #common patter in exec filenames
+else:
+    extra_args=''
 with open(lof) as f:
     lines=f.readlines() 
 c=0
@@ -159,7 +159,7 @@ for l in lines:
             which=choose_restart(bn)
             if which == -1:
                 #no restart file, first start
-                exec=' ./'+en+build_arg_start(nline)
+                exec=' ./'+en+build_arg_start(nline,extra_args)
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
                 s2e=prepend + exec + postpend 
@@ -167,7 +167,7 @@ for l in lines:
                 os.system(s2e)
             else:
                 #print('en=',en)
-                exec=' ./'+en+build_arg_restart(nline,which)
+                exec=' ./'+en+build_arg_restart(nline,extra_args,which)
                 print ('exec is: '+exec)
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
