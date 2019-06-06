@@ -38,8 +38,10 @@ def get_num_words(fn):
 # SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
 # CHE TERMINANO CON 0 o 1
 #nomi dei restart files da valutare
-prepend='/usr/bin/nohup /bin/mosrun '# li mette prima dell'exec
+#prepend='/usr/bin/nohup /bin/mosrun '# li mette prima dell'exec
 postpend=' >> screen &'#li mette dopo l'exec
+prepend=''
+#postpend=''
 restart0='restart-0'
 restart1='restart-1'
 donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
