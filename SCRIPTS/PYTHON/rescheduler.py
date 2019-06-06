@@ -60,13 +60,14 @@ for l in lines:
         if os.path.exists(dir+'/cnf-final'):
             ok=True
         else:
-            print('job '+ en + ' is not running and it has not finished yet!')
-            print('I am restarting it')
+            nd+=1
+            print('job '+ en + ' is not running and it has not finished yet!', end='')
+            print(' I am restarting it...')
             f0n=bn+'/restart-0'
             f1n=bn+'/restart-1'
             ex0=os.path.exists(f0n)
             ex1=os.path.exists(f1n)
-            print("ex=", ex0, ex1)
+            #print("ex=", ex0, ex1)
             if ex0 == False and ex1 == False:
                 print('both restart files do not exist...I give up!')
                 continue
@@ -88,10 +89,14 @@ for l in lines:
                         which=1
                     else:
                         which=0
-            print('en=',en)
-            exec=dir+'/'+en+' 1 restart-'+str(which)
+            #print('en=',en)
+            exec=' ./'+en+' 1 restart-'+str(which)
             print ('exec is: '+exec)
-            nd+=1
+            os.chdir(dir)
+            print('dir=',os.getcwd())
+            s2e=exec + ' >> screen &'
+            print('executing ', s2e)
+            os.system(s2e)
             ok=False
 if not ok:
 	print('Some jobs (#'+str(nd)+') were dead and I had to restart them!\n')
