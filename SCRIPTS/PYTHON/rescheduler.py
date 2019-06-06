@@ -4,6 +4,7 @@ import os
 import psutil
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
+
 def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
@@ -47,6 +48,36 @@ restart1='restart-1'
 donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
 arg=' 1 restart-' #argomenti per l'eseguibile
 #######################################
+# se il programma di restart è solo uno la seguente funzione 
+# va cambiata opportunamente
+def choose_restart(bn):
+    f0n=bn+'/'+restart0
+    f1n=bn+'/'+restart1
+    ex0=os.path.exists(f0n)
+    ex1=os.path.exists(f1n)
+    #print("ex=", ex0, ex1)
+    if ex0 == False and ex1 == False:
+        print('both restart files do not exist...I give up!')
+        return -1
+    if ex0 == False: 
+        which=1
+    elif ex1 == False:
+        which=0
+    else: 
+        nw0=get_num_words(f0n)
+        nw1=get_num_words(f1n)
+        if nw0 > nw1:
+            which=0
+        elif nw1 < nw0:
+            which=1
+        else:
+            f0 = os.path.getmtime(f0n)
+            f1 = os.path.getmtime(f1n)
+            if (f0 < f1):
+                which=1
+            else:
+                which=0
+    return which            
 args=sys.argv
 if len(args) > 1:
     lof=args[1]
@@ -79,32 +110,9 @@ for l in lines:
             ndead+=1
             print('job '+ en + ' is not running and it has not finished yet!', end='')
             print(' I am restarting it...')
-            f0n=bn+'/'+restart0
-            f1n=bn+'/'+restart1
-            ex0=os.path.exists(f0n)
-            ex1=os.path.exists(f1n)
-            #print("ex=", ex0, ex1)
-            if ex0 == False and ex1 == False:
-                print('both restart files do not exist...I give up!')
+            which=choose_restart(bn)
+            if which == -1:
                 continue
-            if ex0 == False: 
-                which=1
-            elif ex1 == False:
-                which=0
-            else: 
-                nw0=get_num_words(f0n)
-                nw1=get_num_words(f1n)
-                if nw0 > nw1:
-                    which=0
-                elif nw1 < nw0:
-                    which=1
-                else:
-                    f0 = os.path.getmtime(f0n)
-                    f1 = os.path.getmtime(f1n)
-                    if (f0 < f1):
-                        which=1
-                    else:
-                        which=0
             #print('en=',en)
             exec=' ./'+en+arg+str(which)
             print ('exec is: '+exec)
