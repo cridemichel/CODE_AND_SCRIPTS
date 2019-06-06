@@ -4,7 +4,7 @@ import os
 import psutil
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
-
+#
 def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
@@ -51,7 +51,7 @@ donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
 arg_start=' 2 '
 arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
 #maximum number of running jobs 
-max_jobs=3
+max_jobs=100
 # NOTES:
 # customize these functions is special args, 
 # l is an integer between 0 and the total number of jobs
@@ -61,6 +61,9 @@ def build_arg_start(l):
     return arg_start
 def build_arg_restart(l,w):
     return arg_restart[w]
+# test if simulation is finished (customize if needed)
+def sim_done(dir):
+    return os.path.exists(dir+'/'+donefile)        
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
@@ -127,7 +130,7 @@ for l in lines:
     if bn not in allcwds:
     #print ('job ', i, ' is missing')
         dir=bn
-        if os.path.exists(dir+'/'+donefile):
+        if sim_done(dir): 
             ndone+=1 
         else:
             ndead+=1
