@@ -2,7 +2,8 @@
 import sys
 import os
 import psutil
-#forse la seguente funzioe si può riscriver in maniera più portabile usando il modulo psutil
+#questo rescheduler è abbastanza portabile infatti funziona 
+#sia in linux che in mac osx
 def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
@@ -16,6 +17,7 @@ def get_proc_cmdlines():
         #si ottiene un permission denied poiché il processo è rooted
         #quindi va usato l'effective uid
         if uid != os.getuid():
+        #considera solo i processi che appartengono all'utente
             continue
         #print ('p=',p, 'cmd=',pr.cmdline())
         #filtra le command line con la stringa 
@@ -31,7 +33,18 @@ def get_num_words(fn):
                 l=line.strip('\n').split(' ')
                 nw+=len(l)
         return nw
-#get X0
+#######################################
+# VARIABILI CHE DIPENDONO DA TIPO DI PROGRAMMA DA RIAVVIARE
+# SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
+# CHE TERMINANO CON 0 o 1
+#nomi dei restart files da valutare
+prepend='/usr/bin/nohup /bin/mosrun '# li mette prima dell'exec
+postpend=' >> screen &'#li mette dopo l'exec
+restart0='restart-0'
+restart1='restart-1'
+donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
+#######################################
+arg=' 1 restart-' #argomenti per l'eseguibile
 args=sys.argv
 if len(args) > 1:
     lof=args[1]
@@ -45,8 +58,7 @@ else:
 with open(lof) as f:
     lines=f.readlines() 
 c=0
-#return command lines, pids and absolute path 
-#print ('CFN=', cfn)
+#return command lines, pids and absolute path
 cls,pids,allcwds=get_proc_cmdlines()
 ok=True
 ndone=0
@@ -59,14 +71,14 @@ for l in lines:
     if bn not in allcwds:
     #print ('job ', i, ' is missing')
         dir=bn
-        if os.path.exists(dir+'/cnf-final'):
+        if os.path.exists(dir+'/'+donefile):
             ndone+=1 
         else:
             ndead+=1
             print('job '+ en + ' is not running and it has not finished yet!', end='')
             print(' I am restarting it...')
-            f0n=bn+'/restart-0'
-            f1n=bn+'/restart-1'
+            f0n=bn+'/'+restart0
+            f1n=bn+'/'+restart1
             ex0=os.path.exists(f0n)
             ex1=os.path.exists(f1n)
             #print("ex=", ex0, ex1)
@@ -92,11 +104,11 @@ for l in lines:
                     else:
                         which=0
             #print('en=',en)
-            exec=' ./'+en+' 1 restart-'+str(which)
+            exec=' ./'+en+arg+str(which)
             print ('exec is: '+exec)
             os.chdir(dir)
             print('dir=',os.getcwd())
-            s2e=exec + ' >> screen &'
+            s2e=prepend + exec + postpend 
             print('executing ', s2e)
             os.system(s2e)
             ok=False
