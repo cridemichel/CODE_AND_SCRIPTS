@@ -25,6 +25,9 @@ else:
 	dir=os.getcwd()
 	a=dir.split('/')
 	b=a[len(a)-1].split('_')
+	if len(b) < 2:
+		print('[ERROR] you did not supply an X0 and you are in the right place')
+		quit()
 	x0=b[1]
 #print(x0)
 c=0
@@ -59,10 +62,10 @@ for i in range(0,300) :
 				lastline=lines[-1]
 				l=lastline.strip('\n').split(' ')
 				if l[0] != '99900000000':
-					print('job IR='+str(i)+'is not running and it has not finished yet!')
+					print('job IR='+str(i)+' is not running and it has not finished yet!')
 					print('I am restarting it')
-					exec=dir+'veff_IR_'+str(i)
-					print ('exec is'+exec)
+					exec=dir+'/veff_IR_'+str(i)
+					print ('exec is: '+exec)
 					ok=False
 				else:
 					nd+=1
