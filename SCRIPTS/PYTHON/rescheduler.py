@@ -20,7 +20,7 @@ def get_proc_cmdlines(p=''):
                 l2=str(l.decode('utf-8'))
                 if p in l2:
                     #print ('qui')
-                    print("cwd=",os.readlink(os.path.join('/proc', pid, 'cwd')))
+                    #print("cwd=",os.readlink(os.path.join('/proc', pid, 'cwd')))
                     cls.append(l2)			
                     allpids.append(pid)	
                     allcwds.append(os.readlink(os.path.join('/proc', pid, 'cwd')))
