@@ -75,6 +75,12 @@ def sim_done_veff(dir):
         return True
     else:
         return False
+#build arg depending on l
+def build_arg_restart_veff(l,w):
+    return '100000000000 1.6 300 ' +str(l) + ' 100000000'
+def build_arg_start_veff(l):
+     return '100000000000 1.6 300 ' +str(l) + ' 100000000'
+restart=['calcveff.chk']
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
