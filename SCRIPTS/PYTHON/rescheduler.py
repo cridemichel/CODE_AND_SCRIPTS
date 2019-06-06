@@ -33,7 +33,7 @@ else:
     print('You have to supply a file with all jobs to check')
     quit()
 if len(args) > 2:
-	cfn=args[2] #common patter in exec filenames
+    cfn=args[2] #common patter in exec filenames
 else:
     cfn=''
 with open(lof) as f:
@@ -44,17 +44,19 @@ jobs,pids=get_proc_cmdlines(cfn)
 #print("pids=",pids)
 alljobs=[]
 for e in jobs:
-	l=e.split(' ')
-	if e not in l[0]:
+    l=e.split(' ')
 		#print("process",pids[c],"=",l)
-		c += 1
-		alljobs.append(l[0])
-#
+    alljobs.append(l)
+#flatten the nested list making it a list from a nested list
+alljobs=[item for sublist in alljobs for item in sublist]
+#print ("all jobs=", alljobs)
 ok=True
 nd=0
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
-    if en not in alljobs:
+    rn='./'+en
+    print ('rn=',rn)
+    if rn not in alljobs:
     #print ('job ', i, ' is missing')
         dir=bn
         if os.path.exists(dir+'/cnf-final'):
