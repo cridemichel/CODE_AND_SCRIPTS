@@ -1,3 +1,5 @@
+#!/bin/bash
+#RESCHEDULER
 if [ "$1" == "" ]
 then
 X0="1.3"
@@ -31,7 +33,7 @@ continue
 fi
 cd ${PERC}/IR_$IR
 EN="veff_IR_${IR}"
-ISRUN=`ps ax | grep -e "$EN " | grep mosrun | grep "$X0"`
+ISRUN=`ps ax | grep -e "$EN " | grep mosrun | grep -F -e "$X0"`
 #echo "ISRUN=" $ISRUN
 if [ "$ISRUN" == "" ]
 then
@@ -39,7 +41,7 @@ if [ -e "calcveff.chk" ]
 then
 echo "IR=" $IR " is not running, I will restart it"
 #cp ../$EXE .
-/bin/mosrun ./$EN $TOTT $X0 $NUMR $IR $ST >> screen_$IR & 
+/usr/bin/nohup /bin/mosrun ./$EN $TOTT $X0 $NUMR $IR $ST >> screen_$IR & 
 IR=$[$[IR]+1]
 sleep 0.5
 continue
@@ -50,7 +52,7 @@ then
 FINE=`tail -n 1 veff*dat| grep 99900000000`
 if [ "$FINE" == "" ]
 then
-/bin/mosrun ./$EN $TOTT $X0 $NUMR $IR $ST > screen_$IR & 
+/usr/bin/nohup /bin/mosrun ./$EN $TOTT $X0 $NUMR $IR $ST > screen_$IR & 
 IR=$[$[IR]+1]
 sleep 0.5
 continue
