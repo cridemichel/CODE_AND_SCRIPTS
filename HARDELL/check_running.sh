@@ -33,7 +33,9 @@ continue
 fi
 cd ${PERC}/IR_$IR
 EN="veff_IR_${IR}"
-ISRUN=`ps ax | grep -e "$EN " | grep mosrun | grep -F -e "$X0"`
+ps ax > _aaa_
+ISRUN=`cat _aaa_ | grep -e "$EN " | grep mosrun | grep -F -e "$X0"`
+rm _aaa_
 #echo "ISRUN=" $ISRUN
 if [ "$ISRUN" == "" ]
 then
