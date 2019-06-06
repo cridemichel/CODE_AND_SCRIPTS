@@ -45,8 +45,8 @@ prepend=''
 restart0='restart-0'
 restart1='restart-1'
 donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
-#######################################
 arg=' 1 restart-' #argomenti per l'eseguibile
+#######################################
 args=sys.argv
 if len(args) > 1:
     lof=args[1]
