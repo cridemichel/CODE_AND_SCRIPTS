@@ -17,67 +17,75 @@ def get_proc_cmdlines(p=''):
 		except IOError: # proc has already terminated
 			continue
 	return (cls,allpids)
+def get_num_words(fn):
+    with open(fn) as f:
+        lines=f.readlines()
+        nw=0
+        for line in lines:
+                l=line.strip('\n').split(' ')
+                nw+=len(l)
+        return nw
 #get X0
 args=sys.argv
 if len(args) > 1:
-	x0 = args[1]
+    lof=args[1]
 else:
-	dir=os.getcwd()
-	a=dir.split('/')
-	b=a[len(a)-1].split('_')
-	if len(b) < 2:
-		print('[ERROR] you did not supply an X0 and you are in the right place')
-		quit()
-	x0=b[1]
-#print(x0)
+    print('You have to supply a file with all jobs to check')
+    quit()
+if len(args) > 2:
+	cfn=args[2] #common patter in exec filenames
+else:
+    cfn=''
+with open(lof) as f:
+    lines=f.readlines() 
 c=0
 #return all pid obtained from commandlines containing string p
-l2,pids=get_proc_cmdlines('veff_IR_')
+jobs,pids=get_proc_cmdlines(cfn)
 #print("pids=",pids)
-allIR=[]
-for e in l2:
+alljobs=[]
+for e in jobs:
 	l=e.split(' ')
-	if len(l) == 8:
-		if l[3] == x0:
-			#print("process",pids[c],"=",l)
-			c += 1
-			allIR.append(l[5])
+	if e not in l[0]:
+		#print("process",pids[c],"=",l)
+		c += 1
+		alljobs.append(l[0])
 #
-#print ('running=', c)
-#print ('allIR=', allIR)
-#search for missing jobs and check if they have already finished
-perc='/home/demichel/HARDELL/Veff/X0_'+str(x0)+'/'
 ok=True
 nd=0
-if not os.path.exists(perc):
-	print('dir \''+perc+'\' does not exist...\n')
-	quit()
-for i in range(0,300) :
-	if str(i) not in allIR:
-		#print ('job ', i, ' is missing')
-		dir=perc+'IR_'+str(i)
-		try:
-			with open(dir+'/veff_vs_tt.dat') as f:
-				lines=f.readlines()
-				lastline=lines[-1]
-				l=lastline.strip('\n').split(' ')
-				if l[0] != '99900000000':
-					print('job IR='+str(i)+' is not running and it has not finished yet!')
-					print('I am restarting it')
-					exec=dir+'/veff_IR_'+str(i)
-					print ('exec is: '+exec)
-					ok=False
-				else:
-					nd+=1
-		except:
-			print ('file '+dir+'/veff_vs_tt.dat'+ 'does not exist but I continue...\n')
-		continue
+for l in lines:
+    bn, en=os.path.split(l)
+    if en not in alljobs:
+    #print ('job ', i, ' is missing')
+        dir=bn
+        if os.path.exists(dir+'cnf-final'):
+            ok=True
+        else:
+            print('job '+ en + ' is not running and it has not finished yet!')
+            print('I am restarting it')
+            f0n=bn+'restart-0'
+            f1n=bn+'restart-0'
+            nw0=get_num_words(f0n)
+            nw1=get_num_words(f1n)
+            if nw0 > nw1:
+                    which=0
+            elif nw1 < nw0:
+                    which=1
+            else:
+                f0 = os.path.getmtime(f0n)
+                f1 = os.path.getmtime(f1n)
+                if (f0 < f1):
+                    which=1
+                else:
+                    which=0
+            exec=dir+en+' 1 restart-'+which
+            print ('exec is: '+exec)
+            ok=False
 if not ok:
 	print('Some jobs were dead and I had to restart them!\n')
 else:
 	if c == 0:
 		print('All done here!')
 	else:
-		print('Here (X0='+ x0 + ') there are '+str(c)+' jobs runnings', end='')
+		print('There are '+str(c)+' jobs runnings', end='')
 		print(' and '+ str(nd) + ' regularly finished')
-		print('Total job is', str(nd+c))
+		print('Total number of job is', str(nd+c))
