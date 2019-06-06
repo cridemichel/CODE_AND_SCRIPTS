@@ -3,20 +3,25 @@ import sys
 import os
 import psutil
 #forse la seguente funzioe si può riscriver in maniera più portabile usando il modulo psutil
-def get_proc_cmdlines(p=''):
+def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
     cls=[]
     pids = [pid for pid in psutil.pids()]
     for pid in pids:
-        p=psutil.Process(pid)
-        uid=p.uids()[1]#effective uid
+        pr=psutil.Process(pid)
+        uid=pr.uids()[1]#effective uid(0 is uid, 1 is effective uid)
+        #lo uid potrebbe essere quello dell'utente mentre l'effettivo
+        #potrebbe essere 0 se si è usato setuid cosicché 
+        #si ottiene un permission denied poiché il processo è rooted
+        #quindi va usato l'effective uid
         if uid != os.getuid():
             continue
-        if p in p.cmdline():
-            cls.append(p.cmdline())			
-            allpids.append(p.pid)	
-            allcwds.append(p.cwd())
+        #print ('p=',p, 'cmd=',pr.cmdline())
+        #filtra le command line con la stringa 
+        cls.append(pr.cmdline())#command line con cui è stato eseguito			
+        allpids.append(pr.pid)#pid del processo	
+        allcwds.append(pr.cwd())#directory del processo
     return (cls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
@@ -33,15 +38,16 @@ if len(args) > 1:
 else:
     print('You have to supply a file with all jobs to check')
     quit()
-if len(args) > 2:
-    cfn=args[2] #common patter in exec filenames
-else:
-    cfn=''
+#if len(args) > 2:
+#    cfn=args[2] #common patter in exec filenames
+#else:
+#    cfn=''
 with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path 
-cls,pids,allcwds=get_proc_cmdlines(cfn)
+#print ('CFN=', cfn)
+cls,pids,allcwds=get_proc_cmdlines()
 ok=True
 ndone=0
 ndead=0

@@ -3,7 +3,7 @@ import sys
 import os
 #import getpass
 #forse la seguente funzioe si può riscriver in maniera più portabile usando il modulo psutil
-def get_proc_cmdlines(p=''):
+def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
     cls=[]
@@ -18,12 +18,11 @@ def get_proc_cmdlines(p=''):
                 l=f.readline()
                 l=l.replace(b'\x00',b'\x20')
                 l2=str(l.decode('utf-8'))
-                if p in l2:
-                    #print ('qui')
-                    #print("cwd=",os.readlink(os.path.join('/proc', pid, 'cwd')))
-                    cls.append(l2)			
-                    allpids.append(pid)	
-                    allcwds.append(os.readlink(os.path.join('/proc', pid, 'cwd')))
+                #print ('qui')
+                #print("cwd=",os.readlink(os.path.join('/proc', pid, 'cwd')))
+                cls.append(l2)			
+                allpids.append(pid)	
+                allcwds.append(os.readlink(os.path.join('/proc', pid, 'cwd')))
         except IOError: # proc has already terminated
             pass
     return (cls,allpids,allcwds)
@@ -42,15 +41,15 @@ if len(args) > 1:
 else:
     print('You have to supply a file with all jobs to check')
     quit()
-if len(args) > 2:
-    cfn=args[2] #common patter in exec filenames
-else:
-    cfn=''
+#if len(args) > 2:
+#    cfn=args[2] #common patter in exec filenames
+#else:
+#    cfn=''
 with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path 
-cls,pids,allcwds=get_proc_cmdlines(cfn)
+cls,pids,allcwds=get_proc_cmdlines()
 ok=True
 ndone=0
 ndead=0
