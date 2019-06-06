@@ -43,46 +43,59 @@ def get_num_words(fn):
 postpend=' >> screen &'#li mette dopo l'exec
 prepend=''
 #postpend=''
-restart0='restart-0'
-restart1='restart-1'
+#restart can be also a list of one element!
+restart=['restart-0','restart-1']
 donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
-arg=' 1 restart-' #argomenti per l'eseguibile
+#argomenti per l'eseguibile in caso
+# di start o restart
+arg_start=' 2 '
+arg_restart=' 1 '
+#maximum number of running jobs 
+max_jobs=3
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
 def choose_restart(bn):
-    f0n=bn+'/'+restart0
-    f1n=bn+'/'+restart1
-    ex0=os.path.exists(f0n)
-    ex1=os.path.exists(f1n)
-    #print("ex=", ex0, ex1)
-    if ex0 == False and ex1 == False:
-        print('both restart files do not exist...I give up!')
-        return -1
-    if ex0 == False: 
-        which=1
-    elif ex1 == False:
-        which=0
-    else: 
-        nw0=get_num_words(f0n)
-        nw1=get_num_words(f1n)
-        if nw0 > nw1:
-            which=0
-        elif nw1 < nw0:
+    if len(restart) == 2:
+        f0n=bn+'/'+restart[0]
+        f1n=bn+'/'+restart[1]
+        ex0=os.path.exists(f0n)
+        ex1=os.path.exists(f1n)
+        #print("ex=", ex0, ex1)
+        if ex0 == False and ex1 == False:
+            print('both restart files do not exist...I give up!')
+            return -1
+        if ex0 == False: 
             which=1
-        else:
-            f0 = os.path.getmtime(f0n)
-            f1 = os.path.getmtime(f1n)
-            if (f0 < f1):
+        elif ex1 == False:
+            which=0
+        else: 
+            nw0=get_num_words(f0n)
+            nw1=get_num_words(f1n)
+            if nw0 > nw1:
+                which=0
+            elif nw1 < nw0:
                 which=1
             else:
-                which=0
-    return which            
+                f0 = os.path.getmtime(f0n)
+                f1 = os.path.getmtime(f1n)
+                if (f0 < f1):
+                    which=1
+                else:
+                    which=0
+        return which
+    else:#only one restart file
+        f0n=bn+'/'+restart[0]
+        ex0=os.path.exists(f0n)
+        if ex0 == False:
+            return -1
+        else:
+            return 0            
 args=sys.argv
 if len(args) > 1:
     lof=args[1]
 else:
-    print('You have to supply a file with all jobs to check')
+    print('You have to supply a file with all jobs to check (with absolute paths)')
     quit()
 #if len(args) > 2:
 #    cfn=args[2] #common patter in exec filenames
@@ -108,20 +121,30 @@ for l in lines:
             ndone+=1 
         else:
             ndead+=1
+            if ndead + nrun > max_jobs:
+                print ('maximum number of jobs (' + str(max_jobs) + ') reached')
+                continue
             print('job '+ en + ' is not running and it has not finished yet!', end='')
             print(' I am restarting it...')
             which=choose_restart(bn)
             if which == -1:
-                continue
-            #print('en=',en)
-            exec=' ./'+en+arg+str(which)
-            print ('exec is: '+exec)
-            os.chdir(dir)
-            print('dir=',os.getcwd())
-            s2e=prepend + exec + postpend 
-            print('executing ', s2e)
-            os.system(s2e)
-            ok=False
+                #no restart file, first start
+                exec=' ./'+en+arg_start
+                os.chdir(dir)
+                #print('dir=',os.getcwd())
+                s2e=prepend + exec + postpend 
+                print('executing ', s2e)
+                os.system(s2e)
+            else:
+                #print('en=',en)
+                exec=' ./'+en+arg_restart+restart[which]
+                print ('exec is: '+exec)
+                os.chdir(dir)
+                #print('dir=',os.getcwd())
+                s2e=prepend + exec + postpend 
+                print('executing ', s2e)
+                os.system(s2e)
+                ok=False
     else:#bn is running if here
         nrun+=1
 if not ok:
@@ -132,4 +155,4 @@ else:
 	else:
 		print('There are '+str(nrun)+' jobs runnings', end='')
 		print(' and '+ str(ndone) + ' regularly finished')
-		print('Total number of job is', str(ndone+nrun))
+		print('Total number of job is', str(len(lines)))
