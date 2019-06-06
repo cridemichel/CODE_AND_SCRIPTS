@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 #import matplotlib.transforms as transforms
 import sys
-fig, ax = plt.subplots(figsize=(10, 10))
 nl=0
 if len(sys.argv) > 1:
     filename=sys.argv[1]
@@ -27,6 +26,7 @@ with open(filename) as f:
             db=2.0*float(arr[4])
             Lx=float(arr[1])
             Ly=float(arr[2])
+            fig, ax = plt.subplots(figsize=(15, 15*Ly/Lx))
             plt.axis([-Lx/2.0-da, Lx/2.0+da, -Ly/2.0-db, Ly/2.0+db])
         else:
             arr=line.strip('\n').split(' ')
