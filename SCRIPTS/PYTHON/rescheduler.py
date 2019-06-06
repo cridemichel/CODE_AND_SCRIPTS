@@ -64,6 +64,17 @@ def build_arg_restart(l,w):
 # test if simulation is finished (customize if needed)
 def sim_done(dir):
     return os.path.exists(dir+'/'+donefile)        
+#la seguente va bene se il criterio è se ci sia un file
+#con una certa linea finale 
+def sim_done_veff(dir):
+    with open(dir+'/veff_vs_tt.dat') as f:
+        lines=f.readlines()
+    lastline=lines[-1]
+    lst=lastline.strip('\n').split(' ')
+    if lst[0] == '99900000000':
+        return True
+    else:
+        return False
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
