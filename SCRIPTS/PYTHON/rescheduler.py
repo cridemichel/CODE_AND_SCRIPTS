@@ -2,6 +2,7 @@
 import sys
 import os
 import psutil
+from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
@@ -34,6 +35,14 @@ def get_num_words(fn):
                 l=line.strip('\n').split(' ')
                 nw+=len(l)
         return nw
+def get_steps(bn,w):
+    with open(bn+'/'+restart[w]) as f:
+        firstline=f.readline()
+    l=firstline.split(' ')
+    #print ('l=',l)
+    #print ('lines[0][2]=', ls[0][2])
+    #overwrite filed total steps with new value
+    return int(l[2])
 #######################################
 # VARIABILI CHE DIPENDONO DA TIPO DI PROGRAMMA DA RIAVVIARE
 # SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
@@ -164,6 +173,7 @@ nrun=0
 #(we assume that each jobs has been launched from a different dir)
 nline=0
 lstdone=[]
+lststps=[]
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if bn not in allcwds:
@@ -171,7 +181,8 @@ for l in lines:
         dir=bn
         if sim_done(dir): 
             if keep_going == True:
-                lstdone.append(l)
+                which=choose_restart(bn)
+                lstdone.append([get_steps(dir,which),l])
             ndone+=1 
         else:
             ndead+=1
@@ -203,6 +214,9 @@ for l in lines:
         nrun+=1
     nline+=1
 if keep_going == True:
+    #sort list of done simulations from lower steps to higher
+    #so that simulations left behind start first
+    lstdone.sort(key=itemgetter(0))
     nj=0
     njmax = max_jobs-(nrun+ndead)
     for l in lstdone:
