@@ -229,10 +229,14 @@ for l in lines:
     #print ('job ', i, ' is missing')
         dir=bn
         if sim_done(dir): 
+            #found a cnf-final if keepgoing=True 
+            # and not max num of jobs reache then restart (see below)
             if keep_going == True:
                 which=choose_restart(bn)
                 # se non ci sono i restart ma c'il file cnf-final
                 # allora la simulazione è terminata
+                # se ci sono i restart invece possiamo estenderla
+                # (verrà fatto dopo utilizzando la lista lstdone)
                 if which != -1:
                     lstdone.append([get_steps(dir,which),l])
                 else:
@@ -240,9 +244,11 @@ for l in lines:
             else:
                 ndone+=1 
         else:
+            #not a cnf-final found (i.e. simulation is dead)
+            #look for restart files
             ndead+=1
             if ndead + nrun > max_jobs:
-                print ('maximum number of jobs (' + str(max_jobs) + ') reached')
+                #print ('maximum number of jobs (' + str(max_jobs) + ') reached')
                 continue
             print('job '+ en + ' is not running and it has not finished yet!', end='')
             print(' I am restarting it...')
@@ -253,16 +259,16 @@ for l in lines:
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
                 s2e=prepend + exec + postpend 
-                print('executing ', s2e)
+                print('Initial launch: ', s2e)
                 os.system(s2e)
             else:
-                #print('en=',en)
+                #at least one restart file found
                 exec=' ./'+en+build_arg_restart(nline,extra_args,which)
                 #print ('exec is: '+exec)
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
                 s2e=prepend + exec + postpend 
-                print('executing ', s2e)
+                print('Restart, executing ', s2e)
                 os.system(s2e)
                 ok=False
     else:#bn is running if here
@@ -288,12 +294,15 @@ if keep_going == True:
         nj += 1
 #       
 if not ok:
-	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
+	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
 else:
     if keep_going == True:
-        #print ('ndone=',ndone, ' nrun=', nrun, ' ndead=', ndead)
-        print('[keepgoing] Jobs now runing='+str(nj+nrun+ndead),end='')
-        print(', completed='+str(ndone)+'/'+str(len(lines))+' (max:'+str(max_jobs)+')')
+        if ndone < len(lines):
+            #print ('ndone=',ndone, ' nrun=', nrun, ' ndead=', ndead)
+            print('[keepgoing] Jobs now running='+str(nj+nrun+ndead),end='')
+            print(', completed='+str(ndone)+'/'+str(len(lines))+' (max:'+str(max_jobs)+')')
+        else:
+            print('[keepgoing] All done here!')
     else:
         if ndead == 0 and ndone == len(lines):
             print('All done here!')
