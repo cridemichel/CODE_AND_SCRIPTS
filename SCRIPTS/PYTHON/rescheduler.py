@@ -222,7 +222,7 @@ if keep_going == True:
     for l in lstdone:
         if nj >= njmax:
             break
-        bn, en=os.path.split(l.strip('\n'))
+        bn, en=os.path.split(l[1].strip('\n'))
         os.chdir(bn)
         which=choose_restart(bn)
         extend_sim(bn,which)
