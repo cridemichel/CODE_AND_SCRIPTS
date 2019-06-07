@@ -13,7 +13,7 @@ if len(args) > 1:
     lof=args[1]
 else:
     print('You have to supply a file with all jobs to check (with absolute paths)')
-    print('reschedluer <lista dirs> <totsteps> <extrasteps> <proc str ',end='')
+    print('reschedluer <lista dirs> <totsteps> <extrasteps> <maxjobs> <proc str ',end='')
     print('filter(*=disabled)> <extra args> <sched type> ')
     print('<sched type>=simpp or veff')
     quit()
@@ -26,17 +26,21 @@ if len(args) > 3:
 else:
     extsteps=-1
 if len(args) > 4:
-    filter_proc=args[4] #common pattern in exec filenames
+    max_jobs=int(args[4])
+else:
+    max_jobs=3    
+if len(args) > 5:
+    filter_proc=args[5] #common pattern in exec filenames
 else:
     filter_proc=''
 if filter_proc== '*':
     filter_proc=''
-if len(args) > 5:
-    extra_args=args[5] #extra args for launching the executable
+if len(args) > 6:
+    extra_args=args[6] #extra args for launching the executable
 else:
     extra_args=''
-if len(args) > 6:
-    sched_type=args[6] # simpp or veff for now
+if len(args) > 7:
+    sched_type=args[7] # simpp or veff for now
 else:
     sched_type='simpp' # simpp or veff for now
 #
@@ -91,9 +95,7 @@ def get_steps(bn,w):
 postpend=' >> screen &'#li mette dopo l'exec
 prepend=''
 #postpend=''
-max_jobs=3
 if sched_type == 'simpp':
-    keep_going=False #if true restart finished simulations too
     #restart can be also a list of one element!
     restart=['restart-0','restart-1']
     donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
@@ -327,17 +329,9 @@ if totsteps > 0:
 #       
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
+if ndone < len(lines):
+    #print ('ndone=',ndone, ' nrun=', nrun, ' ndead=', ndead)
+    print('Jobs now running='+str(nrun),end='')
+    print(', completed='+str(ndone)+'/'+str(len(lines))+' (max:'+str(max_jobs)+')')
 else:
-    if keep_going == True:
-        if ndone < len(lines):
-            #print ('ndone=',ndone, ' nrun=', nrun, ' ndead=', ndead)
-            print('[keepgoing] Jobs now running='+str(nrun),end='')
-            print(', completed='+str(ndone)+'/'+str(len(lines))+' (max:'+str(max_jobs)+')')
-        else:
-            print('[keepgoing] All done here!')
-    else:
-        if ndone == len(lines):
-            print('All done here!')
-        else:
-            print('Jobs now running '+str(nrun), end='')
-            print(', completed '+ str(ndone) + '/'+str(len(lines)))
+    print('All done here!')
