@@ -51,8 +51,8 @@ donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
 arg_start=' 2 '
 arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
 #maximum number of running jobs 
-max_jobs=100
-keep_going=False #if true restart finished simulations too
+max_jobs=1
+keep_going=True #if true restart finished simulations too
 # NOTES:
 # customize these functions is special args, 
 # l is an integer between 0 and the total number of jobs
@@ -60,7 +60,7 @@ keep_going=False #if true restart finished simulations too
 # as argument)
 def build_arg_start(l,ea):
     return arg_start
-def build_arg_restart(l,w,ea):
+def build_arg_restart(l,ea,w):
     return arg_restart[w]
 # test if simulation is finished (customize if needed)
 def sim_done(dir):
@@ -69,8 +69,8 @@ def sim_done(dir):
 #con una certa linea finale 
 def sim_done_veff(dir):
     with open(dir+'/veff_vs_tt.dat') as f:
-        lines=f.readlines()
-    lastline=lines[-1]
+        ls=f.readlines()
+    lastline=ls[-1]
     lst=lastline.strip('\n').split(' ')
     if lst[0] == '99900000000':
         return True
@@ -78,15 +78,22 @@ def sim_done_veff(dir):
         return False
 #step to extend simulation
 extra_steps=1000000
-def extend_sim(bn,which):
+def extend_sim(bn,w):
     os.system('rm '+donefile)
-    with open(bn+'/'+restart[which]) as f:
-        lines=f.readlines()
-    l=lines[0].split(' ')
+    with open(bn+'/'+restart[w]) as f:
+        ls=f.readlines()
+    l=ls[0].split(' ')
+    #print ('l=',l)
+    #print ('lines[0][2]=', ls[0][2])
     #overwrite filed total steps with new value
-    lines[0][2]=str(int(l[2])+extra_steps)
-    with open(dir+'/'+restart[which],"w") as f:
-        for l in lines:
+    newsteps=int(l[2])+extra_steps
+    l[2]=str(newsteps)
+    ls[0]=' '.join(l)
+    #print ('dopo ls[0]=',ls[0])
+    #print ('dir=', bn)
+    #print ('res='+restart[w])
+    with open(bn+'/'+restart[w],"w") as f:
+        for l in ls:
             f.write(l)
 #            
 #build arg depending on l
@@ -94,7 +101,7 @@ def build_arg_restart_veff(l,ea,w):
     return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
 def build_arg_start_veff(l,ea):
      return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
-restart=['calcveff.chk']
+restart_veff=['calcveff.chk']
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
@@ -196,10 +203,10 @@ for l in lines:
         nrun+=1
     nline+=1
 if keep_going == True:
-    nj=1
+    nj=0
     njmax = max_jobs-(nrun+ndead)
     for l in lstdone:
-        if nj > njmax:
+        if nj >= njmax:
             break
         bn, en=os.path.split(l.strip('\n'))
         os.chdir(bn)
@@ -207,16 +214,20 @@ if keep_going == True:
         extend_sim(bn,which)
         exec=' ./'+en+build_arg_restart(nline,extra_args,which)
         s2e=prepend + exec + postpend 
-        print('executing ', s2e)
+        print('[keepgoing] executing ', s2e)
         os.system(s2e) 
         nj += 1
 #       
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
 else:
-	if ndead == 0 and ndone == len(lines):
-		print('All done here!')
-	else:
-		print('There are '+str(nrun)+' jobs runnings', end='')
-		print(' and '+ str(ndone) + ' regularly finished')
-		print('Total number of job is', str(len(lines)))
+    if keep_going == True:
+        print('[keepgoing] Jobs runing='+str(nj+nrun+ndead))
+        print('max_jobs='+str(max_jobs)+ ' total jobs='+str(len(lines)))
+    else:
+        if ndead == 0 and ndone == len(lines):
+            print('All done here!')
+        else:
+            print('There are '+str(nrun)+' jobs runnings', end='')
+            print(' and '+ str(ndone) + ' regularly finished')
+            print('Total number of job is', str(len(lines)))
