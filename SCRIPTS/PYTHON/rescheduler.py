@@ -46,7 +46,8 @@ def get_proc_info(fil):
         #filtra le command line con la stringa 
         cli=pr.cmdline()
         if len(cli) > 1:
-            if fil == '' or cli[1].find(fil):
+            if fil == '' or cli[1].find(fil) != -1:
+                print('cli1=', cli[1], ' boh=', cli[1].find(fil))
                 cls.append(pr.cmdline())#command line con cui è stato eseguito			
                 allpids.append(pr.pid)#pid del processo	
                 allcwds.append(pr.cwd())#directory del processo
@@ -211,8 +212,10 @@ nrun=0
 nline=0
 lstdone=[]
 lststps=[]
-#print('allcwds=',allcwds)
-#print('pids=',pids)
+print('cls=',cls)
+print('fil=',filter_proc)
+print('allcwds=',allcwds)
+print('pids=',pids)
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if bn not in allcwds:
