@@ -430,20 +430,24 @@ class mcsim {
           is >> dth[i];
         }
     }
+  void save_restart_fn(const char *rfn)
+    {
+      restorefile.open(rfn,ios::out|ios::trunc);
+      pars.write(restorefile);
+      state.write(restorefile);
+      write_coords(restorefile);
+      write_msd(restorefile);
+      restorefile.close();
+    }
   void save_restart(long long int tt)
     {
-      static unsigned int w=0;
+      //static unsigned int w=0;
       state.curStep = tt;
       if (tt != iniStep && pars.saverest > 0 && tt % pars.saverest == 0)
         {
-          sprintf(rfn, "restart-%u", w);
-          restorefile.open(rfn,ios::out|ios::trunc);
-          pars.write(restorefile);
-          state.write(restorefile);
-          write_coords(restorefile);
-          write_msd(restorefile);
-          restorefile.close();
-          w = (~w)&1;
+          sprintf(rfn, "restart-%u", state.which);
+          save_restart_fn(rfn);
+          state.which = (~state.which)&1;
         }
     }
   
@@ -689,7 +693,12 @@ public:
       //cout << "saverest=" << pars.saverest << "\n";
       cout << "N=" << pars.parnum << " a=" << pars.a << " b=" << pars.b << "\n";
       prepare_observables();
-      for (tt=iniStep; tt < pars.steps; tt++)
+      if (pars.steps > pars.totsteps)
+        {
+          cout << "[ERROR] totsteps must be greater that steps\n";
+          exit(1);
+        }
+      for (tt=iniStep; tt < pars.steps && tt < pars.totsteps; tt++)
         {
           state.curStep=tt;
           ntot=pars.parnum;
@@ -728,7 +737,12 @@ public:
               break;
             } 
         }
-
+      if (tt >= pars.totsteps)
+        {
+          save_restart_fn("restart-final-0");
+          save_restart_fn("restart-final-1");
+          system("rm restart-*");
+        }
       save_snap_str("cnf-final");
     }
   
