@@ -52,6 +52,7 @@ arg_start=' 2 '
 arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
 #maximum number of running jobs 
 max_jobs=100
+keep_going=False #if true restart finished simulations too
 # NOTES:
 # customize these functions is special args, 
 # l is an integer between 0 and the total number of jobs
@@ -75,6 +76,19 @@ def sim_done_veff(dir):
         return True
     else:
         return False
+#step to extend simulation
+extra_steps=1000000
+def extend_sim(bn,which):
+    os.system('rm '+donefile)
+    with open(bn+'/'+restart[which]) as f:
+        lines=f.readlines()
+    l=lines[0].split(' ')
+    #overwrite filed total steps with new value
+    lines[0][2]=str(int(l[2])+extra_steps)
+    with open(dir+'/'+restart[which],"w") as f:
+        for l in lines:
+            f.write(l)
+#            
 #build arg depending on l
 def build_arg_restart_veff(l,ea,w):
     return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
@@ -142,12 +156,15 @@ nrun=0
 #we compare absolute paths to determine if process is running
 #(we assume that each jobs has been launched from a different dir)
 nline=0
+lstdone=[]
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if bn not in allcwds:
     #print ('job ', i, ' is missing')
         dir=bn
         if sim_done(dir): 
+            if keep_going == True:
+                lstdone.append(l)
             ndone+=1 
         else:
             ndead+=1
@@ -178,7 +195,22 @@ for l in lines:
     else:#bn is running if here
         nrun+=1
     nline+=1
-    
+if keep_going == True:
+    nj=1
+    njmax = max_jobs-(nrun+ndead)
+    for l in lstdone:
+        if nj > njmax:
+            break
+        bn, en=os.path.split(l.strip('\n'))
+        os.chdir(bn)
+        which=choose_restart(bn)
+        extend_sim(bn,which)
+        exec=' ./'+en+build_arg_restart(nline,extra_args,which)
+        s2e=prepend + exec + postpend 
+        print('executing ', s2e)
+        os.system(s2e) 
+        nj += 1
+#       
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
 else:
