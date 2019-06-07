@@ -6,6 +6,7 @@ from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
+sched_type='simpp' # simpp or veff for now
 def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
@@ -52,57 +53,61 @@ def get_steps(bn,w):
 postpend=' >> screen &'#li mette dopo l'exec
 prepend=''
 #postpend=''
-#restart can be also a list of one element!
-restart=['restart-0','restart-1']
-donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
-#argomenti per l'eseguibile in caso
-# di start o restart
-arg_start=' 2 '
-arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
-#maximum number of running jobs 
 max_jobs=1
 keep_going=True #if true restart finished simulations too
-# NOTE SUL RESTART
-# se le simulazioni arrivano a totsteps i file di restart vengono cancellati
-# e non si riavviano più finendo senza riprendere
-# nel file di parametri delle sim vanno impostati gli step a cui termina 
-# la simulazione (steps) senza cancellare i restart e quelli a cui deve finire 
-# cancellando i restart per non proseguire.
-# Notare che quando raggiunge totsteps comunque scrive dei file di restart
-# chiamati restart-final-[0,1] che possono essere utilizzati per ripartire 
-# ulteriormente rinominandlo in restart-[0,1] 
-# NOTES:
-# customize these functions is special args, 
-# l is an integer between 0 and the total number of jobs
-# which is equal to len(lines) (=# of lines in the file supplied 
-# as argument)
-def build_arg_start(l,ea):
-    return arg_start
-def build_arg_restart(l,ea,w):
-    return arg_restart[w]
-# test if simulation is finished (customize if needed)
-def sim_done(dir):
-    return os.path.exists(dir+'/'+donefile)        
-#step to extend simulation
-extra_steps=1000000
-#
-def extend_sim(bn,w):
-    os.system('rm '+donefile)
-    with open(bn+'/'+restart[w]) as f:
-        ls=f.readlines()
-    l=ls[0].split(' ')
-    #print ('l=',l)
-    #print ('lines[0][2]=', ls[0][2])
-    #overwrite filed total steps with new value
-    newsteps=int(l[2])+extra_steps
-    l[2]=str(newsteps)
-    ls[0]=' '.join(l)
-    #print ('dopo ls[0]=',ls[0])
-    #print ('dir=', bn)
-    #print ('res='+restart[w])
-    with open(bn+'/'+restart[w],"w") as f:
-        for l in ls:
-            f.write(l)
+
+if sched_type == 'simpp':
+    #restart can be also a list of one element!
+    restart=['restart-0','restart-1']
+    donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
+    #argomenti per l'eseguibile in caso
+    # di start o restart
+    arg_start=' 2 '
+    arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
+    #maximum number of running jobs     
+    #
+    # NOTE SUL RESTART
+    # se le simulazioni arrivano a totsteps i file di restart vengono cancellati
+    # e non si riavviano più finendo senza riprendere
+    # nel file di parametri delle sim vanno impostati gli step a cui termina 
+    # la simulazione (steps) senza cancellare i restart e quelli a cui deve finire 
+    # cancellando i restart per non proseguire.
+    # Notare che quando raggiunge totsteps comunque scrive dei file di restart
+    # chiamati restart-final-[0,1] che possono essere utilizzati per ripartire 
+    # ulteriormente rinominandlo in restart-[0,1] 
+    # NOTES:
+    # customize these functions is special args, 
+    # l is an integer between 0 and the total number of jobs
+    # which is equal to len(lines) (=# of lines in the file supplied 
+    # as argument)
+    def build_arg_start(l,ea):
+        return arg_start
+    def build_arg_restart(l,ea,w):
+        return arg_restart[w]
+    # test if simulation is finished (customize if needed)
+    def sim_done(dir):
+        return os.path.exists(dir+'/'+donefile)        
+    #step to extend simulation
+    extra_steps=1000000
+    #
+    def extend_sim(bn,w):   
+        os.system('rm '+donefile)
+        with open(bn+'/'+restart[w]) as f:
+            ls=f.readlines()
+        l=ls[0].split(' ')
+        #print ('l=',l)
+        #print ('lines[0][2]=', ls[0][2])
+        #overwrite filed total steps with new value
+        newsteps=int(l[2])+extra_steps
+        l[2]=str(newsteps)
+        ls[0]=' '.join(l)
+        #print ('dopo ls[0]=',ls[0])
+        #print ('dir=', bn)
+        #print ('res='+restart[w])
+        with open(bn+'/'+restart[w],"w") as f:
+            for l in ls:
+                f.write(l)
+elif sched_type == 'veff':
 #la seguente va bene se il criterio è se ci sia un file
 #con una certa linea finale 
 #routine riavviare programmi con un solo file di restart 
@@ -110,22 +115,25 @@ def extend_sim(bn,w):
 # queste devono rimpiazzare le corrispondenti build_arg_start,
 # build_arg_restart e sim_done
 # inoltre anche la variabile restart_veff deve essere rinominata in restart
-def sim_done_veff(dir):
-    with open(dir+'/veff_vs_tt.dat') as f:
-        ls=f.readlines()
-    lastline=ls[-1]
-    lst=lastline.strip('\n').split(' ')
-    if lst[0] == '99900000000':
-        return True
-    else:
-        return False
-#            
-#build arg depending on l
-def build_arg_restart_veff(l,ea,w):
-    return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
-def build_arg_start_veff(l,ea):
-     return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
-restart_veff=['calcveff.chk']
+    def sim_done(dir):
+        with open(dir+'/veff_vs_tt.dat') as f:
+            ls=f.readlines()
+            lastline=ls[-1]
+            lst=lastline.strip('\n').split(' ')
+            if lst[0] == '99900000000':
+                return True
+            else:
+                return False
+            #            
+            #build arg depending on l
+    def build_arg_restart_veff(l,ea,w):
+        return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
+    def build_arg_start_veff(l,ea):
+        return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
+    restart_veff=['calcveff.chk']
+else:
+    print('wrong schedule type '+sched_type)
+    quit()
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
