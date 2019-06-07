@@ -78,7 +78,7 @@ def get_steps(bn,w):
 postpend=' >> screen &'#li mette dopo l'exec
 prepend=''
 #postpend=''
-max_jobs=2
+max_jobs=3
 if sched_type == 'simpp':
     keep_going=True #if true restart finished simulations too
     #restart can be also a list of one element!
@@ -176,7 +176,7 @@ def choose_restart(bn):
         ex1=os.path.exists(f1n)
         #print("ex=", ex0, ex1)
         if ex0 == False and ex1 == False:
-            print('both restart files do not exist...I give up!')
+            #print('both restart files do not exist...I give up!')
             return -1
         if ex0 == False: 
             which=1
@@ -231,8 +231,14 @@ for l in lines:
         if sim_done(dir): 
             if keep_going == True:
                 which=choose_restart(bn)
-                lstdone.append([get_steps(dir,which),l])
-            ndone+=1 
+                # se non ci sono i restart ma c'il file cnf-final
+                # allora la simulazione è terminata
+                if which != -1:
+                    lstdone.append([get_steps(dir,which),l])
+                else:
+                    ndone+=1
+            else:
+                ndone+=1 
         else:
             ndead+=1
             if ndead + nrun > max_jobs:
@@ -285,9 +291,9 @@ if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
 else:
     if keep_going == True:
-        print ('nj=',nj, ' nrun=', nrun, ' pndead=', ndead)
-        print('[keepgoing] Jobs runing='+str(nj+nrun+ndead))
-        print('max_jobs='+str(max_jobs)+ ' total jobs='+str(len(lines)))
+        #print ('ndone=',ndone, ' nrun=', nrun, ' ndead=', ndead)
+        print('[keepgoing] Jobs now runing='+str(nj+nrun+ndead),end='')
+        print(', max_jobs='+str(max_jobs)+ ', jobs to complete='+str(len(lines)))
     else:
         if ndead == 0 and ndone == len(lines):
             print('All done here!')
