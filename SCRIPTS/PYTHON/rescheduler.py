@@ -62,6 +62,15 @@ arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
 #maximum number of running jobs 
 max_jobs=1
 keep_going=True #if true restart finished simulations too
+# NOTE SUL RESTART
+# se le simulazioni arrivano a totsteps i file di restart vengono cancellati
+# e non si riavviano più finendo senza riprendere
+# nel file di parametri delle sim vanno impostati gli step a cui termina 
+# la simulazione (steps) senza cancellare i restart e quelli a cui deve finire 
+# cancellando i restart per non proseguire.
+# Notare che quando raggiunge totsteps comunque scrive dei file di restart
+# chiamati restart-final-[0,1] che possono essere utilizzati per ripartire 
+# ulteriormente rinominandlo in restart-[0,1] 
 # NOTES:
 # customize these functions is special args, 
 # l is an integer between 0 and the total number of jobs
@@ -74,19 +83,9 @@ def build_arg_restart(l,ea,w):
 # test if simulation is finished (customize if needed)
 def sim_done(dir):
     return os.path.exists(dir+'/'+donefile)        
-#la seguente va bene se il criterio è se ci sia un file
-#con una certa linea finale 
-def sim_done_veff(dir):
-    with open(dir+'/veff_vs_tt.dat') as f:
-        ls=f.readlines()
-    lastline=ls[-1]
-    lst=lastline.strip('\n').split(' ')
-    if lst[0] == '99900000000':
-        return True
-    else:
-        return False
 #step to extend simulation
 extra_steps=1000000
+#
 def extend_sim(bn,w):
     os.system('rm '+donefile)
     with open(bn+'/'+restart[w]) as f:
@@ -104,6 +103,22 @@ def extend_sim(bn,w):
     with open(bn+'/'+restart[w],"w") as f:
         for l in ls:
             f.write(l)
+#la seguente va bene se il criterio è se ci sia un file
+#con una certa linea finale 
+#routine riavviare programmi con un solo file di restart 
+# come quelli usati per il calcolo del potenziale efficace
+# queste devono rimpiazzare le corrispondenti build_arg_start,
+# build_arg_restart e sim_done
+# inoltre anche la variabile restart_veff deve essere rinominata in restart
+def sim_done_veff(dir):
+    with open(dir+'/veff_vs_tt.dat') as f:
+        ls=f.readlines()
+    lastline=ls[-1]
+    lst=lastline.strip('\n').split(' ')
+    if lst[0] == '99900000000':
+        return True
+    else:
+        return False
 #            
 #build arg depending on l
 def build_arg_restart_veff(l,ea,w):
