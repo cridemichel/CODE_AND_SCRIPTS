@@ -258,7 +258,7 @@ for l in lines:
             else:
                 #print('en=',en)
                 exec=' ./'+en+build_arg_restart(nline,extra_args,which)
-                print ('exec is: '+exec)
+                #print ('exec is: '+exec)
                 os.chdir(dir)
                 #print('dir=',os.getcwd())
                 s2e=prepend + exec + postpend 
@@ -293,7 +293,7 @@ else:
     if keep_going == True:
         #print ('ndone=',ndone, ' nrun=', nrun, ' ndead=', ndead)
         print('[keepgoing] Jobs now runing='+str(nj+nrun+ndead),end='')
-        print(', max_jobs='+str(max_jobs)+ ', jobs to complete='+str(len(lines)))
+        print(', completed='+str(ndone)+'/'+str(len(lines))+' (max:'+str(max_jobs)+')')
     else:
         if ndead == 0 and ndone == len(lines):
             print('All done here!')
