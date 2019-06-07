@@ -15,11 +15,15 @@ else:
     print('You have to supply a file with all jobs to check (with absolute paths)')
     quit()
 if len(args) > 2:
-    extra_args=args[2] #common patter in exec filenames
+    filter_proc=args[2] #common pattern in exec filenames
+else:
+    filter_proc=''
+if len(args) > 3:
+    extra_args=args[3] #extra args for launching the executable
 else:
     extra_args=''
-if len(args) > 3:
-    sched_type=args[3] #common patter in exec filenames
+if len(args) > 4:
+    sched_type=args[4] # simpp or veff for now
 else:
     sched_type='simpp' # simpp or veff for now
 #
@@ -41,10 +45,11 @@ def get_proc_info(fil):
         #print ('p=',p, 'cmd=',pr.cmdline())
         #filtra le command line con la stringa 
         cli=pr.cmdline()
-        if fil == '' or cli.find(fil):
-            cls.append(pr.cmdline())#command line con cui è stato eseguito			
-            allpids.append(pr.pid)#pid del processo	
-            allcwds.append(pr.cwd())#directory del processo
+        if len(cli) > 1:
+            if fil == '' or cli[1].find(fil):
+                cls.append(pr.cmdline())#command line con cui è stato eseguito			
+                allpids.append(pr.pid)#pid del processo	
+                allcwds.append(pr.cwd())#directory del processo
     return (cls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
@@ -196,7 +201,7 @@ with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
-cls,pids,allcwds=get_proc_info("exe")
+cls,pids,allcwds=get_proc_info(filter_proc)
 ok=True
 ndone=0
 ndead=0
