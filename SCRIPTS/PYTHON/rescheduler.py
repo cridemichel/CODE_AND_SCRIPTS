@@ -30,7 +30,7 @@ else:
 def get_proc_info(fil):
     allpids=[]
     allcwds=[]
-    cls=[]
+    allcls=[]
     pids = [pid for pid in psutil.pids()]
     for pid in pids:
         pr=psutil.Process(pid)
@@ -47,11 +47,12 @@ def get_proc_info(fil):
         cli=pr.cmdline()
         if len(cli) > 1:
             if fil == '' or cli[1].find(fil) != -1:
-                print('cli1=', cli[1], ' boh=', cli[1].find(fil))
-                cls.append(pr.cmdline())#command line con cui è stato eseguito			
+                print('cli1=', cli, ' boh=', cli[1].find(fil))
+                print('pr.cwd=', pr.cwd())
+                allcls.append(cli)#command line con cui è stato eseguito			
                 allpids.append(pr.pid)#pid del processo	
                 allcwds.append(pr.cwd())#directory del processo
-    return (cls,allpids,allcwds)
+    return (allcls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
         lines=f.readlines()
@@ -158,6 +159,12 @@ elif sched_type == 'veff':
 else:
     print('wrong schedule type '+sched_type)
     quit()
+    
+def in_allcls(allcls,en):
+    for l in allcls:
+        if l[1].find(en) != -1:
+            return True
+    return False
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
@@ -202,7 +209,7 @@ with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
-cls,pids,allcwds=get_proc_info(filter_proc)
+allcls,pids,allcwds=get_proc_info(filter_proc)
 ok=True
 ndone=0
 ndead=0
@@ -212,13 +219,13 @@ nrun=0
 nline=0
 lstdone=[]
 lststps=[]
-print('cls=',cls)
-print('fil=',filter_proc)
+print('cls=',allcls)
+#print('fil=',filter_proc)
 print('allcwds=',allcwds)
 print('pids=',pids)
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
-    if bn not in allcwds:
+    if not ((bn in allcwds) and in_allcls(allcls,en)):
     #print ('job ', i, ' is missing')
         dir=bn
         if sim_done(dir): 
