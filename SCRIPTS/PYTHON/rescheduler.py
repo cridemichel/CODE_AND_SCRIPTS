@@ -47,8 +47,8 @@ def get_proc_info(fil):
         cli=pr.cmdline()
         if len(cli) > 1:
             if fil == '' or cli[1].find(fil) != -1:
-                print('cli1=', cli, ' boh=', cli[1].find(fil))
-                print('pr.cwd=', pr.cwd())
+                #print('cli1=', cli, ' boh=', cli[1].find(fil))
+                #print('pr.cwd=', pr.cwd())
                 allcls.append(cli)#command line con cui è stato eseguito			
                 allpids.append(pr.pid)#pid del processo	
                 allcwds.append(pr.cwd())#directory del processo
