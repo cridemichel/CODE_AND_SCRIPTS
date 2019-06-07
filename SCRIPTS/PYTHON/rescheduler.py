@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+#questo script python assume che per ogni cartella fornita nella lista
+#giri un solo processo
 import sys
 import os
 import psutil
@@ -21,7 +23,7 @@ if len(args) > 3:
 else:
     sched_type='simpp' # simpp or veff for now
 #
-def get_proc_cmdlines():
+def get_proc_info():
     allpids=[]
     allcwds=[]
     cls=[]
@@ -67,7 +69,7 @@ def get_steps(bn,w):
 postpend=' >> screen &'#li mette dopo l'exec
 prepend=''
 #postpend=''
-max_jobs=1
+max_jobs=2
 if sched_type == 'simpp':
     keep_going=True #if true restart finished simulations too
     #restart can be also a list of one element!
@@ -192,7 +194,7 @@ with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
-cls,pids,allcwds=get_proc_cmdlines()
+cls,pids,allcwds=get_proc_info()
 ok=True
 ndone=0
 ndead=0
@@ -202,6 +204,8 @@ nrun=0
 nline=0
 lstdone=[]
 lststps=[]
+#print('allcwds=',allcwds)
+#print('pids=',pids)
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if bn not in allcwds:
@@ -264,6 +268,7 @@ if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!\n')
 else:
     if keep_going == True:
+        print ('nj=',nj, ' nrun=', nrun, ' pndead=', ndead)
         print('[keepgoing] Jobs runing='+str(nj+nrun+ndead))
         print('max_jobs='+str(max_jobs)+ ' total jobs='+str(len(lines)))
     else:
