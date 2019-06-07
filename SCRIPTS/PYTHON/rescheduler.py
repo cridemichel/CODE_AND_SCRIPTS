@@ -80,7 +80,7 @@ prepend=''
 #postpend=''
 max_jobs=3
 if sched_type == 'simpp':
-    keep_going=True #if true restart finished simulations too
+    keep_going=False #if true restart finished simulations too
     #restart can be also a list of one element!
     restart=['restart-0','restart-1']
     donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
@@ -304,9 +304,8 @@ else:
         else:
             print('[keepgoing] All done here!')
     else:
-        if ndead == 0 and ndone == len(lines):
+        if ndone == len(lines):
             print('All done here!')
         else:
-            print('There are '+str(nrun)+' jobs runnings', end='')
-            print(' and '+ str(ndone) + ' regularly finished')
-            print('Total number of job is', str(len(lines)))
+            print('Jobs now running '+str(nrun+ndead), end='')
+            print(', completed '+ str(ndone) + '/'+str(len(lines)))
