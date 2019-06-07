@@ -693,12 +693,7 @@ public:
       //cout << "saverest=" << pars.saverest << "\n";
       cout << "N=" << pars.parnum << " a=" << pars.a << " b=" << pars.b << "\n";
       prepare_observables();
-      if (pars.steps > pars.totsteps)
-        {
-          cout << "[ERROR] totsteps must be greater that steps\n";
-          exit(1);
-        }
-      for (tt=iniStep; tt < pars.steps && tt < pars.totsteps; tt++)
+      for (tt=iniStep; tt < pars.steps; tt++)
         {
           state.curStep=tt;
           ntot=pars.parnum;
@@ -737,12 +732,14 @@ public:
               break;
             } 
         }
+#if 0
       if (tt >= pars.totsteps)
         {
           save_restart_fn("restart-final-0");
           save_restart_fn("restart-final-1");
-          system("rm restart-*");
+          system("rm restart-*"); 
         }
+#endif
       save_snap_str("cnf-final");
     }
   

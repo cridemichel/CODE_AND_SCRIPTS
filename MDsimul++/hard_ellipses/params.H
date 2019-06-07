@@ -24,10 +24,7 @@ class params
     }
 public:
   string iniconf; // configurazione iniziale da leggere
-  long long int steps, totsteps;
-  //stop at steps without deleting restart files
-  //stop at totsteps (typically > steps) delete restart-[0,1] files
-  //and write restart-final-[0,1] files 
+  long long int steps;
   int simtype;
   int seed;// -1 means random seed 
   ntype a, b;
@@ -72,7 +69,6 @@ public:
       o << simtype << " ";
       o << iniconf << " ";
       o << steps << " ";
-      o << totsteps << " ";
       o << seed << " ";
       o << a << " ";// a semi-axis
       o << b << " ";// b semi-axis
@@ -99,7 +95,6 @@ public:
       i >> simtype;
       i >> iniconf;
       i >> steps;
-      i >> totsteps;
       i >> seed;
       i >> a;// a semi-axis
       i >> b;// b semi-axis
@@ -160,7 +155,7 @@ public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
   long long int volmoves=0, volrej=0;
   long long int curStep;
-  int which;
+  unsigned int which=0;
   //long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
