@@ -6,7 +6,21 @@ from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
-sched_type='simpp' # simpp or veff for now
+args=sys.argv
+if len(args) > 1:
+    lof=args[1]
+else:
+    print('You have to supply a file with all jobs to check (with absolute paths)')
+    quit()
+if len(args) > 2:
+    extra_args=args[2] #common patter in exec filenames
+else:
+    extra_args=''
+if len(args) > 3:
+    sched_type=args[3] #common patter in exec filenames
+else:
+    sched_type='simpp' # simpp or veff for now
+#
 def get_proc_cmdlines():
     allpids=[]
     allcwds=[]
@@ -54,9 +68,8 @@ postpend=' >> screen &'#li mette dopo l'exec
 prepend=''
 #postpend=''
 max_jobs=1
-keep_going=True #if true restart finished simulations too
-
 if sched_type == 'simpp':
+    keep_going=True #if true restart finished simulations too
     #restart can be also a list of one element!
     restart=['restart-0','restart-1']
     donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
@@ -115,6 +128,7 @@ elif sched_type == 'veff':
 # queste devono rimpiazzare le corrispondenti build_arg_start,
 # build_arg_restart e sim_done
 # inoltre anche la variabile restart_veff deve essere rinominata in restart
+    keep_going=False #if true restart finished simulations too
     def sim_done(dir):
         with open(dir+'/veff_vs_tt.dat') as f:
             ls=f.readlines()
@@ -126,11 +140,11 @@ elif sched_type == 'veff':
                 return False
             #            
             #build arg depending on l
-    def build_arg_restart_veff(l,ea,w):
+    def build_arg_restart(l,ea,w):
         return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
-    def build_arg_start_veff(l,ea):
+    def build_arg_start(l,ea):
         return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
-    restart_veff=['calcveff.chk']
+    restart=['calcveff.chk']
 else:
     print('wrong schedule type '+sched_type)
     quit()
@@ -173,16 +187,7 @@ def choose_restart(bn):
             return -1
         else:
             return 0            
-args=sys.argv
-if len(args) > 1:
-    lof=args[1]
-else:
-    print('You have to supply a file with all jobs to check (with absolute paths)')
-    quit()
-if len(args) > 2:
-    extra_args=args[2] #common patter in exec filenames
-else:
-    extra_args=''
+#
 with open(lof) as f:
     lines=f.readlines() 
 c=0
