@@ -23,7 +23,7 @@ if len(args) > 3:
 else:
     sched_type='simpp' # simpp or veff for now
 #
-def get_proc_info():
+def get_proc_info(fil):
     allpids=[]
     allcwds=[]
     cls=[]
@@ -40,9 +40,11 @@ def get_proc_info():
             continue
         #print ('p=',p, 'cmd=',pr.cmdline())
         #filtra le command line con la stringa 
-        cls.append(pr.cmdline())#command line con cui è stato eseguito			
-        allpids.append(pr.pid)#pid del processo	
-        allcwds.append(pr.cwd())#directory del processo
+        cli=pr.cmdline()
+        if fil == '' or cli.find(fil):
+            cls.append(pr.cmdline())#command line con cui è stato eseguito			
+            allpids.append(pr.pid)#pid del processo	
+            allcwds.append(pr.cwd())#directory del processo
     return (cls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
@@ -194,7 +196,7 @@ with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
-cls,pids,allcwds=get_proc_info()
+cls,pids,allcwds=get_proc_info("exe")
 ok=True
 ndone=0
 ndead=0
