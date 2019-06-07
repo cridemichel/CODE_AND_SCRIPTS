@@ -274,6 +274,8 @@ for l in lines:
     else:#bn is running if here
         nrun+=1
     nline+=1
+# all jobs with a cnf-final are extended now 
+# if number of jobs does not exceed max_jobs
 if keep_going == True:
     #sort list of done simulations from lower steps to higher
     #so that simulations left behind start first
