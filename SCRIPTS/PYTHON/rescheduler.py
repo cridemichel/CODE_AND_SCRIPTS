@@ -219,10 +219,10 @@ nrun=0
 nline=0
 lstdone=[]
 lststps=[]
-print('cls=',allcls)
+#print('cls=',allcls)
 #print('fil=',filter_proc)
-print('allcwds=',allcwds)
-print('pids=',pids)
+#print('allcwds=',allcwds)
+#print('pids=',pids)
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if not ((bn in allcwds) and in_allcls(allcls,en)):
