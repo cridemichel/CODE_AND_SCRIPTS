@@ -285,18 +285,12 @@ for l in lines:
             if to_extend(dir,which): 
                 lsttoext.append([get_steps(dir,which),l])
                 continue
-            else:
-                if totsteps <= 0:
-                    print(donefile+' exists but restart file does not...')
-                    print('I try to start sim from begin')
-                else:
-                    # se non ci sono i file di restart ma il donefile 
+            if which == -1:
+                # se non ci sono i file di restart ma il donefile 
                     # assumo che siano stati cancellati o rinominati per
                     # per far terminare la simulazione
+                if totsteps > 0 and os.path.exists(dir+'/'+donefile):
                     continue
-            #print('job '+ en + ' is not running and it has not finished yet!', end='')
-            #print(' I am restarting it...')
-            if which == -1:
                 lststart.append(l)
                 nrun += 1
                 #no restart file, first start
