@@ -69,6 +69,7 @@ public:
       o << simtype << " ";
       o << iniconf << " ";
       o << steps << " ";
+      o << curStep << " ";
       o << seed << " ";
       o << a << " ";// a semi-axis
       o << b << " ";// b semi-axis
@@ -95,6 +96,7 @@ public:
       i >> simtype;
       i >> iniconf;
       i >> steps;
+      i >> curStep;
       i >> seed;
       i >> a;// a semi-axis
       i >> b;// b semi-axis
@@ -154,7 +156,7 @@ class simstate
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
   long long int volmoves=0, volrej=0;
-  long long int curStep;
+  //long long int curStep;
   unsigned int which=0;
   //long long int resetaccept=0, resetacceptVol=0;
 
@@ -165,7 +167,7 @@ public:
       o << trarej << " " << rotrej << " " << totrej << "\n";
       o << totmoves << " " << tramoves << " " << rotmoves << "\n";
       o << volmoves << " " << volrej << "\n";
-      o << curStep << " ";
+      //o << curStep << " ";
       o << which << "\n";
     }
 
@@ -180,7 +182,7 @@ public:
       i >> rotmoves;
       i >> volmoves;
       i >> volrej;
-      i >> curStep;
+      //i >> curStep;
       i >> which;
     }
   simstate ()
