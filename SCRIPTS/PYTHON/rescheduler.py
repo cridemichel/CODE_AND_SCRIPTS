@@ -8,15 +8,19 @@ from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
-args=sys.argv
-if len(args) > 1:
-    lof=args[1]
-else:
+def print_error():
     print('You have to supply a file with all jobs to check (with absolute paths)')
     print('reschedluer <lista dirs> <totsteps> <extrasteps> <maxjobs> <proc str ',end='')
     print('filter(*=disabled)> <extra args> <sched type> ')
     print('<sched type>=simpp or veff')
     quit()
+show_only = False   
+args=sys.argv
+if len(args) > 1:
+    lof=args[1]
+else:
+   print_error()
+totsteps=-1
 if len(args) > 2:
     totsteps=int(args[2])
 else:
@@ -26,7 +30,13 @@ if len(args) > 3:
 else:
     extsteps=-1
 if len(args) > 4:
-    max_jobs=int(args[4])
+    if not args[4].isnumeric():
+        if args[4] == 'show':
+            show_only=True
+        else:
+            print_error()
+    else:
+        max_jobs=int(args[4])
 else:
     max_jobs=3    
 if len(args) > 5:
@@ -247,7 +257,8 @@ lststps=[]
 lstrun=[]
 lstdead=[]
 lststart=[]
-lstext=[]
+lsttoext=[]
+lstextended=[]
 #print('cls=',allcls)
 #print('fil=',filter_proc)
 #print('allcwds=',allcwds)
@@ -260,7 +271,10 @@ for l in lines:
         if sim_done(dir): 
             #job is finished correctly if here 
             ndone += 1 
+            lstdone.append(l)
         else:
+            if show_only == True:
+                continue
             #not a cnf-final found (i.e. simulation is dead)
             #look for restart files
             if nrun >= max_jobs:
@@ -270,7 +284,7 @@ for l in lines:
             # se totsteps > 0 e ci sono il donefiled e il restart, prova ad estenderla
             # mettendola nella lista che poi verrà utilizzata per i riavvii
             if to_extend(dir,which): 
-                lstdone.append([get_steps(dir,which),l])
+                lsttoext.append([get_steps(dir,which),l])
                 continue
             else:
                 if totsteps <= 0:
@@ -284,6 +298,7 @@ for l in lines:
             #print('job '+ en + ' is not running and it has not finished yet!', end='')
             #print(' I am restarting it...')
             if which == -1:
+                lststart.append(l)
                 nrun += 1
                 #no restart file, first start
                 exec=' ./'+en+build_arg_start(nline,extra_args)
@@ -292,9 +307,9 @@ for l in lines:
                 s2e=prepend + exec + postpend 
                 print('exec: ', s2e)
                 os.system(s2e)
-                lststart.append(l)
             else:
                 ndead += 1
+                lstdead.append(l)
                 #at least one restart file found
                 exec=' ./'+en+build_arg_restart(nline,extra_args,which)
                 #print ('exec is: '+exec)
@@ -304,20 +319,20 @@ for l in lines:
                 print('exec: ', s2e)
                 nrun += 1
                 os.system(s2e)
-                lstdead.append(l)
                 ok=False
     else:#bn is running if here
         nrun+=1
-        lstrun.append([pids[nline],l])
+        #lstrun.append([pids[nline],l])
+        lstrun.append(l)
     nline+=1
 # all jobs with a cnf-final are extended now 
 # if number of jobs does not exceed max_jobs
-if totsteps > 0:
+if totsteps > 0 and show_only==False:
     #sort list of done simulations from lower steps to higher
     #so that simulations left behind start first
-    lstdone.sort(key=itemgetter(0))
+    lsttoext.sort(key=itemgetter(0))
     nj=0
-    for l in lstdone:
+    for l in lsttoext:
         if nrun >= max_jobs:
             break
         bn, en=os.path.split(l[1].strip('\n'))
@@ -329,7 +344,7 @@ if totsteps > 0:
         print('[extend simulation, dir=',bn,'] exec: ', s2e)
         os.system(s2e) 
         nj += 1
-        lstext.append(l[1])
+        lstextended.append(l[1])
         nrun +=1
 #       
 # stampare liste di running e riavviati
@@ -342,6 +357,18 @@ if len(lstrun) > 0:
 #    print ('list start=', lststart)
 #if len(lstext) > 0:
 #    print ('list extend=', lstext)
+if show_only == True:
+    print ('R= running; F=finished')
+    print ('tot running =', len(lstrun))
+    for l in lines:
+        if l in lstrun:
+            print ('R ', end='')
+        elif l in lstdone:
+            print ('F ', end='')
+        else:
+            print ('  ', end='')
+        print (l)
+    quit()
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
 if ndone < len(lines):

@@ -692,6 +692,7 @@ public:
       int ntot, ran, i;
       //cout << "saverest=" << pars.saverest << "\n";
       cout << "N=" << pars.parnum << " a=" << pars.a << " b=" << pars.b << "\n";
+      system("mv -f ./cnf-final ./cnf-final-bak");
       prepare_observables();
       for (tt=iniStep; tt < pars.steps; tt++)
         {
