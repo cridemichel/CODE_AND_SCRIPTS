@@ -227,6 +227,8 @@ def choose_restart(bn):
             return -1
         else:
             return 0            
+def to_extend(dir,w):        
+    return totsteps > 0 and os.path.exists(dir+'/'+donefile) and w != -1
 #
 with open(lof) as f:
     lines=f.readlines() 
@@ -261,7 +263,7 @@ for l in lines:
                 #print ('maximum number of jobs (' + str(max_jobs) + ') reached')
                 break
             which=choose_restart(bn)
-            if totsteps > 0 and os.path.exists(dir+'/'+donefile) and which != -1: 
+            if to_extend(dir,which): 
                 lstdone.append([get_steps(dir,which),l])
                 continue
             else:
