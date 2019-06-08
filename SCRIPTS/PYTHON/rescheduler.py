@@ -16,7 +16,6 @@ def print_error():
     quit()
 show_only = False
 verbose = False   
-start=False
 args=sys.argv
 if len(args) > 1:
     lof=args[1]
@@ -35,8 +34,6 @@ if len(args) > 3:
         elif args[3] == 'showv':
             show_only=True 
             verbose=True
-        elif args[3] == 'start':
-            start=True
         else:
             print_error()
     else:
@@ -293,15 +290,12 @@ for l in lines:
             if to_extend(dir,which): 
                 lsttoext.append([get_steps(dir,which),l])
                 continue
-            if which == -1 
-                if start == False:
-                    print('Both restart files missing')
-                    continue
+            if which == -1:
                 # se non ci sono i file di restart ma il donefile 
                 # assumo che siano stati cancellati o rinominati per
                 # per far terminare la simulazione
-                #if totsteps > 0 and os.path.exists(dir+'/'+donefile):
-                #    continue
+                if totsteps > 0 and os.path.exists(dir+'/'+donefile):
+                    continue
                 lststart.append(l)
                 nrun += 1
                 #no restart file, first start
