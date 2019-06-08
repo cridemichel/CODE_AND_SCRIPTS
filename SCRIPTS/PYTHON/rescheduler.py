@@ -244,6 +244,10 @@ nrun=0#numero running
 nline=0
 lstdone=[]
 lststps=[]
+lstrun=[]
+lstdead=[]
+lststart=[]
+lstext=[]
 #print('cls=',allcls)
 #print('fil=',filter_proc)
 #print('allcwds=',allcwds)
@@ -288,6 +292,7 @@ for l in lines:
                 s2e=prepend + exec + postpend 
                 print('exec: ', s2e)
                 os.system(s2e)
+                lststart.append(l)
             else:
                 ndead += 1
                 #at least one restart file found
@@ -299,9 +304,11 @@ for l in lines:
                 print('exec: ', s2e)
                 nrun += 1
                 os.system(s2e)
+                lstdead.append(l)
                 ok=False
     else:#bn is running if here
         nrun+=1
+        lstrun.append([pids[nline],l])
     nline+=1
 # all jobs with a cnf-final are extended now 
 # if number of jobs does not exceed max_jobs
@@ -322,8 +329,18 @@ if totsteps > 0:
         print('[extend simulation, dir=',bn,'] exec: ', s2e)
         os.system(s2e) 
         nj += 1
+        lstext.append(l[1])
         nrun +=1
 #       
+# stampare liste di running e riavviati
+if len(lstrun) > 0:
+    print ('list run=', lstrun)
+if len(lstdead) > 0:
+    print ('list dead=', lstdead)
+if len(lststart) > 0:
+    print ('list start=', lststart)
+if len(lstext) > 0:
+    print ('list extend=', lstext)
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
 if ndone < len(lines):
