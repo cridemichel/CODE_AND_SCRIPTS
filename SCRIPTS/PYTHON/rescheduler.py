@@ -287,8 +287,8 @@ for l in lines:
                 continue
             if which == -1:
                 # se non ci sono i file di restart ma il donefile 
-                    # assumo che siano stati cancellati o rinominati per
-                    # per far terminare la simulazione
+                # assumo che siano stati cancellati o rinominati per
+                # per far terminare la simulazione
                 if totsteps > 0 and os.path.exists(dir+'/'+donefile):
                     continue
                 lststart.append(l)
