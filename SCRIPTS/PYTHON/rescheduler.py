@@ -85,7 +85,7 @@ def get_steps(bn,w):
     #print ('l=',l)
     #print ('lines[0][2]=', ls[0][2])
     #overwrite filed total steps with new value
-    return int(l[2])
+    return int(l[3])
 #######################################
 # VARIABILI CHE DIPENDONO DA TIPO DI PROGRAMMA DA RIAVVIARE
 # SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
@@ -334,13 +334,14 @@ if totsteps > 0:
 #       
 # stampare liste di running e riavviati
 if len(lstrun) > 0:
+    #for l in lstrun:
     print ('list run=', lstrun)
-if len(lstdead) > 0:
-    print ('list dead=', lstdead)
-if len(lststart) > 0:
-    print ('list start=', lststart)
-if len(lstext) > 0:
-    print ('list extend=', lstext)
+#if len(lstdead) > 0:
+#    print ('list dead=', lstdead)
+#if len(lststart) > 0:
+#    print ('list start=', lststart)
+#if len(lstext) > 0:
+#    print ('list extend=', lstext)
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
 if ndone < len(lines):
