@@ -10,7 +10,7 @@ from operator import itemgetter
 #
 def print_error():
     print('You have to supply a file with all jobs to check (with absolute paths)')
-    print('reschedluer <lista dirs> <totsteps> <extrasteps> <maxjobs> <proc str ',end='')
+    print('reschedluer <lista dirs> <totsteps=-1|num > 0> <extrasteps|show> <maxjobs> <proc str ',end='')
     print('filter(*=disabled)> <extra args> <sched type> ')
     print('<sched type>=simpp or veff')
     quit()
@@ -26,17 +26,17 @@ if len(args) > 2:
 else:
     totsteps=-1# if negative do not extend simulation
 if len(args) > 3:
-    extsteps=int(args[3])# increment final step of sim by extsteps
-else:
-    extsteps=-1
-if len(args) > 4:
-    if not args[4].isnumeric():
-        if args[4] == 'show':
+    if not args[3].isnumeric():
+        if args[3] == 'show':
             show_only=True
         else:
             print_error()
     else:
-        max_jobs=int(args[4])
+        extsteps=int(args[3])# increment final step of sim by extsteps
+else:
+    extsteps=-1
+if len(args) > 4:
+    max_jobs=int(args[4])
 else:
     max_jobs=3    
 if len(args) > 5:
@@ -253,7 +253,6 @@ nrun=0#numero running
 #(we assume that each jobs has been launched from a different dir)
 nline=0
 lstdone=[]
-lststps=[]
 lstrun=[]
 lstdead=[]
 lststart=[]
@@ -291,7 +290,7 @@ for l in lines:
                     print(donefile+' exists but restart file does not...')
                     print('I try to start sim from begin')
                 else:
-                    # se non ci sono i file di restart mail donefile 
+                    # se non ci sono i file di restart ma il donefile 
                     # assumo che siano stati cancellati o rinominati per
                     # per far terminare la simulazione
                     continue
