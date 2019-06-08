@@ -263,13 +263,15 @@ for l in lines:
                 #print ('maximum number of jobs (' + str(max_jobs) + ') reached')
                 break
             which=choose_restart(bn)
+            # se totsteps > 0 e ci sono il donefiled e il restart, prova ad estenderla
+            # mettendola nella lista che poi verrà utilizzata per i riavvii
             if to_extend(dir,which): 
                 lstdone.append([get_steps(dir,which),l])
                 continue
             else:
                 if totsteps <= 0:
                     print(donefile+' exists but restart file does not...')
-                    print('I try to restart sim from begin')
+                    print('I try to start sim from begin')
                 else:
                     # se non ci sono i file di restart mail donefile 
                     # assumo che siano stati cancellati o rinominati per
