@@ -252,21 +252,8 @@ for l in lines:
     #print ('job ', i, ' is missing')
         dir=bn
         if sim_done(dir): 
-            #found a cnf-final if keepgoing=True 
-            # and not max num of jobs reache then restart (see below)
-            #if keep_going == True:
-             #   which=choose_restart(bn)
-                # se non ci sono i restart ma c'il file cnf-final
-                # allora la simulazione è terminata
-                # se ci sono i restart invece possiamo estenderla
-                # (verrà fatto dopo utilizzando la lista lstdone)
-              #  if which != -1:
-               #     lstdone.append([get_steps(dir,which),l])
-               # else:
-               #     ndone+=1
-            #else:
-             #   ndone+=1 
-             ndone += 1 
+            #job is finished correctly if here 
+            ndone += 1 
         else:
             #not a cnf-final found (i.e. simulation is dead)
             #look for restart files
@@ -278,8 +265,14 @@ for l in lines:
                 lstdone.append([get_steps(dir,which),l])
                 continue
             else:
-                print(donefile+' exists but restart file does not...')
-                print('I try to restart sim from begin')
+                if totsteps <= 0:
+                    print(donefile+' exists but restart file does not...')
+                    print('I try to restart sim from begin')
+                else:
+                    # se non ci sono i file di restart mail donefile 
+                    # assumo che siano stati cancellati o rinominati per
+                    # per far terminare la simulazione
+                    continue
             #print('job '+ en + ' is not running and it has not finished yet!', end='')
             #print(' I am restarting it...')
             if which == -1:
