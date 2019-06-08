@@ -54,7 +54,7 @@ class mcsim {
         }
       if (pars.adjsteps >= 0 || pars.curStep <= pars.adjsteps)
         { 
-          if (pars.targetAccept > 0.0 && state.curStep % pars.resetaccept==0)
+          if (pars.targetAccept > 0.0 && pars.curStep % pars.resetaccept==0)
             {
               if (traaccept > pars.targetAccept)
                 pars.deltra *= 1.1;
@@ -72,7 +72,7 @@ class mcsim {
             }
 
           if ((pars.simtype==1 || pars.simtype==2) && pars.targetAcceptVol > 0.0 && state.volmoves > 0     
-              && (state.curStep % pars.resetacceptVol==0))
+              && (pars.curStep % pars.resetacceptVol==0))
             {
               if (volaccept > pars.targetAcceptVol)
                 pars.vmax *= 1.1;
@@ -442,7 +442,7 @@ class mcsim {
   void save_restart(long long int tt)
     {
       //static unsigned int w=0;
-      state.curStep = tt;
+      pars.curStep = tt;
       if (tt != iniStep && pars.saverest > 0 && tt % pars.saverest == 0)
         {
           sprintf(rfn, "restart-%u", state.which);
@@ -695,7 +695,7 @@ public:
       prepare_observables();
       for (tt=iniStep; tt < pars.steps; tt++)
         {
-          state.curStep=tt;
+          pars.curStep=tt;
           ntot=pars.parnum;
           if (pars.simtype==1||pars.simtype==2) //NPT
             ntot+=1;
@@ -749,11 +749,9 @@ public:
       restorefile.open(rfn);
       pars.read(restorefile);
       state.read(restorefile);
-      pars.curStep = state.curStep;
       read_coords(restorefile);
       read_msd(restorefile);
       restorefile.close();
-      //cout << "state.curStep=" << state.curStep << "\n";
       cout << "semi-axes=" << pars.a << " " << pars.b << "\n";
       iniStep = pars.curStep;
       build_LL();
