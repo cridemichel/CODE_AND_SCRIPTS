@@ -14,7 +14,8 @@ def print_error():
     print('filter(*=disabled)> <extra args> <sched type> ')
     print('<sched type>=simpp or veff')
     quit()
-show_only = False   
+show_only = False
+verbose = False   
 args=sys.argv
 if len(args) > 1:
     lof=args[1]
@@ -29,6 +30,10 @@ if len(args) > 3:
     if not args[3].isnumeric():
         if args[3] == 'show':
             show_only=True
+            verbose=False
+        elif args[3] == 'showv':
+            show_only=True 
+            verbose=True
         else:
             print_error()
     else:
@@ -352,15 +357,16 @@ if len(lstrun) > 0:
 #    print ('list extend=', lstext)
 if show_only == True:
     print ('R= running; F=finished')
-    print ('tot running =', len(lstrun))
-    for l in lines:
-        if l in lstrun:
-            print ('R ', end='')
-        elif l in lstdone:
-            print ('F ', end='')
-        else:
-            print ('  ', end='')
-        print (l)
+    print ('tot running =', len(lstrun),' tot finished=', len(lstdone))
+    if verbose == True:
+        for l in lines:
+            if l in lstrun:
+                print ('R ', end='')
+            elif l in lstdone:
+                print ('F ', end='')
+            else:
+                print ('  ', end='')
+            print (l)
     quit()
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
