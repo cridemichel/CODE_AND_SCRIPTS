@@ -346,7 +346,7 @@ if totsteps > 0 and show_only==False:
         nrun +=1
 #       
 # stampare liste di running e riavviati
-if len(lstrun) > 0:
+if len(lstrun) > 0 and show_only == False:
     #for l in lstrun:
     print ('list run=', lstrun)
 #if len(lstdead) > 0:
@@ -356,8 +356,8 @@ if len(lstrun) > 0:
 #if len(lstext) > 0:
 #    print ('list extend=', lstext)
 if show_only == True:
-    print ('R= running; F=finished')
-    print ('tot running =', len(lstrun),' tot finished=', len(lstdone))
+    if verbose == True:
+        print ('R= running; F=finished')
     if verbose == True:
         for l in lines:
             if l in lstrun:
@@ -366,7 +366,8 @@ if show_only == True:
                 print ('F ', end='')
             else:
                 print ('  ', end='')
-            print (l)
+            print (l,end='')
+    print ('tot running ='+str(len(lstrun))+'; tot finished=', len(lstdone))
     quit()
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
