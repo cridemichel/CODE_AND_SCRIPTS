@@ -747,6 +747,8 @@ public:
           system("rm restart-*"); 
         }
 #endif
+      sprintf(rfn, "restart-%u", state.which);
+      save_restart_fn(rfn);
       save_snap_str("cnf-final");
     }
   
