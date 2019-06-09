@@ -8,7 +8,6 @@ from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
-filter_lst=['(sd-pam)']
 def is_integer(s):
     try:
         int(s)
@@ -53,7 +52,11 @@ if len(args) > 4:
 else:
     max_jobs=3    
 if len(args) > 5:
-    filter_lst.append(args[5])
+    filter_proc=args[5]
+else:
+    filter_proc=''
+if filter_proc == '*':
+    filter_proc=''    
     #common pattern in exec filenames
 if len(args) > 6:
     extra_args=args[6] #extra args for launching the executable
@@ -64,11 +67,6 @@ if len(args) > 7:
 else:
     sched_type='simpp' # simpp or veff for now
 #
-def is_in_fil(cli,lst):
-    for l in lst:
-        if cli.find(l) != -1:
-            return True
-    return False
 def can_access_cwd(pr):
     try:
         pr.cwd()
@@ -95,7 +93,7 @@ def get_proc_info(fil):
         cli=' '.join(pr.cmdline())
         if not can_access_cwd(pr):
             continue
-        if len(fil)==0 or is_in_fil(cli,fil):
+        if len(fil)==0 or cli.find(fil)!=-1:
             #print('cli1=', cli, ' boh=', cli[1].find(fil))
             #print('pr.cwd=', pr.cwd())
             allcls.append(cli)#command line con cui è stato eseguito			
@@ -107,8 +105,8 @@ def get_num_words(fn):
         lines=f.readlines()
         nw=0
         for line in lines:
-                l=line.strip('\n').split(' ')
-                nw+=len(l)
+            l=line.strip('\n').split(' ')
+            nw+=len(l)
         return nw
 def get_steps(bn,w):
     with open(bn+'/'+restart[w]) as f:
@@ -266,7 +264,7 @@ with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
-allcls,pids,allcwds=get_proc_info(filter_lst)
+allcls,pids,allcwds=get_proc_info(filter_proc)
 ok=True
 ndone=0# numero terminati
 ndead=0#numero morti
