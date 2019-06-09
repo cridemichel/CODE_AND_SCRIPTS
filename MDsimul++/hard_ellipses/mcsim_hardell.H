@@ -686,13 +686,19 @@ public:
       exit(1);
 #endif
     }
+  inline bool file_exists (const std::string& name) {
+    ifstream f(name.c_str());
+    return f.good();
+  }
+
   void run(void)
     {
       long long int tt;
       int ntot, ran, i;
       //cout << "saverest=" << pars.saverest << "\n";
       cout << "N=" << pars.parnum << " a=" << pars.a << " b=" << pars.b << "\n";
-      system("mv -f ./cnf-final ./cnf-final-bak");
+      if (file_exists("./cnf-final"))
+          system("mv -f ./cnf-final ./cnf-final-bak");
       prepare_observables();
       for (tt=iniStep; tt < pars.steps; tt++)
         {
