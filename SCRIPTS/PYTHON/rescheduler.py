@@ -8,6 +8,13 @@ from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
+filter_lst=['(sd-pam)']
+def is_integer(s):
+    try:
+        int(s)
+        return True
+    except (ValueError, TypeError):
+        return False
 def print_error():
     print('You have to supply a file with all jobs to check (with absolute paths)')
     print('reschedluer <lista dirs> <totsteps=-1|num > 0> <extrasteps|show> <maxjobs> <proc str ',end='')
@@ -27,7 +34,8 @@ if len(args) > 2:
 else:
     totsteps=-1# if negative do not extend simulation
 if len(args) > 3:
-    if not args[3].isnumeric():
+    #print ('arg3=',args[3])
+    if not is_integer(args[3]):
         if args[3] == 'show':
             show_only=True
             verbose=False
@@ -45,11 +53,8 @@ if len(args) > 4:
 else:
     max_jobs=3    
 if len(args) > 5:
-    filter_proc=args[5] #common pattern in exec filenames
-else:
-    filter_proc=''
-if filter_proc== '*':
-    filter_proc=''
+    filter_lst.append(args[5])
+    #common pattern in exec filenames
 if len(args) > 6:
     extra_args=args[6] #extra args for launching the executable
 else:
@@ -59,6 +64,17 @@ if len(args) > 7:
 else:
     sched_type='simpp' # simpp or veff for now
 #
+def is_in_fil(cli,lst):
+    for l in lst:
+        if cli.find(l) != -1:
+            return True
+    return False
+def can_access_cwd(pr):
+    try:
+        pr.cwd()
+        return True
+    except psutil.AccessDenied:
+       return False 
 def get_proc_info(fil):
     allpids=[]
     allcwds=[]
@@ -77,13 +93,14 @@ def get_proc_info(fil):
         #print ('p=',p, 'cmd=',pr.cmdline())
         #filtra le command line con la stringa 
         cli=' '.join(pr.cmdline())
-        if len(cli) > 1:
-            if fil == '' or cli.find(fil) != -1:
-                #print('cli1=', cli, ' boh=', cli[1].find(fil))
-                #print('pr.cwd=', pr.cwd())
-                allcls.append(cli)#command line con cui è stato eseguito			
-                allpids.append(pr.pid)#pid del processo	
-                allcwds.append(pr.cwd())#directory del processo
+        if not can_access_cwd(pr):
+            continue
+        if len(fil)==0 or is_in_fil(cli,fil):
+            #print('cli1=', cli, ' boh=', cli[1].find(fil))
+            #print('pr.cwd=', pr.cwd())
+            allcls.append(cli)#command line con cui è stato eseguito			
+            allpids.append(pr.pid)#pid del processo	
+            allcwds.append(pr.cwd())#directory del processo
     return (allcls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
@@ -249,7 +266,7 @@ with open(lof) as f:
     lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
-allcls,pids,allcwds=get_proc_info(filter_proc)
+allcls,pids,allcwds=get_proc_info(filter_lst)
 ok=True
 ndone=0# numero terminati
 ndead=0#numero morti
