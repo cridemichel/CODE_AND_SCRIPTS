@@ -261,7 +261,15 @@ def choose_restart(bn):
         if ex0 == False:
             return -1
         else:
-            return 0            
+            return 0    
+def job_is_running(bn,en,clines,cwds):
+    cc=0    
+    for l in cwds:
+        if bn == l and clines[cc].find(en)!=-1:
+            #print ('bn=', bn, ' cline=', clines[cc], ' en=', en)
+            return True
+        cc += 1
+    return False
 def to_extend(dir,w):        
     return totsteps > 0 and os.path.exists(dir+'/'+donefile) and w != -1
 #
@@ -312,7 +320,8 @@ if killp == True:
     quit()        
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
-    if not ((bn in allcwds) and in_allcls(allcls,en)):
+    if not job_is_running(bn,en,allcls,allcwds):
+    #if not ((bn in allcwds) and in_allcls(allcls,en)):
     #print ('job ', i, ' is missing')
         dir=bn
         if sim_done(dir): 
