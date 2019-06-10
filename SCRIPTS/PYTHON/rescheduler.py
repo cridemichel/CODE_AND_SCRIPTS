@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 #questo script python assume che per ogni cartella fornita nella lista
 #giri un solo processo
+# N.B. mosrun viene eseguito con setuid root quindi le info del processo
+# (ad es. il path) non sono accessibili per cui se si usa mosrun 
+# è bene lanciare la simulazione tramite uno script che poi lancia l'eseguibile con mosrun
+# Per passare gli argomenti basta usare $@ per passare tutti gli arg dello script all'eseguibile
+# lanciato da mosrun.
+# Ora questo script python presuppone l'esistenza di un'unico script/eseguibuile
+# che viene usato per lanciare e rilanciare, si potrebbe anche pensare di creare
+# un file di configurazione solo con le directory e di mettere nella prima riga
+# i nomi degli script di start e restart
 import sys
 import os
 import psutil
@@ -54,6 +63,7 @@ if lof == '':
 #print ('lof=',lof)    
 totsteps=-1
 extsteps=-1
+#print ('uid=', os.getuid())
 def can_access_cwd(pr):
     try:
         pr.cwd()
@@ -79,6 +89,7 @@ def get_proc_info(fil):
         #filtra le command line con la stringa 
         cli=' '.join(pr.cmdline())
         if not can_access_cwd(pr):
+            #print('qui cl=', pr.cmdline())
             continue
         if len(fil)==0 or cli.find(fil)!=-1:
             #print('cli1=', cli, ' boh=', cli[1].find(fil))
@@ -108,8 +119,7 @@ def get_steps(bn,w):
 # SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
 # CHE TERMINANO CON 0 o 1
 #nomi dei restart files da valutare
-#prepend='/usr/bin/nohup /bin/mosrun '# li mette prima dell'exec
-postpend=' >> screen &'#li mette dopo l'exec
+postpend=' &'
 prepend=''
 #postpend=''
 if sched_type == 'simpp':
@@ -118,7 +128,7 @@ if sched_type == 'simpp':
     donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
     #argomenti per l'eseguibile in caso
     # di start o restart
-    arg_start=' 2 '
+    arg_start=' 2'
     arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
     #maximum number of running jobs     
     #
