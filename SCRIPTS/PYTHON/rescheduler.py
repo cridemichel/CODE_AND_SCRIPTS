@@ -27,7 +27,7 @@ def print_error():
     print('You have to supply a config file where:')
     print('first lines=<tosteps=-1|>0> <extra steps=-1|>0> <max jobs>')
     print('list of jobs to check (with absolute paths)')
-    print('reschedluer [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea] <conf file>')
+    print('reschedluer [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill] <conf file>')
     quit()
 show_only = False
 verbose = False   
