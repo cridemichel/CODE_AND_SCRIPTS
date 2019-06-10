@@ -217,12 +217,6 @@ elif sched_type == 'veff':
 else:
     print('wrong schedule type '+sched_type)
     quit()
-    
-def in_allcls(allcls,en):
-    for l in allcls:
-        if l.find(en) != -1:
-            return True
-    return False
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
@@ -321,7 +315,6 @@ if killp == True:
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if not job_is_running(bn,en,allcls,allcwds):
-    #if not ((bn in allcwds) and in_allcls(allcls,en)):
     #print ('job ', i, ' is missing')
         dir=bn
         if sim_done(dir): 
