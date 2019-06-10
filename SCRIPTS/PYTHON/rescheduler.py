@@ -262,7 +262,7 @@ lstextended=[]
 ll=lines[0].strip('\n').split(' ')
 #print ('ll=',ll)
 totsteps=int(ll[0])
-maxsteps=int(ll[1])
+extsteps=int(ll[1])
 max_jobs=int(ll[2])
 del(lines[0])
 for l in lines:
