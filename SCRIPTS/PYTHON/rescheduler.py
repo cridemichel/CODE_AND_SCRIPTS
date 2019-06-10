@@ -15,58 +15,35 @@ def is_integer(s):
     except (ValueError, TypeError):
         return False
 def print_error():
-    print('You have to supply a file with all jobs to check (with absolute paths)')
-    print('reschedluer <lista dirs> <totsteps=-1|num > 0> <extrasteps|show> <maxjobs> <proc str ',end='')
-    print('filter(*=disabled)> <extra args> <sched type> ')
-    print('<sched type>=simpp or veff')
+    print('You have to supply a config file where:')
+    print('first lines=<tosteps=-1|>0> <extra steps=-1|>0> <max jobs>')
+    print('list of jobs to check (with absolute paths)')
+    print('reschedluer [-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>] <conf file>')
     quit()
 show_only = False
 verbose = False   
 args=sys.argv
-if len(args) > 1:
-    lof=args[1]
-else:
-   print_error()
-totsteps=-1
-if len(args) > 2:
-    totsteps=int(args[2])
-else:
-    totsteps=-1# if negative do not extend simulation
-if len(args) > 3:
-    #print ('arg3=',args[3])
-    if not is_integer(args[3]):
-        if args[3] == 'show':
-            show_only=True
-            verbose=False
-        elif args[3] == 'showv':
-            show_only=True 
-            verbose=True
-        else:
-            print_error()
+sched_type='simpp'
+filter_proc=''
+extra_args=''
+if len(args)==1:
+    print_error()
+    quit()
+for a in args:
+    if a == '-show' or a  == '-s':
+        show_only=True
+    elif a == '-verbose' or a == '-v':
+        verbose=True        
+    elif a == '-filter' or a == '-f':
+        filter_proc=next(a)
+    elif a == '-extargs' or a == '-ea':
+        extra_args=next(a)
+    elif a == '-type' or a == '-t':
+        sched_type=next(a)
     else:
-        extsteps=int(args[3])# increment final step of sim by extsteps
-else:
-    extsteps=-1
-if len(args) > 4:
-    max_jobs=int(args[4])
-else:
-    max_jobs=3    
-if len(args) > 5:
-    filter_proc=args[5]
-else:
-    filter_proc=''
-if filter_proc == '*':
-    filter_proc=''    
-    #common pattern in exec filenames
-if len(args) > 6:
-    extra_args=args[6] #extra args for launching the executable
-else:
-    extra_args=''
-if len(args) > 7:
-    sched_type=args[7] # simpp or veff for now
-else:
-    sched_type='simpp' # simpp or veff for now
-#
+      lof = a
+totsteps=-1
+extsteps=-1
 def can_access_cwd(pr):
     try:
         pr.cwd()
@@ -282,6 +259,12 @@ lstextended=[]
 #print('fil=',filter_proc)
 #print('allcwds=',allcwds)
 #print('pids=',pids)
+ll=lines[0].strip('\n').split(' ')
+#print ('ll=',ll)
+totsteps=int(ll[0])
+maxsteps=int(ll[1])
+max_jobs=int(ll[2])
+del(lines[0])
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if not ((bn in allcwds) and in_allcls(allcls,en)):
