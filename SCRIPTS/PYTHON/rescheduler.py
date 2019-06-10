@@ -18,7 +18,7 @@ def print_error():
     print('You have to supply a config file where:')
     print('first lines=<tosteps=-1|>0> <extra steps=-1|>0> <max jobs>')
     print('list of jobs to check (with absolute paths)')
-    print('reschedluer [-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea] <conf file>')
+    print('reschedluer [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea] <conf file>')
     quit()
 show_only = False
 verbose = False   
@@ -26,14 +26,20 @@ args=sys.argv
 sched_type='simpp'
 filter_proc=''
 extra_args=''
+#print('args=',args)
 if len(args)==1:
     print_error()
     quit()
+lof=''
+del(args[0])
 for a in args:
     if a == '-show' or a  == '-s':
         show_only=True
     elif a == '-verbose' or a == '-v':
-        verbose=True        
+        verbose=True    
+    elif a == '-sv':    
+        show_only=True
+        verbose=True
     elif a == '-filter' or a == '-f':
         filter_proc=next(a)
     elif a == '-extargs' or a == '-ea':
@@ -42,6 +48,10 @@ for a in args:
         sched_type=next(a)
     else:
       lof = a
+if lof == '':
+    print_error()
+    quit()
+#print ('lof=',lof)    
 totsteps=-1
 extsteps=-1
 def can_access_cwd(pr):
