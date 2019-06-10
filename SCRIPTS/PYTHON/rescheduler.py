@@ -41,6 +41,7 @@ if len(args)==1:
     quit()
 lof=''
 del(args[0])
+killp=False
 for a in args:
     if a == '-show' or a  == '-s':
         show_only=True
@@ -55,6 +56,8 @@ for a in args:
         extra_args=next(a)
     elif a == '-type' or a == '-t':
         sched_type=next(a)
+    elif a == '-kill' or a == '-k':
+        killp=True
     else:
       lof = a
 if lof == '':
@@ -91,12 +94,17 @@ def get_proc_info(fil):
         if not can_access_cwd(pr):
             #print('qui cl=', pr.cmdline())
             continue
+        #print('pid=', pid, ' cl=', pr.cmdline())
         if len(fil)==0 or cli.find(fil)!=-1:
             #print('cli1=', cli, ' boh=', cli[1].find(fil))
             #print('pr.cwd=', pr.cwd())
+            #print('proc pid=', pr.pid)
             allcls.append(cli)#command line con cui è stato eseguito			
             allpids.append(pr.pid)#pid del processo	
             allcwds.append(pr.cwd())#directory del processo
+            #print ('pid= ', pid, ' cl=', cli)
+        #if pid == 89288 or pid==89367:
+        #    print('pid=', pid, ' cwd=', pr.cwd(), ' cli=', cli)
     return (allcls,allpids,allcwds)
 def get_num_words(fn):
     with open(fn) as f:
@@ -262,13 +270,15 @@ with open(lof) as f:
 c=0
 #return command lines, pids and absolute path
 allcls,pids,allcwds=get_proc_info(filter_proc)
+#print ('allcwd=', allcwds)
+#print ('allpids=', pids)
 ok=True
 ndone=0# numero terminati
 ndead=0#numero morti
 nrun=0#numero running
 #we compare absolute paths to determine if process is running
 #(we assume that each jobs has been launched from a different dir)
-nline=0
+nline=int(0)
 lstdone=[]
 lstrun=[]
 lstdead=[]
@@ -285,6 +295,21 @@ totsteps=int(ll[0])
 extsteps=int(ll[1])
 max_jobs=int(ll[2])
 del(lines[0])
+if killp == True:
+    for l in allcwds:
+        #print ('bn=',bnc)
+        #print ('en=',enc)
+        found=False
+        for ll in lines:
+            bn, en=os.path.split(ll.strip('\n'))
+            #print ('bn=', bn, ' bnc=', l)
+            if bn==l and allcls[nline].find(en) != -1: 
+                found=True
+        if found:
+            print('nline=', nline, ' killing process ', pids[nline])
+            os.system(' kill '+ str(pids[nline]))
+        nline += 1    
+    quit()        
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if not ((bn in allcwds) and in_allcls(allcls,en)):
