@@ -64,8 +64,8 @@ public:
       resetaccept = 10000;
       resetacceptVol = 10000;
       zeta=0;
-      susnmin=1000;
-      susnmax=1001;
+      susnmin=0;
+      susnmax=1;
       nexc=10;
       npav=1000;
       curStep=0;
@@ -98,11 +98,14 @@ public:
       o << resetacceptVol << " ";
       o << targetPhi << " ";
       o << maxmsd << "\n";
-      o << zeta << " ";
-      o << susnmin << " ";
-      o << susnmax << " ";
-      o << npav << " ";
-      o << nexc << "\n";
+      if (simtype==3 || simtype==4)
+        {
+          o << zeta << " ";
+          o << susnmin << " ";
+          o << susnmax << " ";
+          o << npav << " ";
+          o << nexc << "\n";
+        }
     }
   void read(fstream& i)
     {
@@ -130,7 +133,8 @@ public:
       i >> resetacceptVol;
       i >> targetPhi;
       i >> maxmsd;
-      i >> zeta >> susnmin >>  susnmax >> npav >> nexc;
+      if (simtype==3 || simtype==4)
+        i >> zeta >> susnmin >>  susnmax >> npav >> nexc;
     }
   void readpars(const char *fn)
     {
@@ -205,12 +209,17 @@ public:
       i >> volrej;
       //i >> curStep;
       i >> which;
-      i >> excmove >> excrej;
-      for (auto &e: sushisto)
-        i >> e;
+      if (ppars->simtype==3||ppars->simtype==4)
+        {
+          i >> excmove >> excrej;
+          for (auto &e: sushisto)
+            i >> e;
+        }
     }
   void init_vecs(void)
     {
+      if (ppars->simtype!=3 && ppars->simtype!=4)
+        return;
       sushisto.resize(ppars->susnmax-ppars->susnmin+1);
       for (auto &e: sushisto)
         e = 0;
