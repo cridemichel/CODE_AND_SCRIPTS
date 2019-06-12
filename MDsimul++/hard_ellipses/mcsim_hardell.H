@@ -471,6 +471,8 @@ class mcsim {
       of.close();
       of.open("nem.dat", ios::trunc);
       of.close();
+      of.open("sushisto.dat", ios::trunc);
+      of.close();
     }
   void save_measures(long long int tt)
     {
@@ -490,7 +492,21 @@ class mcsim {
           // save observables, e.g. energy, volume, pressure, etc...
           msd=0;
           pvector<ntype,2> dr;
-
+          if (pars.simtype == 3 || pars.simtype == 4)
+            {
+              of.open("sushisto.dat",ios::trunc);
+              // save observables, e.g. energy, volume, pressure, etc...
+              long long int sustot=0;
+              for (auto &e: state.sushisto)
+                sustot+=e;
+              int i = pars.susnmin;
+              for (auto &e: state.sushisto)
+                {
+                  of << i << " " << ntype(e)/ntype(sustot) << "\n";
+                  i++;
+                }
+              of.close();
+            }
           if (pars.simtype != 3 && pars.simtype != 4 && pars.parnum > 0)
             {
               for (auto i=0; i < pars.N; i++)
@@ -1092,111 +1108,6 @@ public:
       init_LL();
       build_LL();
     }
-#if 0
-  void place_on_triang_lattice(bool randorient=false)
-    { 
-      ntype dx, dy, sig,exfact;
-      pvector<ntype,2> u1, u2, Ls;
-      ntype fact, phim;
-      //ntype x, y;
-      bool fine=false;
-      int i=0, ix, iy, maxix, maxiy;
-      // assum pars.a > pars.b 
-      maxix = maxiy = ceil(sqrt(((ntype) pars.N))); 
-      cout << "maxix=" << maxix << " maxiy=" << maxiy << "\n";
-      u1 << 1,0;
-      u2 << -0.5,sqrt(3.0)/2.0;
-      sig = 2.0*pars.b;
-      exfact = 2.0*pars.a;
-      dx = sig;
-      dy = sig;
-      phim = M_PI/(sqrt(3.0)*2.0);
-      cout << setprecision(16) << "phi max=" << phim << "\n";
-      Ls[0] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
-      Ls[1] = sqrt(pars.N*M_PI*pars.a*pars.b/phim);
-      cout << "Ls = " << Ls[0] << " " << Ls[1] << "\n";
-      //x=y=0;
-      cout << "dx=" << dx << " dy=" << dy << "\n";
-      cout << "a=" << pars.a << " b=" << pars.b << "\n";
-      //pars.L.show("box");
-
-      ellLL.set_ini_numcells();
-      for (ix = -3*maxix; ix < 3*maxix; ix++)
-        {
-          for (iy = -3*maxiy; iy < 3*maxiy; iy++)
-            {
-              //he[i].r.show("r");
-              //cout << "ix=" << ix << " iy=" << iy << "\n";
-              he[i].r = (ix*dx)*u1 + (iy*dy)*u2;
-              he[i].r[0] *= exfact;
-              if (he[i].r[0] <  0 || he[i].r[0] >= Ls[0]
-                  || he[i].r[1] < 0 || he[i].r[1] >= Ls[1])
-                {
-                  continue;
-                }
-
-              //cerr << he[i].r[0] << " " << he[i].r[1] << "\n";
-              if (randorient==true)
-                {
-                  //he[i].r << x-pars.L[0]*0.5,y-pars.L[1]*0.5;
-                  he[i].na.random_orient();
-                  he[i].nb = he[i].na.orto();
-                }
-              else
-                {
-                  //he[i].r[maxax] *= fact;
-                  he[i].na << 1,0;
-                  he[i].nb << 0,1;
-                }
-              he[i].a = pars.a;
-              he[i].b = pars.b;
-              i++;
-              //cout << "i=" << i << " pars.N="<< pars.N <<"\n";
-              if (i==pars.N)
-                {
-                  fine=true;
-                  break;
-                }
-              //y += dy;
-            }
-          //y=0;
-          //x += dx;
-          if (fine==true)
-            break;
-        }
-      if (i < pars.N)
-        {
-          cout << "Placed only " << i << " particles out of " << pars.N << "\n";
-          exit(1); 
-        }
-      pars.L << 0,0;
-      for (i=0; i < pars.N; i++)
-        {
-          if (i==0 || he[i].r[0]+2.0*pars.a > pars.L[0])
-            pars.L[0]=he[i].r[0]+2.0*pars.a;
-          if (i==0 || he[i].r[1]+2.0*pars.b*sqrt(3.0) > pars.L[1])
-            pars.L[1]=he[i].r[1]+2.0*pars.b*sqrt(3.0);
-        }
-      cout << "L= " << pars.L[0] << " " << pars.L[1] << "\n";
-      ntype phiT = 0.875;
-      auto phi=calc_phi();
-
-      fact = sqrt(phi/phiT); 
-      cout << "phi=" << phi << " fact=" << fact << "\n"; 
-      for (i=0; i < pars.N; i++)
-        { 
-          he[i].r -= 0.5*pars.L;
-          he[i].r *=fact;
-          update_rect(i);
-          //he[i].show("mah");
-        }
-      pars.L *= fact;
-      //cout << "quiqui\n";
-      ellLL.update_numcells(pars.L);
-      build_LL();
-      //init_LL();
-    }
-#endif
   void createconf(int type)
     { // type = 0 SC  1 = TRIANGULAR
       resize_vec_N();
