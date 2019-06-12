@@ -100,6 +100,7 @@ class linked_cell_lists_2d
   void add_to_LL(int n)
     {
       int cx, cy;
+      //cout << "[add_to_LL] part " << n << " =" << (*part)[n].r[0] << " " << (*part)[n].r[1] << "\n";
       cx =  ((*part)[n].r[0] + 0.5*L[0]) * cellsx / L[0];
       cy =  ((*part)[n].r[1] + 0.5*L[1]) * cellsy / L[1];
       inCell[0][n] = cx;
@@ -111,24 +112,26 @@ public:
   void insert_par(void)
     {
       parnum++;
-      resize_vectors();
+      resize_vectors(parnum);
       adjLinkedListInsert();
       add_to_LL(parnum-1); //last particle 
     }
   void remove_par(int ip)
     {
+      int np;
       /* last particle parnum-1 becomes ip-th */
       remove_from_current_cell(ip);
-      if (ip < parnum-1)
-        remove_from_current_cell(parnum-1);
+      np=parnum-1;
+      if (ip < np)
+        remove_from_current_cell(np);
       parnum--; 
-      if (ip < parnum-1)
+      if (ip < np)
         {
           for (auto k=0; k < 2; k++)
-            inCell[k][ip] = inCell[k][parnum-1];
+            inCell[k][ip] = inCell[k][np];
         }
       adjLinkedListRemove();
-      if (ip < parnum-1)
+      if (ip < np)
         insert_in_new_cell(ip);
     } 
   vector<int> lista_vicini;
@@ -140,7 +143,7 @@ public:
     {
       L[0]=L[1]=-1.0;
     }
-  void init(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize, ntype rc)
+  void init(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize, ntype rc,int np=0)
     {
       if (P!=nullptr)
         part = P;
@@ -152,17 +155,19 @@ public:
       cellsy = L[1] / rcut;
       //cout << "L=" << L[0] << L[1] << " rcut=" << rcut << "\n";
       L2 = ntype(0.5)*boxsize;
-      parnum=part->size();
-      cout << "parnum=" << parnum << "\n";
+      parnum=np;//part->size();
+      //cout << "parnum=" << parnum << "\n";
       //cout << "cellsx= " << cellsx << " cellsy= " << cellsy << "\n";
-      resize_vectors();
+      resize_vectors(np);
       lista_vicini.reserve(8);
     }
-  void resize_vectors(void)
+
+  void resize_vectors(int N)
     {
       int k;
-      parnum=part->size();
+      parnum=N;
       int oldN=inCell[0].size();
+      //cout << "oldN=" << oldN << " new=" << parnum <<  "part=" << (*part).size() << "\n";
       if (oldN < parnum)
         {
           for (k=0; k < 2; k++)

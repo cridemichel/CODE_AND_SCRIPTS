@@ -424,7 +424,7 @@ if show_only == True:
             else:
                 print ('  ', end='')
             print (l,end='')
-    print ('tot running ='+str(len(lstrun))+'; tot finished=', len(lstdone))
+    print ('tot running ='+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines))
     quit()
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
