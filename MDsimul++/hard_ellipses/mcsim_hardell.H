@@ -807,6 +807,7 @@ public:
       if (pars.susnmin >= 0 && pars.susnmax > 0)
         {
           state.gchisto[pars.parnum-pars.susnmin]++;
+          cout << "qui n=" << pars.parnum  <<  " "  <<  state.gchisto[pars.parnum-pars.susnmin] << "\n";
         }
       state.excmove++;
     }
