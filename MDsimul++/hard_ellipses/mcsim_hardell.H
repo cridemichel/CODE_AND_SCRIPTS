@@ -494,7 +494,7 @@ class mcsim {
           pvector<ntype,2> dr;
           if (pars.simtype == 3 || pars.simtype == 4)
             {
-              of.open("gchisto.dat",ios::trunc);
+              of.open("gchisto.dat",ios::app);
               // save observables, e.g. energy, volume, pressure, etc...
               long long int sustot=0;
               for (auto &e: state.gchisto)
@@ -502,9 +502,11 @@ class mcsim {
               int i = pars.susnmin;
               for (auto &e: state.gchisto)
                 {
-                  of << i << " " << ntype(e)/ntype(sustot) << "\n";
+                  of << i << " " << setprecision(16) << ntype(e)/ntype(sustot) << "\n";
+                  cout << setprecision(16) << ntype(e)/ntype(sustot) << "\n";
                   i++;
                 }
+              of.flush();
               of.close();
             }
           if (pars.simtype != 3 && pars.simtype != 4 && pars.parnum > 0)
@@ -807,7 +809,7 @@ public:
       if (pars.susnmin >= 0 && pars.susnmax > 0)
         {
           state.gchisto[pars.parnum-pars.susnmin]++;
-          cout << "qui n=" << pars.parnum  <<  " "  <<  state.gchisto[pars.parnum-pars.susnmin] << "\n";
+          //cout << "qui n=" << pars.parnum  <<  " "  <<  state.gchisto[pars.parnum-pars.susnmin] << "\n";
         }
       state.excmove++;
     }
