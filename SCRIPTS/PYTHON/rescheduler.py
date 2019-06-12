@@ -102,7 +102,10 @@ def get_proc_info(fil):
         try:
             cli=' '.join(pr.cmdline())
             prid = pr.pid
-            pdir = pr.cwd()
+            if include_dir==True:
+                pdir = pr.cwd()
+            else:
+                pdir='none'
         except psutil.NoSuchProcess:
             continue
         #print('pid=', pid, ' cl=', pr.cmdline())
@@ -112,10 +115,7 @@ def get_proc_info(fil):
             #print('proc pid=', pr.pid)
             allcls.append(cli)#command line con cui è stato eseguito			
             allpids.append(prid)#pid del processo	
-            if include_dir==True:
-                allcwds.append(pdir)#directory del processo
-            else:
-                allcwds.append('none')
+            allcwds.append(pdir)#directory del processo
             #print ('pid= ', pid, ' cl=', cli)
         #if pid == 89288 or pid==89367:
         #    print('pid=', pid, ' cwd=', pr.cwd(), ' cli=', cli)
