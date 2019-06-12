@@ -488,10 +488,6 @@ class mcsim {
           // save observables, e.g. energy, volume, pressure, etc...
           of << tt << " " << setprecision(16) << calc_phi() << "\n";
           of.close();
-          of.open("tramsd.dat",ios::app);
-          // save observables, e.g. energy, volume, pressure, etc...
-          msd=0;
-          pvector<ntype,2> dr;
           if (pars.simtype == 3 || pars.simtype == 4)
             {
               of.open("gchisto.dat",ios::app);
@@ -511,6 +507,10 @@ class mcsim {
             }
           if (pars.simtype != 3 && pars.simtype != 4 && pars.parnum > 0)
             {
+              of.open("tramsd.dat",ios::app);
+              // save observables, e.g. energy, volume, pressure, etc...
+              msd=0;
+              pvector<ntype,2> dr;
               for (auto i=0; i < pars.N; i++)
                 {
                   dr[0] = ntype(cross[i][0])*pars.L[0];
