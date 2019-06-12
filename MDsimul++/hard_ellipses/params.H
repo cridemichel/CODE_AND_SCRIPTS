@@ -189,10 +189,13 @@ public:
       o << volmoves << " " << volrej << "\n";
       //o << curStep << " ";
       o << which << "\n";
-      o << excmove << " " << excrej << "\n";
-      for (auto &e: gchisto)
-        o << e << " ";
-      o << "\n";
+      if (ppars->simtype==3 || ppars->simtype==4)
+        {
+          o << excmove << " " << excrej << "\n";
+          for (auto &e: gchisto)
+            o << e << " ";
+          o << "\n";
+        }
     }
 
   void read(fstream& i)

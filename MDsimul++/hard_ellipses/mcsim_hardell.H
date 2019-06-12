@@ -230,7 +230,7 @@ class mcsim {
       state.volmoves++;
       if (pars.simtype==2)
         {
-          dir=3*ranf();
+          dir=2*ranf();
         }
 #if 0
       for (ii=0; ii < pars.parnum; ii++)
