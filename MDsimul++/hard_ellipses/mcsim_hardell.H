@@ -576,6 +576,9 @@ class mcsim {
       //cout << "deltra=" << pars.deltra << " delrot=" << pars.delrot << " vmax=" << pars.vmax << "\n";
       //cout << "P= " << pars.P << " T=" << pars.T << "\n";
       pars.rcut = 2.0*max(pars.a,pars.b);
+      state.ppars = &pars;
+      //initialize all state vector which depend on pars
+      state.init_vecs();
       //resize_vec_N();
       //init_LL();
       iniStep=0;
@@ -735,7 +738,7 @@ public:
           ntype arg =  pars.parnum*1.0/(pars.zeta*surf);
           if (ranf() < arg)
             {
-              if (pars.simtype == 4)
+              if (pars.simtype == 4) // 4 = SUS
                 {
                   if (pars.susnmin < 0 || pars.susnmax <=0 || pars.parnum > pars.susnmin)
                     remove_par(o);
@@ -766,7 +769,7 @@ public:
               return;
             }
         } 
-      if (pars.simtype==4)
+      if (pars.simtype==4)//4 = SUS
         {
           if (pars.susnmin >= 0 && pars.susnmax > 0)
             state.sushisto[pars.parnum-pars.susnmin]++;

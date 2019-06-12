@@ -1,4 +1,5 @@
 #include "../mdlib/pvector.H"
+#include<vector>
 #include<string>
 #include<iostream>
 #include<fstream>
@@ -168,9 +169,11 @@ class simstate
 {
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
-  long long int volmoves=0, volrej=0, excmove=0;
+  long long int volmoves=0, volrej=0, excmove=0, excrej=0;
   //long long int curStep;
   unsigned int which=0;
+  vector<long long int> sushisto;
+  params<ntype> *ppars;
   //long long int resetaccept=0, resetacceptVol=0;
 
   //ntype deltra, delrot, vmax;
@@ -182,11 +185,15 @@ public:
       o << volmoves << " " << volrej << "\n";
       //o << curStep << " ";
       o << which << "\n";
-      o << excmove << "\n";
+      o << excmove << " " << excrej << "\n";
+      for (auto &e: sushisto)
+        o << e << " ";
+      o << "\n";
     }
 
   void read(fstream& i)
     {
+      init_vecs();
       // read full state from ascii file
       i >> trarej;
       i >> rotrej;
@@ -198,7 +205,15 @@ public:
       i >> volrej;
       //i >> curStep;
       i >> which;
-      i >> excmove;
+      i >> excmove >> excrej;
+      for (auto &e: sushisto)
+        i >> e;
+    }
+  void init_vecs(void)
+    {
+      sushisto.resize(ppars->susnmax-ppars->susnmin+1);
+      for (auto &e: sushisto)
+        e = 0;
     }
   simstate ()
     {
