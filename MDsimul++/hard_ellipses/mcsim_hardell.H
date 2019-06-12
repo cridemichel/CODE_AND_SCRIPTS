@@ -471,7 +471,7 @@ class mcsim {
       of.close();
       of.open("nem.dat", ios::trunc);
       of.close();
-      of.open("sushisto.dat", ios::trunc);
+      of.open("gchisto.dat", ios::trunc);
       of.close();
     }
   void save_measures(long long int tt)
@@ -494,13 +494,13 @@ class mcsim {
           pvector<ntype,2> dr;
           if (pars.simtype == 3 || pars.simtype == 4)
             {
-              of.open("sushisto.dat",ios::trunc);
+              of.open("gchisto.dat",ios::trunc);
               // save observables, e.g. energy, volume, pressure, etc...
               long long int sustot=0;
-              for (auto &e: state.sushisto)
+              for (auto &e: state.gchisto)
                 sustot+=e;
               int i = pars.susnmin;
-              for (auto &e: state.sushisto)
+              for (auto &e: state.gchisto)
                 {
                   of << i << " " << ntype(e)/ntype(sustot) << "\n";
                   i++;
@@ -760,7 +760,7 @@ public:
           if (pars.parnum==0)
             {
               if (pars.simtype==4 && pars.susnmin>=0 && pars.susnmax > 0)
-                state.sushisto[pars.parnum - pars.susnmin]++;
+                state.gchisto[pars.parnum - pars.susnmin]++;
               return;  
             }
           int o = pars.parnum*ranf();
@@ -776,7 +776,7 @@ public:
                 remove_par(o);
             }
           if (pars.simtype==4 && pars.susnmin >= 0 && pars.susnmax > 0)
-            state.sushisto[pars.parnum-pars.susnmin]++;
+            state.gchisto[pars.parnum-pars.susnmin]++;
         }
       else
         {
@@ -785,7 +785,7 @@ public:
             return;
           if (pars.simtype==4 && pars.susnmax > 0 && pars.parnum >= pars.susnmax)
             {
-              state.sushisto[pars.parnum-pars.susnmin]++;
+              state.gchisto[pars.parnum-pars.susnmin]++;
               return;
             }
           int np = insert_particle();
@@ -804,10 +804,9 @@ public:
               return;
             }
         } 
-      if (pars.simtype==4)//4 = SUS
+      if (pars.susnmin >= 0 && pars.susnmax > 0)
         {
-          if (pars.susnmin >= 0 && pars.susnmax > 0)
-            state.sushisto[pars.parnum-pars.susnmin]++;
+          state.gchisto[pars.parnum-pars.susnmin]++;
         }
       state.excmove++;
     }

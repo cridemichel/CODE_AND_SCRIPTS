@@ -176,7 +176,7 @@ public:
   long long int volmoves=0, volrej=0, excmove=0, excrej=0;
   //long long int curStep;
   unsigned int which=0;
-  vector<long long int> sushisto;
+  vector<long long int> gchisto;
   params<ntype> *ppars;
   //long long int resetaccept=0, resetacceptVol=0;
 
@@ -190,7 +190,7 @@ public:
       //o << curStep << " ";
       o << which << "\n";
       o << excmove << " " << excrej << "\n";
-      for (auto &e: sushisto)
+      for (auto &e: gchisto)
         o << e << " ";
       o << "\n";
     }
@@ -212,7 +212,7 @@ public:
       if (ppars->simtype==3||ppars->simtype==4)
         {
           i >> excmove >> excrej;
-          for (auto &e: sushisto)
+          for (auto &e: gchisto)
             i >> e;
         }
     }
@@ -220,8 +220,8 @@ public:
     {
       if (ppars->simtype!=3 && ppars->simtype!=4)
         return;
-      sushisto.resize(ppars->susnmax-ppars->susnmin+1);
-      for (auto &e: sushisto)
+      gchisto.resize(ppars->susnmax-ppars->susnmin+1);
+      for (auto &e: gchisto)
         e = 0;
     }
   simstate ()
