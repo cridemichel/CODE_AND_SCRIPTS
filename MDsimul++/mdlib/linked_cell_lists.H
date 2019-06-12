@@ -20,28 +20,7 @@ class linked_cell_lists_2d
   pvector<int,-1> inCellBak[2];
   int cxini, cyini;
   ntype rcut;
-  void insert_in_new_cell(int i)
-    {
-      int n;
-      n = inCell[1][i]*cellsx + 
-        inCell[0][i] + parnum;
-      /* Inserimento di evIdA nella nuova cella (head) */
-      cellList[i] = cellList[n];
-      cellList[n] = i;
-
-    }
-  void remove_from_current_cell(int i)
-    {
-      int n;
-      n = inCell[1][i]*cellsx + inCell[0][i]
-        + parnum;
-
-      while (cellList[n] != i) 
-        n = cellList[n];
-      /* Eliminazione di evIdA dalla lista della cella n-esima */
-      cellList[n] = cellList[i];
-    }
-  
+    
   bool overlap_two(int na, int n, pvector<ntype,2> shift)
     {
       auto rectA = (*rect)[na];
@@ -81,7 +60,77 @@ class linked_cell_lists_2d
       //cout << "false\n";
       return false;
     }
+  void insert_in_new_cell(int i)
+    {
+      int n;
+      n = inCell[1][i]*cellsx + 
+        inCell[0][i] + parnum;
+      /* Inserimento di evIdA nella nuova cella (head) */
+      cellList[i] = cellList[n];
+      cellList[n] = i;
+
+    }
+  void remove_from_current_cell(int i)
+    {
+      int n;
+      n = inCell[1][i]*cellsx + inCell[0][i]
+        + parnum;
+
+      while (cellList[n] != i) 
+        n = cellList[n];
+      /* Eliminazione di evIdA dalla lista della cella n-esima */
+      cellList[n] = cellList[i];
+    }
+  void adjLinkedListRemove(void)
+    {
+      int k;
+      for (k = parnum; k < cellsx*cellsy + parnum; k++)
+        {
+          cellList[k] = cellList[k+1];
+        }
+    }
+  void adjLinkedListInsert(void)
+    {
+      int k;
+      for (k = cellsx*cellsy + parnum - 1; k >= parnum; k--)
+        {
+          cellList[k] = cellList[k-1];
+        }
+    }
+  void add_to_LL(int n)
+    {
+      int cx, cy;
+      cx =  ((*part)[n].r[0] + 0.5*L[0]) * cellsx / L[0];
+      cy =  ((*part)[n].r[1] + 0.5*L[1]) * cellsy / L[1];
+      inCell[0][n] = cx;
+      inCell[1][n] = cy;
+      insert_in_new_cell(n);
+    }
+  
 public:
+  void insert_par(void)
+    {
+      parnum++;
+      resize_vectors();
+      adjLinkedListInsert();
+      add_to_LL(parnum-1); //last particle 
+    }
+  void remove_par(int ip)
+    {
+      /* last particle parnum-1 becomes ip-th */
+      remove_from_current_cell(ip);
+      if (ip < parnum-1)
+        remove_from_current_cell(parnum-1);
+      parnum--; 
+      if (ip < parnum-1)
+        {
+          for (auto k=0; k < 2; k++)
+            inCell[k][ip] = inCell[k][parnum-1];
+        }
+      adjLinkedListRemove();
+      if (ip < parnum-1)
+        insert_in_new_cell(ip);
+    } 
   vector<int> lista_vicini;
   linked_cell_lists_2d(vector<particles>* P, vector<rectangles> *R, pvector<ntype,2>& boxsize)
     {

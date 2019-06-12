@@ -38,6 +38,8 @@ public:
   long long int curStep;
   ntype targetAccept, targetAcceptVol;
   long long int adjsteps, outsteps, resetaccept, resetacceptVol; 
+  ntype zeta;
+  int susnmin, susnmax, npav, nexc;
   ntype maxmsd;
   char fnt[256];
   ntype targetPhi;
@@ -60,6 +62,11 @@ public:
       adjsteps = 0;
       resetaccept = 10000;
       resetacceptVol = 10000;
+      zeta=0;
+      susnmin=1000;
+      susnmax=1001;
+      nexc=10;
+      npav=1000;
       curStep=0;
       targetPhi=-1; //<= 0 means disabled
       maxmsd = -1;// equilibration
@@ -87,9 +94,14 @@ public:
       o << adjsteps << " ";
       o << outsteps << "\n";
       o << resetaccept << " ";
-      o << resetacceptVol << "\n";
-      o << targetPhi << "\n";
+      o << resetacceptVol << " ";
+      o << targetPhi << " ";
       o << maxmsd << "\n";
+      o << zeta << " ";
+      o << susnmin << " ";
+      o << susnmax << " ";
+      o << npav << " ";
+      o << nexc << "\n";
     }
   void read(fstream& i)
     {
@@ -117,6 +129,7 @@ public:
       i >> resetacceptVol;
       i >> targetPhi;
       i >> maxmsd;
+      i >> zeta, susnmin, susnmax, npav, nexc;
     }
   void readpars(const char *fn)
     {
@@ -155,7 +168,7 @@ class simstate
 {
 public:
   long long int trarej=0, rotrej=0, totrej=0, totmoves=0, tramoves=0, rotmoves=0;
-  long long int volmoves=0, volrej=0;
+  long long int volmoves=0, volrej=0, excmove=0;
   //long long int curStep;
   unsigned int which=0;
   //long long int resetaccept=0, resetacceptVol=0;
@@ -169,6 +182,7 @@ public:
       o << volmoves << " " << volrej << "\n";
       //o << curStep << " ";
       o << which << "\n";
+      o << excmove << "\n";
     }
 
   void read(fstream& i)
@@ -184,6 +198,7 @@ public:
       i >> volrej;
       //i >> curStep;
       i >> which;
+      i >> excmove;
     }
   simstate ()
     {

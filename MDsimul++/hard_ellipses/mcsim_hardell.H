@@ -690,7 +690,89 @@ public:
     ifstream f(name.c_str());
     return f.good();
   }
-
+  void remove_par(int ip)
+    {
+      ellLL.remove_par(ip);
+      if (ip < pars.parnum-1)
+        {
+          he[ip] = he[pars.parnum-1];
+          rect[ip] = rect[pars.parnum-1];
+        }
+      // erase last element of vectors
+      he[ip].erase(he.end());
+      rect[ip].erase(rect.end());
+      pars.parnum--;
+    }
+  int insert_particle(void)
+    {
+      pars.parnum++;
+      int np=pars.parnum-1;//index of new particle
+      resize_vec_N();
+      he[np].a = he[np-1].a;// all particles are assumed to have same aspect semi-axes
+      he[np].b = he[np-1].b;
+      // random position and orientation
+      he[np].r[0]=pars.L[0]*(ranf()-0.5);
+      he[np].r[1]=pars.L[1]*(ranf()-0.5);
+      he[np].na.random_orient();
+      he[np].nb = he[np].na.orto(); 
+      update_rect(np);
+      ellLL.insert_par(np);
+      return np;
+    }
+  void gcexc(void)
+    {
+      ntype surf = pars.L[0]*pars.L[1];
+      if (ranf() < 0.5)
+        {
+          // remove particle
+          if (pars.parnum==0)
+            {
+              if (pars.simtype==4 && pars.susnmin>=0 && pars.susnmax > 0)
+                state.sushisto[pars.parnum - pars.susnmin]++;
+              return;  
+            }
+          int o = pars.parnum*ranf();
+          ntype arg =  pars.parnum*1.0/(pars.zeta*surf);
+          if (ranf() < arg)
+            {
+              if (pars.simtype == 4)
+                {
+                  if (pars.susnmin < 0 || pars.susnmax <=0 || pars.parnum > pars.susnmin)
+                    remove_par(o);
+                }
+              else
+                remove_par(o);
+            }
+          if (pars.simtype==4 && pars.susnmin >= 0 && pars.susnmax > 0)
+            state.sushisto[pars.parnum-pars.susnmin]++;
+        }
+      else
+        {
+          // insert particle
+          if (pars.susnmin == -1 && pars.susnmax > 0 && pars.parnum >= pars.susnmax)
+            return;
+          int np = insert_particle();
+          if (ellLL.check_overlap(np)==true)
+            {
+              remove_par(np);
+              state.excrej++;
+              return;
+            }
+          ntype arg = pars.zeta*surf/ntype(pars.parnum);
+          if (ranf() >= arg)
+            {
+              remove_par(np);
+              state.excrej++;
+              return;
+            }
+        } 
+      if (pars.simtype==4)
+        {
+          if (pars.susnmin >= 0 && pars.susnmax > 0)
+            state.sushisto[pars.parnum-pars.susnmin]++;
+        }
+      state.excmove++;
+    }
   void run(void)
     {
       long long int tt;
@@ -703,7 +785,13 @@ public:
       for (tt=iniStep; tt < pars.steps; tt++)
         {
           pars.curStep=tt;
-          ntot=pars.parnum;
+          if (pars.simtype==3)
+            {
+              ntot = pars.npav + pars.nexc;
+            }
+          else
+            ntot=pars.parnum;
+          // 1 = NPT isotropic; 2=NPT xy; 3=grand canonical; 4 = SUS
           if (pars.simtype==1||pars.simtype==2) //NPT
             ntot+=1;
           ellLL.set_ini_numcells();
@@ -714,13 +802,27 @@ public:
             {
               //cout << "step #" << tt << " i=" << i << "ntot=" << ntot << "\n";
               ran = (int) (ntot*ranf());
-              if (ran < pars.parnum)
+              if (pars.simtype==3 || pars.simtype ==4)
                 {
-                  mcmotion(ran);
-                }
-              else 
+                  if (ran >= pars.npav)
+                    {
+                      gcexc();
+                    }
+                  else
+                    {
+                      mcmotion();
+                    }
+                }                
+              else
                 {
-                  move_box();
+                  if (ran < pars.parnum)
+                    {
+                      mcmotion(ran);
+                    }
+                  else 
+                    {
+                      move_box();
+                    }
                 }
             } 
           //check_overlap_debug();
