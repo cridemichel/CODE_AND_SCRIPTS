@@ -264,7 +264,7 @@ class mcsim {
           pars.L *= Lfact;
           L2 = 0.5*pars.L;
         }
-     //ellLL.store();
+      //ellLL.store();
       //cout << "Lnew=" << pars.L[0] << " " << pars.L[1] << "\n";
       for (i=0; i < pars.parnum; i++)
         {
