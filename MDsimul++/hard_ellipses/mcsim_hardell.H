@@ -548,6 +548,9 @@ class mcsim {
     {
       if (tt> 0 && tt % pars.outsteps == 0)
         {
+          // DA ELIMINARE QUANDO TUTTO FUNZIONERA'
+          check_overlap_debug();
+          ///////////////////////////
           if (pars.simtype==3 || pars.simtype==4)
             cout << "steps=" << tt << " N= " << pars.parnum << "\n";
           else
