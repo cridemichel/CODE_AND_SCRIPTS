@@ -67,12 +67,15 @@ if lof == '':
 totsteps=-1
 extsteps=-1
 #print ('uid=', os.getuid())
+#return a tuple where first value is True if directory has been accessed
+#and False otherwise while second value is an integer where 0 means
+#that process died meanwhile can not be appended to the list
 def can_access_cwd(pr):
     try:
         pr.cwd()
         return True
     except psutil.AccessDenied:
-       return False 
+        return False
 def get_proc_info(fil):
     allpids=[]
     allcwds=[]
@@ -90,24 +93,29 @@ def get_proc_info(fil):
             continue
         #print ('p=',p, 'cmd=',pr.cmdline())
         #filtra le command line con la stringa 
-        cli=' '.join(pr.cmdline())
         if not can_access_cwd(pr):
             #print('qui cl=', pr.cmdline())
+            #          continue
+            include_dir=False
+        else:
+            include_dir=True    
+        try:
+            cli=' '.join(pr.cmdline())
+            prid = pr.pid
+            pdir = pr.cwd()
+        except psutil.NoSuchProcess:
             continue
-  #           include_dir=False
-  #      else:
-  #          include_dir=True    
         #print('pid=', pid, ' cl=', pr.cmdline())
         if len(fil)==0 or cli.find(fil)!=-1:
             #print('cli1=', cli, ' boh=', cli[1].find(fil))
             #print('pr.cwd=', pr.cwd())
             #print('proc pid=', pr.pid)
             allcls.append(cli)#command line con cui è stato eseguito			
-            allpids.append(pr.pid)#pid del processo	
-        #    if include_dir==True:
-            allcwds.append(pr.cwd())#directory del processo
-         #   else:
-          #      allcwds.append('none')
+            allpids.append(prid)#pid del processo	
+            if include_dir==True:
+                allcwds.append(pdir)#directory del processo
+            else:
+                allcwds.append('none')
             #print ('pid= ', pid, ' cl=', cli)
         #if pid == 89288 or pid==89367:
         #    print('pid=', pid, ' cwd=', pr.cwd(), ' cli=', cli)
@@ -265,12 +273,13 @@ def choose_restart(bn):
 def job_is_running(bn,en,clines,cwds):
     cc=0    
     for l in cwds:
-#        if clines[cc].find(en)!=-1 and l == 'none':
-#            print('Executable name ' + en + ' matches') 
-#            print('but folder is not accessible,')
-#            print('if it has been launched through mosrun command, please')
-#            print('use a script to start the job')
-#            return True
+        if clines[cc].find(en)!=-1 and l == 'none':
+            print('Executable name ' + en + ' matches') 
+            print('but folder is not accessible,')
+            print('if it has been launched through mosrun command, please')
+            print('use a script to start the job and change ')
+            print('the configuration file accordingly')
+            return True
         if bn == l and clines[cc].find(en)!=-1:
             #print ('bn=', bn, ' cline=', clines[cc], ' en=', en)
             return True
