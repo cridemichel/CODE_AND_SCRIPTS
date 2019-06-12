@@ -530,7 +530,10 @@ class mcsim {
     {
       if (tt> 0 && tt % pars.outsteps == 0)
         {
-          cout << "steps=" << tt << "\n";
+          if (pars.simtype==3 || pars.simtype==4)
+            cout << "steps=" << tt << " N= " << pars.parnum << "\n";
+          else
+            cout << "steps=" << tt << "\n";
           cout << "tra acceptance=" << traaccept << " [ deltra=" << pars.deltra << " ]\n";
           cout << "rot acceptance=" << rotaccept << " [ delrot=" << pars.delrot << " ]\n";
           if (pars.simtype==1 || pars.simtype==2||state.volmoves > 0)
