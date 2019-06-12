@@ -702,8 +702,8 @@ public:
           rect[ip] = rect[pars.parnum-1];
         }
       // erase last element of vectors
-      he[ip].erase(he.end());
-      rect[ip].erase(rect.end());
+      he.erase(he.end());
+      rect.erase(rect.end());
       pars.parnum--;
     }
   int insert_particle(void)
@@ -719,7 +719,7 @@ public:
       he[np].na.random_orient();
       he[np].nb = he[np].na.orto(); 
       update_rect(np);
-      ellLL.insert_par(np);
+      ellLL.insert_par();
       return np;
     }
   void gcexc(void)
@@ -813,7 +813,7 @@ public:
                     }
                   else
                     {
-                      mcmotion();
+                      mcmotion(ranf()*pars.parnum);
                     }
                 }                
               else

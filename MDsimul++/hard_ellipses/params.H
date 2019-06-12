@@ -130,7 +130,7 @@ public:
       i >> resetacceptVol;
       i >> targetPhi;
       i >> maxmsd;
-      i >> zeta, susnmin, susnmax, npav, nexc;
+      i >> zeta >> susnmin >>  susnmax >> npav >> nexc;
     }
   void readpars(const char *fn)
     {
