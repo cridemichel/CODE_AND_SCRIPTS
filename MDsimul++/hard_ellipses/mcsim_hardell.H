@@ -772,7 +772,7 @@ public:
           int np = insert_particle();
           if (ellLL.check_overlap(np)==true)
             {
-              cout << "qui\n";
+              //cout << "qui\n";
               remove_par(np);
               state.excrej++;
               return;
