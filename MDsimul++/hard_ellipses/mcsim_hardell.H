@@ -90,7 +90,7 @@ class mcsim {
     }
   void init_LL(void)
     {
-      ellLL.init(&he,&rect,pars.L,pars.rcut);
+      ellLL.init(&he,&rect,pars.L,pars.rcut,pars.parnum);
     }
   void build_LL(void)
     {
@@ -182,6 +182,7 @@ class mcsim {
       he[ip].nb.show("na=");
 #endif       
       auto movetype=random_move(ip);
+
       // check overlap by using LL here!
       //pbc(ip);
       ellLL.update_LL(ip);
@@ -210,6 +211,8 @@ class mcsim {
 #endif
           // reject move
         }
+
+      //cout << "dopo\n";
       if (!reject)
         {
           adjust_cross(ip);
@@ -708,8 +711,8 @@ public:
           rect[ip] = rect[pars.parnum-1];
         }
       // erase last element of vectors
-      he.erase(he.end());
-      rect.erase(rect.end());
+      //he.erase(he.end());
+      //rect.erase(rect.end());
       pars.parnum--;
     }
   int insert_particle(void)
@@ -717,11 +720,12 @@ public:
       pars.parnum++;
       int np=pars.parnum-1;//index of new particle
       resize_vec_N();
-      he[np].a = he[np-1].a;// all particles are assumed to have same aspect semi-axes
-      he[np].b = he[np-1].b;
+      he[np].a = pars.a;// all particles are assumed to have same aspect semi-axes
+      he[np].b = pars.b;
       // random position and orientation
       he[np].r[0]=pars.L[0]*(ranf()-0.5);
       he[np].r[1]=pars.L[1]*(ranf()-0.5);
+      //cout << "[insert] part " << np << " =" << he[np].r[0] << " " << he[np].r[1] << "\n";
       he[np].na.random_orient();
       he[np].nb = he[np].na.orto(); 
       update_rect(np);
@@ -768,6 +772,7 @@ public:
           int np = insert_particle();
           if (ellLL.check_overlap(np)==true)
             {
+              cout << "qui\n";
               remove_par(np);
               state.excrej++;
               return;
@@ -799,7 +804,7 @@ public:
       for (tt=iniStep; tt < pars.steps; tt++)
         {
           pars.curStep=tt;
-          if (pars.simtype==3)
+          if (pars.simtype==3|| pars.simtype==4)
             {
               ntot = pars.npav + pars.nexc;
             }
@@ -824,6 +829,8 @@ public:
                     }
                   else
                     {
+                      if (pars.parnum==0)
+                        continue;
                       mcmotion(ranf()*pars.parnum);
                     }
                 }                
