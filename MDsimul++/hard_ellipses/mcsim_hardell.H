@@ -490,7 +490,7 @@ class mcsim {
           of.close();
           if (pars.simtype == 3 || pars.simtype == 4)
             {
-              of.open("gchisto.dat",ios::app);
+              of.open("gchisto.dat",ios::trunc);
               // save observables, e.g. energy, volume, pressure, etc...
               long long int sustot=0;
               for (auto &e: state.gchisto)
@@ -499,7 +499,7 @@ class mcsim {
               for (auto &e: state.gchisto)
                 {
                   of << i << " " << setprecision(16) << ntype(e)/ntype(sustot) << "\n";
-                  cout << setprecision(16) << ntype(e)/ntype(sustot) << "\n";
+                  //cout << setprecision(16) << ntype(e)/ntype(sustot) << "\n";
                   i++;
                 }
               of.flush();
