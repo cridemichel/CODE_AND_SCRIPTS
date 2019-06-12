@@ -488,36 +488,39 @@ class mcsim {
           msd=0;
           pvector<ntype,2> dr;
 
-          for (auto i=0; i < pars.N; i++)
+          if (pars.simtype != 3 && pars.simtype != 4 && pars.parnum > 0)
             {
-              dr[0] = ntype(cross[i][0])*pars.L[0];
-              dr[1] = ntype(cross[i][1])*pars.L[1];
-              dr += he[i].r - r0[i];
-              msd+=dr*dr;
+              for (auto i=0; i < pars.N; i++)
+                {
+                  dr[0] = ntype(cross[i][0])*pars.L[0];
+                  dr[1] = ntype(cross[i][1])*pars.L[1];
+                  dr += he[i].r - r0[i];
+                  msd+=dr*dr;
+                }
+              msd /= ntype(pars.N);
+              of << tt << " " << setprecision(16) << msd << "\n";
+              of.close();
+              of.open("rotmsd.dat",ios::app);
+              // save observables, e.g. energy, volume, pressure, etc...
+              ntype dthtot=0;
+              for (auto i=0; i < pars.N; i++)
+                {
+                  dthtot+=dth[i]*dth[i];
+                }
+              dthtot /= ntype(pars.N);
+              of << tt << " " << setprecision(16) << dthtot << "\n";
+              of.close();
+              build_neighbours_list();
+              of.open("psi6.dat",ios::app);
+              of << tt << " " << setprecision(16) << calc_hex_ordpar() << "\n";
+              of.close();
+              of.open("psiT.dat",ios::app);
+              of << tt << " " << setprecision(16) << calc_transl_order() << "\n";
+              of.close();
+              of.open("nem.dat",ios::app);
+              of << tt << " " << setprecision(16) << calc_nem_ordpar() << "\n";
+              of.close();
             }
-          msd /= ntype(pars.N);
-          of << tt << " " << setprecision(16) << msd << "\n";
-          of.close();
-          of.open("rotmsd.dat",ios::app);
-          // save observables, e.g. energy, volume, pressure, etc...
-          ntype dthtot=0;
-          for (auto i=0; i < pars.N; i++)
-            {
-              dthtot+=dth[i]*dth[i];
-            }
-          dthtot /= ntype(pars.N);
-          of << tt << " " << setprecision(16) << dthtot << "\n";
-          of.close();
-          build_neighbours_list();
-          of.open("psi6.dat",ios::app);
-          of << tt << " " << setprecision(16) << calc_hex_ordpar() << "\n";
-          of.close();
-          of.open("psiT.dat",ios::app);
-          of << tt << " " << setprecision(16) << calc_transl_order() << "\n";
-          of.close();
-          of.open("nem.dat",ios::app);
-          of << tt << " " << setprecision(16) << calc_nem_ordpar() << "\n";
-          of.close();
         }
     }
   void outinfo(long long int tt)
@@ -754,6 +757,11 @@ public:
           // insert particle
           if (pars.susnmin == -1 && pars.susnmax > 0 && pars.parnum >= pars.susnmax)
             return;
+          if (pars.simtype==4 && pars.susnmax > 0 && pars.parnum >= pars.susnmax)
+            {
+              state.sushisto[pars.parnum-pars.susnmin]++;
+              return;
+            }
           int np = insert_particle();
           if (ellLL.check_overlap(np)==true)
             {
@@ -836,6 +844,11 @@ public:
           save_measures(tt);
           //output
           outinfo(tt);
+          if (pars.susnmin==-1 && pars.susnmax > 0 && pars.parnum >= pars.susnmax)
+            {
+              cout << "Inserted all particles, exiting...\n";
+              break;
+            }
           if (pars.targetPhi > 0 && abs(calc_phi()-pars.targetPhi) < 1E-7)
             break;
           if (pars.maxmsd > 0 && msd > pars.maxmsd)
