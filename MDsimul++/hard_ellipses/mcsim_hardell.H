@@ -534,28 +534,31 @@ class mcsim {
             cout << "vol acceptance=" << volaccept << " [vmax=" << pars.vmax << " ]\n";
           //cout << "psitra=" << calc_transl_order() << "\n";
 
-          build_neighbours_list();
-          cout << "psi6=" << calc_hex_ordpar() << "\n";
-          //b1.show("b1");
-          //b2.show("b2");
-     
-          cout << "PsiT=" << calc_transl_order() << "\n";
+          if (pars.simtype != 3 && pars.simtype !=4 && pars.parnum > 0)
+            {
+              build_neighbours_list();
+              cout << "psi6=" << calc_hex_ordpar() << "\n";
+              //b1.show("b1");
+              //b2.show("b2");
+
+              cout << "PsiT=" << calc_transl_order() << "\n";
 #if 0
-          build_neighbours_list();
-          cout << "<<<[tt=" << tt << "] begin neigh of i=10\n";
-          for (auto i=0; i < pars.N; i++)
-            {
-              if (neigh_list[i].size() < 6)
-                cout << "[tt=" << tt  << "problem for nnl of i=" << i << "\n";
-              else
-                cout << "[tt=" << tt << "] number of neighbours=" << neigh_list[i].size() << "\n";
+              build_neighbours_list();
+              cout << "<<<[tt=" << tt << "] begin neigh of i=10\n";
+              for (auto i=0; i < pars.N; i++)
+                {
+                  if (neigh_list[i].size() < 6)
+                    cout << "[tt=" << tt  << "problem for nnl of i=" << i << "\n";
+                  else
+                    cout << "[tt=" << tt << "] number of neighbours=" << neigh_list[i].size() << "\n";
             }
-          for (auto &e: neigh_list[10])
-            {
-              cout << "[tt=" << tt << "] i=" << e << "\n";
-            }
-          cout << "end>>>";
+              for (auto &e: neigh_list[10])
+                {
+                  cout << "[tt=" << tt << "] i=" << e << "\n";
+                }
+              cout << "end>>>";
 #endif
+            }
         } 
     }
   void resize_vec_N(void)
