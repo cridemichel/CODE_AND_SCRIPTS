@@ -45,7 +45,7 @@ def print_error():
 show_only = False
 verbose = False   
 args=sys.argv
-sched_type='simpp'
+sched_type=''
 filter_proc=''
 extra_args=''
 #print('args=',args)
@@ -266,8 +266,8 @@ elif sched_type == 'veff':
     # come quelli usati per il calcolo del potenziale efficace
     # queste devono rimpiazzare le corrispondenti build_arg_start,
     # build_arg_restart e sim_done
-    def get_steps(bn,w):
-        return 0
+    def get_steps(dir,w):
+        return 0 
     restart=['calcveff.chk']
     donefile='not_used' # se esiste questo file vuol dire che ha finito!
     #argomenti per l'eseguibile in caso
@@ -292,13 +292,15 @@ elif sched_type == 'veff':
     def extend_sim(bn,w):
         pass
 else:
-    def get_steps(bn,w):
-        return 0
     if len(restart)==0:
         restart=['restart-0','restart-1']
     # donefile is the one created when a run terminates 
     if donefile=='':
         donefile='cnf-final'
+    #get modificatiom time (which is a float) instead of steps in this general case
+    def get_steps(bn,w):
+        #print('mod time=',os.path.getmtime(os.path.join(dir,donefile)))
+        return os.path.getmtime(os.path.join(dir,donefile))
     #
     if jobfinished=='':
         jobfinished='_DONE_'
@@ -306,6 +308,7 @@ else:
     # [totsteps > 0] if the scripts creates a file called DONE simulation 
     #   will not be restarted 
     # [totsteps <= 0] if a file called donefile is created jobs is finished
+    #print ('jobfib=',jobfinished)
     def sim_done(dir):
         if totsteps > 0:
             return os.path.exists(dir+'/'+jobfinished)
@@ -491,7 +494,7 @@ for l in lines:
             which=choose_restart(bn)
             # se totsteps > 0 e ci sono il donefiled e il restart, prova ad estenderla
             # mettendola nella lista che poi verrà utilizzata per i riavvii
-            if to_extend(dir,which): 
+            if to_extend(dir,which):
                 lsttoext.append([get_steps(dir,which),l])
                 continue
             if which == -1:
