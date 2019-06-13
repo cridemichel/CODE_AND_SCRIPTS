@@ -346,6 +346,7 @@ max_jobs=int(ll[2])
 del(lines[0])
 if killp == True:
     #pids = [pid for pid in psutil.pids()] 
+    nkilled=0
     for l in allcwds:
         #print ('bn=',bnc)
         #print ('en=',enc)
@@ -370,7 +371,12 @@ if killp == True:
                 #psutil.Process(pids[nline]).terminate()
             except psutil.NoSuchProcess:
                 continue
+            nkilled+=1
         nline += 1    
+    if nkilled == 0:
+        print('No process running...')
+    else:
+        print (nkilled, 'processes killed together with all their childs')        
     quit()        
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
