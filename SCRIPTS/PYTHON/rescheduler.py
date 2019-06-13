@@ -132,14 +132,7 @@ def get_num_words(fn):
             l=line.strip('\n').split(' ')
             nw+=len(l)
         return nw
-def get_steps(bn,w):
-    with open(bn+'/'+restart[w]) as f:
-        firstline=f.readline()
-    l=firstline.split(' ')
-    #print ('l=',l)
-    #print ('lines[0][2]=', ls[0][2])
-    #overwrite filed total steps with new value
-    return int(l[3])
+
 #######################################
 # VARIABILI CHE DIPENDONO DA TIPO DI PROGRAMMA DA RIAVVIARE
 # SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
@@ -149,6 +142,14 @@ postpend=' &'
 prepend=''
 #postpend=''
 if sched_type == 'simpp':
+    def get_steps(bn,w):
+        with open(bn+'/'+restart[w]) as f:
+            firstline=f.readline()
+            l=firstline.split(' ')
+        #print ('l=',l)
+        #print ('lines[0][2]=', ls[0][2])
+        #overwrite filed total steps with new value
+        return int(l[3])
     #restart can be also a list of one element!
     restart=['restart-0','restart-1']
     donefile='cnf-final' # se esiste questo file vuol dire che ha finito!
@@ -156,7 +157,7 @@ if sched_type == 'simpp':
     # di start o restart
     arg_start=' 2'
     arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
-    #maximum number of running jobs     
+    # maximum number of running jobs     
     #
     # NOTE SUL RESTART
     # se le simulazioni arrivano a totsteps i file di restart vengono cancellati
