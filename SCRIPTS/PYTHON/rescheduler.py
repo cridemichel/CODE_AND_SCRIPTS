@@ -465,9 +465,9 @@ if totsteps > 0 and show_only==False:
         nrun +=1
 #       
 # stampare liste di running e riavviati
-if len(lstrun) > 0 and show_only == False:
+#if len(lstrun) > 0 and show_only == False:
     #for l in lstrun:
-    print ('list run=', lstrun)
+#    print ('list run=', lstrun)
 #if len(lstdead) > 0:
 #    print ('list dead=', lstdead)
 #if len(lststart) > 0:
