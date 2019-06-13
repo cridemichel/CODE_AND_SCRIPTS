@@ -346,6 +346,7 @@ class mcsim {
               else
                 he[i].r /= Lfact;
               pbc(i);
+              update_rect(i);
             }
           //volrejMC++;
           ellLL.update_numcells(pars.L);
