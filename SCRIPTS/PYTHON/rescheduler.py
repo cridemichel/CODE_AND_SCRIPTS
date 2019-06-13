@@ -18,6 +18,10 @@ from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
+#initializations do not touch!
+restart=[]
+donefile=''
+jobfinished=''
 def is_integer(s):
     try:
         int(s)
@@ -27,16 +31,20 @@ def is_integer(s):
 def print_error():
     print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill] <conf_file>')
     print('where <conf_file> is a configuration file with the following structure:\n')
-    print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs>')
+    print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs> <donefile> <jobfinished> <restart0> <restart1>')
     print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
     print('\n<totsteps> is the total number of steps (-1 means to not extend)')
     print('<extra steps> is the number of steps to extend simulaitons')
+    print('<donefile> is the file written when a simulation ends (if totsteps < 0 jobs is finished)')
+    print('<jobfinished> is the file written when jobs is terminated and has not to be extended')
+    print('<restart0> and <restart1> are the names of the restart files')
+    print('<donefile>, <jobsfinished>, <restart0> and <restart1> are optional')
     print('first line is followed by a list of jobs (preferably shell scripts) to check with absolute paths')
     quit()
 show_only = False
 verbose = False   
 args=sys.argv
-sched_type='simpp'
+sched_type=''
 filter_proc=''
 extra_args=''
 #print('args=',args)
@@ -70,6 +78,22 @@ if lof == '':
 #print ('lof=',lof)    
 totsteps=-1
 extsteps=-1
+with open(lof) as f:
+    lines=f.readlines()
+ll=lines[0].strip('\n').split(' ')
+#print ('ll=',ll)
+totsteps=int(ll[0])
+extsteps=int(ll[1])
+max_jobs=int(ll[2])
+if (len(ll) > 3):
+    donefile=ll[3]
+if (len(ll) > 4):
+    jobfinished=ll[4]
+if (len(ll) > 5):
+    restart.append(ll[5])
+if (len(ll) > 6):
+    restart.append(ll[6])  
+del(lines[0])
 #print ('uid=', os.getuid())
 #return a tuple where first value is True if directory has been accessed
 #and False otherwise while second value is an integer where 0 means
@@ -132,7 +156,6 @@ def get_num_words(fn):
             l=line.strip('\n').split(' ')
             nw+=len(l)
         return nw
-
 #######################################
 # VARIABILI CHE DIPENDONO DA TIPO DI PROGRAMMA DA RIAVVIARE
 # SI PRESUPPONE COMUNQUE CHE ESISTANO DUE RESTART FILES
@@ -215,6 +238,8 @@ elif sched_type == 'veff':
     # come quelli usati per il calcolo del potenziale efficace
     # queste devono rimpiazzare le corrispondenti build_arg_start,
     # build_arg_restart e sim_done
+    def get_steps(bn,w):
+        return 0
     restart=['calcveff.chk']
     donefile='not_used' # se esiste questo file vuol dire che ha finito!
     #argomenti per l'eseguibile in caso
@@ -239,8 +264,35 @@ elif sched_type == 'veff':
     def extend_sim(bn,w):
         pass
 else:
-    print('wrong schedule type '+sched_type)
-    quit()
+    def get_steps(bn,w):
+        return 0
+    if len(restart)==0:
+        restart=['restart-0','restart-1']
+    # donefile is the one created when a run terminates 
+    if donefile=='':
+        donefile='cnf-final'
+    #
+    if jobfinished=='':
+        jobfinished='_DONE_'
+    # test if simulation is finished (customize if needed)
+    # [totsteps > 0] if the scripts creates a file called DONE simulation 
+    #   will not be restarted 
+    # [totsteps <= 0] if a file called donefile is created jobs is finished
+    def sim_done(dir):
+        if totsteps > 0:
+            return os.path.exists(dir+'/'+jobfinished)
+        else:
+            return os.path.exists(dir+'/'+donefile)
+    #ea are extra arg which can be specified in the command line
+    def build_arg_restart(l,ea,w):
+        return ' 1 '+str(w)+' '+str(totsteps)+' '+str(extsteps)+' '+ea
+    def build_arg_start(l,ea):
+        return ' 2 '+ea #2 means first start 
+    def extend_sim(bn,w):
+        pass #not used
+    print('restart=', restart, ' donefile=', donefile)
+    #print('wrong schedule type '+sched_type)
+    #quit()
 #######################################
 # se il programma di restart è solo uno la seguente funzione 
 # va cambiata opportunamente
@@ -323,8 +375,6 @@ def kill_parent_and_childs(pid):
             # give up
             for p in alive:
                 print("process {} survived SIGKILL; giving up" % p)
-with open(lof) as f:
-    lines=f.readlines() 
 c=0
 #return command lines, pids and absolute path
 allcls,pids,allcwds=get_proc_info(filter_proc)
@@ -347,12 +397,6 @@ lstextended=[]
 #print('fil=',filter_proc)
 #print('allcwds=',allcwds)
 #print('pids=',pids)
-ll=lines[0].strip('\n').split(' ')
-#print ('ll=',ll)
-totsteps=int(ll[0])
-extsteps=int(ll[1])
-max_jobs=int(ll[2])
-del(lines[0])
 if killp == True:
     #pids = [pid for pid in psutil.pids()] 
     nkilled=0
