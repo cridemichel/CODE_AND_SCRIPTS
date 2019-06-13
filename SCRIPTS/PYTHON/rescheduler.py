@@ -356,6 +356,14 @@ if killp == True:
             #print ('bn=', bn, ' bnc=', l)
             if bn==l and allcls[nline].find(en) != -1: 
                 found=True
+            if clines[cc].find(en)!=-1 and l == 'none':
+                print('Executable name ' + en + ' matches') 
+                print('but folder is not accessible,')
+                print('if it has been launched through mosrun command, please')
+                print('use a script to start the job and change ')
+                print('the configuration file accordingly')
+                print('I skip it...')
+                found=False
         if found:
             print('Killing process', pids[nline],end='')
             print(' and, recursively, all its subprocesses:')
