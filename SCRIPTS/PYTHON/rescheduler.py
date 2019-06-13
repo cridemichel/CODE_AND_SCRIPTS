@@ -209,14 +209,18 @@ if sched_type == 'simpp':
             for l in ls:
                 f.write(l)
 elif sched_type == 'veff':
-#la seguente va bene se il criterio è se ci sia un file
-#con una certa linea finale 
-#routine riavviare programmi con un solo file di restart 
-# come quelli usati per il calcolo del potenziale efficace
-# queste devono rimpiazzare le corrispondenti build_arg_start,
-# build_arg_restart e sim_done
-# inoltre anche la variabile restart_veff deve essere rinominata in restart
-# keep_going=False #if true restart finished simulations too
+    # la seguente va bene se il criterio è se ci sia un file
+    # con una certa linea finale 
+    # routine riavviare programmi con un solo file di restart un solo file di restart 
+    # come quelli usati per il calcolo del potenziale efficace
+    # queste devono rimpiazzare le corrispondenti build_arg_start,
+    # build_arg_restart e sim_done
+    restart=['calcveff.chk']
+    donefile='not_used' # se esiste questo file vuol dire che ha finito!
+    #argomenti per l'eseguibile in caso
+    # di start o restart
+    arg_start='not_used'
+    arg_restart=['not_used', 'not_used']
     def sim_done(dir):
         with open(dir+'/veff_vs_tt.dat') as f:
             ls=f.readlines()
@@ -232,7 +236,8 @@ elif sched_type == 'veff':
         return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
     def build_arg_start(l,ea):
         return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
-    restart=['calcveff.chk']
+    def extend_sim(bn,w):
+        pass
 else:
     print('wrong schedule type '+sched_type)
     quit()
