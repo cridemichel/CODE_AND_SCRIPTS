@@ -25,10 +25,13 @@ def is_integer(s):
     except (ValueError, TypeError):
         return False
 def print_error():
-    print('You have to supply a config file where:')
-    print('first lines=<tosteps=-1|>0> <extra steps=-1|>0> <max jobs>')
-    print('list of jobs to check (with absolute paths)')
-    print('reschedluer [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill] <conf file>')
+    print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill] <conf_file>')
+    print('where <conf_file> is a configuration file with the following structure:\n')
+    print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs>')
+    print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
+    print('\n<totsteps> is the total number of steps (-1 means to not extend)')
+    print('<extra steps> is the number of steps to extend simulaitons')
+    print('first line is followed by a list of jobs (preferably shell scripts) to check with absolute paths')
     quit()
 show_only = False
 verbose = False   
