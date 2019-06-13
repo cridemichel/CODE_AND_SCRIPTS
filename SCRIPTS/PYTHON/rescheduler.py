@@ -29,8 +29,9 @@ def is_integer(s):
     except (ValueError, TypeError):
         return False
 def print_error():
-    print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill] <conf_file>')
+    print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>] <conf_file>')
     print('where <conf_file> is a configuration file with the following structure:\n')
+    print('<list_to_kill>=0,1,2,3-4')
     print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs> <donefile> <jobfinished> <restart0> <restart1>')
     print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
     print('\n<totsteps> is the total number of steps (-1 means to not extend)')
@@ -44,7 +45,7 @@ def print_error():
 show_only = False
 verbose = False   
 args=sys.argv
-sched_type=''
+sched_type='simpp'
 filter_proc=''
 extra_args=''
 #print('args=',args)
@@ -54,7 +55,9 @@ if len(args)==1:
 lof=''
 del(args[0])
 killp=False
-for a in args:
+karg=''
+itargs=iter(args)
+for a in itargs:
     if a == '-show' or a  == '-s':
         show_only=True
     elif a == '-verbose' or a == '-v':
@@ -63,15 +66,32 @@ for a in args:
         show_only=True
         verbose=True
     elif a == '-filter' or a == '-f':
-        filter_proc=next(a)
+        filter_proc=next(itargs)
     elif a == '-extargs' or a == '-ea':
-        extra_args=next(a)
+        extra_args=next(itargs)
     elif a == '-type' or a == '-t':
-        sched_type=next(a)
+        sched_type=next(itargs)
     elif a == '-kill' or a == '-k':
+        karg=next(itargs)
         killp=True
     else:
       lof = a
+if killp==True:
+    lst=karg.split(',')
+    list_to_kill=[]
+    for l in lst:
+        ll=l.split('-')
+        #print('ll=',ll)
+        if len(ll)==1:
+            list_to_kill.append(int(ll[0]))
+        elif len(ll)==2:
+            for i in range(int(ll[0]),int(ll[1])+1):
+                list_to_kill.append(i)
+        else:
+            print('Parse error in list of jobs to kill')
+            quit()
+    print("list_to_kill=", list_to_kill)
+    #quit()        
 if lof == '':
     print_error()
     quit()
@@ -404,7 +424,10 @@ if killp == True:
         #print ('bn=',bnc)
         #print ('en=',enc)
         found=False
+        cc=0
         for ll in lines:
+            if not cc in list_to_kill:
+                continue
             bn, en=os.path.split(ll.strip('\n'))
             #print ('bn=', bn, ' bnc=', l)
             if bn==l and allcls[nline].find(en) != -1: 
@@ -416,7 +439,8 @@ if killp == True:
                 print('use a script to start the job and change ')
                 print('the configuration file accordingly')
                 print('I skip it...')
-                found=False
+                #found=False
+            cc+=1
         if found:
             print('Killing process', pids[nline],end='')
             print(' and, recursively, all its subprocesses:')
@@ -531,14 +555,17 @@ if show_only == True:
     if verbose == True:
         print ('R= running; F=finished')
     if verbose == True:
+        cc=0
         for l in lines:
+            print ('[',str(cc),']',end='')
             if l in lstrun:
-                print ('R ', end='')
+                print (' R ', end='')
             elif l in lstdone:
-                print ('F ', end='')
+                print (' F ', end='')
             else:
                 print ('  ', end='')
             print (l,end='')
+            cc+=1
     print ('tot running ='+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines))
     quit()
 if not ok:
