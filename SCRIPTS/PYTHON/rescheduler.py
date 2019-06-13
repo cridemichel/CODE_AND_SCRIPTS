@@ -13,6 +13,7 @@
 import sys
 import os
 import psutil
+import signal
 from operator import itemgetter
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
@@ -288,16 +289,31 @@ def job_is_running(bn,en,clines,cwds):
 def to_extend(dir,w):        
     return totsteps > 0 and os.path.exists(dir+'/'+donefile) and w != -1
 #
-def kill_childs(ppid,pids):
-    for pid in pids:
+def on_terminate(proc):
+    print("process {} terminated with exit code {}".format(proc, proc.returncode))
+
+def kill_parent_and_childs(pid):
+    parent = psutil.Process(pid)    
+    children = parent.children(recursive=True)
+    children.append(parent)#kill also the parent
+    for p in children:
         try:
-            pr=psutil.Process(pid)
-            prppid=pr.ppid()
-            if prppid == ppid:
-                pr.terminate()
+            p.send_signal(signal.SIGTERM)
         except psutil.NoSuchProcess:
-            continue        
-###
+            pass
+    gone, alive = psutil.wait_procs(children,timeout=1,callback=on_terminate)
+    if alive:
+        for p in alive:
+            print("process {} survived SIGTERM; trying SIGKILL" % p)
+            try:
+                p.kill()
+            except psutil.NoSuchProcess:
+                pass
+        gone, alive = psutil.wait_procs(alive, timeout=1, callback=on_terminate)
+        if alive:
+            # give up
+            for p in alive:
+                print("process {} survived SIGKILL; giving up" % p)
 with open(lof) as f:
     lines=f.readlines() 
 c=0
@@ -329,7 +345,7 @@ extsteps=int(ll[1])
 max_jobs=int(ll[2])
 del(lines[0])
 if killp == True:
-    pids = [pid for pid in psutil.pids()] 
+    #pids = [pid for pid in psutil.pids()] 
     for l in allcwds:
         #print ('bn=',bnc)
         #print ('en=',enc)
@@ -341,17 +357,17 @@ if killp == True:
                 found=True
         if found:
             print('Killing process', pids[nline],end='')
-            print(' and all its subprocesses')
+            print(' and, recursively, all its subprocesses:')
             #os.system(' kill '+ str(pids[nline]))
             #kills all processes which have current pid as parent pid
             # suspend the job first
             try:
-                psutil.Process(pids[nline]).suspend()
+                #psutil.Process(pids[nline]).suspend()
                 # kill its childs (so that if job is a script it kills all 
                 # subprocesses)
-                kill_childs(pids[nline],pids)
+                kill_parent_and_childs(pids[nline])
                 # finally kill the job
-                psutil.Process(pids[nline]).terminate()
+                #psutil.Process(pids[nline]).terminate()
             except psutil.NoSuchProcess:
                 continue
         nline += 1    
