@@ -288,6 +288,16 @@ def job_is_running(bn,en,clines,cwds):
 def to_extend(dir,w):        
     return totsteps > 0 and os.path.exists(dir+'/'+donefile) and w != -1
 #
+def kill_childs(ppid,pids):
+    for pid in pids:
+        try:
+            pr=psutil.Process(pid)
+            prppid=pr.ppid()
+            if prppid == ppid:
+                pr.terminate()
+        except psutil.NoSuchProcess:
+            continue        
+###
 with open(lof) as f:
     lines=f.readlines() 
 c=0
@@ -319,6 +329,7 @@ extsteps=int(ll[1])
 max_jobs=int(ll[2])
 del(lines[0])
 if killp == True:
+    pids = [pid for pid in psutil.pids()] 
     for l in allcwds:
         #print ('bn=',bnc)
         #print ('en=',enc)
@@ -329,8 +340,20 @@ if killp == True:
             if bn==l and allcls[nline].find(en) != -1: 
                 found=True
         if found:
-            print('nline=', nline, ' killing process ', pids[nline])
-            os.system(' kill '+ str(pids[nline]))
+            print('Killing process', pids[nline],end='')
+            print(' and all its subprocesses')
+            #os.system(' kill '+ str(pids[nline]))
+            #kills all processes which have current pid as parent pid
+            # suspend the job first
+            try:
+                psutil.Process(pids[nline]).suspend()
+                # kill its childs (so that if job is a script it kills all 
+                # subprocesses)
+                kill_childs(pids[nline],pids)
+                # finally kill the job
+                psutil.Process(pids[nline]).terminate()
+            except psutil.NoSuchProcess:
+                continue
         nline += 1    
     quit()        
 for l in lines:
