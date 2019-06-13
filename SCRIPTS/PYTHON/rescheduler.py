@@ -31,7 +31,7 @@ def is_integer(s):
 def print_error():
     print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>] <conf_file>')
     print('where <conf_file> is a configuration file with the following structure:\n')
-    print('<list_to_kill>=0,1,2,3-4')
+    print('<list_to_kill>=0,1,2,3-4 (if equal to \'all\' means all jobs)')
     print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs> <donefile> <jobfinished> <restart0> <restart1>')
     print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
     print('\n<totsteps> is the total number of steps (-1 means to not extend)')
@@ -77,19 +77,27 @@ for a in itargs:
     else:
       lof = a
 if killp==True:
-    lst=karg.split(',')
     list_to_kill=[]
-    for l in lst:
-        ll=l.split('-')
-        #print('ll=',ll)
-        if len(ll)==1:
-            list_to_kill.append(int(ll[0]))
-        elif len(ll)==2:
-            for i in range(int(ll[0]),int(ll[1])+1):
-                list_to_kill.append(i)
-        else:
-            print('Parse error in list of jobs to kill')
-            quit()
+    #print('karg=',karg)
+    if karg != 'all':
+        lst=karg.split(',')  
+        for l in lst:
+            ll=l.split('-')
+            #print('ll=',ll)
+            if len(ll)==1:
+                if not ll[0].isnumeric():
+                    print_error()
+                    quit()
+                list_to_kill.append(int(ll[0]))
+            elif len(ll)==2:
+                if (not ll[0].isnumeric()) or (not ll[1].isnumeric()):
+                    print_error()
+                    quit()
+                for i in range(int(ll[0]),int(ll[1])+1):
+                    list_to_kill.append(i)
+            else:
+                print('Parse error in list of jobs to kill')
+                quit()
     print("list_to_kill=", list_to_kill)
     #quit()        
 if lof == '':
@@ -426,7 +434,7 @@ if killp == True:
         found=False
         cc=0
         for ll in lines:
-            if not cc in list_to_kill:
+            if len(list_to_kill) > 0 and (not cc in list_to_kill):
                 continue
             bn, en=os.path.split(ll.strip('\n'))
             #print ('bn=', bn, ' bnc=', l)
