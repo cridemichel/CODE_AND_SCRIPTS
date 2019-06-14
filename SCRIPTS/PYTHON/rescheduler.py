@@ -73,6 +73,11 @@ def parse_ranges(arg):
                 print('Parse error in list of jobs to kill')
                 quit()
     return lst
+def check_range(lista,lines):
+    for i in lista:
+        if i < 0 or i >= len(lines):
+            print('Job index out of range [0,'+ str(len(lines)-2) +']')
+            quit()
 show_only = False
 verbose = False   
 args=sys.argv
@@ -127,8 +132,14 @@ for a in itargs:
         deljobs=True
     else:
       lof = a
+if not os.path.exists(lof):
+    print('file '+ lof + ' does not exist')
+    quit()
+with open(lof) as f:
+    lines=f.readlines()
 if killp==True:
     list_to_kill=parse_ranges(karg)
+    check_range(list_to_kill,lines)
     #print('karg=',karg)
     #print("list_to_kill=", list_to_kill)
     #quit()        
@@ -136,7 +147,8 @@ if deljobs==True:
     if killp == True:
         list_to_delete=list_to_kill
     else:
-        list_to_delete=parse_ranges(darg)   
+        list_to_delete=parse_ranges(darg)
+        check_range(list_to_delete,lines)
 if restartjobs==True:
     list_to_restart=parse_ranges(rarg)    
 if finjobs==True:
@@ -144,16 +156,15 @@ if finjobs==True:
         list_to_finish=list_to_kill
     else:
         list_to_finish=parse_ranges(farg)
+        check_range(list_to_finish,lines)
 if lof == '':
     print_error()
     quit()
 #print ('lof=',lof)    
 totsteps=-1
 extsteps=-1
-with open(lof) as f:
-    lines=f.readlines()
-ll=lines[0].strip('\n').split(' ')
 #print ('ll=',ll)
+ll=lines[0].strip('\n').split(' ')
 totsteps=int(ll[0])
 extsteps=int(ll[1])
 max_jobs=int(ll[2])
