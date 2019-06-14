@@ -165,9 +165,13 @@ totsteps=-1
 extsteps=-1
 #print ('ll=',ll)
 ll=lines[0].strip('\n').split(' ')
-totsteps=int(ll[0])
-extsteps=int(ll[1])
-max_jobs=int(ll[2])
+try:
+    totsteps=int(ll[0])
+    extsteps=int(ll[1])
+    max_jobs=int(ll[2])
+except ValueError:
+    print('Value in config file is not an integer, exiting...')
+    quit()
 if (len(ll) > 3):
     donefile=ll[3]
 if (len(ll) > 4):
