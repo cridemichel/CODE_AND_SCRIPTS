@@ -32,14 +32,14 @@ def print_error():
     print('rescheduler [-sv|-filter <filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>|')
     print('-delete|-d <list_to_delete>|-finish|-f <list_to_finish>|-kf <list_to_kill_and_finish>')
     print('|-kd <list_to_kill_and_delete> <conf_file>')
-    print('where <conf_file> is a configuration file with the following structure:\n')
-    print('<list_to_kill>=0,1,2,3-4 (if equal to \'all\' means all jobs)')
+    print('where <list_to_kill>=0,1,2,3-4 (if equal to \'all\' means all jobs)')
     print('-kf kill specified processes and mark them as done')
     print('-kd kill specified processes and delete job from configuration file')
+    print('and <conf_file> is a configuration file with the following structure:\n')
     print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs> <donefile> <jobfinished> <restart0> <restart1>')
     print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
     print('\n<totsteps> is the total number of steps (-1 means to not extend)')
-    print('<extra steps> is the number of steps to extend simulaitons')
+    print('<extra steps> is the number of steps to extend simulations')
     print('<donefile> is the file written when a simulation ends (if totsteps < 0 jobs is finished)')
     print('<jobfinished> is the file written when jobs is terminated and, if it exists, job will not be restarted anymore')
     print('<restart0> and <restart1> are the names of the restart files')
@@ -81,7 +81,7 @@ def check_range(lista,lines):
 show_only = False
 verbose = False   
 args=sys.argv
-sched_type=''
+sched_type='simpp'
 filter_proc=''
 extra_args=''
 #print('args=',args)
@@ -458,7 +458,7 @@ def kill_parent_and_childs(pid):
     for p in children:
         try:
             p.send_signal(signal.SIGTERM)
-        except psutil.NoSuchProcess:
+        except (psutil.NoSuchProcess,psutil.AccessDenied):
             pass
     gone, alive = psutil.wait_procs(children,timeout=1,callback=on_terminate)
     if alive:
@@ -466,7 +466,7 @@ def kill_parent_and_childs(pid):
             print("process {} survived SIGTERM; trying SIGKILL" % p)
             try:
                 p.kill()
-            except psutil.NoSuchProcess:
+            except (psutil.NoSuchProcess,psutil.AccessDenied):
                 pass
         gone, alive = psutil.wait_procs(alive, timeout=1, callback=on_terminate)
         if alive:
@@ -534,7 +534,7 @@ if killp == True:
                 kill_parent_and_childs(pids[nline])
                 # finally kill the job
                 #psutil.Process(pids[nline]).terminate()
-            except psutil.NoSuchProcess:
+            except (psutil.NoSuchProcess,psutil.AccessDenied):
                 continue
             nkilled+=1
         nline += 1    
@@ -689,7 +689,7 @@ if show_only == True:
                 print ('   ', end='')
             print (l,end='')
             cc+=1
-    print ('tot running ='+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines))
+    print ('tot running= '+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines))
     quit()
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
