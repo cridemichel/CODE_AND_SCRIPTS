@@ -15,14 +15,14 @@ Created on Fri Jun 14 09:43:18 2019
 # $5 ... possible extra args
 import sys,os
 args=sys.argv
-type=int(args[1])
+jtype=int(args[1])
 restart=args[2]
 totsteps=int(args[3])
 extsteps=int(args[4])
 jobfinished=args[5]
 ### SIMULATION DEPENDENT VARIABLES
 prepend='nohup mosrun ' # prepend to exec name
-exec_name=prepend+'./ellipsoid' # sim executable
+exec_name=prepend+'./ellipsoid ' # sim executable
 arg_start=' -fa ellipsoid_flex.par ' # command line arg for starting
 arg_restart=' -ca ' + restart #command line arg for restarting
 ##########################################################
@@ -68,7 +68,7 @@ def sim_done(restart):
 if sim_done(restart):
     os.system('echo \"job regularly finished\" > '+jobfinished)
     quit()
-if type==2:#start for the first time
+if jtype==2:#start for the first time
     os.system(exec_name+arg_start + ' > screen') 
 else:#restart extending if requested, i.e. if totsteps > 0 
     if totsteps > 0:
