@@ -553,6 +553,9 @@ if restartjobs == True:
     #print ('qui')
     for l in lines:
         bn, en=os.path.split(l.strip('\n'))
+        if not os.path.exists(bn):
+            print('folder '+bn + ' does not exist, I skip it...')
+            continue
         if len(list_to_kill) == 0 or (cc in list_to_finish):
             os.chdir(bn)
             #if jobfinished files exists job is done
@@ -568,7 +571,13 @@ if finjobs == True:
     #print ('qui')
     for l in lines:
         bn, en=os.path.split(l.strip('\n'))
+        if not os.path.exists(bn):
+            print('folder '+bn + ' does not exist, I skip it...')
+            continue
         if len(list_to_kill) == 0 or (cc in list_to_finish):
+            if not os.path.exists(bn):
+                print('folder '+bn + ' does not exist, I skip it...')
+                continue
             os.chdir(bn)
             #if jobfinished files exists job is done
             if not os.path.exists(jobfinished):
@@ -592,8 +601,11 @@ if deljobs == True:
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if not job_is_running(bn,en,allcls,allcwds):
-    #print ('job ', i, ' is missing')
+        #print ('job ', i, ' is missing')
         dir=bn
+        if not os.path.exists(dir):
+            print('folder '+bn + ' does not exist, I skip it...')
+            continue
         if sim_done(dir): 
             #job is finished correctly if here 
             ndone += 1 
