@@ -23,8 +23,8 @@ jobfinished=args[5]
 ### SIMULATION DEPENDENT VARIABLES
 prepend='nohup mosrun ' # prepend to exec name
 exec_name=prepend+'./ellipsoid' # sim executable
-arg_start=' 2 ' # command line arg for starting
-arg_restart=' 1 ' + restart #command line arg for restarting
+arg_start=' -fa ellipsoid_flex.par ' # command line arg for starting
+arg_restart=' -ca ' + restart #command line arg for restarting
 ##########################################################
 # SIMULATION DEPENDENT CODE
 # following functions depend on simulation file format
@@ -48,7 +48,7 @@ def extend_sim(restart):
     with open(restart,'w') as f:
         for l in ls:
             par=ls.strip('\n').split(':').strip(' ')
-            if par[0] == 'stepnum':
+            if par[0] == 'totStep':
                 stps=int(par[1])
                 newsteps=stps+extsteps
    i            newl=par[0]+':'+str(newsteps)
