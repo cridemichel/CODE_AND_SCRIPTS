@@ -494,6 +494,7 @@ lstdead=[]
 lststart=[]
 lsttoext=[]
 lstextended=[]
+lst_not_exist=[]
 #print('cls=',allcls)
 #print('fil=',filter_proc)
 #print('allcwds=',allcwds)
@@ -605,6 +606,7 @@ for l in lines:
         dir=bn
         if not os.path.exists(dir):
             print('folder '+bn + ' does not exist, I skip it...')
+            lst_not_exist.append(l)
             continue
         if sim_done(dir): 
             #job is finished correctly if here 
@@ -691,7 +693,7 @@ if totsteps > 0 and show_only==False:
 #    print ('list extend=', lstext)
 if show_only == True:
     if verbose == True:
-        print ('R= running; F=finished')
+        print ('R= running; F=finished; X=directory not found')
     if verbose == True:
         cc=0
         for l in lines:
@@ -700,6 +702,8 @@ if show_only == True:
                 print (' R ', end='')
             elif l in lstdone:
                 print (' F ', end='')
+            elif l in lst_not_exist:
+                print (' X ', end='')
             else:
                 print ('   ', end='')
             print (l,end='')
