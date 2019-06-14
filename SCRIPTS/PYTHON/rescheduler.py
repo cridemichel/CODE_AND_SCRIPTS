@@ -565,14 +565,15 @@ if deljobs == True:
     if killp==True:
         list_to_delete = list_to_kill
     cc=0
+    #print('ld=', list_to_delete)
     #backup
     os.system('cp ' + lof + ' ' + lof + '.bak')
     with open(lof,"w") as f: 
         f.write(firstline)
         for l in lines:
-            if not (len(list_to_kill) > 0 or cc in list_to_delete):    
+            if (not len(list_to_delete) == 0) and (not cc in list_to_delete):    
                f.write(l)
-        cc+=1
+            cc+=1
     quit()
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
