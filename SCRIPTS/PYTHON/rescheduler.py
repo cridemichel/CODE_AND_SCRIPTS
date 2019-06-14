@@ -90,6 +90,7 @@ karg=''
 itargs=iter(args)
 deljobs=False
 finjobs=False
+restartjobs=False
 for a in itargs:
     if a == '-show' or a  == '-s':
         show_only=True
@@ -113,6 +114,9 @@ for a in itargs:
     elif a == '-finish' or a == '-f':
         farg=next(itargs)
         finjobs=True
+    elif a == '-restart' or a == '-r':
+        rarg=next(itargs)
+        restartjobs=True
     elif a== '-kf':
         karg=next(itargs)
         killp=True
@@ -126,13 +130,15 @@ for a in itargs:
 if killp==True:
     list_to_kill=parse_ranges(karg)
     #print('karg=',karg)
-    print("list_to_kill=", list_to_kill)
+    #print("list_to_kill=", list_to_kill)
     #quit()        
 if deljobs==True:
     if killp == True:
         list_to_delete=list_to_kill
     else:
         list_to_delete=parse_ranges(darg)   
+if restartjobs==True:
+    list_to_restart=parse_ranges(rarg)    
 if finjobs==True:
     if killp == True:
         list_to_finish=list_to_kill
@@ -371,7 +377,7 @@ else:
         return ' 2 '+ea #2 means first start 
     def extend_sim(bn,w):
         pass #not used
-    print('restart=', restart, ' donefile=', donefile)
+    #print('restart=', restart, ' donefile=', donefile)
     #print('wrong schedule type '+sched_type)
     #quit()
 #######################################
@@ -527,6 +533,19 @@ if killp == True:
         print (nkilled, 'processes killed together with all their childs')        
     if finjobs==False and deljobs==False: 
         quit()        
+if restartjobs == True:
+    cc=0 
+    #print('list found=', lst_kill_found)
+    #print ('qui')
+    for l in lines:
+        bn, en=os.path.split(l.strip('\n'))
+        if len(list_to_kill) == 0 or (cc in list_to_finish):
+            os.chdir(bn)
+            #if jobfinished files exists job is done
+            if os.path.exists(jobfinished):
+                os.system('rm '+ jobfinished)
+        cc+=1 
+    quit()
 if finjobs == True:
     if killp == True:
         list_to_finish = list_to_kill
@@ -538,7 +557,7 @@ if finjobs == True:
         if len(list_to_kill) == 0 or (cc in list_to_finish):
             os.chdir(bn)
             #if jobfinished files exists job is done
-            if not os.path.exists('touch '+jobfinished):
+            if not os.path.exists(jobfinished):
                 os.system('touch '+jobfinished)
         cc+=1 
     quit()
