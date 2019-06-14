@@ -686,7 +686,7 @@ if show_only == True:
             elif l in lstdone:
                 print (' F ', end='')
             else:
-                print ('  ', end='')
+                print ('   ', end='')
             print (l,end='')
             cc+=1
     print ('tot running ='+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines))
