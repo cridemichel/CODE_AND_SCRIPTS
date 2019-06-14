@@ -29,9 +29,13 @@ def is_integer(s):
     except (ValueError, TypeError):
         return False
 def print_error():
-    print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>] <conf_file>')
+    print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>|')
+    print('-delete|-d <list_to_delete>|-finish|-f <list_to_finish>|-kf <list_to_kill_and_finish>')
+    print('|-kd <list_to_kill_and_delete> <conf_file>')
     print('where <conf_file> is a configuration file with the following structure:\n')
     print('<list_to_kill>=0,1,2,3-4 (if equal to \'all\' means all jobs)')
+    print('-kf kill specified processes and mark them as done')
+    print('-kd kill specified processes and delete job from configuration file')
     print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs> <donefile> <jobfinished> <restart0> <restart1>')
     print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
     print('\n<totsteps> is the total number of steps (-1 means to not extend)')
@@ -42,6 +46,33 @@ def print_error():
     print('<donefile>, <jobsfinished>, <restart0> and <restart1> are optional')
     print('first line is followed by a list of jobs (preferably shell scripts) to check with absolute paths')
     quit()
+list_to_kill=[]
+list_to_finish=[]
+list_to_delete=[]
+def parse_ranges(arg):
+    lst=[]
+    if arg != 'all':
+        sarg=arg.split(',') 
+    else: 
+        return []
+    for l in sarg:
+            ll=l.split('-')
+            #print('ll=',ll)
+            if len(ll)==1:
+                if not ll[0].isnumeric():
+                    print_error()
+                    quit()
+                lst.append(int(ll[0]))
+            elif len(ll)==2:
+                if (not ll[0].isnumeric()) or (not ll[1].isnumeric()):
+                    print_error()
+                    quit()
+                for i in range(int(ll[0]),int(ll[1])+1):
+                    lst.append(i)
+            else:
+                print('Parse error in list of jobs to kill')
+                quit()
+    return lst
 show_only = False
 verbose = False   
 args=sys.argv
@@ -57,6 +88,8 @@ del(args[0])
 killp=False
 karg=''
 itargs=iter(args)
+deljobs=False
+finjobs=False
 for a in itargs:
     if a == '-show' or a  == '-s':
         show_only=True
@@ -74,32 +107,37 @@ for a in itargs:
     elif a == '-kill' or a == '-k':
         karg=next(itargs)
         killp=True
+    elif a == '-delete' or a == '-d':
+        darg=next(itargs)
+        deljobs=True
+    elif a == '-finish' or a == '-f':
+        farg=next(itargs)
+        finjobs=True
+    elif a== '-kf':
+        karg=next(itargs)
+        killp=True
+        finjobs=True
+    elif a=='-kd':
+        karg=next(itargs)
+        killp=True
+        deljobs=True
     else:
       lof = a
 if killp==True:
-    list_to_kill=[]
+    list_to_kill=parse_ranges(karg)
     #print('karg=',karg)
-    if karg != 'all':
-        lst=karg.split(',')  
-        for l in lst:
-            ll=l.split('-')
-            #print('ll=',ll)
-            if len(ll)==1:
-                if not ll[0].isnumeric():
-                    print_error()
-                    quit()
-                list_to_kill.append(int(ll[0]))
-            elif len(ll)==2:
-                if (not ll[0].isnumeric()) or (not ll[1].isnumeric()):
-                    print_error()
-                    quit()
-                for i in range(int(ll[0]),int(ll[1])+1):
-                    list_to_kill.append(i)
-            else:
-                print('Parse error in list of jobs to kill')
-                quit()
     print("list_to_kill=", list_to_kill)
     #quit()        
+if deljobs==True:
+    if killp == True:
+        list_to_delete=list_to_kill
+    else:
+        list_to_delete=parse_ranges(darg)   
+if finjobs==True:
+    if killp == True:
+        list_to_finish=list_to_kill
+    else:
+        list_to_finish=parse_ranges(farg)
 if lof == '':
     print_error()
     quit()
@@ -121,6 +159,7 @@ if (len(ll) > 5):
     restart.append(ll[5])
 if (len(ll) > 6):
     restart.append(ll[6])  
+firstline=lines[0]
 del(lines[0])
 #print ('uid=', os.getuid())
 #return a tuple where first value is True if directory has been accessed
@@ -208,6 +247,7 @@ if sched_type == 'simpp':
     # di start o restart
     arg_start=' 2'
     arg_restart=[' 1 restart-0 ', ' 1 restart-1 ']
+    jobfinished='_DONE_'
     # maximum number of running jobs     
     #
     # NOTE SUL RESTART
@@ -226,17 +266,19 @@ if sched_type == 'simpp':
     # as argument)
     def build_arg_start(l,ea):
         return arg_start
-    def build_arg_restart(l,ea,w):
+    def build_arg_restart(l,ea,w,ext):
         return arg_restart[w]
     # test if simulation is finished (customize if needed)
     def sim_done(dir):
+        if os.path.exists(dir+'/'+jobfinished):
+            return True
         if totsteps > 0:
-             w=choose_restart(dir)
-             s=get_steps(dir,w)
-             if s >= totsteps:
-                 return True
-             else:
-                 return False
+            w=choose_restart(dir)
+            s=get_steps(dir,w)
+            if s >= totsteps:
+                return True
+            else:
+                return False
         else:     
             return os.path.exists(dir+'/'+donefile)        
     #step to extend simulation
@@ -266,6 +308,7 @@ elif sched_type == 'veff':
     # come quelli usati per il calcolo del potenziale efficace
     # queste devono rimpiazzare le corrispondenti build_arg_start,
     # build_arg_restart e sim_done
+    jobfinished='_DONE_'
     def get_steps(dir,w):
         return 0 
     restart=['calcveff.chk']
@@ -275,6 +318,8 @@ elif sched_type == 'veff':
     arg_start='not_used'
     arg_restart=['not_used', 'not_used']
     def sim_done(dir):
+        if os.path.exists(dir+'/'+jobfinished):
+            return True
         with open(dir+'/veff_vs_tt.dat') as f:
             ls=f.readlines()
             lastline=ls[-1]
@@ -285,7 +330,7 @@ elif sched_type == 'veff':
                 return False
             #            
             #build arg depending on l
-    def build_arg_restart(l,ea,w):
+    def build_arg_restart(l,ea,w,ext):
         return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
     def build_arg_start(l,ea):
         return '100000000000 ' + ea + ' 300 ' +str(l) + ' 100000000'
@@ -310,13 +355,18 @@ else:
     # [totsteps <= 0] if a file called donefile is created jobs is finished
     #print ('jobfib=',jobfinished)
     def sim_done(dir):
-        if totsteps > 0:
-            return os.path.exists(dir+'/'+jobfinished)
-        else:
+        if os.path.exists(dir+'/'+jobfinished):
+            return True
+        if totsteps <= 0:
             return os.path.exists(dir+'/'+donefile)
+        return False
     #ea are extra arg which can be specified in the command line
-    def build_arg_restart(l,ea,w):
-        return ' 1 '+str(w)+' '+str(totsteps)+' '+str(extsteps)+' '+ea
+    # if ext=True provide totsteps and exsteps otherwise pass -1 -1 to script 
+    def build_arg_restart(l,ea,w,ext):
+        if ext==True:
+            return ' 1 '+str(w)+' '+str(totsteps)+' '+str(extsteps)+' '+ea
+        else:
+            return ' 1 '+str(w)+' -1 -1 '+ea
     def build_arg_start(l,ea):
         return ' 2 '+ea #2 means first start 
     def extend_sim(bn,w):
@@ -431,6 +481,7 @@ lstextended=[]
 if killp == True:
     #pids = [pid for pid in psutil.pids()] 
     nkilled=0
+    lst_kill_found=[]
     for l in allcwds:
         #print ('bn=',bnc)
         #print ('en=',enc)
@@ -443,6 +494,7 @@ if killp == True:
             #print ('bn=', bn, ' bnc=', l)
             if bn==l and allcls[nline].find(en) != -1: 
                 found=True
+                lst_kill_found.append(cc)
             if allcls[nline].find(en)!=-1 and l == 'none':
                 print('Executable name ' + en + ' matches') 
                 print('but folder is not accessible,')
@@ -473,7 +525,36 @@ if killp == True:
         print('No process running...')
     else:
         print (nkilled, 'processes killed together with all their childs')        
-    quit()        
+    if finjobs==False and deljobs==False: 
+        quit()        
+if finjobs == True:
+    if killp == True:
+        list_to_finish = list_to_kill
+    cc=0 
+    #print('list found=', lst_kill_found)
+    #print ('qui')
+    for l in lines:
+        bn, en=os.path.split(l.strip('\n'))
+        if len(list_to_kill) == 0 or (cc in list_to_finish):
+            os.chdir(bn)
+            #if jobfinished files exists job is done
+            if not os.path.exists('touch '+jobfinished):
+                os.system('touch '+jobfinished)
+        cc+=1 
+    quit()
+if deljobs == True:
+    if killp==True:
+        list_to_delete = list_to_kill
+    cc=0
+    #backup
+    os.system('cp ' + lof + ' ' + lof + '.bak')
+    with open(lof,"w") as f: 
+        f.write(firstline)
+        for l in lines:
+            if not (len(list_to_kill) > 0 or cc in list_to_delete):    
+               f.write(l)
+        cc+=1
+    quit()
 for l in lines:
     bn, en=os.path.split(l.strip('\n'))
     if not job_is_running(bn,en,allcls,allcwds):
@@ -516,7 +597,7 @@ for l in lines:
                 ndead += 1
                 lstdead.append(l)
                 #at least one restart file found
-                exec=' ./'+en+build_arg_restart(nline,extra_args,which)
+                exec=' ./'+en+build_arg_restart(nline,extra_args,which,False)
                 #print ('exec is: '+exec)
                 os.chdir(dir)
                 print('[restart dead, dir=',os.getcwd(),'] ',end='')
@@ -544,7 +625,7 @@ if totsteps > 0 and show_only==False:
         os.chdir(bn)
         which=choose_restart(bn)
         extend_sim(bn,which)
-        exec=' ./'+en+build_arg_restart(nline,extra_args,which)
+        exec=' ./'+en+build_arg_restart(nline,extra_args,which,True)
         s2e=prepend + exec + postpend 
         print('[extend simulation, dir=',bn,'] exec: ', s2e)
         os.system(s2e) 
