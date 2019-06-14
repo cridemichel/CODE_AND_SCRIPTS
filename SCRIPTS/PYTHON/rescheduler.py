@@ -370,9 +370,9 @@ else:
     # if ext=True provide totsteps and exsteps otherwise pass -1 -1 to script 
     def build_arg_restart(l,ea,w,ext):
         if ext==True:
-            return ' 1 '+str(w)+' '+str(totsteps)+' '+str(extsteps)+' '+ea
+            return ' 1 '+restart[w]+' '+str(totsteps)+' '+str(extsteps)+' '+jobfinished+' '+ea
         else:
-            return ' 1 '+str(w)+' -1 -1 '+ea
+            return ' 1 '+restart[w]+' -1 -1 '+jobfinished+' '+ea
     def build_arg_start(l,ea):
         return ' 2 '+ea #2 means first start 
     def extend_sim(bn,w):
