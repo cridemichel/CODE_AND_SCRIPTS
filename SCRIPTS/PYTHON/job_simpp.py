@@ -5,14 +5,13 @@ Created on Fri Jun 14 09:43:18 2019
 
 @author: demichel
 """
-
 #job script
 # arguments passed by rescheduler.py
 # $1 = 1 or 2; 1=restart 2=start
 # $2 = restart file which is good for restarting 
 # $3 = <totsteps> (-1 means to not extend)
-# $4 = <extend steps> steps by which extend current
-# $5 = jobfinished
+# $4 = <extend steps> steps by which extend current job
+# $5 = jobfinished file (tyipically '_DONE_')
 # $5 ... possible extra args
 import sys,os
 args=sys.argv
@@ -21,7 +20,10 @@ restart=args[2]
 totsteps=int(args[3])
 extsteps=int(args[4])
 jobfinished=args[5]
-exec_name='./mcsim_hardell'
+prepend='nohup mosrun '
+exec_name=prepend+'./mcsim_hardell'
+arg_start=' 2 '
+arg_restart=' 1 ' + restart
 def get_steps(restart):
     with open(restart) as f:
         firstline=f.readline()
@@ -55,13 +57,12 @@ def sim_done(restart):
         else:
             return False
 if sim_done(restart):
-    os.system('echo job regularly finished > '+jobfinished)
+    os.system('echo \"job regularly finished\" > '+jobfinished)
     quit()
 if type==2:#start for the first time
-    os.system('nohup mosrun '+exec_name+' 1 > screen')
-    quit()  
-else:
+    os.system(exec_name+arg_start + ' > screen') 
+else:#restart extending if requested, i.e. if totsteps > 0 
     if totsteps > 0:
         extend_sim(restart)
-    os.system('nohup mosrun '+exec_name + ' 2 ' + restart + ' > screen')
-    quit()
+    os.system(exec_name + arg_restart + ' > screen')
+quit()
