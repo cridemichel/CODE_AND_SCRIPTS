@@ -11,7 +11,7 @@ Created on Fri Jun 14 09:43:18 2019
 # $2 = restart file which is good for restarting 
 # $3 = <totsteps> (-1 means to not extend)
 # $4 = <extend steps> steps by which extend current job
-# $5 = jobfinished file (tyipically '_DONE_')
+# $5 = jobfinished file (typically named '_DONE_')
 # $5 ... possible extra args
 import sys,os
 args=sys.argv
@@ -20,15 +20,21 @@ restart=args[2]
 totsteps=int(args[3])
 extsteps=int(args[4])
 jobfinished=args[5]
-prepend='nohup mosrun '
-exec_name=prepend+'./mcsim_hardell'
-arg_start=' 2 '
-arg_restart=' 1 ' + restart
+### SIMULATION DEPENDENT VARIABLES
+prepend='nohup mosrun ' # prepend to exec name
+exec_name=prepend+'./mcsim_hardell' # sim executable
+arg_start=' 2 ' # command line arg for starting
+arg_restart=' 1 ' + restart #command line arg for restarting
+##########################################################
+# following functions depend on simulation file format
+# SIMULATION DEPENDENT CODE
+# get current simulation steps from restart file
 def get_steps(restart):
     with open(restart) as f:
         firstline=f.readline()
         l=firstline.split(' ')
     return int(l[3])
+#extend simulation by modifying restart file
 def extend_sim(restart):   
     #os.system('rm '+ donefile)
     with open(restart) as f:
@@ -41,6 +47,7 @@ def extend_sim(restart):
     with open(restart,"w") as f:
         for l in ls:
             f.write(l)
+#establish whether simulation is finished (simulations steps > totsteps)
 def sim_done(restart):
     if totsteps > 0:
         s=get_steps(restart)
@@ -48,6 +55,7 @@ def sim_done(restart):
             return True
         else:
             return False
+####################################################
 if sim_done(restart):
     os.system('echo \"job regularly finished\" > '+jobfinished)
     quit()
