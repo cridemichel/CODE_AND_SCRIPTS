@@ -81,7 +81,7 @@ def check_range(lista,lines):
 show_only = False
 verbose = False   
 args=sys.argv
-sched_type='simpp'
+sched_type=''
 filter_proc=''
 extra_args=''
 #print('args=',args)
