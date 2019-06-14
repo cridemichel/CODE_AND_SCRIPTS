@@ -28,24 +28,16 @@ def get_steps(restart):
     with open(restart) as f:
         firstline=f.readline()
         l=firstline.split(' ')
-    #print ('l=',l)
-    #print ('lines[0][2]=', ls[0][2])
-    #overwrite filed total steps with new value
     return int(l[3])
 def extend_sim(restart):   
     #os.system('rm '+ donefile)
     with open(restart) as f:
         ls=f.readlines()
     l=ls[0].split(' ')
-    #print ('l=',l)
-    #print ('lines[0][2]=', ls[0][2])
     #overwrite filed total steps with new value
     newsteps=int(l[2])+extsteps
     l[2]=str(newsteps)
     ls[0]=' '.join(l)
-    #print ('dopo ls[0]=',ls[0])
-    #print ('dir=', bn)
-    #print ('res='+restart[w])
     with open(restart,"w") as f:
         for l in ls:
             f.write(l)
