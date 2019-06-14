@@ -26,14 +26,16 @@ exec_name=prepend+'./mcsim_hardell' # sim executable
 arg_start=' 2 ' # command line arg for starting
 arg_restart=' 1 ' + restart #command line arg for restarting
 ##########################################################
-# following functions depend on simulation file format
 # SIMULATION DEPENDENT CODE
+# following functions depend on simulation file format
+#
 # get current simulation steps from restart file
 def get_steps(restart):
     with open(restart) as f:
         firstline=f.readline()
         l=firstline.split(' ')
     return int(l[3])
+#
 #extend simulation by modifying restart file
 def extend_sim(restart):   
     #os.system('rm '+ donefile)
@@ -47,6 +49,7 @@ def extend_sim(restart):
     with open(restart,"w") as f:
         for l in ls:
             f.write(l)
+#
 #establish whether simulation is finished (simulations steps > totsteps)
 def sim_done(restart):
     if totsteps > 0:
@@ -64,5 +67,5 @@ if type==2:#start for the first time
 else:#restart extending if requested, i.e. if totsteps > 0 
     if totsteps > 0:
         extend_sim(restart)
-    os.system(exec_name + arg_restart + ' > screen')
+    os.system(exec_name + arg_restart + ' >> screen')
 quit()
