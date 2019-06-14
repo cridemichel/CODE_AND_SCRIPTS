@@ -689,7 +689,7 @@ if show_only == True:
                 print ('   ', end='')
             print (l,end='')
             cc+=1
-    print ('tot running= '+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines))
+    print ('tot running= '+str(len(lstrun))+'; tot finished=', len(lstdone),'/',len(lines), ' (max:'+str(max_jobs)+')')
     quit()
 if not ok:
 	print('Some jobs (#'+str(ndead)+') were dead and I had to restart them!')
