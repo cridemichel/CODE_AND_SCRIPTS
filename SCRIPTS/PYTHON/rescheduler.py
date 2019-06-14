@@ -29,7 +29,7 @@ def is_integer(s):
     except (ValueError, TypeError):
         return False
 def print_error():
-    print('rescheduler [-sv|-f<filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>|')
+    print('rescheduler [-sv|-filter <filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>|')
     print('-delete|-d <list_to_delete>|-finish|-f <list_to_finish>|-kf <list_to_kill_and_finish>')
     print('|-kd <list_to_kill_and_delete> <conf_file>')
     print('where <conf_file> is a configuration file with the following structure:\n')
@@ -41,7 +41,7 @@ def print_error():
     print('\n<totsteps> is the total number of steps (-1 means to not extend)')
     print('<extra steps> is the number of steps to extend simulaitons')
     print('<donefile> is the file written when a simulation ends (if totsteps < 0 jobs is finished)')
-    print('<jobfinished> is the file written when jobs is terminated and has not to be extended')
+    print('<jobfinished> is the file written when jobs is terminated and, if it exists, job will not be restarted anymore')
     print('<restart0> and <restart1> are the names of the restart files')
     print('<donefile>, <jobsfinished>, <restart0> and <restart1> are optional')
     print('first line is followed by a list of jobs (preferably shell scripts) to check with absolute paths')
@@ -99,7 +99,7 @@ for a in itargs:
     elif a == '-sv':    
         show_only=True
         verbose=True
-    elif a == '-filter' or a == '-f':
+    elif a == '-filter':
         filter_proc=next(itargs)
     elif a == '-extargs' or a == '-ea':
         extra_args=next(itargs)
