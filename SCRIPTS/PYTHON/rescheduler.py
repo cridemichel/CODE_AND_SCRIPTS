@@ -194,7 +194,10 @@ def get_proc_info(fil):
     allcls=[]
     pids = [pid for pid in psutil.pids()]
     for pid in pids:
-        pr=psutil.Process(pid)
+        try:
+            pr=psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            continue
         uid=pr.uids()[1]#effective uid(0 is uid, 1 is effective uid)
         #lo uid potrebbe essere quello dell'utente mentre l'effettivo
         #potrebbe essere 0 se si è usato setuid cosicché 
