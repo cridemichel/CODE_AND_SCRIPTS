@@ -22,11 +22,27 @@ with open("hepars.asc","w") as f:
         #print ('l=',l)
         f.write(l)
 os.system('../create_conf.sh')
-os.system('ls -d P_* > lista_dir')
+if os.path.exists('lista_press'):
+    with open('lista_press') as f:
+        line=f.readline()
+    lst2=[]
+    lst=line.strip('\n').split(' ')        
+    for l in lst:
+        if l != '':
+            lst2.append('P_'+l)
+    with open('lista_dir','w') as f:
+        for l in lst2:
+            f.write(l+'\n')
+else:    
+    os.system('ls -d P_* > lista_dir')
 with open("lista_dir") as f:
     lines=f.readlines()
 for l in lines:
     os.chdir(l.strip('\n'))
+    if os.path.exists('restart-0'):
+        os.system('rm restart-[0,1]')
+    if os.path.exists('cnf-final'):
+        os.system('rm cnf-final')
     ll=l.strip('\n').split('_')
     press=ll[1]
     lines2new=[]
@@ -45,7 +61,8 @@ for l in lines:
             f.write(l)
     os.system('cp ../startcnf .')
     os.system('cp ../mcsim_hardell .')
+    os.system('cp ../mcsim_hardell.sh .')
     os.chdir('..')
 resfile='res_X0_' + X0 + '.conf'
-os.system('echo \"-1 -1 10\" > '+resfile)
-os.system('ls -d `pwd`/P_*/*mcsim* >> '+resfile)
+os.system('echo \"-1 -1 60\" > '+resfile)
+os.system('ls -d `pwd`/P_*/mcsim_hardell.sh >> '+resfile)
