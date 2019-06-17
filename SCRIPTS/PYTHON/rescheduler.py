@@ -190,7 +190,7 @@ def can_access_cwd(pr):
     try:
         pr.cwd()
         return True
-    except psutil.AccessDenied:
+    except (psutil.AccessDenied,psutil.NoSuchProcess):
         return False
 def get_proc_info(fil):
     allpids=[]
@@ -200,7 +200,7 @@ def get_proc_info(fil):
     for pid in pids:
         try:
             pr=psutil.Process(pid)
-        except psutil.NoSuchProcess:
+        except (psutil.NoSuchProcess):
             continue
         uid=pr.uids()[1]#effective uid(0 is uid, 1 is effective uid)
         #lo uid potrebbe essere quello dell'utente mentre l'effettivo
@@ -225,7 +225,7 @@ def get_proc_info(fil):
                 pdir = pr.cwd()
             else:
                 pdir='none'
-        except psutil.NoSuchProcess:
+        except (psutil.NoSuchProcess):
             continue
         #print('pid=', pid, ' cl=', pr.cmdline())
         if len(fil)==0 or cli.find(fil)!=-1:
@@ -392,7 +392,7 @@ else:
         else:
             return ' 1 '+restart[w]+' -1 -1 '+jobfinished+' '+ea
     def build_arg_start(l,ea):
-        return ' 2 '+ea #2 means first start 
+        return ' 2 '+ restart[0] + '-1 -1 ' + jobfinished + ' ' + ea #2 means first start 
     def extend_sim(bn,w):
         pass #not used
     #print('restart=', restart, ' donefile=', donefile)

@@ -12,7 +12,7 @@ Created on Fri Jun 14 09:43:18 2019
 # $3 = <totsteps> (-1 means to not extend)
 # $4 = <extend steps> steps by which extend current job
 # $5 = jobfinished file (typically named '_DONE_')
-# $5 ... possible extra args
+# $6 ... possible extra args
 import sys,os
 args=sys.argv
 jtype=int(args[1])
@@ -42,7 +42,7 @@ def extend_sim(restart):
     with open(restart) as f:
         ls=f.readlines()
     l=ls[0].split(' ')
-    #overwrite filed total steps with new value
+    #overwrite file total steps with new value
     newsteps=int(l[2])+extsteps
     l[2]=str(newsteps)
     ls[0]=' '.join(l)
