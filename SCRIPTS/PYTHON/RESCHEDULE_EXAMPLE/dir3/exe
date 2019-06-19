@@ -1,0 +1,9 @@
+#!/bin/bash
+i=0
+echo "args=" $@
+while [ $i -lt 10 ]
+do
+sleep 10
+i=$[$[i]+1]
+done
+touch cnf-final

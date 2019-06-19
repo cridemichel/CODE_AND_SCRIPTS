@@ -79,7 +79,7 @@ def check_range(lista,lines):
             print('Job index out of range [0,'+ str(len(lines)-2) +']')
             quit()
 show_only = False
-verbose = False   
+verbose = False
 args=sys.argv
 sched_type=''
 filter_proc=''
@@ -100,8 +100,8 @@ for a in itargs:
     if a == '-show' or a  == '-s':
         show_only=True
     elif a == '-verbose' or a == '-v':
-        verbose=True    
-    elif a == '-sv':    
+        verbose=True
+    elif a == '-sv':
         show_only=True
         verbose=True
     elif a == '-filter':
@@ -200,7 +200,7 @@ def get_proc_info(fil):
     for pid in pids:
         try:
             pr=psutil.Process(pid)
-        except (psutil.NoSuchProcess):
+        except psutil.NoSuchProcess:
             continue
         uid=pr.uids()[1]#effective uid(0 is uid, 1 is effective uid)
         #lo uid potrebbe essere quello dell'utente mentre l'effettivo
