@@ -1359,9 +1359,10 @@ public:
           u2 = u1.orto();
           //u2.show("u2");
           auto scal_fact = a/a0;
-          cout << "scal_fact=" << scal_fact << "\n";
+          auto K=sqrt(3.0)/2.0;
+          //cout << "scal_fact=" << scal_fact << "\n";
           pa.v1 = (2.0*pars.b*scal_fact)*u1;
-          pa.v2 = (-0.5*2.0*pars.b*scal_fact)*u1 + (2.0*pars.a*scal_fact)*u2;
+          pa.v2 = (-0.5*2.0*pars.b*scal_fact)*u1 + (K*2.0*pars.a*scal_fact)*u2;
           build_rec_vlat(pa,pb);
           lov.push_back(pb);
           // swap lattice vectors
@@ -1371,7 +1372,7 @@ public:
           lov.push_back(pb); 
           // swap semi-axes 
           pa.v1 = (2.0*pars.a*scal_fact)*u1;
-          pa.v2 = (-0.5*2.0*pars.a*scal_fact)*u1 + (2.0*pars.b*scal_fact)*u2;
+          pa.v2 = (-0.5*2.0*pars.a*scal_fact)*u1 + (K*2.0*pars.b*scal_fact)*u2;
           build_rec_vlat(pa,pb);
           lov.push_back(pb);
           pbT = pb.v2;
