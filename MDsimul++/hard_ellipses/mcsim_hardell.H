@@ -1338,12 +1338,13 @@ public:
       paR.v1 << a, 0;
       paR.v2 <<  -0.5*a, a*sqrt(3.0)/2.0;
       int n = 6;
-      ntype dtheta = M_PI/ntype(n);
-      for (auto i=0; i < n; i++)
+      ntype dtheta = M_PI/ntype(n)/2.0;
+      for (auto i=0; i <= n; i++)
         {
           auto costh= cos(theta);
           auto sinth = sin(theta);
           R << costh, sinth, -sinth, costh;
+          //cout << "theta=" << theta << "\n";
           pa.v1 = R*paR.v1;
           pa.v2 = R*paR.v2;
           build_rec_vlat(pa,pb);
