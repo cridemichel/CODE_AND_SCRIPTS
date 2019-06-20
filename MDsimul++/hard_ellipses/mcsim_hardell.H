@@ -1370,23 +1370,21 @@ public:
           auto scal_fact = a/a0;
           auto K=sqrt(3.0)/2.0;
           //cout << "scal_fact=" << scal_fact << "\n";
-          pa.v1 = (2.0*pars.b*scal_fact)*u1;
-          pa.v2 = (-0.5*2.0*pars.b*scal_fact)*u1 + (K*2.0*pars.a*scal_fact)*u2;
-          build_rec_vlat(pa,pb);
-          lov.push_back(pb);
-          // swap lattice vectors
-          auto pbT = pb.v2;
-          pb.v2 = pb.v1;
-          pb.v1 = pbT;
-          lov.push_back(pb); 
-          // swap semi-axes 
+          // expand triangular lattice along y-axis
+          //pa.v1 = (2.0*pars.b*scal_fact)*u1;
+          //pa.v2 = (-0.5*2.0*pars.b*scal_fact)*u1 + (K*2.0*pars.a*scal_fact)*u2;
+          //build_rec_vlat(pa,pb);
+          //lov.push_back(pb); 
+          // expand triangular lattice along x-axis
           pa.v1 = (2.0*pars.a*scal_fact)*u1;
           pa.v2 = (-0.5*2.0*pars.a*scal_fact)*u1 + (K*2.0*pars.b*scal_fact)*u2;
           build_rec_vlat(pa,pb);
           lov.push_back(pb);
-          pbT = pb.v2;
-          pb.v2 = pb.v1;
-          pb.v1 = pbT;
+          // 90 deg rotation 
+          R << 0.0, 1.0, -1.0, 1.0;
+          pa.v1 = R*pa.v1;
+          pa.v2 = R*pa.v2;
+          build_rec_vlat(pa,pb);
           lov.push_back(pb);
         }
       // ten vectors in total if n=6
@@ -1413,6 +1411,7 @@ public:
           auto psi1=calc_psiT_G(G);
           G = vp.v2;
           auto psi2=calc_psiT_G(G);
+          cout << "psi1=" <<  abs(psi1) << " psi2=" << abs(psi2) << "\n";
           if (abs(psi1) > abs(psi2))
             psi=psi1;
           else
