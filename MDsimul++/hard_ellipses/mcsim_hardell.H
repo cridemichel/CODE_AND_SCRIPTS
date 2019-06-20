@@ -1323,22 +1323,29 @@ public:
       pb.v2[0] = b2[0];
       pb.v2[1] = b2[1];
     }
-  pvector<ntype,2> calc_nematic_vec(void)
-    {
-      pvector<ntype,2> nv;
-        
-      return nv;
-    }
   list<pov_struct> build_list_of_lattice_vecs(ntype a, ntype a0)
     {
       list<pov_struct> lov;
       pmatrixq<ntype, 2> R;
       pov_struct paR,pa,pb;
+#if 1
+      // consider only vectors parallel to initial lattice or vectors perpendicular to them
+      pa.v1 << a, 0;
+      pa.v2 <<  -0.5*a, a*sqrt(3.0)/2.0;
+      build_rec_vlat(pa,pb);
+      lov.push_back(pb);
+      R << 0, 1, -1, 0;
+      pa.v1 = R*pa.v1;
+      pa.v2 = R*pa.v2;
+      build_rec_vlat(pa,pb);
+      lov.push_back(pb);
+#else
       ntype theta=0;
       paR.v1 << a, 0;
       paR.v2 <<  -0.5*a, a*sqrt(3.0)/2.0;
       int n = 6;
       ntype dtheta = M_PI/ntype(n)/2.0;
+
       for (auto i=0; i <= n; i++)
         {
           auto costh= cos(theta);
@@ -1351,6 +1358,7 @@ public:
           lov.push_back(pb);
           theta += dtheta;
         }
+#endif
       pvector<ntype,2> u1, u2; // nematic axis and orthogonal vec
       auto S = calc_nem_ordpar(u1,true), Sthr=0.1;
       //cout << "S=" << S << "\n";
