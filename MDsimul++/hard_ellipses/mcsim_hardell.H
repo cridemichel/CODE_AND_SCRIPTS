@@ -1277,9 +1277,9 @@ public:
       dist /= Ntot;
       return dist;
     }
-  ntype calc_psiT_G(pvector<ntype,2> G)
+  complex<ntype> calc_psiT_G(pvector<ntype,2> G)
     {
-      ntype psi;
+      complex<ntype> psi;
       psi=0;
       for (auto i=0; i < pars.N; i++)
         {
@@ -1312,10 +1312,16 @@ public:
     }
   void build_rec_vlat(pov_struct& pa, pov_struct& pb)
     {
-      pvector<ntype,2> a3;
+      pvector<ntype,3> a1,a2,a3,b1,b2;
+      a1 << pa.v1[0], pa.v1[1], 0;
+      a2 << pa.v2[0], pa.v2[1], 0;
       a3 << 0,0,1;
-      pb.v1 = 2.0*M_PI*pa.v2^a3/(pa.v1*(pa.v2^a3));
-      pb.v2 = 2.0*M_PI*a3^pa.v1/(pa.v1*(pa.v2^a3));
+      b1 = 2.0*M_PI*a2^a3/(a1*(a2^a3));
+      b2 = 2.0*M_PI*a3^a1/(a1*(a2^a3));
+      pb.v1[0] = b1[0];
+      pb.v1[1] = b1[1];
+      pb.v2[0] = b2[0];
+      pb.v2[1] = b2[1];
     }
   pvector<ntype,2> calc_nematic_vec(void)
     {
@@ -1329,11 +1335,11 @@ public:
       pmatrixq<ntype, 2> R;
       pov_struct paR,pa,pb;
       ntype theta=0;
-      paR.v1 << a, 0, 0;
-      paR.v2 <<  -0.5*a, a*sqrt(3.0)/2.0,0;
+      paR.v1 << a, 0;
+      paR.v2 <<  -0.5*a, a*sqrt(3.0)/2.0;
       int n = 6;
-      ntype dtheta = (M_PI/2.0)/ntype(n);
-      for (auto i=0; i <= n; i++)
+      ntype dtheta = M_PI/ntype(n);
+      for (auto i=0; i < n; i++)
         {
           auto costh= cos(theta);
           auto sinth = sin(theta);
@@ -1344,39 +1350,45 @@ public:
           lov.push_back(pb);
           theta += dtheta;
         }
-
       pvector<ntype,2> u1, u2; // nematic axis and orthogonal vec
-      auto S = calc_nem_ordpar(u1);
-      u2 = u1.orto();
-      auto scal_fact = a/a0;
-      pa.v1 = (pars.b*scal_fact)*u1;
-      pa.v2 = (-0.5*pars.b*scal_fact)*u1 + (pars.a*scal_fact)*u2;
-      build_rec_vlat(pa,pb);
-      lov.push_back(pb);
-      // swap lattice vectors
-      auto pbT = pb.v2;
-      pb.v2 = pb.v1;
-      pb.v1 = pbT;
-      lov.push_back(pb); 
-      // swap semi-axes 
-      pa.v1 = (pars.a*scal_fact)*u1;
-      pa.v2 = (-0.5*pars.a*scal_fact)*u1 + (pars.b*scal_fact)*u2;
-      build_rec_vlat(pa,pb);
-      lov.push_back(pb);
-      pbT = pb.v2;
-      pb.v2 = pb.v1;
-      pb.v1 = pbT;
-      lov.push_back(pb);
+      auto S = calc_nem_ordpar(u1,true), Sthr=0.1;
+      //cout << "S=" << S << "\n";
+      //u1.show("nem vec");
+      if (S > Sthr)
+        {
+          u2 = u1.orto();
+          //u2.show("u2");
+          auto scal_fact = a/a0;
+          cout << "scal_fact=" << scal_fact;
+          pa.v1 = (pars.b*scal_fact)*u1;
+          pa.v2 = (-0.5*pars.b*scal_fact)*u1 + (pars.a*scal_fact)*u2;
+          build_rec_vlat(pa,pb);
+          lov.push_back(pb);
+          // swap lattice vectors
+          auto pbT = pb.v2;
+          pb.v2 = pb.v1;
+          pb.v1 = pbT;
+          lov.push_back(pb); 
+          // swap semi-axes 
+          pa.v1 = (pars.a*scal_fact)*u1;
+          pa.v2 = (-0.5*pars.a*scal_fact)*u1 + (pars.b*scal_fact)*u2;
+          build_rec_vlat(pa,pb);
+          lov.push_back(pb);
+          pbT = pb.v2;
+          pb.v2 = pb.v1;
+          pb.v1 = pbT;
+          lov.push_back(pb);
+        }
       // ten vectors in total if n=6
+      return lov;
     }
   ntype calc_transl_order(void)
     {
       pvector<ntype,2> G;
       vector<pvector<ntype,2>> Avecs, Gvecs;// set of reciprcola lattice vectors to use for calculating psiT 
-      complex<ntype> psi, psi_r0, psi_r90;
-      psi=0;
+      complex<ntype> psi;//, psi_r0, psi_r90;
       auto a = calc_avg_dist(), a0=calc_ref_dist_nem();
-           // 
+      // 
       // N.B. calcolo la distanza media in modo da avere
       // un fattore per riscalare il lattice esagonale unitario
       // usato per calcolare i vettori primitivi del reticolo 
@@ -1385,6 +1397,19 @@ public:
       //cout << "\na=" << a << "\n";
       list<pov_struct> lst_of_vec = build_list_of_lattice_vecs(a, a0);
 
+      for (auto &vp: lst_of_vec)
+        {
+          G = vp.v1;
+          auto psi1=calc_psiT_G(G);
+          G = vp.v2;
+          auto psi2=calc_psiT_G(G);
+          if (abs(psi1) > abs(psi2))
+            psi=psi1;
+          else
+            psi=psi2;
+        }
+      return abs(psi);
+#if 0
 #if 1
       G = (1.0/a)*b1;
       psi_r0=0;
@@ -1428,8 +1453,9 @@ public:
         }
       return abs(psimax);
 #endif
+#endif
     }
-  ntype calc_nem_ordpar(pvector<ntype,2>& nv, bool calcnv=False)
+  ntype calc_nem_ordpar(pvector<ntype,2>& nv, bool calcnv=false)
     {
       ntype S,Q00,Q10,Q01,Q11, ev0, ev1;
       pmatrixq<ntype,2> Q;
@@ -1454,11 +1480,10 @@ public:
       ev1 = 0.5*(Q00 + Q11 + det);
       if (calcnv==true)
         {
-          nv <<  -((-Q00 + Q11 + ((ev0 > ev1)?1.0:-1.0)*det)
-                   /(2.0*Q10)), 1;
+          nv <<  -(-Q00 + Q11 + ((ev0 > ev1)?1.0:-1.0)*det), 2.0*Q10;
           nv /= nv.norm();
         }
-      cout << "ev0=" << ev0 << " ev1=" << ev1 << "\n";
+      //cout << "ev0=" << ev0 << " ev1=" << ev1 << "\n";
       S=max(ev0,ev1);
       // find eigenvalues, eigenvectors here
       return S;
