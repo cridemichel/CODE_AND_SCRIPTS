@@ -46,9 +46,9 @@ def print_error():
     print('<donefile>, <jobsfinished>, <restart0> and <restart1> are optional')
     print('first line is followed by a list of jobs (preferably shell scripts) to check with absolute paths')
     quit()
-list_to_kill=[]
-list_to_finish=[]
-list_to_delete=[]
+list_to_kill=[int]
+list_to_finish=[int]
+list_to_delete=[int]
 def parse_ranges(arg):
     lst=[]
     if arg != 'all':
@@ -56,22 +56,22 @@ def parse_ranges(arg):
     else: 
         return []
     for l in sarg:
-            ll=l.split('-')
-            #print('ll=',ll)
-            if len(ll)==1:
-                if not ll[0].isnumeric():
-                    print_error()
-                    quit()
-                lst.append(int(ll[0]))
-            elif len(ll)==2:
-                if (not ll[0].isnumeric()) or (not ll[1].isnumeric()):
-                    print_error()
-                    quit()
-                for i in range(int(ll[0]),int(ll[1])+1):
-                    lst.append(i)
-            else:
-                print('Parse error in list of jobs to kill')
+        ll=l.split('-')
+        #print('ll=',ll)
+        if len(ll)==1:
+            if not ll[0].isnumeric():
+                print_error()
                 quit()
+            lst.append(int(ll[0]))
+        elif len(ll)==2:
+            if (not ll[0].isnumeric()) or (not ll[1].isnumeric()):
+                print_error()
+                quit()
+            for i in range(int(ll[0]),int(ll[1])+1):
+                lst.append(i)
+        else:
+            print('Parse error in list of jobs to kill')
+            quit()
     return lst
 def check_range(lista,lines):
     for i in lista:
@@ -131,7 +131,7 @@ for a in itargs:
         killp=True
         deljobs=True
     else:
-      lof = a
+        lof = a
 if not os.path.exists(lof):
     print('file '+ lof + ' does not exist')
     quit()
@@ -333,7 +333,7 @@ elif sched_type == 'veff':
     # queste devono rimpiazzare le corrispondenti build_arg_start,
     # build_arg_restart e sim_done
     jobfinished='_DONE_'
-    def get_steps(dir,w):
+    def get_steps(bn,w):
         return 0 
     restart=['calcveff.chk']
     donefile='not_used' # se esiste questo file vuol dire che ha finito!
@@ -512,10 +512,10 @@ if killp == True:
         #print ('en=',enc)
         found=False
         cc=0
-        for ll in lines:
+        for al in lines:
             if len(list_to_kill) > 0 and (not cc in list_to_kill):
                 continue
-            bn, en=os.path.split(ll.strip('\n'))
+            bn, en=os.path.split(al.strip('\n'))
             #print ('bn=', bn, ' bnc=', l)
             if bn==l and allcls[nline].find(en) != -1: 
                 found=True
