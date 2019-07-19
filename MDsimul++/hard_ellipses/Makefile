@@ -1,5 +1,5 @@
-CXX=g++-8
-CC=gcc-8
+CXX=g++-9
+CC=gcc-9
 CXXFLAGS=-O3 -Wall -std=c++17#-g 
 CFLAGS=-O3 #-Wall
 MDLIB=../mdlib
