@@ -1404,7 +1404,6 @@ public:
       //
       //cout << "\na=" << a << "\n";
       list<pov_struct> lst_of_vec = build_list_of_lattice_vecs(a, a0);
-
       for (auto &vp: lst_of_vec)
         {
           G = vp.v1;
