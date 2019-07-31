@@ -392,7 +392,7 @@ else:
         else:
             return ' 1 '+restart[w]+' -1 -1 '+jobfinished+' '+ea
     def build_arg_start(l,ea):
-        return ' 2 '+ restart[0] + '-1 -1 ' + jobfinished + ' ' + ea #2 means first start 
+        return ' 2 '+ restart[0] + ' -1 -1 ' + jobfinished + ' ' + ea #2 means first start 
     def extend_sim(bn,w):
         pass #not used
     #print('restart=', restart, ' donefile=', donefile)
