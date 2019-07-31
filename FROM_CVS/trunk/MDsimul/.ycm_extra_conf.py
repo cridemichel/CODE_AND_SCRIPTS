@@ -30,8 +30,8 @@ def getmacros():
             break
     mactmp=macros.split('#')
     macros=mactmp[0]
-    with open('macros2.output','w') as f:
-        f.write(macros)
+    #with open('macros2.output','w') as f:
+    #    f.write(macros)
    
     #aggiungo uno spazio prima e dopo altrimenti ci sono problemi
     alst=macros.split(' ')
@@ -46,8 +46,8 @@ def getmacros():
             maclst.append('-D')
         lasti=len(l)
         maclst.append(l[2:lasti])
-    with open('macros.output','w') as f:
-        f.write(str(maclst))
+    #with open('macros.output','w') as f:
+    #    f.write(str(maclst))
     return maclst
 
 def Settings( **kwargs ):
@@ -55,9 +55,8 @@ def Settings( **kwargs ):
     #if language=='cfamily':
     #if language == 'python':
     #
-    #MACROS=' -UMC_PERWER -DDIST_OF_CLOSE_APPR  -DPOLYELLIPS -UMC_HYDROPHOBIC_INT -DMC_NVE -UMC_FREEZE_BONDS -DMC_SOFTHE -UMC_SWELL -UMC_CLUSTER_MOVE -UMC_CLUSTER_NPT -UMC_ALT_ROT -DMC_FLIP_MOVE -UMC_OPT_BUILDATOMPOS -DMCIN_OPT -UMC_HC -DMC_SUS -UMC_CALC_COVADD -DMD_NO_SYSTEM -DMC_GRANDCAN  -DMC_SIMUL -UMD_STANDALONE -DMD_LXYZ -UMD_CHAIN_SIM -UMD_CALC_VBONDING -UDMD_MULTIPLE_LL -DMD_DYNAMIC_OPROG -UMD_CALENDAR_HYBRID -DMD_SCALEPHI_STAGES -DMD_OPT_SCALEPHI -UMD_ALLOW_ONE_IGG_BOND -UMD_PROTEIN_DESIGN -UMD_PARANOID_CHECKS -DMD_GRAZING_TRYHARDER -DMD_GHOST_IGG -DMD_RABBIT -DMD_SAVE_SPOTS -DMD_SUPERELLIPSOID -UMD_ABSORPTION -UMD_FOUR_BEADS -DMD_BASIC_DT -UMD_EDHEFLEX_WALL -UMD_INELASTIC -UMD_POLYDISP -UMD_CALC_DPP -UMD_HE_PARALL -DMD_BIG_DT -DMD_ASYM_ITENS -DEDHE_FLEX -DMD_PATCHY_HE -UMD_GLOBALNR -DMD_GLOBALNRD -DMD_GLOBALNRNL -DMD_GLOBALNRDNL -UMD_USE_CBLAS -UMD_USE_LAPACK -DMD_STOREMGL -UMD_HSVISCO -DMD_LOADMESH -DXDISP -UATPTENS -DMOLPTENS -UATPRESS' #getmacros()
     MACROS=getmacros()
     flags = [ '-x', 'c', '-Wall', '-Wextra', '-I', DIR_OF_THIS_SCRIPT+'/commSrc']
-    #flags.append(MACROS)
+    #flags.append(' '+ MACROS +' ')
     flags=flags+MACROS
     return {'flags': flags}
