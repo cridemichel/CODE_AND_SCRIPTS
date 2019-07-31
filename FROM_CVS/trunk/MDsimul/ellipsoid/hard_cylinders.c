@@ -1104,7 +1104,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
 {
   int bisection;
   int converged;
-  int doPrint;
+  //int doPrint;
   int iterate;
   int minimum;
   int overshoot;
@@ -1112,7 +1112,7 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   int notZero;
 
   int deflateCase;
-  int oscillate;
+  //int oscillate;
   int quarticType;
 
   const int Re = 1, Im = 2;
@@ -2098,13 +2098,13 @@ double drimdiskfunc(double th);
 void find_initial_linecircle(double diam, double Cip[3], double nip[3], struct iniguessStruct *ig)
 {
   //static int firstcall=1;
-  double m, q, xp[3], Ui[3], UiPj[3], dist, maxdist;
-  double normCipP, CipP[3], ab2, asq1, nipP[3], PgCip[3], sqrtdelta, PgOld[3];
+  double m, q, dist, maxdist;
+  double normCipP, CipP[3], ab2, asq1, nipP[3], sqrtdelta;
   double Pp[3];
   //static double *tharr;
   //static struct brentOpt *mesh;
-  double sp, D2, lambda, aR, bR, delta, norm;
-  int k1, k2, nn, numsol=0, iter;
+  double sp, D2, lambda, delta, norm;
+  int k1, k2, numsol=0;
   /* bracketing */
   maxdist = -1;
 
@@ -2296,7 +2296,7 @@ void find_initial_linecircle(double diam, double Cip[3], double nip[3], struct i
 }
 double find_initial_guess_proj(double diam, double Cip[3], double nip[3], struct iniguessStruct *ig)
 {
-  int k1, k2, iter;
+  int k1, iter;
   const int MAXNUMITER = 100;
   double PgOld[3], D2, sp, PgCip[3], norm, Cold[3];
 
@@ -2340,14 +2340,15 @@ double find_initial_guess_proj(double diam, double Cip[3], double nip[3], struct
   else
     ig->thg[0] = 2.0*M_PI-acos(ig->Pg[0][1]);
   printf("iter=%d guessed=%.15G\n", iter, ig->thg[0]);
+  return 0.0;
 }
 double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mesh, int *nnini, struct maxminS *maxmin)
 {
   //static int firstcall=1;
-  double th, dth, xp[3], Ui[3], UiPj[3], dist, maxdist;
+  double th, dth, dist, maxdist;
   //static double *tharr;
   //static struct brentOpt *mesh;
-  int k1, k2, nn;
+  int k1, k2;
   /* bracketing */
   dth = 2.0*M_PI/meshpts;
   th = 0;
@@ -2384,15 +2385,15 @@ double find_initial_guess_bracket(double *thg, int meshpts, struct brentOpt* mes
 double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[3], double nj[3], double D, double *thmin)
 {
   const int meshpts = MESH_PTS;
-  double Pj[3], Rj[3][3], AiCi[3];
-  int kk, k1, k2, nn;
+  double Pj[3], Rj[3][3];
+  int kk, nn;
   static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3];
   static double *tharr;
   static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
       {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
       {0,-1},{0.707106781186547,-0.707106781186547}};*/
-  double PjCini, PjCi[3], normPjCi, d, mindist=-1.0; 
+  double PjCini, PjCi[3], d, mindist=-1.0; 
   versor_to_R(nj[0],nj[1],nj[2], Rj); 
 #if 1
   if (firstcall)
@@ -2459,7 +2460,7 @@ double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[
 void find_initial_guess_simpler(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
   int kk1, kk2;
-  double sp, dsc[3], dscperp[3], dscpara[3], norm;
+  double sp, dsc[3], norm;
   
   for (kk2=0; kk2 < 3; kk2++)
     dsc[kk2] = Ci[kk2] - Dj[kk2]; 
@@ -2470,14 +2471,14 @@ void find_initial_guess_simpler(double *Ai, double Ci[3], double ni[3], double D
 void find_initial_guess(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
   const int meshpts = 8;
-  double Pj[3], Rj[3][3], AiCi[3];
-  int kk, k1, k2, nn;
+  double Pj[3], Rj[3][3];
+  int kk, nn;
   static int firstcall=1;
   double th, dth, xp[3], Ui[3], UiPj[3];
   static double **mesh; /* {{1,0},{0.707106781186547, 0.707106781186547},{0,1},
       {-0.707106781186547,0.707106781186547},{-1,0},{-0.707106781186547,-0.707106781186547},
       {0,-1},{0.707106781186547,-0.707106781186547}};*/
-  double PjCini, PjCi[3], normPjCi, d, mindist=-1.0; 
+  double PjCini, PjCi[3], d, mindist=-1.0; 
   versor_to_R(nj[0],nj[1],nj[2], Rj); 
 #if 1
   if (firstcall)
@@ -2548,17 +2549,15 @@ double calcDistNegHCdiff(int i, int j, double shift[3], int* retchk)
   int it, k2;
   double normNSq, ViVj[3], lambdai, lambdaj, Li, Diami, Lj, Diamj; 
   double LiTmp, LjTmp, DiamiTmp, DiamjTmp;
-  double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djni, Djnj;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, DiN, DjN, niN[3], njN[3], Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
-  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
-  double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
+  double normPiPj, Ui[3], DjCi[3], normDjCi;
+  double PiDi[3], PjDj[3], Ai[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
   double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
-  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
-  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
-  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
-  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
+  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3];
+  double Dini;
+  double DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
-  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj, Tjpara, Tjperp[3];	
   double normCiCj;	
   double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
   int kk, j1, j2;
@@ -2899,7 +2898,7 @@ extern double dbrent(double ax, double bx, double cx, double (*f)(double), doubl
 double signGbl;
 void calcrimdisk(double th)
 {
-  int k1, k2;
+  int k1;
   double D2;
 
   D2 = 0.5*Dgbl;
@@ -2970,8 +2969,8 @@ double drimdiskfunc(double th)
   /* i è il rim e j il disco */
   //double lambda, Pjp[3], Pip[3], D2, tj[3], PjCi[3], PjPi[3];
   //double UipPjp[3], Uip[3], fact, dUipPjp[3];
-  double dUipPjp[3], fact, D2;
-  int k1, k2;
+  double fact, D2;
+  int k2;
   D2 = 0.5*Dgbl;
 
   if (!(th==brentmsg.th) || brentmsg.id==0)
@@ -3018,7 +3017,7 @@ double rimdiskfunc(double th)
 void versor_to_R_opt(double ox, double oy, double oz, double R[3][3])
 {
   int k;
-  double angle, u[3], sp, norm, up[3], xx, yy;
+  double u[3], sp, norm;
 #ifdef MC_BENT_DBLCYL
   double Rout[3][3];
   int k1, k2;
@@ -3106,7 +3105,7 @@ void csolve_cubic(double *coeff, double complex sol[3])
 {
   const double sqrt3=sqrt(3.0);
   /* solution from Abramovitz */
-  double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
+  double q, r, q3, r2, a2, a1, a0, a2sq, H;
   double complex cs1, cs2, s1ps2, s1ms2;
   if (coeff[3]==0)
     {
@@ -3185,7 +3184,7 @@ void solve_cubicl(long double *coeff, int *numsol, long double sol[3])
 void solve_cubic_analytic_depressed_handle_inf(double b, double c, double *sol)
 {
   double Q, R, theta, A, B;//Q3, R2;
-  const double sqrt32=sqrt(3)/2.0;
+  //const double sqrt32=sqrt(3)/2.0;
   double QR, QRSQ, KK, sqrtQ, RQ;
   //printf("qu?????????????????????????????\n");
   Q = -b/3.0;
@@ -3267,8 +3266,7 @@ void solve_cubic_analytic_depressed_handle_inf(double b, double c, double *sol)
 void solve_cubic_analytic_depressed(double b, double c, double *sol)
 {
   double Q, R, theta, Q3, R2, A, B, sqrtQ;
-  double sa, sb, sc;
-  const double sqrt32=sqrt(3)/2.0;
+  //const double sqrt32=sqrt(3)/2.0;
   //printf("qu?????????????????????????????\n");
   Q = -b/3.0;
   R = 0.5*c;
@@ -3467,11 +3465,9 @@ void solve_cubic_analytic(double *coeff, complex double sol[3])
 
 void solve_cubic(double *coeff, int *numsol, double sol[3])
 {
-  const double sqrt3=sqrt(3.0);
+  //const double sqrt3=sqrt(3.0);
   int ok;
   /* solution from Abramovitz */
-  double s1, s2, q, r, q3, r2, a2, a1, a0, a2sq, H;
-  double complex cs1, cs2, s1ps2, s1ms2;
   if (coeff[3] == 0.0)
     {
       printf("[WARNING] fallback to quadratic from cubic\n");
@@ -3520,12 +3516,11 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
 {
   /* questa soluzione di fatto è quella di abramovitz */
   double a43, a2a3a4, a44, a4, a3, a2, a1, a0, a32, a12, a42, a3a4;
-  double lambda, dd0, dd1, dd2;
-  double cb[4], y1, p, q, r, m, cq[3];
+  double cb[4], p, q, r, m, cq[3];
   double complex solc[3], solq[2];
   complex double sm, A, B, C, Dp, Dm;
   const double sqrt2=1.4142135623730950488016887242097; 
-  int k, nsc, mzero;
+  int k, mzero;
   a4 = coeff[4];
   a3 = coeff[3];
   a2 = coeff[2];
@@ -3593,10 +3588,9 @@ void csolve_quartic_ferrari_cmplx(double *coeff, complex double sol[4])
 void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
 {
   double a3, a2, a1, a0, a32, a12;
-  double lambda, dd0, dd1, dd2;
+  double lambda;
   double cb[4], y1;
-  double complex solc[3], sma, smb, smc, R, D, E, A, B;
-  int k, nsc;
+  double complex solc[3], R, D, E, A, B;
   a3 = coeff[3]/coeff[4];
   a2 = coeff[2]/coeff[4];
   a1 = coeff[1]/coeff[4];
@@ -3639,7 +3633,7 @@ void csolve_quartic_abramovitz_cmplx(double *coeff, complex double sol[4])
 }
 void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
 {
-  int nsol, k;
+  int k;
   complex double csol[4];
   csolve_quartic_abramovitz_cmplx(coeff, csol);
   /* restituisce solo le soluzioni reali */
@@ -3658,11 +3652,10 @@ void csolve_quartic_abramovitz(double *coeff, int *numrealsol, double rsol[4])
 void solve_fourth_deg_cmplx(double *coeff, complex double sol[4])
 {
   /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
-  const double ROUNDOFFERR = 1E-20;
+  //const double ROUNDOFFERR = 1E-20;
   double x1, A, B, C, D, cb[4], m, n;
-  double Asq, alpha, beta, rho, mp, np, m2, dd0, dd1, dd2;
+  double Asq, alpha, beta, rho, mp, np, m2;
   complex double gamma, delta, solc[3];
-  int nsc, kk, k;
   A = coeff[3]/coeff[4];
   B = coeff[2]/coeff[4];
   C = coeff[1]/coeff[4];
@@ -3730,9 +3723,9 @@ void solve_fourth_deg_cmplx(double *coeff, complex double sol[4])
 void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 {
   /* solution from H.E. Salzer, "A Note on Solution of Quartic Equations" Am. Math Society Proceedings, 279-281 (1959) */ 
-  const double ROUNDOFFERR = 1E-20;
+  //const double ROUNDOFFERR = 1E-20;
   double x1, A, B, C, D, solc[3], cb[4], m, n;
-  double Asq, alpha, beta, gamma, delta, rho, mp, np, m2, dd0, dd1, dd2;
+  double Asq, alpha, beta, gamma, delta, rho, mp, np, m2;
   int nsc, kk;
 #if 1
   if (coeff[4]==0)
@@ -3862,7 +3855,6 @@ void solve_fourth_deg(double *coeff, int *numsol, double sol[4])
 }
 void ellips2disk(double *solE, double *solD, double xEr, double yEr, double a, double b)
 {
-  int k;
   solD[0] = 0;
   solD[1] = xEr + solE[0];
   solD[2] = yEr + solE[1];
@@ -3961,7 +3953,6 @@ int compare_func (const void *aa, const void *bb)
 #endif
 double polyquart(double x, double *coeff)
 {
-  int k;
   double x4, x2, x3;
   x2=Sqr(x);
   x3=x2*x;
@@ -3970,7 +3961,6 @@ double polyquart(double x, double *coeff)
 }
 void polyquartd(double x, double *coeff, double *fx, double *dfx)
 {
-  int k;
   double x4, x2, x3;
   x2=Sqr(x);
   x3=x2*x;
@@ -4164,7 +4154,7 @@ double diskdisk(double D, double L, double Di[2][3], double Ci[3], double ni[3],
 {
   int j1, j2, kk; 
   double sp, normCiCj, CiCj[3], VV[3], Q1;
-  double DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], Dini, Pi[3], N[3], Pj[3], normN;
+  double DiN, DjN, niN[3], njN[3], Djnj, Dini, Pi[3], N[3], Pj[3], normN;
   double normNSq, PiPj[3], normPiPj, Q2, PjDj[3], normPiDi, normPjDj, PiDi[3];
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   numcallsDD++;
@@ -4923,8 +4913,6 @@ void wrap_dgeev(double a[4][4], double *wr, double *wi, int n, int *ok)
 void QRfactorizationl(long double hess[4][4], complex long double sol[4], int *ok, int n)
 {
   //int ok;
-  long double zr[4], zi[4];
-  int ilo, ihi,k;
   /* pagina 615 Num. Rec. */  
   /* ora funziona si doveva solo aumentare il numero massimo d'iterazioni */
   balancel(hess, n);
@@ -4970,7 +4958,7 @@ void solve_numrecl(long double coeff[5], int *numrealsol, long double rsol[4], i
    * eigenvalues are the desired roots and then use the routine Unsymmeig. The roots are returned 
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
-  complex long double csol[4], cc[5]; 
+  complex long double csol[4]; 
   //const int m=4;
   const double TINYEPS=1E-7;
   long double hess[4][4];
@@ -5579,11 +5567,10 @@ void solve_numrecl_cmplx(long double *coeff, complex long double *csol, int m)
    * eigenvalues are the desired roots and then use the routine Unsymmeig. The roots are returned 
    * in the complex vector rt[0..m-1], sorted in descending order by their real parts.*/
   /* pagina 497 Num. Rec. */
-  complex long double cc[5], lsol[4]; 
   //const int m=4;
-  const double TINYEPS=1E-7;
+  //const double TINYEPS=1E-7;
   long double hess[4][4]; //coeff[5];
-  int j, k, smallimag, ok;
+  int j, k, ok;
   //for (k=0; k < 5; k++)
     //coeff[k] = (long double) coeffA[k];
   for (k=0;k<m;k++) { //Construct the matrix.
@@ -5597,8 +5584,8 @@ void solve_numrecl_cmplx(long double *coeff, complex long double *csol, int m)
 /* ============================================================================================ */  
 void myquadratic(double aa,double bb,double cc, double dd, double a, double b, complex double roots[2])
 { 
-  double MACHEPS=2.2204460492503131E-16;
-  double sqrtd, errold, diskr,div,zmax,zmin,evec[2], fmat[2][2],dpar[2],at,bt,err,errt;
+  // double MACHEPS=2.2204460492503131E-16;
+  double sqrtd, diskr,div,zmax,zmin;
   int iter; 
 #ifdef LDLT_USENR
   int k;
@@ -6564,22 +6551,19 @@ void LDLT_quartic(double coeff[5], complex double roots[4])
   double err0, err1;
   double aq1, bq1, cq1, dq1; 
   complex double acx1, bcx1, ccx1, dcx1;
-  double l2mC, l2m[12], d2m[12], res[12], resmin;
-  int  printall, C5, C1, C2, C3;//, tryalt;
-  double d2eq46, bl311, diff, diff_alt, l2alt, dml3l3;
-  int s1, s2, k1, k, kmin, nsol; 
-  double a,b,c,d,g,h,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3], l1sq;
-  double d2alt, gamma,del2,hphi0,phibal[3][3],phimat[3][3];
+  double l2m[12], d2m[12], res[12], resmin;
+  double d2eq46, bl311, dml3l3;
+  int k1, k, kmin, nsol; 
+  double a,b,c,d,phi0,aq,bq,cq,dq,d2,d3,l1,l2,l3, errmin, errv[3], aqv[3], cqv[3];
+  double gamma,del2;
   const double macheps =2.2204460492503131E-16;
   double cbq[3];
   complex double sbq[2]; 
   double cubc[4];
-  double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2], qcx;
-  int nreal;
-  double sd, ssd;
+  double complex acx,bcx,cdiskr,zx1,zx2,zxmax,zxmin, qroots[2];
+  double ssd;
   complex long double rri, rmri;
   complex double ccx, dcx;
-  double l3m[2];
   //int d2z=0;
   //----------------------------- calculate the antidiagonal shift phi0:
 
@@ -7090,8 +7074,8 @@ int fast_solver_cmp_func(const void* aa, const void *bb)
 }
 void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma, double *delta, double a, double b, double c, double d)
 {
-  int nsol, k;
-  complex double csol[4], cc[5];
+  int k;
+  complex double csol[4];
   double coeff[5];
   double phi1, phi2, c1, c2, L1, L2, L3, y1, y2;
   coeff[4] = 1.0;
@@ -7137,8 +7121,8 @@ void initial_guess_fast_quart_solver(double *alpha, double *beta, double *gamma,
 void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 {
   double alpha[2], beta[2], gamma[2], delta[2];
-  double al, be, a, b, c, d;
-  double cq[3], sq[2], eps1, eps2;
+  double a, b, c, d;
+  double cq[3], sq[2];
   int k, nsq, setchosen; 
  
   return;
@@ -7406,7 +7390,7 @@ void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 void newt2Dquartic(double c[6], double sol[3], double D2)
 {
   double M[2][2], invM[2][2], detM;
-  double x[2], dx[2], fnew[2], f[2], fini[2], D2sq;
+  double x[2], dx[2], f[2], fini[2], D2sq;
   int i, j, it;
   D2sq = Sqr(D2);
   x[0] = sol[1]/D2;
@@ -7465,9 +7449,9 @@ void newt2Dquartic(double c[6], double sol[3], double D2)
 }
 double rimdiskone_ibarradiff(double Diami, double Diamj, double Li, double Lj, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, it, k;
+  int kk1, it, k;
   const int MAX_ITERATIONS=1000;
-  double Bi[3], Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dscpara[3], dsc[3];
+  double Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dscpara[3];
   double dscperp[3], ragg, ragg2, TnCi[3]; 
   for (kk1 = 0; kk1 < 3; kk1++)
     Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
@@ -7752,8 +7736,8 @@ double rimdiskoneldiff(double Diamis, double Diamjs, double Lis, double Ljs, dou
   int kk1, kk2, numsol[2], nsc, fallback, solset;
   long double diff[2][4], maxdiff[2], sumdiff[2], tmp;
 //  double coeffs[5], solquas[4];
-  long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
-  long double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
+  long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4];
+  long double dsc[3], c0, c1, c2, c3, c02, c12, c22,  coeffEr[6], norm, c32, c42, c52, c4, c5;  
   long double Cip[3], nip[3];
   long double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -8197,11 +8181,11 @@ void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long do
 double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Djs[3], double njs[3], double DjCinis)
 {
   long double D, L, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
   long double diff[2][4], maxdiff[2], sumdiff[2], tmp;
 //  double coeffs[5], solquas[4];
-  long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
-  long double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, norm, c32, c42, c52, c4, c5;  
+  long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4];
+  long double dsc[3], c0, c1, c2, c3, c02, c12, c22,  coeffEr[6], norm, c32, c42, c52, c4, c5;  
   long double Cip[3], nip[3];
   long double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -8653,10 +8637,10 @@ double rimdiskonel(double Ds, double Ls, double Cis[3], double nis[3], double Dj
 }
 double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
-  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
-  double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  int kk1, kk2, numsol[2], fallback, solset;
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4];
+  double dsc[3], c0, c1, c2, c3, c02, c12, c22,  coeffEr[6], c32, c42, c52, c4, c5;  
+  double diff[2][4], maxdiff[2], sumdiff[2];
   double Cip[3], nip[3], norm, Rl[3][3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -9166,9 +9150,9 @@ double rimdiskonediff(double Diami, double Diamj, double Li, double Lj, double C
 }
 void versor_to_R_altl(long double *Ci, long double *ni, long double *Dj, long double *nj, long double R[3][3], long double D)
 {
-  int k, kk1, kk2, kk;
-  long double u[3], norm, sp, dsc[3]; 
-  long double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
+  int k, kk1, kk;
+  long double u[3]; 
+  long double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDj[3], VV[3], ragg;
   /* first row vector */
   for (k=0; k < 3; k++)
     R[0][k] = nj[k];
@@ -9278,9 +9262,9 @@ void rotate_axes_on_plane(double RR[3][3])
 }
 void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D, double *Tj, int MAXITS)
 {
-  int k, kk1, kk2, kk, its;
-  double u[3], norm, sp, dsc[3]; 
-  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
+  int k, kk1, kk, its;
+  double u[3]; 
+  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDj[3], VV[3], ragg;
   /* first row vector */
   for (k=0; k < 3; k++)
     R[0][k] = nj[k];
@@ -9342,9 +9326,9 @@ void versor_to_R_alt_fb(double *Ci, double *ni, double *Dj, double *nj, double R
 }
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D)
 {
-  int k, kk1, kk2, kk;
-  double u[3], norm, sp, dsc[3]; 
-  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDjni, AiDj[3], Tnew[3], VV[3], dscperp[3], dscpara[3], ragg, TnCi[3];
+  int k, kk1, kk;
+  double u[3]; 
+  double normDjCi, DjCi[3], DjCini, Ai[3], AiDjnj, AiDj[3], VV[3], ragg;
   /* first row vector */
   for (k=0; k < 3; k++)
     R[0][k] = nj[k];
@@ -9483,9 +9467,9 @@ double rimdiskone_hybrid_diff(double Diami, double Li, double Diamj, double Lj, 
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
-  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2], uy[3];
-  double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], uy[3];
+  double dsc[3], c0, c1, c2, c3, c02, c12, c22,  coeffEr[6], c32, c42, c52, c4, c5;  
+  double diff[2][4], maxdiff[2], sumdiff[2];
   double Cip[2][3], nip[2][3], norm, Rl[3][3];
   double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
@@ -10095,13 +10079,13 @@ double rimdiskone_hybrid_diff(double Diami, double Li, double Diamj, double Lj, 
 }
 double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
-  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2], uy[3];
-  double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], uy[3];
+  double dsc[3], c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
+  double diff[2][4], maxdiff[2], sumdiff[2];
   double Cip[2][3], nip[2][3], norm, Rl[3][3];
   double nip02,nip12,nip22,Cip02,Cip12,Cip22, temp;
   double omnip02, omnip12, omnip22;
@@ -10768,13 +10752,13 @@ double rimdiskone_hybrid(double D, double L, double Ci[3], double ni[3], double 
 }
 double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
-  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4], solquasort[4], solquad[2];
-  double dsc[3], dscperp[3], c0, c1, c2, c3, c02, c12, c22, nipp[3], Cipp[3], coeffEr[6], rErpp1sq, rErpp2sq, c32, c42, c52, c4, c5;  
-  double diff[2][4], maxdiff[2], sumdiff[2], diffxy[2][4];
+  double tmp, sp, coeff[5], solarr[2][4][3], solec[4][2], solqua[4];
+  double dsc[3], c0, c1, c2, c3, c02, c12, c22, coeffEr[6], c32, c42, c52, c4, c5;  
+  double diff[2][4], maxdiff[2], sumdiff[2];
   double Cip[3], nip[3], norm, Rl[3][3];
   double nip02,nip12,nip22,nip03,nip13,nip23,nip04,nip14,nip24,Cip02,Cip12,Cip22, temp;
   //long double c0l, c1l, c2l, c3l, c4l, c5l, templ, solqual;
@@ -11338,9 +11322,8 @@ double rimdiskone(double D, double L, double Ci[3], double ni[3], double Dj[3], 
 double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, kk, j2, k2, ignore[2];
-  char fileop2[512];
   double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
-  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
+  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3];
   double LiTmp, LjTmp, DiamiTmp, DiamjTmp, Li, Lj, Diami, Diamj;
   Diami=D[0];
   Diamj=D[1];
@@ -11547,9 +11530,8 @@ double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2
 double rimdisk(double D, double L, double Ci[3], double ni[3], double Di[2][3], double Dj[2][3], double Cj[3], double nj[3])
 {
   int j1, kk, j2, k2, ignore[2];
-  char fileop2[512];
   double DjUini, DjTmp[2][3], DjCi[3], DjUi[3], niTmp[3], njTmp[3], perpdist[2];
-  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3], CjTmp[3];
+  double normDjUi, normDjCi, DjCini, Ui[3], CiTmp[3];
 
   numcallsRD++;
 
@@ -11896,7 +11878,6 @@ double calcDistNegHCbrentDiff(int i, int j, double shift[3], int* retchk)
 #endif
 double calcDistNegHCoptdiff(int i, int j, double shift[3], int* retchk)
 {
-  static int firstcall=1;
 #ifdef MC_HC_SPHERO_OPT
   int rim;
   double sphov;
@@ -11957,7 +11938,6 @@ double calcDistNegHCoptdiff(int i, int j, double shift[3], int* retchk)
 }
 double calcDistNegHCopt(int i, int j, double shift[3], int* retchk)
 {
-  static int firstcall=1;
 #ifdef MC_HC_SPHERO_OPT
   int rim;
   double sphov;
