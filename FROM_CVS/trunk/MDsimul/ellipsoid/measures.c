@@ -536,9 +536,9 @@ void calcV(void)
       mf=fopenMPI(absMisHD("histo.dat"),"w+");
       sustot=0.0;
       for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-	sustot += OprogStatus.gchisto[i];
+	sustot += OprogStatus.sushisto[i];
       for (i=0; i < OprogStatus.susnmax-OprogStatus.susnmin+1; i++)
-	fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.gchisto[i]/sustot);
+	fprintf(mf,"%d %.15G\n", i+OprogStatus.susnmin, OprogStatus.sushisto[i]/sustot);
       fclose(mf);
     }
 #endif
