@@ -1981,7 +1981,7 @@ double overlap_using_multibox(int i, int j, double shift[3])
 {
   /* per ora ci sono due livelli di multibox quindi nmb=0 o 1,
      a livello 0 c'è un solo multibox a livello 1 ce ne sono 4 */
-  int k1, k2, nmbox, typei, typej, nmboxi, nmboxj;
+  int k1, k2, typei, typej, nmboxi, nmboxj;
   double rA[3], rB[3];
   double d0;  
 
@@ -2382,8 +2382,8 @@ double check_overlap_pw(int i, int j, double shift[3])
 
 double check_overlap_ij(int i, int j, double shift[3], int *errchk)
 {
-  int k, k1, k2, kk;
-  double tpo, vecg[8], vecgNeg[8], rA[3], rB[3], saxi[3], saxj[3];
+  int k, kk;
+  double tpo, vecg[8], rA[3], rB[3], saxi[3], saxj[3];
   double daSq, drSq, d, d0, r1[3], r2[3], alpha; 
   *errchk=0;
   OprogStatus.optnnl = 0;
@@ -2756,13 +2756,10 @@ double calcdistsaQC(double ra[3], double rb[3], double u1a[3], double u2a[3], do
 #endif
 int overlapMC_NNL(int na, int *err)
 {
-  int i, signDir[NDIM]={0,0,0}, evCode, k, n;
-  double vecg[5], shift[3], t1, t2, t, tm[NDIM];
-  double sigSq, tInt, d, b, vv, dv[3], dr[3], distSq;
-  int overlap;
+  int i, n;
+  double shift[3];
 #ifdef MD_PATCHY_HE
-  int nb, ac, bc, collCode, collCodeOld, acHC, bcHC;
-  double evtime, evtimeHC;
+  int nb;
 #ifdef MD_EDHEFLEX_WALL
   int nplane=-1;
 #endif
@@ -3633,7 +3630,7 @@ void update_bonds_GC(int oldi, int newi)
   int kk;
 #ifdef MD_LL_BONDS
   int i, nb;
-  long long int aa, bb, ii, jj, jj2;
+  long long int aa, bb, jj, jj2;
 #else
   int i, nb, ii, jj, aa, bb, jj2;
 #endif
@@ -4131,8 +4128,8 @@ void remove_bonds_GC(int ip)
 {
   int kk;
 #ifdef MD_LL_BONDS
-  int i, nb;
-  long long int aa, bb, ii, jj, jj2;
+  int nb;
+  long long int aa, bb, jj, jj2;
 #else
   int i, nb, ii, jj, aa, bb, jj2;
 #endif
@@ -4212,7 +4209,7 @@ extern double eval_max_dist_for_spots(int pt);
 void calc_maxax(void)
 {
   double MAXAX, maxSpots;
-  int i, a;
+  int i;
   MAXAX = 0.0;
 
   for (i = 0; i < Oparams.parnum; i++)
@@ -4640,7 +4637,6 @@ void mcexc(int *ierr)
 {
   int o, np;
   double enn, eno, arg, vol;
-  double xn[3]; 
 #ifdef MD_LXYZ
   vol = L[0]*L[1]*L[2];
 #else
@@ -4862,8 +4858,8 @@ void restore_bonds_mc(int ip)
 {
   int i, k;
 #ifdef MD_LL_BONDS
-  int nb, nn, kk;
-  long long int jj, jj2, aa, bb;
+  int kk;
+  long long int jj;
 #else
   int nb, jj, jj2, kk, nn, aa, bb;
 #endif  
@@ -6640,7 +6636,7 @@ extern int checkMoveKF;
 void update_bonds_MC(int ip)
 {
 #ifdef MD_LL_BONDS
-  int nb, nn, kk;
+  int nb, kk;
   long long int jj, jj2, aa, bb;
 #else
   int nb, jj, jj2, kk, nn, aa, bb;
@@ -6831,7 +6827,6 @@ void calc_all_maxsteps(void)
 
 int do_nnl_rebuild(void)
 {
-  int i=0; 
   double displ; 
   displ = get_max_displ_MC();
   /* NOTA: ms è il massimo displacemente finora mentre 
@@ -6929,10 +6924,10 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
   double ratAll[NA][3]; 
 #endif
   const int maxtrials=1000000;
-  double rA[3], rat[3], norm, sax, cc[3], ene;
+  double rA[3], norm, sax, cc[3], ene;
   double shift[3], Rl[3][3], vv[3];
   double ox, oy, oz, d, dx, dy, dz;
-  int nb, ierr, bonded, k1, k2, trials, nbold, nbf;
+  int nb, ierr, bonded, k1, k2, trials, nbf;
   /* N.B. questa routine dipende dalla geometria degli spot, in particolare il volume
      in cui inserire va scelto in relazione alla geometria adottata, per ora qui assumiamo
      due spot sulle basi di uno pseudo-cilindro di elongazione data elongazione (sax, vedi sotto) */
@@ -7053,7 +7048,7 @@ int mcinAVB(int i, int j, int dist_type, double alpha, int *merr)
 int check_bond_added(int j, int nb)
 {
 #ifdef MD_LL_BONDS
-  long long int aa, bb, ii, jj, jj2;
+  long long int aa, bb, jj, jj2;
 #else
   int ii, jj, aa, bb, jj2;
 #endif
@@ -8012,8 +8007,8 @@ void remove_allbonds_ij(int ip, int j)
 {
   int kk;
 #ifdef MD_LL_BONDS
-  int i, nb;
-  long long int aa, bb, ii, jj, jj2;
+  int nb;
+  long long int aa, bb, jj, jj2;
 #else
   int i, nb, ii, jj, aa, bb, jj2;
 #endif
@@ -8068,7 +8063,7 @@ double find_bonds_fake(int i, int j, int *nbf)
 void mcout(int i, int j, int nb)
 {
   double ene, ox, oy, oz, Rl[3][3];
-  int k1, k2, bonded=1, nbjold;
+  int k1, k2, bonded=1;
   int nbf;
   //store_bonds_mc(i);
   //store_bonds_mc(j);
@@ -8209,8 +8204,7 @@ int is_bonded_mc(int ip, int numb)
 {
   int kk;
 #ifdef MD_LL_BONDS
-  int i, nb;
-  long long int aa, bb, ii, jj, jj2;
+  long long int aa, bb, jj, jj2;
 #else
   int i, nb, ii, jj, aa, bb, jj2;
 #endif
@@ -14724,7 +14718,7 @@ void move(void)
 #ifdef MD_LXYZ
   double avL;
 #endif
-  int ran, movetype, i, ip, err=0, dorej, enn, ntot, deln;
+  int ran, movetype, i, err=0, ntot, deln;
   /* 1 passo monte carlo = num. particelle tentativi di mossa */
   //printf("Doing MC step #%d\n", Oparams.curStep);
 #if 1 
