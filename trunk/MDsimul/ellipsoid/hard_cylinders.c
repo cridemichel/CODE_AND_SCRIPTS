@@ -9559,7 +9559,7 @@ double rimdiskone_hybrid_diff(double Diami, double Li, double Diamj, double Lj, 
   coeffEr[1] = omnip22;
   coeffEr[2] = -2.0*nip1nip2;  
   coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
-								    Cip1*Cip2*nip1nip2) - D2sq;
+								    Cip1*Cip2*nip1nip2) - D2jsq;
   coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
   coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
 #elif 0
@@ -9867,7 +9867,7 @@ double rimdiskone_hybrid_diff(double Diami, double Li, double Diamj, double Lj, 
       coeffEr[1] = omnip22;
       coeffEr[2] = -2.0*nip1nip2;  
       coeffEr[3] = Cip02*omnip02 + Cip12*omnip12 + Cip22*omnip22 - 2.0*(Cip0*Cip1*nip0nip1 + Cip0*Cip2*nip0nip2 +
-									Cip1*Cip2*nip1nip2) - D2sq;
+									Cip1*Cip2*nip1nip2) - D2jsq;
       coeffEr[4] = 2.0*(Cip2*nip1nip2 + Cip0*nip0nip1 - Cip1*omnip12);
       coeffEr[5] = 2.0*(Cip0*nip0nip2 + Cip1*nip1nip2 - Cip2*omnip22);  
 
@@ -11080,10 +11080,10 @@ double rimdiskone_solvxy(double D, double L, double Ci[3], double ni[3], double 
       /* rimoltiplico le coordinate per D2 per riportarmi alla circonferenza di raggio D2 
        * (ossia faccio l'omotetia inversa rispetto a quella precedente) */	
       solarr[0][kk1][0] = 0.0;
-      solarr[0][kk1][1] = D2j*solec[kk1][0];
-      solarr[0][kk1][2] = D2j*solec[kk1][1];
+      solarr[0][kk1][1] = D2*solec[kk1][0];
+      solarr[0][kk1][2] = D2*solec[kk1][1];
 #if 1
-      if (test_for_fallback_diff(solarr[0][kk1], Cip, nip, D2, &(diff[0][kk1])))
+      if (test_for_fallback(solarr[0][kk1], Cip, nip, D2, &(diff[0][kk1])))
 	{
 	  fallback=1;
 #if 0
