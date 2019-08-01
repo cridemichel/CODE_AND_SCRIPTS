@@ -1,5 +1,16 @@
-CXX=g++-9
+#N.B. la seguente condizione vuol dire
+#se la stringa intercept si trova nella variabile d'ambiente CXX
+#allora... 
+#infatti se 'intercept' si trova in CXX findstring restituisce 'intercept' e la condizione è false 
+#altrimenti non restituisce niente e la condizione in ifeq è vera
+#ifneq ($(CXX),intercept-c++)
+ifeq (,$(findstring intercept,$(CXX))
+CXX=g++
+endif
+#ifneq ($(CC),intercept-c)
+ifeq (,$(findstring intercept,$(CC))
 CC=gcc-9
+endif
 CXXFLAGS=-O3 -Wall -std=c++17#-g 
 CFLAGS=-O3 #-Wall
 MDLIB=../mdlib
