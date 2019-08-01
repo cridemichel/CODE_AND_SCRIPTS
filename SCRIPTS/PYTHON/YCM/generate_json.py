@@ -3,7 +3,10 @@ import json, os, sys
 fn='compile_commands.json'
 os.system('make clean')
 args=sys.argv
-if len(args)==0:
+if len(args) > 2:
+    print('You have to supply one argument which will be passed to make')
+    quit()
+if len(args)==1:
     targ=''
 else:
     targ = args[1]
