@@ -2,6 +2,7 @@
 #undef DEBUG_HCMC
 #undef MC_HC_SPHERO_OPT
 #include<mdsimul.h>
+#undef MD_MAC
 #ifdef MD_MAC
 #include <Accelerate/Accelerate.h>
 #endif
@@ -37,8 +38,8 @@
 //#define LDLT_LOSSOFSIG_FIX
 //#define LDLT_USENRCMPLX
 //#define MC_QUART_USE_ANALYTIC
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_errno.h>
+//#include <gsl/gsl_poly.h>
+//#include <gsl/gsl_errno.h>
 void versor_to_R_alt(double *Ci, double *ni, double *Dj, double *nj, double R[3][3], double D);
 double test_overlap_parall_cyll(long double *Ci, long double *ni, long double *Dj, long double *nj, long double Li, 
 				long double Diami, long double Diamj);
