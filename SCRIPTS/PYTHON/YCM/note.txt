@@ -2,3 +2,7 @@
 Questo script estrae dal Makefile tutte le definizioni di macro utilizzate nella compilazione
 
 - il file ycm_extra_conf_MDsimul++.py si puo' utilizzare in alternativa al JSON database creato con scan-build (da installare con pip3 install scan-build) copiandolo nel progetto MDsimul++ e rinomimandolo in .ycm_extra_conf.py
+
+- usando il file json autogenerato con gli scan-build e compdb youcompleteme ha problemi (se si usa però quello generato 
+  da scan-build funziona ma questo però non funziona con ALE) e quindi è meglio usare 
+  questi due file, tanto se youcompleteme trova il file .ycm_extra_conf.py usa quello e lo preferisce al json
