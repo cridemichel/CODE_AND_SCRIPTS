@@ -1,0 +1,4 @@
+questo file si puo' utilizzare in alternativa al JSON database creato con scan-build (da installare con pip3 install scan-build)
+nel progetto MDsimul
+Questo script estrae dal Makefile tutte le definizioni di macro utilizzate nella compilazione
+
