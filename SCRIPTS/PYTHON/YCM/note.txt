@@ -1,4 +1,4 @@
-questo file si puo' utilizzare in alternativa al JSON database creato con scan-build (da installare con pip3 install scan-build)
-nel progetto MDsimul
+- il file ycm_extra_conf_MDsimul.py si puo' utilizzare in alternativa al JSON database creato con scan-build (da installare con pip3 install scan-build) copiandolo nel progetto MDsimul e rinomimandolo in .ycm_extra_conf.py
 Questo script estrae dal Makefile tutte le definizioni di macro utilizzate nella compilazione
 
+- il file ycm_extra_conf_MDsimul++.py si puo' utilizzare in alternativa al JSON database creato con scan-build (da installare con pip3 install scan-build) copiandolo nel progetto MDsimul++ e rinomimandolo in .ycm_extra_conf.py
