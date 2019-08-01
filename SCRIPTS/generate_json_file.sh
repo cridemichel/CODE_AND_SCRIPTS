@@ -7,8 +7,25 @@
 if [ "$1" != "" ]
 then
   TARGET="$1"
+else
+  TARGET=""
+fi
+COMPDB="1"
+if [ "$2" == "0" ]
+then
+  COMPDB="0"
 fi
 make clean
 intercept-build make $TARGET
-compdb -p . list > _aaa_
-mv -f _aaa_ compile_commands.json
+if [ "$COMPDB" == "1" ]
+then
+compdb -p . list > _bbb_
+mv compile_commands.json _aaa_
+./merge_json.py _aaa_ _bbb_ > compile_commands.json
+#mv -f _bbb_ compile_commands.json
+mv compile_commands.json _aaa_
+#riformatta il file in maniera più leggibile
+#jq si installa con 'brew install jq'
+jq . _aaa_ > compile_commands.json
+rm -f _bbb_
+fi

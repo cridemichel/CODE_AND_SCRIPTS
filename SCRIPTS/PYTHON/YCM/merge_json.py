@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys
+import sys, os
 args=sys.argv
 if len(args) < 2:
     print ('you have two supply the names of two json files')
@@ -27,4 +27,4 @@ exec(str2b)
 for i in range(0,len(json1)):
     json1[i].update(json2[i]) 
 #stampa il risulta il risuultante json file
-print(json1)
+print(str(json1).replace("'", '"'))
