@@ -351,8 +351,8 @@ void usrInitAft(void);
 void calc(void);
 void move(void);
 #else
-inline void calc(void);
-inline void move(void);
+void calc(void);
+void move(void);
 #endif
 /* MEMORY MANAGEMENT */
 /* See Rapaport pag. 364 */
