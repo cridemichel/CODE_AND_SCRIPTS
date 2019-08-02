@@ -282,13 +282,13 @@ double Max2(double a, double b)
   else
     return b;
 }
- double Max3(double a, double b, double c)
+double Max3(double a, double b, double c)
 {
   double t;
   t = Max2(a,b);
   return Max2(t,c);
 }
- double Max4(double a, double b, double c, double d)
+double Max4(double a, double b, double c, double d)
 {
   double t;
   t = Max3(a,b,c);
