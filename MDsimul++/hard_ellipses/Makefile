@@ -9,7 +9,7 @@ CXX=g++
 endif
 #ifneq ($(CC),intercept-c)
 ifeq (,$(findstring intercept,$(CC)))
-CC=gcc-9
+CC=gcc
 endif
 CXXFLAGS=-O3 -Wall -std=c++17#-g 
 CFLAGS=-O3 #-Wall

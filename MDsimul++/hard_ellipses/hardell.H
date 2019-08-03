@@ -5,6 +5,13 @@ using pvec3=pvector<ntype,3>;
 template <class ntype>
 using pmat3=pmatrixq<ntype,3>;
 #define Sqr(x) ((x)*(x))
+
+template <class ntype>
+class hardell;
+
+template <class ntype>
+ntype overlap(class hardell<ntype>& A, class hardell<ntype>& B);
+
 template <class ntype>
 class hardell 
 {
@@ -17,8 +24,7 @@ public:
   pvector<ntype,2> na, nb, r;//na nb versori degli assi e r centro di massa 
   pvector<ntype,2> shift;
   using numtype = ntype;// useful trait to remove template ntype parameter from linked_cell_lists class
-  template <class U>
-    friend U overlap (class hardell<U>& A, class hardell<U>& B, pvector<U,2>& shift);
+  friend ntype overlap<ntype> (class hardell<ntype>& A, class hardell<ntype>& B);//, pvector<U,2>& shift);
   void show()
     {
       show(nullptr);
