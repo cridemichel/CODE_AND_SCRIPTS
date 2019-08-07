@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /usr/local/bin/python3
 # USAGE:
 # cleanupold.py <dir> <days> <regexp>
 # delete all file in the directory <dir> older than <days> days

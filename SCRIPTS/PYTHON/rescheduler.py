@@ -164,7 +164,7 @@ if lof == '':
 totsteps=-1
 extsteps=-1
 #print ('ll=',ll)
-ll=lines[0].strip('\n').split(' ')
+ll=lines[0].strip('\n').split()
 try:
     totsteps=int(ll[0])
     extsteps=int(ll[1])
@@ -244,7 +244,7 @@ def get_num_words(fn):
         lines=f.readlines()
         nw=0
         for line in lines:
-            l=line.strip('\n').split(' ')
+            l=line.strip('\n').split()
             nw+=len(l)
         return nw
 #######################################
@@ -259,7 +259,7 @@ if sched_type == 'simpp':
     def get_steps(bn,w):
         with open(bn+'/'+restart[w]) as f:
             firstline=f.readline()
-            l=firstline.split(' ')
+            l=firstline.split()
         #print ('l=',l)
         #print ('lines[0][2]=', ls[0][2])
         #overwrite filed total steps with new value
@@ -312,7 +312,7 @@ if sched_type == 'simpp':
         os.system('rm '+donefile)
         with open(bn+'/'+restart[w]) as f:
             ls=f.readlines()
-        l=ls[0].split(' ')
+        l=ls[0].split()
         #print ('l=',l)
         #print ('lines[0][2]=', ls[0][2])
         #overwrite filed total steps with new value
@@ -347,7 +347,7 @@ elif sched_type == 'veff':
         with open(dir+'/veff_vs_tt.dat') as f:
             ls=f.readlines()
             lastline=ls[-1]
-            lst=lastline.strip('\n').split(' ')
+            lst=lastline.strip('\n').split()
             if lst[0] == '99900000000':
                 return True
             else:
