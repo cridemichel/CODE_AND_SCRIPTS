@@ -33,7 +33,7 @@ arg_restart=' 1 ' + restart #command line arg for restarting
 def get_steps(restart):
     with open(restart) as f:
         firstline=f.readline()
-        l=firstline.split(' ')
+        l=firstline.split()
     return int(l[3])
 #
 #extend simulation by modifying restart file
@@ -41,7 +41,7 @@ def extend_sim(restart):
     #os.system('rm '+ donefile)
     with open(restart) as f:
         ls=f.readlines()
-    l=ls[0].split(' ')
+    l=ls[0].split()
     #overwrite file total steps with new value
     newsteps=int(l[2])+extsteps
     l[2]=str(newsteps)
