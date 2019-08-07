@@ -7245,6 +7245,7 @@ complex double quarticfunc(double c[5], double complex sol)
     }
   return sum/cabs(sol);
 }
+extern void oqs_quartic_solver(double coeff[5], complex double roots[4]);      
 
 void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
 {
@@ -11502,7 +11503,7 @@ double rimdiskdiff(double *D, double *L, double Ci[3], double ni[3], double Di[2
 	    }
 #else
 #ifdef MC_QUART_HYBRID
-         if (rimdiskone_hybrid_diff(Diami, Li, Diamj, Lj, Ci, ni, Dj, nj, DjCini) < 0.0)
+         if (rimdiskone_hybrid_diff(Diami, Li, Diamj, Lj, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
            return -1;
 #else
          if (rimdiskonediff(Diami, Diamj, Li, Lj, Ci, ni, Dj[j2], nj, DjCini) < 0.0)
