@@ -34,7 +34,7 @@ def get_steps(restart):
     with open(restart) as f:
         lines=f.readlines
     for l in lines:
-        par=ls.strip('\n').split(':').strip(' ')
+        par=l.strip('\n').split(':').strip(' ')
         if par[0] == 'curStep':
             stps=int(par[1])
             break
@@ -51,9 +51,9 @@ def extend_sim(restart):
             if par[0] == 'totStep':
                 stps=int(par[1])
                 newsteps=stps+extsteps
-   i            newl=par[0]+':'+str(newsteps)
+                newl=par[0]+':'+str(newsteps)
                 f.write(newl+'\n')
-            else
+            else:
                 f.write(l)
 #
 #establish whether simulation is finished (simulations steps > totsteps)
