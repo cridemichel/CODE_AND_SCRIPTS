@@ -22,7 +22,8 @@ extsteps=int(args[4])
 jobfinished=args[5]
 ### SIMULATION DEPENDENT VARIABLES
 prepend=' ' # prepend to exec name
-exec_name=prepend+'./hard_cylinders ' # sim executable
+exec_name=prepend+'nohup mosrun ./hard_cylinders ' # sim executable
+#exec_name=prepend+'./hard_cylinders ' # sim executable
 arg_start=' -fa ellipsoid_flex_mc.par ' # command line arg for starting
 arg_restart=' -ca ' + restart #command line arg for restarting
 ##########################################################
