@@ -35,7 +35,7 @@ def get_steps(restart):
         ls=f.readlines()
     for l in ls:
         ll= l.strip('\n').split(':')
-        if ll[0].find('curStep')!=-1:
+        if ll[0].strip().find('curStep')!=-1:
             curstps=int(ll[1])        
     return curstps
 #
@@ -47,7 +47,7 @@ def extend_sim(restart):
     cc=0
     for l in ls:
         ll= l.strip('\n').split(':')
-        if ll[0].find('totStep')!=-1:
+        if ll[0].strip().find('totStep')!=-1:
             ls[cc] = ll[0]+': '+ str(int(ll[1])+extsteps) + '\n'
         cc+=1     
     #overwrite file total steps with new value
