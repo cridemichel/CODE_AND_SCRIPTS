@@ -14,6 +14,7 @@ extern void mappairs(int curi, int curj, int *chA, int *chB, int *i, int *j);
 #endif
 #ifdef MC_BOND_POS
 void update_spot_pos(int i, double dx, double dy, double dz);
+
 void update_spot_pos_dir(int i, int dir, double fact);
 #endif
 #if defined(MC_KERN_FRENKEL) || defined(MC_GAPDNA)
