@@ -11,8 +11,8 @@ endif
 ifeq (,$(findstring intercept,$(CC)))
 CC=gcc
 endif
-CXXFLAGS=-O3 -Wall -std=c++17#-g 
-CFLAGS=-O3 #-Wall
+CXXFLAGS=-Wall -std=c++17 -O3# -g 
+CFLAGS= -Wall -O3
 MDLIB=../mdlib
 HEADERS=$(MDLIB)/pvector.H $(MDLIB)/pmatrix.H $(MDLIB)/rpoly.H $(MDLIB)/boxes.H ./mcsim_hardell.H 
 LDFLAGS=-lm -llapack -lblas #-g
