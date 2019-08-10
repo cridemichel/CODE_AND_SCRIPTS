@@ -470,7 +470,7 @@ def kill_parent_and_childs(pid):
     gone, alive = psutil.wait_procs(children,timeout=1,callback=on_terminate)
     if alive:
         for p in alive:
-            print("process {} survived SIGTERM; trying SIGKILL" % p)
+            print("process {} survived SIGTERM; trying SIGKILL".format(p))
             try:
                 p.kill()
             except (psutil.NoSuchProcess,psutil.AccessDenied):
@@ -479,7 +479,7 @@ def kill_parent_and_childs(pid):
         if alive:
             # give up
             for p in alive:
-                print("process {} survived SIGKILL; giving up" % p)
+                print("process {} survived SIGKILL; giving up".format(p))
 c=0
 #return command lines, pids and absolute path
 allcls,pids,allcwds=get_proc_info(filter_proc)
