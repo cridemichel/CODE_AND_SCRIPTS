@@ -369,7 +369,6 @@ void cubicRoots (double c2, double c1, double c0, int *nReal, complex double roo
   int cubicType, deflateCase, oscillate;
 
   enum costanti {allzero = 0, linear = 1, quadratic = 2, general   = 3};
-  const int Re = 1, Im = 2;
 
   double a0, a1, a2, a=0, b=0, c=0, k, s, t, u, x, y, z, xShift;
 
@@ -906,7 +905,6 @@ void quadraticRoots (double q1, double q0, int *nReal, complex double root[2])
   double a0, a1;
   double k, x, y, z;
 
-  const int Re = 1, Im = 2;
 
   const double LPN = 1.7976931348623157E+308;   // the (L)argest (P)ositive (N)umber
   const double sqrtLPN = sqrt (LPN);      // and the square root of it
@@ -1116,7 +1114,6 @@ void quarticRoots (double cc[5], int *nReal, complex double root[4])
   //int oscillate;
   int quarticType;
 
-  const int Re = 1, Im = 2;
   double q1, q2, q3, q0;
   //const int biquadratic = 2, cubic = 3, general = 4; 
   enum casi {biquadratic=2, cubic=3, general=4 };
@@ -2461,7 +2458,7 @@ double find_initial_guess_opt(double *Aj, double Ci[3], double ni[3], double Dj[
 void find_initial_guess_simpler(double *Ai, double Ci[3], double ni[3], double Dj[3], double nj[3], double D)
 {
   int kk1, kk2;
-  double sp, dsc[3], norm;
+  double sp, dsc[3];
   
   for (kk2=0; kk2 < 3; kk2++)
     dsc[kk2] = Ci[kk2] - Dj[kk2]; 
@@ -2944,7 +2941,6 @@ double ddrimdiskfunc(double th)
   //double lambda, Pjp[3], Pip[3], D2, tj[3], PjCi[3], PjPi[3];
   //double UipPjp[3], Uip[3], fact, dUipPjp[3];
   double dfact, ddUipPjp[3];
-  int k1, k2;
   //if (!(th==brentmsg.th) || brentmsg.id==0)
     //{
       calcdrimdisk(th);
@@ -2970,8 +2966,7 @@ double drimdiskfunc(double th)
   /* i è il rim e j il disco */
   //double lambda, Pjp[3], Pip[3], D2, tj[3], PjCi[3], PjPi[3];
   //double UipPjp[3], Uip[3], fact, dUipPjp[3];
-  double fact, D2;
-  int k2;
+  double D2;
   D2 = 0.5*Dgbl;
 
   if (!(th==brentmsg.th) || brentmsg.id==0)
@@ -4060,7 +4055,7 @@ double diskdiskdiff(double *D, double *L, double Di[2][3], double Ci[3], double 
 {
   int j1, j2, kk; 
   double sp, normCiCj, CiCj[3], VV[3], Q1;
-  double DiN, DjN, niN[3], njN[3], Djni, Djnj, assex[3], Dini, Pi[3], N[3], Pj[3], normN;
+  double DiN, DjN, niN[3], njN[3], Djnj, Dini, Pi[3], N[3], Pj[3], normN;
   double normNSq, PiPj[3], normPiPj, Q2, PjDj[3], normPiDi, normPjDj, PiDi[3];
   /* case A.1 (see Appendix of Mol. Sim. 33 505-515 (2007) */
   for (kk=0; kk < 3; kk++)
@@ -5587,11 +5582,6 @@ void myquadratic(double aa,double bb,double cc, double dd, double a, double b, c
 { 
   // double MACHEPS=2.2204460492503131E-16;
   double sqrtd, diskr,div,zmax,zmin;
-  int iter; 
-#ifdef LDLT_USENR
-  int k;
-  double tt[9], ttmax;
-#endif
   //-------------------------------- parameter backward correction step:       
 #if 0
   /* newtown-raphson must be improved by using bisection if needed (see Numerical Recipat algo NR safe with bisection) */
@@ -5704,18 +5694,14 @@ void solve_cubic_analytic_depressed_handle_inf(double b, double c, complex doubl
 #endif
 void  mycubic_B_shift(double a, double b, double c, double d, double *phi0)
 {
-  double g,h,gg,hh,aq,bq,cq,dq,s,diskr, coeff[4], err;
-  int nreal,k, trovato=0, k2;
+  double g,h,gg,hh,aq,bq,cq,dq,s,diskr;
+  int k;
   double rmax;
-  complex double radici[3];
-  complex long double radicil[3];
-  long double coeffl[4];
 #ifdef LDLT_REFINE_PHI_WITH_NR
   double MACHEPS=2.2204460492503131E-16;
   double maxtt, xxx, gx, x, xold, f, fold, df, xsq;
   int iter;
 #endif
-  double kd0, kd1, kd2; 
   //------------------ call the parabola/reciprocal intersection method:      
   // !------------------------------------------------------- the B-shift:
 #if 1
@@ -6099,7 +6085,7 @@ void NRabcdCmplx(double a, double b, double c, double d,
 		 double complex *AQ, double complex *BQ, double complex *CQ, double complex *DQ)
 {
   int iter, k1, k2;
-  complex double x02, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+  complex double x02, xold[4], x[4], dx[4], det, Jinv[4][4], fvec[4];
   double errf, errfold;
 #ifdef LU_DECOMP
   complex double fjac[4][4], p[4];
@@ -6260,7 +6246,7 @@ void NRabcdCmplx(double a, double b, double c, double d,
 void NRabcd(double a, double b, double c, double d, double *AQ, double *BQ, double *CQ, double *DQ)
 {
   int iter, k1, k2;
-  double x02, errf, errfold, xold[4], x[4], dx[4], det, aq, bq, cq, dq, Jinv[4][4], fvec[4];
+  double x02, errf, errfold, xold[4], x[4], dx[4], det, Jinv[4][4], fvec[4];
 #ifdef LU_DECOMP
   double fjac[4][4], p[4];
   int indx[4], ok;
@@ -7168,7 +7154,7 @@ void fast_quartic_solver(double coeff[5], int *numsol, double solqua[4])
 void solve_quarticl(long double coeff[5], int *numsol, long double solqua[4])
 {
   int ok;
-  long double EPS=2.2204460492503131E-32;
+  //long double EPS=2.2204460492503131E-32;
 
   if (coeff[4] == 0)
     {
@@ -7251,7 +7237,7 @@ void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
 {
   //double ERRTHR=1E-10;
   double complex csol[4];
-  double sum, sum2;
+  double sum2;
   long double complex csoll[4];
   long double coeffl[5];
   int k, planB=0;//, printsol;
@@ -7332,9 +7318,7 @@ void wrap_LDLT_quartic(double coeff[5], int *numsol, double solqua[4])
 #endif
 void solve_quartic(double coeff[5], int *numsol, double solqua[4])
 {
-  int ok, k;
   //double EPS=2.2204460492503131E-16;
-  double target;
   if (coeff[4]==0)
     {
       solve_cubic(coeff, numsol, solqua);
@@ -7512,9 +7496,9 @@ double rimdiskone_ibarradiff(double Diami, double Diamj, double Li, double Lj, d
 }
 double rimdiskone_ibarra(double D, double L, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, it, k;
+  int kk1, it, k;
   const int MAX_ITERATIONS=1000;
-  double Bi[3], Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj, dsc[3];//dscpara[3], dsc[3];
+  double Ai[3], AiDj[3], Tnew[3], Told[3], VV[3], AiDjnj;//dscpara[3], dsc[3];
   double ragg, ragg2, TnCi[3]; 
   for (kk1 = 0; kk1 < 3; kk1++)
     Ai[kk1] = Ci[kk1] + DjCini*ni[kk1];
@@ -7735,7 +7719,7 @@ extern void versor_to_Rl(long double ox, long double oy, long double oz, long do
 double rimdiskoneldiff(double Diamis, double Diamjs, double Lis, double Ljs, double Cis[3], double nis[3], double Djs[3], double njs[3], double DjCinis)
 {
   long double Diami, Diamj, Li, Lj, Ci[3], ni[3], nj[3], DjCini, Dj[3], temp;
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
   long double diff[2][4], maxdiff[2], sumdiff[2], tmp;
 //  double coeffs[5], solquas[4];
   long double sp, coeff[5],solarr[2][4][3], solec[4][2], solqua[4];
@@ -9465,7 +9449,7 @@ double NeumaierSum(double input[], int n)
 #endif
 double rimdiskone_hybrid_diff(double Diami, double Li, double Diamj, double Lj, double Ci[3], double ni[3], double Dj[3], double nj[3], double DjCini)
 {
-  int kk1, kk2, numsol[2], nsc, fallback, solset;
+  int kk1, kk2, numsol[2], fallback, solset;
 #ifdef MC_QUART_VERBOSE
   static long int numfb=0;
 #endif
@@ -12393,21 +12377,19 @@ double calcDistNegHC(int i, int j, double shift[3], int* retchk)
   int rim;
   double sphov;
 #endif
-  int it, k2, kk1, kk2, k;
-  double ragg, ragg2, norm, normNSq, ViVj[3], lambdai, lambdaj, Aiold[3], TnCi[3], Tnew[3], Told[3];
-  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djni, Djnj, AiOld[3];
+  int it, k2;
+  double normNSq, ViVj[3], lambdai, lambdaj;
+  double sp, Q1, Q2, normPiDi, normPjDj, normN, L, D, DiN, DjN, niN[3], njN[3], Djnj;
   double PiPj[3], N[3], Pi[3], Pj[3], VV[3], Di[2][3], Dj[2][3], ni[3], nj[3], Ci[3], Cj[3];
-  double normPiPj, Ui[3], DiCi[3], DiCini, normDiCi, DjCi[3], normDjCi;
-  double PiDi[3], PjDj[3], Ai[3], Tj[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
+  double normPiPj, Ui[3], DjCi[3], normDjCi;
+  double PiDi[3], PjDj[3], Ai[3], Tjp[3], Tjm[3], TjpCi[3], TjmCi[3], TjpCini, TjmCini;
   double DjUini, DjUi[3], normDjUi, AiDj[3], AiDjnj, AiDjnjvec[3], TjNew[3], TjNewCi[3], TjNewCini;
-  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3], TipCjnj, TimCjnj;
-  double Aj[3], AjDini, AjDinivec[3], AjDi[3], Tip[3], Tim[3], TipCj[3], TimCj[3], Dini;
-  double DiCj[3], normDiCj, DiCjnj, Uj[3], DiUj[3], normDiUj, DiUjnj;
-  double Tim_perp[3], Tip_perp[3], Tim_para[3], Tip_para[3], normTim_perp, DjCini;
+  double TjOld[3], ninj, CiCj[3], CiCjni, CiCjnj, detA, Vi[3], Vj[3];
+  double Dini;
+  double DjCini;
   double Tjm_perp[3], Tjp_perp[3], Tjm_para[3], Tjp_para[3], normTjm_perp;
-  double TiOld[3], TiNew[3], TiNewCj[3], TiNewCjnj;	
   double normCiCj;	
-  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3], dsc[3], dscperp[3], dscpara[3];
+  double DjTmp[2][3], CiTmp[3], niTmp[3], njTmp[3];
   int kk, j1, j2;
 
 #ifdef HC_ALGO_OPT
