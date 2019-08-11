@@ -31,10 +31,11 @@ def is_integer(s):
 def print_error():
     print('rescheduler [-sv|-filter <filter string>|-s/-show|-v/-verbos|-t/-type <type>|-extargs|-ea|-k/-kill <list_to_kill>|')
     print('-delete|-d <list_to_delete>|-finish|-f <list_to_finish>|-kf <list_to_kill_and_finish>')
-    print('|-kd <list_to_kill_and_delete> <conf_file>')
+    print('|-kd <list_to_kill_and_delete>|-kk <conf_file>')
     print('where <list_to_kill>=0,1,2,3-4 (if equal to \'all\' means all jobs)')
     print('-kf kill specified processes and mark them as done')
     print('-kd kill specified processes and delete job from configuration file')
+    print('-kk if a process does not terminate with SIGTERM use SIGKILL signal')
     print('and <conf_file> is a configuration file with the following structure:\n')
     print('<tosteps=-1|>0> <extra steps=-1|>0> <max jobs> <donefile> <jobfinished> <restart0> <restart1>')
     print('/home/demichel/jobs1.sh\n/home/demichel/jobs2.sh')
@@ -96,11 +97,14 @@ itargs=iter(args)
 deljobs=False
 finjobs=False
 restartjobs=False
+usesigkill=False
 for a in itargs:
     if a == '-show' or a  == '-s':
         show_only=True
     elif a == '-verbose' or a == '-v':
         verbose=True
+    elif a == '-kk':
+        usesigkill=True
     elif a == '-sv':
         show_only=True
         verbose=True
@@ -468,7 +472,7 @@ def kill_parent_and_childs(pid):
         except (psutil.NoSuchProcess,psutil.AccessDenied):
             pass
     gone, alive = psutil.wait_procs(children,timeout=3,callback=on_terminate)
-    if alive:
+    if usesigkill==True and alive:
         for p in alive:
             print("process {} survived SIGTERM; trying SIGKILL".format(p))
             try:
