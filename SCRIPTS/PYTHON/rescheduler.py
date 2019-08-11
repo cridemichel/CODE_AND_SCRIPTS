@@ -467,7 +467,7 @@ def kill_parent_and_childs(pid):
             p.send_signal(signal.SIGTERM)
         except (psutil.NoSuchProcess,psutil.AccessDenied):
             pass
-    gone, alive = psutil.wait_procs(children,timeout=1,callback=on_terminate)
+    gone, alive = psutil.wait_procs(children,timeout=3,callback=on_terminate)
     if alive:
         for p in alive:
             print("process {} survived SIGTERM; trying SIGKILL".format(p))
@@ -475,7 +475,7 @@ def kill_parent_and_childs(pid):
                 p.kill()
             except (psutil.NoSuchProcess,psutil.AccessDenied):
                 pass
-        gone, alive = psutil.wait_procs(alive, timeout=1, callback=on_terminate)
+        gone, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
         if alive:
             # give up
             for p in alive:
