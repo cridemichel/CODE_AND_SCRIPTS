@@ -14,7 +14,21 @@ import sys
 import os
 import psutil
 import signal
+import importlib
 from operator import itemgetter
+try:
+    #importlib.find_module('iteration_utilities')
+    importlib.util.find_spec('iteration_utilities')
+    found_itutil = True
+    from iteration_utilities import unique_everseen
+    from iteration_utilities import duplicates
+except ImportError:
+    print('Module iteration_utilities not found')
+    print('You can install it with:')
+    print('> pip3 install iteration_utilities')
+    print('I am not gonna use it now...')
+    found_itutil = False
+    pass
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
@@ -79,6 +93,16 @@ def check_range(lista,lines):
         if i < 0 or i >= len(lines):
             print('Job index out of range [0,'+ str(len(lines)-2) +']')
             quit()
+if found_itutil:
+    def check_duplicates(lstchk):
+        retlst=list(unique_everseen(duplicates(lstchk)))
+        if len(retlst) > 0:
+            print('The following entries are duplicated:')
+            for lll in retlst:
+                print(lll.strip('\n'))
+            print('Please fix it!')
+            quit()
+
 show_only = False
 verbose = False
 args=sys.argv
@@ -141,6 +165,8 @@ if not os.path.exists(lof):
     quit()
 with open(lof) as f:
     lines=f.readlines()
+if found_itutil:
+    check_duplicates(lines)
 if killp==True:
     list_to_kill=parse_ranges(karg)
     check_range(list_to_kill,lines)
