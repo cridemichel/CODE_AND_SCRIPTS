@@ -14,12 +14,9 @@ import sys
 import os
 import psutil
 import signal
-import importlib
 from operator import itemgetter
+found_itutil=True
 try:
-    #importlib.find_module('iteration_utilities')
-    importlib.util.find_spec('iteration_utilities')
-    found_itutil = True
     from iteration_utilities import unique_everseen
     from iteration_utilities import duplicates
 except ImportError:
@@ -27,8 +24,7 @@ except ImportError:
     print('You can install it with:')
     print('> pip3 install iteration_utilities')
     print('I am not gonna use it now...')
-    found_itutil = False
-    pass
+    found_itutil=False
 #questo rescheduler è abbastanza portabile infatti funziona 
 #sia in linux che in mac osx
 #
@@ -102,7 +98,7 @@ if found_itutil:
                 print(lll.strip('\n'))
             print('Please fix it!')
             quit()
-
+#
 show_only = False
 verbose = False
 args=sys.argv
