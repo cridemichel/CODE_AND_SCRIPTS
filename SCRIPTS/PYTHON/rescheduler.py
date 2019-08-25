@@ -9,7 +9,7 @@
 # Ora questo script python presuppone l'esistenza di un'unico script/eseguibuile
 # che viene usato per lanciare e rilanciare, si potrebbe anche pensare di creare
 # un file di configurazione solo con le directory e di mettere nella prima riga
-# i nomi degli script di start e restart
+# i nomi degli script di start e restart.
 import sys
 import os
 import psutil
