@@ -1,3 +1,0 @@
-14/09/2000: wtd.c, jump.c e hetero.c vanno modificate per essere utilizzate 
-            con MPI e salvataggi logaritmici
-	     
