@@ -1,6 +1,0 @@
-#!/bin/sh
-for f in $1
-do
-echo "processing $f"
-$HOME/MDsimul/bin/cri2fraMIX $f FRA/${f}_FRA
-done
