@@ -9,4 +9,4 @@ cc=0
 for l in lines:
     if cc > 0:
         print(l.strip('\n')+' @ 1.4 0.5 0.5 C[red]')
-    c++
+    cc=cc+1
