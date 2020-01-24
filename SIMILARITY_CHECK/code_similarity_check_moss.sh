@@ -5,4 +5,4 @@ then
   echo "code_similarity_check.sh <nome_file>"
   exit
 fi
-moss -l c lcexamCDM*/*/$1
+moss -l c $@

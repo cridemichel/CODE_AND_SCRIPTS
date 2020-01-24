@@ -5,4 +5,4 @@ then
   echo "code_similarity_check.sh <nome_file>"
   exit
 fi
-jplag -l c/c++ -c lcexamCDM*/*/$1
+jplag -l c/c++ -c $@
