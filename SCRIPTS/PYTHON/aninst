@@ -53,15 +53,13 @@ if DEBUG:
     print('fpsf=', fpsf)
 Sopt=' -S '+sf
 NSopt=' -c \':Obsession\''  
-os.chdir(spath)
 if localviminfo==True:
     #exop = ' -c \':set viminfo+=n'+os.getcwd()+'/'+vifn+'\''
-    exop = ' -i '+os.getcwd()+'/'+vifn
+    exop = ' -i '+os.path.abspath(spath)+'/'+vifn
     if DEBUG:
-        print('local viminfo='+os.getcwd()+'/'+vifn)
+        print('local viminfo='+os.path.abspath(spath)+'/'+vifn)
 else:
     exop = ''
-os.chdir(cd)
 if os.path.exists(fpsf):
     os.chdir(spath)
     if DEBUG:
