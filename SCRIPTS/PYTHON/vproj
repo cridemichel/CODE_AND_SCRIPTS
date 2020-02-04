@@ -64,11 +64,11 @@ else:
     NSopt = NSopt 
 NSopt = NSopt + '\''
 if DEBUG: 
-    print('path=',os.path.abspath(''))
+    print('path=',os.getenv('HOME'))
     print('spath=',os.path.abspath(spath))
     print('vinfo=',vifn)
-if vifn == '.viminfo' and os.path.abspath(spath)==os.path.abspath(''):
-    yn=input(red('I will overwrite .viminfo in you home dir, continue (y/N)? '))
+if vifn == '.viminfo' and os.path.abspath(spath)==os.getenv('HOME'):
+    yn=input(red('I will overwrite .viminfo in your home dir, continue (y/N)? '))
     if yn != 'y':
         print(green('ok aborting...'))
         quit()
