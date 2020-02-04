@@ -4,6 +4,9 @@
 #or recover a session and type
 #> aninst <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-h> <optional_path>
 import os, sys
+# per avere i color va installato con pip il modulo ansicolors 
+# > pip install ansicolors
+from colors import red, green, blue
 def print_help():
     print('vinst <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
     print('with option -sn you can provide an optional servername while')
@@ -13,7 +16,8 @@ def print_help():
     quit()
 args=sys.argv
 itargs=iter(args)
-sf='Session.vim'    
+sfdef='Session.vim'
+sf=sfdef 
 cd=os.getcwd()
 DEBUG=True
 spath=cd
@@ -52,7 +56,22 @@ fpsf=spath+sf
 if DEBUG:   
     print('fpsf=', fpsf)
 Sopt=' -S '+sf
-NSopt=' -c \':Obsession\''  
+#start obession with custom session file name provided via command flag -sf
+NSopt=' -c \':Obsession '
+if sf != sfdef:
+    NSopt = NSopt + sf 
+else:
+    NSopt = NSopt 
+NSopt = NSopt + '\''
+if DEBUG: 
+    print('path=',os.path.abspath(''))
+    print('spath=',os.path.abspath(spath))
+    print('vinfo=',vifn)
+if vifn == '.viminfo' and os.path.abspath(spath)==os.path.abspath(''):
+    yn=input(red('I will overwrite .viminfo in you home dir, continue (y/N)? '))
+    if yn != 'y':
+        print(green('ok aborting...'))
+        quit()
 if localviminfo==True:
     #exop = ' -c \':set viminfo+=n'+os.getcwd()+'/'+vifn+'\''
     exop = ' -i '+os.path.abspath(spath)+'/'+vifn
@@ -70,5 +89,5 @@ else:
     os.chdir(spath)
     if DEBUG:
         print('executing=', vims+sn+NSopt+exop)
-    os.chdir(cd)
     os.system(vims+sn+NSopt+exop)
+    os.chdir(cd)
