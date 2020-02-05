@@ -8,9 +8,9 @@ import os, sys
 # > pip install ansicolors
 from colors import red, green, blue
 def print_help():
-    print('vinst <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
-    print('with option -sn you can provide an optional servername while')
-    print('with option -sf you choose a file name for the session file different from the default Session.vim') 
+    print('vproj <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
+    print('-sn: provide an optional servername')
+    print('-sf: choose a file name for the session file different from the default Session.vim') 
     print('-novi: do not load .viminfo file in the dir of session file')
     print('-vifn NAME: set a viminfo custom filename')
     quit()
