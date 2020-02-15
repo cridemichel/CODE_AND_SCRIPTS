@@ -10,14 +10,14 @@ from colors import red, green, blue
 def print_help():
     print('vproj <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
     print('-sn: provide an optional servername')
-    print('-sf: choose a file name for the session file different from the default Session.vim') 
+    print('-sf: choose a file name for the session file different from the default Session.vim')
     print('-novi: do not load .viminfo file in the dir of session file')
     print('-vifn NAME: set a viminfo custom filename')
     quit()
 args=sys.argv
 itargs=iter(args)
 sfdef='Session.vim'
-sf=sfdef 
+sf=sfdef
 cd=os.getcwd()
 DEBUG=True
 spath=cd
@@ -38,7 +38,7 @@ for a in itargs:
     if a == '-vifn' or a == '--viminfofilename':
         vifn=next(itargs)
     else:
-        spath = a 
+        spath = a
 spath=spath.strip('\n')
 if spath[-1]=='/':
     spath=spath[:-1] #strip '/'
@@ -53,17 +53,17 @@ if sn=='':
 if spath=='':
     spath=cd
 fpsf=spath+sf
-if DEBUG:   
+if DEBUG:
     print('fpsf=', fpsf)
 Sopt=' -S '+sf
 #start obession with custom session file name provided via command flag -sf
 NSopt=' -c \':Obsession '
 if sf != sfdef:
-    NSopt = NSopt + sf 
+    NSopt = NSopt + sf
 else:
-    NSopt = NSopt 
+    NSopt = NSopt
 NSopt = NSopt + '\''
-if DEBUG: 
+if DEBUG:
     print('path=',os.getenv('HOME'))
     print('spath=',os.path.abspath(spath))
     print('vinfo=',vifn)
@@ -79,6 +79,14 @@ if localviminfo==True:
         print('local viminfo='+os.path.abspath(spath)+'/'+vifn)
 else:
     exop = ''
+# set ale lsp root dir for texlab
+# this way texlab works, this is a workaround
+# since texlab is not provided with a function able
+# to properly detect latex project root
+alelsp=' -c ":let g:ale_lsp_root={\'texlab\':\''+os.path.abspath(spath)+'/\'}"'
+#alelsp=''
+print('alelsproot='+alelsp)
+exop=exop+alelsp
 if os.path.exists(fpsf):
     os.chdir(spath)
     if DEBUG:
