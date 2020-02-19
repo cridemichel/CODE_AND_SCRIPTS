@@ -83,7 +83,7 @@ else:
 # this way texlab works, this is a workaround
 # since texlab is not provided with a function able
 # to properly detect latex project root
-alelsp=' -c ":let g:ale_lsp_root={\'texlab\':\''+os.path.abspath(spath)+'/\'}"'
+alelsp=' --cmd ":let g:ale_lsp_root={\'texlab\':\''+os.path.abspath(spath)+'/\'}"'
 #alelsp=''
 print('alelsproot='+alelsp)
 exop=exop+alelsp
