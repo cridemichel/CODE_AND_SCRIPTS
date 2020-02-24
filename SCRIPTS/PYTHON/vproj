@@ -25,6 +25,7 @@ vims='mvim --servername '
 sn=''
 vifn='.viminfo'
 localviminfo=True
+usevim=False
 del(args[0])
 for a in itargs:
     if a=='-s' or a == '-sn' or a  == '--servername':
@@ -37,8 +38,12 @@ for a in itargs:
         localviminfo=False
     if a == '-vifn' or a == '--viminfofilename':
         vifn=next(itargs)
+    if a =='--vim' or a=='-v':
+        usevim=True
     else:
         spath = a
+if usevim==True:
+    vims='vim --servername '
 spath=spath.strip('\n')
 if spath[-1]=='/':
     spath=spath[:-1] #strip '/'
