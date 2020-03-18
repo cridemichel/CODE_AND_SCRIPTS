@@ -12,7 +12,7 @@ i=1
 c=1
 ii=i+2
 FTXT='testo.txt'
-os.system('pdftotext ' + FPDF + ' ' + FTXT)
+os.system("pdftotext '" + FPDF + "' " + FTXT)
 with open(FTXT) as f:
     lines=f.readlines()
 #with open(NOMI) as f:
@@ -23,10 +23,15 @@ pagini=1
 listpag=[]
 cc=0
 nomi=[]
+tempwork=False
 for l in lines:
     #print ('linea=',l)
     if  l.find('VIDIMAZIONE') != -1:
         np = np+1
+    if l.find('RIEPILOGO') != -1:
+        pagfin = np-1
+        listpag.append([pagini,pagfin])
+        break
     if  l.find('AGGIUNTIVE') != -1:
         nw = nw+1
         pagfin = np-1
@@ -50,7 +55,7 @@ for l in lines:
             ccc = ccc+1
         #print('nome cognome=', nomco)
     cc=cc+1
-listpag.append([pagini,np-3])
+listpag.append([pagini,np])
 print ('# pagine=', np)
 print ('# lavoratori=', nw)
 subdir='CEDOLINI'
@@ -61,8 +66,8 @@ if not os.path.exists(subdir):
 cc=0
 for n in nomi:
     pag=listpag[cc]
-    print('pag=', pag[0], pag[1])
-    os.system('gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage='+ str(pag[0]) + ' -dLastPage='+ str(pag[1]) +' -sOUTPUTFILE=' + nomi[cc].strip('\n') + '.pdf ' + FPDF)
+    print(nomi[cc].strip('\n') + ' pagine da ' + str(pag[0]) + ' a ' + str(pag[1]))
+    os.system('gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage='+ str(pag[0]) + ' -dLastPage='+ str(pag[1]) +' -sOUTPUTFILE=' + nomi[cc].strip('\n') + '.pdf ' + "'"+FPDF+"'")
     #gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage=$i -dLastPage=$ii -sOUTPUTFILE=$NOME.pdf $FN
     os.system('mv ' + nomi[cc].strip('\n') + '.pdf ' + subdir + '/')
     cc=cc+1
