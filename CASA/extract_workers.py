@@ -38,6 +38,10 @@ for l in lines:
         ccc=0
         for sl in sublines:
             #print('subline=', sl)
+            # dopo aver trovato la string COGNOME
+            # cerca l'occorenza della string SALUS
+            # poiché nella linea successiva ci saranno
+            # nome e cognome
             if sl.find('SALUS')!=-1:
                 nomco=sublines[ccc+1]
                 nomus=nomco.replace(' ', '_')
@@ -49,14 +53,17 @@ for l in lines:
 listpag.append([pagini,np-3])
 print ('# pagine=', np)
 print ('# lavoratori=', nw)
-for n in nomi:
-    print('n=', n);
+subdir='CEDOLINI'
+if not os.path.exists(subdir):
+    os.system('mkdir '+subdir)
+#for n in nomi:
+#    print('n=', n);
 cc=0
 for n in nomi:
     pag=listpag[cc]
     print('pag=', pag[0], pag[1])
     os.system('gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage='+ str(pag[0]) + ' -dLastPage='+ str(pag[1]) +' -sOUTPUTFILE=' + nomi[cc].strip('\n') + '.pdf ' + FPDF)
     #gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage=$i -dLastPage=$ii -sOUTPUTFILE=$NOME.pdf $FN
-    os.system('mv ' + nomi[cc].strip('\n') + '.pdf SUBCEDOL/')
+    os.system('mv ' + nomi[cc].strip('\n') + '.pdf ' + subdir + '/')
     cc=cc+1
 os.system('rm ' + FTXT)
