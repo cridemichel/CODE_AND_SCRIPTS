@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 import sys,json,datetime
-from datetime import datetime
+#from datetime import datetime
 fn='compile_commands.json'
 provincia='Terni'
 Regione='Umbria'
@@ -19,7 +19,8 @@ def parse_ranges(arg):
     return sarg
 
 def data2obj(d):
-    return datetime.strptime(d,"%Y-%m-%dT%H:%M:%S")
+    subs = d.split('T')[0]
+    return datetime.datetime.strptime(subs,"%Y-%m-%d")
 def inlist(n,l):
     if n in l:
         return True
@@ -43,7 +44,7 @@ for a in itargs:
         datatype='p'
     elif a == '-r' or a == '--regioni':
         datatype='r'
-    elif a == 'n' or a == '--nazionale':
+    elif a == '-n' or a == '--nazionale':
         datatype = 'n'
     else:
         datafield = a
@@ -77,7 +78,7 @@ valarr=[]
 primo=True
 for i in range(0,len(jf)):
     if datatype == 'p':
-        provincia= jf[i]['denominazione_provincia']        
+        provincia= jf[i]['denominazione_provincia']
         if seltype=='e':
             if inlist(provincia,toexcl):
                 continue
@@ -85,7 +86,7 @@ for i in range(0,len(jf)):
             if not inlist(provincia,toincl):
                 continue
     elif datatype == 'r':
-        regione = jf[i]['denominazione_regione']        
+        regione = jf[i]['denominazione_regione']
         if seltype=='e':
             if inlist(regione,toexcl):
                 continue
@@ -97,7 +98,9 @@ for i in range(0,len(jf)):
         primo=False
     datarel = data2obj(jf[i]['data'])-dataini
     valore=jf[i][datafield]
-    giorno = int(datarel.days)
+    giorno = datarel.days
+    #giorno = int(numpy.rint((datarel.seconds)/(60*24)))
+    #print('seconds=', datarel.seconds, ' giorni=', datarel.days)
     if giorno > len(valarr)-1:
         valarr.append(valore)
     else:
