@@ -20,18 +20,25 @@ def parse_ranges(arg):
 
 def data2obj(d):
     return datetime.strptime(d,"%Y-%m-%dT%H:%M:%S")
-
+def inlist(n,l):
+    if n in l:
+        return True
+    else:
+        return False
 if len(args)==1:
     print_error()
     quit()
 itargs=iter(args)
 toexcl=[]
+toincl=[]
 for a in itargs:
     if a == '--help' or a  == '-h':
         print_error()
         quit()
-    elif a == '-kill' or a == '-k':
-        toexcl=parse_ranges(next(itargs))
+    elif a == '-i' or a == '--include':
+        toincl = parse_ranges(next(itargs))
+    elif a == '-e' or a == '--exclude':
+        toexcl = parse_ranges(next(itargs))
     elif a == '-p' or a == '--province':
         datatype='p'
     elif a == '-r' or a == '--regioni':
@@ -40,6 +47,15 @@ for a in itargs:
         datatype = 'n'
     else:
         datafield = a
+if len(toexcl) > 0 and len(toincl) > 0:
+    print('You can use either exclude or include option')
+    quit()
+if len(toexcl) > 0:
+    seltype='e'
+elif len(toincl) > 0:
+    seltype='i'
+else:
+    seltype='a' #all
 fn = 'dpc-covid19-ita-'
 if datatype == 'p':
     fn = fn + 'province'
@@ -58,9 +74,27 @@ valarr=[int]
 #for i in range(0,100):
 #    valarr.append(0)
 valarr=[]
+primo=True
 for i in range(0,len(jf)):
-    if i==0:
-        dataini = data2obj(jf[i]['data'])
+    if datatype == 'p':
+        provincia= jf[i]['denominazione_provincia']        
+        if seltype=='e':
+            if inlist(provincia,toexcl):
+                continue
+        elif seltype=='i':
+            if not inlist(provincia,toincl):
+                continue
+    elif datatype == 'r':
+        regione = jf[i]['denominazione_regione']        
+        if seltype=='e':
+            if inlist(regione,toexcl):
+                continue
+        elif seltype=='i':
+            if not inlist(regione,toincl):
+                continue
+    if primo==True:
+        dataini=data2obj(jf[i]['data'])
+        primo=False
     datarel = data2obj(jf[i]['data'])-dataini
     valore=jf[i][datafield]
     giorno = int(datarel.days)
