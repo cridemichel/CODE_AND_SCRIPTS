@@ -2,9 +2,13 @@
 import sys,json,datetime
 #from datetime import datetime
 fn='compile_commands.json'
+#defaults
 provincia='Terni'
 Regione='Umbria'
+datatype='n'
 args=sys.argv
+
+#helper functions
 def print_error():
     print('syntax: extract_data.py [--exclude|-e <province o regioni da escludere separate da virgola>|-r|--regioni')
     print('|-p|--province|-n|--nazionale] <campo (deceduti,terapia_intensiva,totale_casi,...)>')
@@ -21,11 +25,14 @@ def parse_ranges(arg):
 def data2obj(d):
     subs = d.split('T')[0]
     return datetime.datetime.strptime(subs,"%Y-%m-%d")
+
 def inlist(n,l):
     if n in l:
         return True
     else:
         return False
+
+#args parsing
 if len(args)==1:
     print_error()
     quit()
@@ -48,6 +55,7 @@ for a in itargs:
         datatype = 'n'
     else:
         datafield = a
+
 if len(toexcl) > 0 and len(toincl) > 0:
     print('You can use either exclude or include option')
     quit()
@@ -57,6 +65,8 @@ elif len(toincl) > 0:
     seltype='i'
 else:
     seltype='a' #all
+
+#build filename with datasets
 fn = 'dpc-covid19-ita-'
 if datatype == 'p':
     fn = fn + 'province'
@@ -67,13 +77,15 @@ elif datatype == 'n':
 else:
     print_error()
     quit()
+
+#read json file (it will be stored in a python dictionary)
 fn = fn + '.json'
 with open(fn) as f:
+    # jf è una lista di dizionari
     jf=json.load(f)
-# jf è una lista di dizionari
+
+#extract data according to selected field
 valarr=[int]
-#for i in range(0,100):
-#    valarr.append(0)
 valarr=[]
 primo=True
 for i in range(0,len(jf)):
@@ -105,6 +117,8 @@ for i in range(0,len(jf)):
         valarr.append(valore)
     else:
         valarr[giorno] += valore
+
+#print out cumlative data
 g = 0
 gmax = len(valarr)
 print('{',end='')
