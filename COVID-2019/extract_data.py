@@ -8,7 +8,7 @@ args=sys.argv
 def print_error():
     print('syntax: extract_data.py [--exclude|-e <province o regioni da escludere separate da virgola>|-r|--regioni')
     print('|-p|--province|-n|--nazionale] <campo (deceduti,terapia_intensiva,totale_casi,...)>')
-    print('r=regiorni, p=province, n=nazionale')
+    print('nota: per i possibili campi vedere i file json')
 
 def parse_ranges(arg):
     sarg=[]
