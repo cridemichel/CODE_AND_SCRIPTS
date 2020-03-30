@@ -30,12 +30,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 91 - ((0 * winheight(0) + 10) / 21)
+let s:l = 17 - ((16 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-91
-normal! 013|
+17
+normal! 0
 tabnext 1
 badd +0 extract_data.py
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0
