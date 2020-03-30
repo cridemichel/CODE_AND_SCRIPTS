@@ -1,7 +1,5 @@
 #!/usr/local/bin/python3
 import sys,json,datetime
-#from datetime import datetime
-fn='compile_commands.json'
 #defaults
 provincia='Terni'
 Regione='Umbria'
