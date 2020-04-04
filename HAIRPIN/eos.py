@@ -3,7 +3,7 @@ import sys,os
 import numpy as np
 filen='_lista_dir_'
 from operator import itemgetter
-os.system('ls -d P_* > ' + filen)
+os.system('ls -d P_*[^a-z] > ' + filen)
 vol=72.3823
 with open(filen) as f:
     lines=f.readlines()
