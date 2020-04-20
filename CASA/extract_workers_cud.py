@@ -46,7 +46,7 @@ for l in lines:
         #print('nome cognome=', nomco)
     cc=cc+1
 print ('# pagine=', np)
-print ('# lavoratori=', nw)
+print ('# lavoratori=', nw-1)
 subdir='CUD'
 if not os.path.exists(subdir):
     os.system('mkdir '+subdir)
