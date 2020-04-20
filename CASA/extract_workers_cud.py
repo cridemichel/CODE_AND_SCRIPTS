@@ -18,7 +18,7 @@ with open(FTXT) as f:
 #with open(NOMI) as f:
 #    nomi=f.readlines()
 np=0 #numero pagine 
-nw=0 #numero lavoratori
+nw=1 #numero lavoratori
 pagini=1
 listpag=[]
 cc=0
@@ -26,13 +26,19 @@ nomi=[]
 tempwork=False
 for l in lines:
     if  l.find('Pag.')!=-1:
+        sl = l.strip('\n').split()
         np = np + 1
-        if l.find('1/4')!= -1:
+        pa=sl[4].split('/')
+        numpag = int(pa[0])
+        pagtot = int(pa[1])
+        print('np=',np)
+        if numpag==1:
             pagini = np
-        if l.find('3/4')!= -1:
+        if numpag==pagtot:
             pagfin = np
-        if nw > 1:
-            listpag.append([pagini,pagfin])
+            print('pagini=', pagini, ' pagfin=', pagfin)
+            if nw > 1:
+                listpag.append([pagini,pagfin])
     if l.find('PENSIONATO') != -1:
         nw = nw + 1
         sublines = l.split()
@@ -45,7 +51,7 @@ subdir='CUD'
 if not os.path.exists(subdir):
     os.system('mkdir '+subdir)
 #for n in nomi:
-#    print('n=', n);
+#    print('n=', n)
 cc=0
 for n in nomi:
     pag=listpag[cc]
