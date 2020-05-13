@@ -149,7 +149,7 @@ int main(int argc, char **argv)
 #endif
     }
 #endif
-  fprintf(f, "parnum: %d\n", parnum);
+  fprintf(f,"parnum: %d\n", parnum);
   fprintf(f,"ninters: 2\n");
   fprintf(f,"nintersIJ: 0\n");
   fprintf(f,"ntypes: 1\n");
