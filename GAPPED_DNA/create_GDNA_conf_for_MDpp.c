@@ -150,7 +150,6 @@ int main(int argc, char **argv)
     }
 #endif
   fprintf(f,"%d ", parnum);
-  fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
   nx=ny=nz=0;
   full=0;
   ibeg = 0;
@@ -264,6 +263,8 @@ int main(int argc, char **argv)
   //  if (full)
   //   exit(-1);
 #if 1
+
+  fprintf(f, "%.15G %.15G %.15G\n", L[0], L[1], L[2]);
   for (i=0; i < numpoly; i++)
     {
       for (j=0; j < polylen; j++)
