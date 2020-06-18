@@ -237,7 +237,7 @@ int main(int argc, char** argv)
       if (first)
 	{
 	  /* legge L */
-          fscanf("%d %lf %lf %lf\n", &N, &L[0], &L[1], &L[2]);
+          fscanf(f, "%d %lf %lf %lf\n", &N, &(L[0]), &(L[1]), &(L[2]));
 	  Nptseff=generate_mesh(Npts, sax);
 	  printf("===>N=%d Npts=%d\n", N, Npts);
 	  for (k1=0; k1 < 3; k1++)
