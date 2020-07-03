@@ -299,7 +299,7 @@ int main(int argc, char **argv)
       rz[i] -= L[2]*0.5;
       //printf("qui i=%d\n", i);
       //orient=(i%2==0)?1.0:-1.0;
-      fprintf(f, "%f %f %f %f %f %f %f %f %f %f %f %f 0\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i]);
+      fprintf(f, "%.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G 0\n", rx[i], ry[i], rz[i], Ri[0][0][i], Ri[0][1][i], Ri[0][2][i], Ri[1][0][i], Ri[1][1][i], Ri[1][2][i], Ri[2][0][i], Ri[2][1][i], Ri[2][2][i]);
       //fprintf(f, "%f %f %f  0\n", rx[i], ry[i], rz[i]);
       //printf("qui2\n");
     }

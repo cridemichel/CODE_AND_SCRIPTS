@@ -28,7 +28,7 @@ Lx=ll.strip('\n').split(' ')[0]
 Ly=ll.strip('\n').split(' ')[1]
 Lz=ll.strip('\n').split(' ')[2]
 nend=len(lines)-2
-print(N, ' ', Lx, ' ', Ly, ' ', Lz, ' 1 16.24 8 1 1 0')
+print(N, ' ', Lx, ' ', Ly, ' ', Lz, ' 1 16.24 8 1.2 1.2 0')
 print('0.5 1')
 #print('nbeg=',nbeg, ' nend=', nend)
 for l in lines[nbeg:nend+1]:

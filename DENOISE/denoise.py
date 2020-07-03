@@ -25,7 +25,7 @@ def print_error():
     print('syntax: extract_data.py [--compression|-c <0-51 0=lossless>')
     print(' -s|--speed <ultrafast|superfast|veryfast|faster|fast|medium|slow|slower|veryslow|placebo >')
     print(' -tune  <film|animation|grain|stillimage|fastdecode|zerolatency|psnr|ssim>')
-    print(' -co|--codec <x264|x265> --filter|-f <hqdn|ata|nlm|vag>] <input_file> <output_file default=out.mkv>')
+    print(' -co|--codec <x264|x265> --filter|-f <hqdn|ata|nlm|vag|bm3d>] <input_file> <output_file default=out.mkv>')
 
 args = sys.argv
 #print(args)
@@ -57,12 +57,13 @@ for a in itargs:
         print('a=', a)
         infile = a
         outfile= next(itargs)
-hqdn3dpars='=4.0:3.0:6.0:4.5' # found this values in a thread of a video forum, they work well
-#hqdn3dpars='' # default values
+#hqdn3dpars='=4.0:3.0:6.0:4.5' # this values are the default ones
+hqdn3dpars='' # default values
 
-#use hqdn or ata which are faster
+#use hqdn (this should be the best one!) or ata which are faster
 #vaguedenoiser is good bu slower
-#nlmeans is way too slow...
+#nlmeans and bm3d are way too slow...
+# for further details see https://ffmpeg.org/ffmpeg-filters.html#commands
 if nfilter == 'hqdn':
     denstr='hqdn3d'+hqdn3dpars
 elif nfilter == 'ata':
@@ -71,6 +72,8 @@ elif nfilter == 'nlm':
     denstr = 'nlmeans' # slow but very good
 elif nfilter == 'vag':
     denstr = 'vaguedenoiser'
+elif nfilter == 'bm':
+    denstr = 'bm3d'
 else:
     denstr='hqdn3d'+hqdn3dpars
 
