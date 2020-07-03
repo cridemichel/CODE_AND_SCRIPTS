@@ -25,7 +25,7 @@ def print_error():
     print('syntax: extract_data.py [--compression|-c <0-51 0=lossless>')
     print(' -s|--speed <ultrafast|superfast|veryfast|faster|fast|medium|slow|slower|veryslow|placebo >')
     print(' -tune  <film|animation|grain|stillimage|fastdecode|zerolatency|psnr|ssim>')
-    print(' -co|--codec <x264|x265> --filter|-f <hqdn|ata|nlm|vag|bm3d> --deflicker|-d] <input_file> <output_file default=out.mkv>')
+    print(' -co|--codec <x264|x265> --filter|-f <hqdn|ata|nlm|vag|bm|dct|owd> --deflicker|-d] <input_file> <output_file default=out.mkv>')
 
 args = sys.argv
 #print(args)
@@ -60,13 +60,21 @@ for a in itargs:
         print('a=', a)
         infile = a
         outfile= next(itargs)
+#hqdn3dpars='=6.0:4.5:9.0:6.75' # this values are the default ones
 #hqdn3dpars='=4.0:3.0:6.0:4.5' # this values are the default ones
 hqdn3dpars='' # default values
 
 #use hqdn (this should be the best one!) or ata which are faster
 #vaguedenoiser is good bu slower
 #nlmeans and bm3d are way too slow...
+#
 # for further details see https://ffmpeg.org/ffmpeg-filters.html#commands
+#  atadenoise (20 fps) - by averaging pixels across frames, it reduces contrast of noise areas to make them less obvious as opposed to using a specialized algorithm to smooth the noise away; this reduces overall image contrast; filter also darkens the overall output
+#  dctdnoiz (1.6 fps) - creates beautiful detail on a still image, but randomizes the noise across frames so much that it actually makes the noise look worse during playback, plus it darkens the output
+#  nlmeans (0.6 fps) - darkens the output, but sometimes has redeeming qualities (more on this later)
+#  hqdn3d (21 fps) - color neutral which is good, but the output looks smeary to me where it loses a lot of fine detail in hair strands and wood grain
+#  owdenoise (0.3 fps) - color neutral wavelet denoiser with stunningly good results on high-res sources
+#  vaguedenoiser (7.6 fps) - another color neutral wavelet denoiser whose output looks identical to owdenoise, but its processing speed is 25x faster; tried every combination of threshold and nsteps, and found the default settings of 2/6 to consistently produce the closest-to-real-life results
 if nfilter == 'hqdn':
     denstr='hqdn3d'+hqdn3dpars
 elif nfilter == 'ata':
@@ -77,6 +85,10 @@ elif nfilter == 'vag':
     denstr = 'vaguedenoiser'
 elif nfilter == 'bm':
     denstr = 'bm3d'
+elif nfilter == 'owd':
+    denstr='owdenoise'
+elif nfilter == 'dct':
+    denstr = dctdnoiz'
 else:
     denstr='hqdn3d'+hqdn3dpars
 
