@@ -25,7 +25,7 @@ def print_error():
     print('syntax: extract_data.py [--compression|-c <0-51 0=lossless>')
     print(' -s|--speed <ultrafast|superfast|veryfast|faster|fast|medium|slow|slower|veryslow|placebo >')
     print(' -tune  <film|animation|grain|stillimage|fastdecode|zerolatency|psnr|ssim>')
-    print(' -co|--codec <x264|x265> --filter|-f <hqdn|ata|nlm|vag|bm3d>] <input_file> <output_file default=out.mkv>')
+    print(' -co|--codec <x264|x265> --filter|-f <hqdn|ata|nlm|vag|bm3d> --deflicker|-d] <input_file> <output_file default=out.mkv>')
 
 args = sys.argv
 #print(args)
@@ -39,6 +39,7 @@ outfile= 'out.mkv'
 nfilter = 'hqdn3d'
 speed = 'medium'
 codec= 'x264'
+defl=False
 compress='26' #default is 23 ma this way file has a size equal to original nikon MOV
 del(args[0])
 for a in itargs:
@@ -53,6 +54,8 @@ for a in itargs:
         codec=next(itargs)
     elif a == '-f' or a == '--filter':
         nfilter = next(itargs)
+    elif a == '-d' or a == '--deflicker':
+        defl = True
     else:
         print('a=', a)
         infile = a
@@ -83,7 +86,10 @@ elif compress=='x265':
     codstr='libx265'
 else:
     codstr='libx264'
-exestr=prog + ' -i ' + infile + ' -c:v ' + codstr + ' -c:a copy' + ' -crf ' + compress + ' -preset ' + speed + ' -filter:v ' + denstr+ ' ' + outfile
+exestr=prog + ' -i ' + infile + ' -c:v ' + codstr + ' -c:a copy' + ' -crf ' + compress + ' -preset ' + speed + ' -filter:v ' + denstr
+if defl==True:
+    exestr = exestr + ' -filter:v deflicker'
+exestr = exestr + ' ' + outfile
 print(exestr)
 os.system(exestr)
 #ffmpeg -i infile -c:v libx264 -c:a copy -crf 0 -preset ultrafast -filter:v hqdn3d=4.0:3.0:6.0:4.5 $2
