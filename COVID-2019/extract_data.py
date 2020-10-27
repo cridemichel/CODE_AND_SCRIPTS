@@ -8,8 +8,8 @@ args=sys.argv
 
 #helper functions
 def print_error():
-    print('syntax: extract_data.py [--exclude|-e <province o regioni da escludere separate da virgola>|-r|--regioni')
-    print('|-p|--province|-n|--nazionale] <campo (deceduti,terapia_intensiva,totale_casi,...)>')
+    print('syntax: extract_data.py [--start|-s <giorno> ] [--exclude|-e <province o regioni da escludere separate da virgola>|-r|--regioni')
+    print('|-p|--province|-n|--nazionale] [--relative|-rel] <campo (deceduti,terapia_intensiva,totale_casi,...)>')
     print('nota: per i possibili campi vedere i file json')
 
 def parse_ranges(arg):
@@ -37,6 +37,8 @@ if len(args)==1:
 itargs=iter(args)
 toexcl=[]
 toincl=[]
+firstday=0
+printrel=False
 for a in itargs:
     if a == '--help' or a  == '-h':
         print_error()
@@ -51,6 +53,10 @@ for a in itargs:
         datatype='r'
     elif a == '-n' or a == '--nazionale':
         datatype = 'n'
+    elif a == '-s' or  a == '--start':
+        firstday = int(next(itargs))
+    elif a == '-rel' or a== '--relative':
+        printrel=True
     else:
         datafield = a
 
@@ -121,7 +127,14 @@ g = 0
 gmax = len(valarr)
 print('{',end='')
 for v in valarr:
-    print ('{',g, ',', valarr[g],'}',end='')
+    if g < firstday:
+        g+=1
+        continue
+    if printrel:
+        va = valarr[g] - valarr[firstday]
+    else:
+        va = valarr[g]
+    print ('{',g-firstday, ',', va,'}',end='')
     if g < gmax-1:
         print(',',end='')
     g=g+1
