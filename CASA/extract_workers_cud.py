@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/local/bin/python3.8
 import os, sys
 arg=sys.argv
 if len(arg) < 2:

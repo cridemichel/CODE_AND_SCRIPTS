@@ -1,5 +1,5 @@
-#!/usr/local/bin/python3
-import sys,json,datetime,os
+#!/usr/local/bin/python3.8
+import sys,os
 # -crf sets the compression 0=lossless 51=max 23=default (see https://trac.ffmpeg.org/wiki/Encode/H.264)
 #
 # hqdn3d is the denoise filter but there are many others, see 
