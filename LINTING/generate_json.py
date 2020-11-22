@@ -25,8 +25,12 @@ for a in itargs:
 os.system('intercept-build make '+targ)
 if use_compdb:
     # add header files to compile_commands.json
+    # compdb read a compile_commands.json file and add entries
+    # for all the headers in the project recursively!
     os.system('compdb list > _compile_commands.json_')
     os.system('mv _compile_commands.json_ compile_commands.json')
+    # compdb generates only "command" entries but not "arguments" entries 
+    # in the following we add them for all files
     with open(fn) as f:
         jf=json.load(f)
     for i in range(0,len(jf)):
