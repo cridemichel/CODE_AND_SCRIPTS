@@ -291,6 +291,10 @@ int main(int argc, char** argv)
       //printf("L=%.15G\n", L);
       /* -------- */
       fscanf(f, "%d %lf %lf %lf\n", &N, &(L[0]), &(L[1]), &(L[2]));
+      invL[0] = 1.0/L[0];
+      invL[1] = 1.0/L[1];
+      invL[2] = 1.0/L[2];
+
       if (first)
 	{
 	  for (a = 0; a < 3; a++)

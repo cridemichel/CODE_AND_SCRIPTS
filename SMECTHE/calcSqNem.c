@@ -7,7 +7,7 @@
 char line[1000000], parname[124], parval[2560000];
 int N, NA=-1;
 double L[3], invL[3];
-double x[3], *r[3], nemthr=0.1;
+double x[3], *r[3], nemthr=0.2;
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
 #define KMODMAX 599
@@ -208,44 +208,43 @@ int main(int argc, char** argv)
 	NA = N;
       //NA = N;//force monodisperse
       scalFact = twopi;
-      if (first)
-	{
-	  if (physunit || qminpu != -1.0 || qmaxpu != -1.0)
-	    {
-	      for (qmod = 0; qmod < KMODMAX; qmod++)
-		{
-		  qavg[qmod] = 0;
-		  for (mp = 0; mp < ntripl[qmod]; mp++) 
-		    {
-     		      qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
-					 Sqr(((double)mesh[qmod][mp][1]))+
-					 Sqr(((double)mesh[qmod][mp][2])));
-		    }
+      if (physunit || qminpu != -1.0 || qmaxpu != -1.0)
+        {
+          for (qmod = 0; qmod < KMODMAX; qmod++)
+            {
+              qavg[qmod] = 0;
+              for (mp = 0; mp < ntripl[qmod]; mp++) 
+                {
+                  qavg[qmod] += sqrt(Sqr(invL[0]*((double)mesh[qmod][mp][0]))+
+                                     Sqr(invL[1]*((double)mesh[qmod][mp][1]))+
+                                     Sqr(invL[2]*((double)mesh[qmod][mp][2])));
+                }
 
-		  qavg[qmod] *= scalFact/((double)ntripl[qmod]);
-		  //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
-		}
-	      if (qminpu != -1.0 && qminpu == qmaxpu)
-		{
-		  qmin = rint((qminpu-1.0) / (scalFact/2.0));
-		  qmax = qmin;
-		}
-	      else 
-		{
-		  if (qminpu != -1.0 && qminpu >= 0.0)
-		    qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
-		  if (qmaxpu != -1.0 && qmaxpu > 0.0)
-		    qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
-		}
-	      if (qmin < 0)
-		qmin = 0;
-	      if (qmin >= KMODMAX)
-		qmax = KMODMAX-1; 
-	      if (qmax >= KMODMAX)
-		qmax = KMODMAX-1;
-	      if (qmax < 0)
-		qmax = 0;
-	    }
+              qavg[qmod] *= scalFact/((double)ntripl[qmod]);
+              //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
+            }
+
+          if (qminpu != -1.0 && qminpu == qmaxpu)
+            {
+              qmin = rint((qminpu-1.0) / (scalFact/2.0));
+              qmax = qmin;
+            }
+          else 
+            {
+              if (qminpu != -1.0 && qminpu >= 0.0)
+                qmin = ceil( qminpu / (scalFact/2.0) - 2.0);
+              if (qmaxpu != -1.0 && qmaxpu > 0.0)
+                qmax = floor( qmaxpu / (scalFact/2.0) - 2.0);
+            }
+          if (qmin < 0)
+            qmin = 0;
+          if (qmin >= KMODMAX)
+            qmax = KMODMAX-1; 
+          if (qmax >= KMODMAX)
+            qmax = KMODMAX-1;
+          if (qmax < 0)
+            qmax = 0;
+        }
 	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
@@ -257,7 +256,6 @@ int main(int argc, char** argv)
 		}
 	    }
 	  //first = 0;
-	}
       invNm = 1.0 / ((double)N);
       if (NA < N)
 	{
@@ -319,7 +317,7 @@ int main(int argc, char** argv)
 		      sumRhoPerp += Sqr(reRho) + Sqr(imRho);
 		      ccperp[n]++;
 		    }
-		  else if (1.0-scalprodnvq < nemthr)
+		  else if (fabs(1.0-scalprodnvq) < nemthr)
 		    {
 		      sumRhoPara += Sqr(reRho) + Sqr(imRho);
 		      ccpara[n]++;
@@ -396,6 +394,8 @@ int main(int argc, char** argv)
   of = fopen("SqPerp.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
+      if (ccperp[qmod]==0)
+        continue;
       SqPerp[qmod] = (SqPerp[qmod]  * invNm) / ccperp[qmod] /((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
@@ -407,7 +407,9 @@ int main(int argc, char** argv)
   of = fopen("SqPara.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      SqPara[qmod] = (SqPara[qmod]  * invNm) / ccpara[qmod] /((double)nf);  
+      if (ccpara[qmod]==0)
+        continue;
+       SqPara[qmod] = (SqPara[qmod]  * invNm) / ccpara[qmod] /((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqPara[qmod]); 
