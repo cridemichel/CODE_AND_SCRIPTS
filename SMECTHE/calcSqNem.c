@@ -4,60 +4,27 @@
 #include <string.h>
 //#include <lapack.h>
 #define Sqr(x) ((x)*(x))
-char line[10000000], parname[1240], parval[25600000];
-int N, NA=-1, Npts=100, Nptseff;
-double x[3], *r[3], sax[3], *R[3][3];
+char line[1000000], parname[124], parval[2560000];
+int N, NA=-1;
+double L[3], invL[3];
+double x[3], *r[3], nemthr=0.1;
 char fname[1024], inputfile[1024];
 int readCnf = 0, physunit=0;
 #define KMODMAX 599
 #define NKSHELL 150
 double qx[KMODMAX][NKSHELL], qy[KMODMAX][NKSHELL], qz[KMODMAX][NKSHELL];
-double qavg[KMODMAX];
-int ntripleff[KMODMAX]={0};
+int nonem=0;
+double qavg[KMODMAX], nv[3], scalprodnvq, meshvec[3];
 int qmin=0, qmax=KMODMAX-1, eventDriven = 0;
 double qminpu=-1.0, qmaxpu=-1.0;
 int ntripl[]=
 #include "./ntripl.dat"
 int mesh[][NKSHELL][3]= 
 #include "./kmesh.dat"
-double twopi;
-double SqFF[KMODMAX], Sq[KMODMAX], sumRhoFF, sumRho, reRho, reRhoFF, imRho, imRhoFF, rCMk, rCMkFF, scalFact, 
-       invNm, invL[3], L[3], invNmAA, invNmBB, invNmAB;
+double twopi, sinrCMk, cosrCMk;
+double Sq[KMODMAX], SqPara[KMODMAX], SqPerp[KMODMAX], ccperp[KMODMAX], ccpara[KMODMAX],
+       sumRho, reRho, sumRhoPara, sumRhoPerp, imRho, rCMk, scalFact, invNm, invNmAA, invNmBB, invNmAB;
 double SqAA[KMODMAX], SqBB[KMODMAX], SqAB[KMODMAX], sumRhoAA, sumRhoAB, sumRhoBB, reRhoA, reRhoB, imRhoA, imRhoB;
-int qdirfixed = 0;
-double qval[3] = {0,1,0};
-double scalProd(double *v1, double *v2)
-{
-  double sp=0.0;
-  int i;
-  for (i=0; i < 3; i++)
-    sp += v1[i]*v2[i];
-  return sp;
-}
-double calcNorm(double *v)
-{
-  double n=0.0;
-  int i;
-  for (i=0; i < 3; i++)
-    n+=v[i]*v[i];
-  return sqrt(n);
-}
-int checkParall(double *v1, int *v2i)
-{
-  double n1, n2;
-  int i;
-  double v2[3];
-  for (i=0; i < 3; i++)
-    {
-      v2[i] = (double)v2i[i];
-    }
-  n1 = calcNorm(v1);
-  n2 = calcNorm(v2);
-  if (fabs(scalProd(v1, v2)/n1/n2 - 1.0) < 1E-8)
-    return 1;
-  else 
-    return 0;
-}
 void print_usage(void)
 {
   printf("calcSq [ --qminpu/-qpum | --qmaxpu/-qpuM | --qmin/-qm <qmin> | --qmax/qM <qmax> |--help/-h | --cnf/-c | --phys-unit/-pu] <confs_file> [qmin] [qmax]\n");
@@ -98,13 +65,6 @@ void parse_param(int argc, char** argv)
 	    print_usage();
 	  qmax = atoi(argv[cc]);
 	}
-      else if (!strcmp(argv[cc],"--Npts") || !strcmp(argv[cc],"-Np"))
-	{
-	  cc++;
-	  if (cc == argc)
-	    print_usage();
-	  Npts = atoi(argv[cc]);
-	}
       else if (!strcmp(argv[cc],"--qpumin") || !strcmp(argv[cc],"-qpum"))
 	{
 	  cc++;
@@ -118,6 +78,20 @@ void parse_param(int argc, char** argv)
 	  if (cc == argc)
 	    print_usage();
 	  qmaxpu = atof(argv[cc]);
+	}
+      else if (!strcmp(argv[cc],"--nemvector")||!strcmp(argv[cc],"-nv"))
+	{
+	  cc++;
+	  if (cc==argc)
+	    print_usage();
+	  sscanf(argv[cc],"(%lf,%lf,%lf)", &(nv[0]), &(nv[1]), &(nv[2]));
+	}
+      else if (!strcmp(argv[cc],"--nemthr") || !strcmp(argv[cc],"-nt"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  nemthr = atof(argv[cc]);
 	}
       else if (cc == argc || extraparam == 3)
 	print_usage();
@@ -145,92 +119,32 @@ void parse_param(int argc, char** argv)
 }
 double twopi;
 char dummy[2048];
-double *rmesh[3];
-
-int generate_mesh(int N, double sax[3])
+double scalProd(double A[], double B[])
 {
-  int cc, k1, k2, k3, fine=0;
-  double dx, dy, dz, rx, ry, rz;
-  double dens, pi;
-
-  pi = 2.0*acos(0.0);
-  for (k1=0; k1 < 3; k1++)
-    rmesh[k1]=malloc(sizeof(double)*N); 
-  dens = N / (sax[0]*sax[1]*sax[2]*4.0*pi/3.0);
-  dx=dy=dz=pow((sax[0]*sax[1]*sax[2]*4.0*pi/3.0)/N,1.0/3.0);
-  cc=0;
-  printf("vol=%f dx=%f sax=%f %f %f N=%d\n",sax[0]*sax[1]*sax[2]*4.0*pi/3.0, dx, sax[0], sax[1], sax[2], N);
-  rx = -sax[0];
-  ry = -sax[1];
-  rz = -sax[2];
-  while (!fine)
-    {
-      if (N==1)
-	{
-	  rmesh[0][0]=rmesh[1][0]=rmesh[2][0] =0.0;
-	  fine=1;
-	  cc=1;
-	  break;
-	}
-      if (Sqr(rx/sax[0]) + Sqr(ry/sax[1]) + Sqr(rz/sax[2]) <= 1.0)
-	{
-	  printf("assigned cc=%d r=%f %f %f\n", cc, rx, ry, rz);
-	  rmesh[0][cc] = rx;
-	  rmesh[1][cc] = ry;
-	  rmesh[2][cc] = rz;
-	  cc++;
-	}
-      if (cc >= N) 
-	{
-	  printf("OK all points set!\n");
-	  fine=1;
-	  break;
-	}
-      rx += dx;
-      if (rx > sax[0])
-	{
-	  rx = -sax[0];
-	  ry += dy;
-	  if (ry > sax[1])
-	    {
-	      ry = -sax[1];
-	      rz += dz;
-	      if (rz > sax[2])
-		fine=1;
-	    }
-	}
-    }
-  printf("Assigned # %d points out of %d\n", cc, N);
-  return cc; 
+  int kk;
+  double R=0.0;
+  for (kk=0; kk < 3; kk++)
+    R += A[kk]*B[kk];
+  return R;
 }
-double **rmeshLab[3];
-void body2lab(int N, int Npts)
+double calc_norm(double vec[3])
 {
-  int k1, k2, a;
-  int i;
-
-  for (i=0; i < N; i++)
-    {
-      for (a = 0; a < Npts; a++)
-	{
-	  for (k1=0; k1 < 3; k1++)
-	    {
-	      rmeshLab[k1][i][a] = 0;
-	      for (k2=0; k2 < 3; k2++)
-	     	{
-		  rmeshLab[k1][i][a] += R[k2][k1][i]*rmesh[k2][a];
-		} 
-	      rmeshLab[k1][i][a] += r[k1][i];
-	    }
-	}
-    }
+  int k1;
+  double norm=0.0;
+  for (k1 = 0; k1 < 3; k1++)
+    norm += Sqr(vec[k1]);
+  return sqrt(norm);
 }
+
 int main(int argc, char** argv)
 {
   FILE *f, *f2, *of;
-  int nf, i, a, b, n, mp, cc=0, type, k1, k2, ccq;
+  int nf, i, a, b, n, mp, k1;
   double ti, tref=0.0, kbeg=0.0, Vol, a1, a2, a3, a4;
-  int qmod, first = 1, NP1, NP2, nt;
+  int qmod, first = 1, NP1, NP2;
+  nv[0] = 1.0;
+  nv[1] = 0.0;
+  nv[2] = 0.0;
 #if 0
   if (argc == 1)
     {
@@ -255,9 +169,6 @@ int main(int argc, char** argv)
       printf("ERROR: qmin must be less than qmax\n");
       exit(-1);
     }
-  sax[0] = 1.4;
-  sax[1] = 0.5;
-  sax[2] = 0.5;
   while (!feof(f2))
     {
       fscanf(f2, "%[^\n]\n", fname);
@@ -269,28 +180,11 @@ int main(int argc, char** argv)
 	}
       nf++;
       tref=0.0;
-      if (first)
-	{
-	  /* legge L */
-          fscanf(f, "%d %lf %lf %lf\n", &N, &(L[0]), &(L[1]), &(L[2]));
-	  Nptseff=generate_mesh(Npts, sax);
-	  printf("===>N=%d Npts=%d\n", N, Npts);
-	  for (k1=0; k1 < 3; k1++)
-	    { 
-	      rmeshLab[k1]=malloc(sizeof(double*)*N); 
-	      for (k2=0; k2 < 3; k2++)
-		R[k1][k2] = malloc(sizeof(double)*N);
-	      for (k2 = 0; k2 < N; k2++)
-		rmeshLab[k1][k2]=malloc(sizeof(double)*Npts); 
-	    }
-          invL[0] = 1.0/L[0];
-          invL[1] = 1.0/L[1];
-          invL[2] = 1.0/L[2];
-	  rewind(f);
-	}
-      //printf("L=%.15G\n", L);
-      /* -------- */
       fscanf(f, "%d %lf %lf %lf\n", &N, &(L[0]), &(L[1]), &(L[2]));
+      invL[0] = 1.0/L[0];
+      invL[1] = 1.0/L[1];
+      invL[2] = 1.0/L[2];
+
       if (first)
 	{
 	  for (a = 0; a < 3; a++)
@@ -303,13 +197,13 @@ int main(int argc, char** argv)
 	{
 	   fscanf(f, "%[^\n]\n", line); 
 	   //printf("line=%s\n", line);
-       	   sscanf(line, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i], 
-		  &R[0][0][i], &R[0][1][i], &R[0][2][i], 
-		  &R[1][0][i], &R[1][1][i], &R[1][2][i], 
-		  &R[2][0][i], &R[2][1][i], &R[2][2][i]); 
+	   if (!(sscanf(line, "%lf %lf %lf\n", &r[0][i], &r[1][i], &r[2][i])==3))
+	     {
+	       //printf("boh\n");
+	       sscanf(line, "%lf %lf %lf %[^\n]\n", &r[0][i], &r[1][i], &r[2][i], dummy); 
+	     }
 	   //printf("r=(%.15G,%.15G,%.15G)\n", r[0][i], r[1][i], r[2][i]);
 	}
-      body2lab(N, Nptseff);
       if (NA == -1)
 	NA = N;
       //NA = N;//force monodisperse
@@ -320,22 +214,15 @@ int main(int argc, char** argv)
 	    {
 	      for (qmod = 0; qmod < KMODMAX; qmod++)
 		{
-                  qavg[qmod] = 0;
-                  nt = 0;
+		  qavg[qmod] = 0;
 		  for (mp = 0; mp < ntripl[qmod]; mp++) 
 		    {
-                      if (qdirfixed)
-                        {
-                          if (!checkParall(qval,mesh[qmod][mp]))
-                            continue;
-                        }
-
-                      qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
-                                         Sqr(((double)mesh[qmod][mp][1]))+
+     		      qavg[qmod] += sqrt(Sqr(((double)mesh[qmod][mp][0]))+
+					 Sqr(((double)mesh[qmod][mp][1]))+
 					 Sqr(((double)mesh[qmod][mp][2])));
-                      nt++;
 		    }
-		  qavg[qmod] *= scalFact/((double)nt);
+
+		  qavg[qmod] *= scalFact/((double)ntripl[qmod]);
 		  //printf("qavg[%d]:%.15G - %.15G\n", qmod, qavg[qmod], scalFact*(1.25+0.5*qmod));
 		}
 	      if (qminpu != -1.0 && qminpu == qmaxpu)
@@ -359,11 +246,11 @@ int main(int argc, char** argv)
 	      if (qmax < 0)
 		qmax = 0;
 	    }
-	  printf("sax= %f %f %f scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", sax[0], sax[1], sax[2], scalFact, qmin, qmax, qminpu, qmaxpu);
+	  printf("scalFact: %.15G qmin: %d qmax: %d qminpu: %.15G qmaxpu: %.15G\n", scalFact, qmin, qmax, qminpu, qmaxpu);
 	  for (qmod=qmin; qmod <= qmax; qmod++)
 	    {
-	      Sq[qmod] = 0.0;      
-	      SqFF[qmod] = 0.0;
+	      Sq[qmod] = SqPerp[qmod] = SqPara[qmod] = 0.0;      
+
 	      if (NA < N)
 		{
 	    	  SqAA[qmod] = SqAB[qmod] = SqBB[qmod] = 0.0;
@@ -380,59 +267,67 @@ int main(int argc, char** argv)
 	}
       if (first)
 	{
+	  if (NA < N)
+	    printf("[MIXTURE N=%d NA=%d] ", N, NA);
+	  else 
+	    printf("[MONODISPERSE] ");
+	  if (eventDriven)
+	    printf("[ED] ");
+	  else
+	    printf("[MD]");
+	  printf("twopi=%.15G N=%d invL=%.15G %.15G %.15G invNm:%.15G qmin: %d qmax: %d\n", twopi, N, 
+                 invL[0], invL[1], invL[2], invNm,
+		 qmin, qmax);
 	  first = 0;
 	}
       if (NA == N)
 	{
 	  for(n = qmin; n <= qmax; n++)
 	    {
-	      sumRho = sumRhoFF = 0.0;
+	      sumRho = sumRhoPerp = sumRhoPara = 0.0;
+	      ccperp[n] = ccpara[n] = 0.0;
 	      for(mp = 0; mp < ntripl[n]; mp++)
 		{
-                  if (qdirfixed)
-                    {
-                      if (!checkParall(qval,mesh[qmod][mp]))
-                        continue;
-                    }
-                  ntripleff[n]++;
-		  reRho = reRhoFF = 0.0;
-		  imRho = imRhoFF = 0.0;
+		  reRho = 0.0;
+		  imRho = 0.0;
 		  for(i=0; i < N; i++)
 		    {
-		      for (a = 0; a < Nptseff; a++)
+		      /* il passo della mesh e' 0.5*pi2/L */
+		      if (mesh[n][mp][0]==0 && mesh[n][mp][1] == 0 && 
+			  mesh[n][mp][2] == 0)
 			{
-			  /* il passo della mesh e' 0.5*pi2/L */
-			  if (mesh[n][mp][0] == 0 && mesh[n][mp][1] == 0 && 
-			      mesh[n][mp][2] == 0)
-			    {
-			      printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
-				     mp, ntripl[n]);
-			      exit(-1);
-			    }
-			  rCMk = kbeg + scalFact * 
-			    (invL[0] * rmeshLab[0][i][a] * mesh[n][mp][0] + invL[1] * rmeshLab[1][i][a] * mesh[n][mp][1] + 
-			     invL[2] * rmeshLab[2][i][a] * mesh[n][mp][2]);
-			  //rCMkFF = kbeg + scalFact *  (rmeshLab[0][i][a]-r[0][i]) * mesh[n][mp][0] + 
-			    //(rmeshLab[1][i][a]-r[1][i]) * mesh[n][mp][1] + 
-			    //(rmeshLab[2][i][a]-r[2][i]) * mesh[n][mp][2];
- 
-			  //printf("i=%d a=%d r=%f %f %f\n", i, a,rmeshLab[0][i][a], rmeshLab[1][i][a],
-			  //					 rmeshLab[2][i][a]);
-			  //printf("R=%f\n", R[2][2][i]); 
-			  reRho = reRho + cos(rCMk); 
-			  imRho = imRho + sin(rCMk);
-
-			  //reRhoFF = reRhoFF + cos(rCMkFF); 
-			  //imRhoFF = imRhoFF + sin(rCMkFF);
-
-			  /* Imaginary part of exp(i*k*r) for the actual molecule*/
+			  printf("ERRORE nella MESH!!!!!!!! n=%d mp=%d ntripl[n]:%d\n", n,
+				 mp, ntripl[n]);
+			  exit(-1);
 			}
+		      rCMk = kbeg + scalFact * 
+			(invL[0]*r[0][i] * mesh[n][mp][0] + invL[1]*r[1][i] * mesh[n][mp][1] + 
+			 invL[2]*r[2][i] * mesh[n][mp][2]);
+		      //printf("i=%d r=%f %f %f\n", i, r[0][i], r[1][i], r[2][i]);
+		      cosrCMk = cos(rCMk);
+		      sinrCMk = sin(rCMk);
+		      reRho = reRho + cosrCMk; 
+		      imRho = imRho + sinrCMk;
+		      /* Imaginary part of exp(i*k*r) for the actual molecule*/
 		    }
 		  sumRho = sumRho + Sqr(reRho) + Sqr(imRho);
-		  //sumRhoFF = sumRhoFF + Sqr(reRhoFF) + Sqr(imRhoFF);
+		  for (k1=0; k1 < 3; k1++)
+		    meshvec[k1] = ((double)mesh[n][mp][k1]);
+	    	  scalprodnvq=fabs(scalProd(meshvec, nv)/calc_norm(nv)/calc_norm(meshvec));
+    		  if (scalprodnvq < nemthr) 
+		    {
+		      sumRhoPerp += Sqr(reRho) + Sqr(imRho);
+		      ccperp[n]++;
+		    }
+		  else if (1.0-scalprodnvq < nemthr)
+		    {
+		      sumRhoPara += Sqr(reRho) + Sqr(imRho);
+		      ccpara[n]++;
+	    	    }
 		}
 	      Sq[n] += sumRho;  
-	      //SqFF[n] += sumRhoFF;
+	      SqPerp[n] += sumRhoPerp;
+	      SqPara[n] += sumRhoPara; 
 	      //printf("sumRho=%.15G Sq[%d]=%.15G\n", sumRho, n, Sq[n]);
 	    }
 	  fclose(f);
@@ -487,11 +382,10 @@ int main(int argc, char** argv)
 	}
     }
   fclose(f2); 
-  of = fopen("SqFull.dat", "w+");
+  of = fopen("Sq.dat", "w+");
   for (qmod = qmin; qmod  <= qmax; qmod++)
     {
-      //SqFF[qmod] = SqFF[qmod] * (1.0/((doube)Nptseff) / ((double) ntripl[qmod]) / ((double)nf);
-      Sq[qmod] = Sq[qmod] * (1.0 / (((double)Nptseff)*((double)N))) / ((double) ntripleff[qmod]) / ((double)nf) ;  
+      Sq[qmod] = (Sq[qmod]  * invNm) / ((double) ntripl[qmod]) / ((double)nf);  
       //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
       if (physunit)
 	fprintf(of, "%.15G %.15G\n", qavg[qmod], Sq[qmod]); 
@@ -499,6 +393,30 @@ int main(int argc, char** argv)
 	fprintf(of, "%d %.15G\n", qmod, Sq[qmod]); 
     }
   fclose(of);
+  of = fopen("SqPerp.dat", "w+");
+  for (qmod = qmin; qmod  <= qmax; qmod++)
+    {
+      SqPerp[qmod] = (SqPerp[qmod]  * invNm) / ccperp[qmod] /((double)nf);  
+      //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
+      if (physunit)
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqPerp[qmod]); 
+      else
+	fprintf(of, "%d %.15G\n", qmod, SqPerp[qmod]); 
+    }
+  fclose(of);
+  of = fopen("SqPara.dat", "w+");
+  for (qmod = qmin; qmod  <= qmax; qmod++)
+    {
+      SqPara[qmod] = (SqPara[qmod]  * invNm) / ccpara[qmod] /((double)nf);  
+      //printf("nf=%d ntripl[%d]=%d\n", nf, qmod, ntripl[qmod]);
+      if (physunit)
+	fprintf(of, "%.15G %.15G\n", qavg[qmod], SqPara[qmod]); 
+      else
+	fprintf(of, "%d %.15G\n", qmod, SqPara[qmod]); 
+    }
+  fclose(of);
+
+
   if (NA < N) 
     {
       of = fopen("SqAA.dat", "w+");
