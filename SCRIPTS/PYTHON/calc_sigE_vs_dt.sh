@@ -22,6 +22,10 @@ while [ $cc -lt 14 ]
 do
   cat $TPF >  $PF
   S=`echo "$TRUN/$DT" | bc -l | awk '{printf("%d",$0)}'`
+  #TAUP=`echo $DT 100.0| awk '{print ($1*$2)}'`
+  #TAUB=`echo $DT 1000.0|awk '{print ($1*$2)}'`
+  #echo "taup:" $TAUP >> $PF
+  #echo "taub:" $TAUB >> $PF
   echo "dt: " $DT >> $PF
   echo "totsteps: " $S >> $PF
   cc=$[$cc+1]

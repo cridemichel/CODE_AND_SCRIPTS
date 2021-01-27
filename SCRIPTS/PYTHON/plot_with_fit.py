@@ -3,20 +3,47 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import matplotlib.animation as anim
+
 argv =sys.argv
 from scipy.optimize import curve_fit
-def func(x, a, b,):
+def func(x, a, b):
     return a * x  + b
 if len(argv) < 2:
     print("Please supply a file with data to plot!")
     quit()
+def update(i):
+    #f, axarr = plt.subplots()
+    plt.clf()
+    plt.title(r'orthoterphenyl $\rho\approx 1.050 g/cm^3$ $ T=346 K $ N=2352 $\delta t=5 fs$')
+    plt.xlabel('t (ps)')
+    for fn in fnlst:
+        x, y = np.loadtxt(fn, comments=['#'], usecols=(0,1), unpack=True)
+        ptd=0
+        if df > 0.0:
+            ptd = int(len(x)*df)
+        if dp > 0:
+            ptd=dp
+        x = x[ptd:]
+        y = y[ptd:]
+        popt, pcov = curve_fit(func, x, y)
+        av=np.mean(y)
+        sd=np.std(y)
+        plt.ylim(av-sd*sdf,av+sd*sdf)
+        plt.plot(x, y, '-', label=fn)
+        plt.plot(x, func(x, *popt), '-', label='fit: y=(%G)*x + (%G)' % tuple(popt))
+    plt.legend()
+    #plt.show()
+    plt.draw()
+
 itargs=iter(argv[1:])
 sdf=30.0
 dp=0
 df=0.0
 #parse arguments
 cc=0
-
+fnlst=[]
+keeprunning=False
 for a in itargs:
     if a == '-sdf' or a=='--stddevfact':
         sdf=float(next(itargs))
@@ -27,8 +54,10 @@ for a in itargs:
     elif a == '-dp' or a=='--droppts':
         dp=int(next(itargs))
         cc+=1
-    elif cc==len(argv)-2:
-        fn=a
+    elif a == '-kr' or a=='-keeprun':
+        keeprunning=True
+    elif cc < len(argv)-1:
+        fnlst.append(a)
     else:
         print('[ERROR] syntax is the following:')
         print('plot_with_fit.py [-sdf/--stddevfact <this values*stddev will be the yrange> | -df/-dropfract <fraction of points to drop> | -dp/--droppts <number of points to drop>] <data file>')
@@ -38,24 +67,11 @@ for a in itargs:
 if dp > 0 and df > 0:
     print('[ERROR] you have to set either -dp or -df')
     exit(1)
-f, axarr = plt.subplots()
-axarr.tick_params(labeltop=True, labelright=True)
-plt.title(r'orthoterphenyl $\rho\approx 1.106 g/cm^3$ $ T=281 K $ N=2352 $\delta t=5 fs$')
-plt.xlabel('t (ps)')
-plt.ylabel('energy')
-x, y = np.loadtxt(fn, comments=['#'], usecols=(0,1), unpack=True)
-ptd=0
-if df > 0.0:
-    ptd = int(len(x)*df)
-if dp > 0:
-    ptd=dp
-x = x[ptd:]
-y = y[ptd:]
-popt, pcov = curve_fit(func, x, y)
-av=np.mean(y)
-sd=np.std(y)
-plt.ylim(av-sd*sdf,av+sd*sdf)
-plt.plot(x, y, '-', label='H(t)')
-plt.plot(x, func(x, *popt), '-', label='fit: y=(%G)*x + (%G)' % tuple(popt))
-plt.legend()
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
+ax.tick_params(labeltop=True, labelright=True)
+if keeprunning:
+    a = anim.FuncAnimation(fig, update, repeat=False)
+else:
+    update(0)
 plt.show()
