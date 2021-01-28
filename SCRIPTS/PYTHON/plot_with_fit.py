@@ -7,8 +7,30 @@ import matplotlib.animation as anim
 
 argv =sys.argv
 from scipy.optimize import curve_fit
-def func(x, a, b):
-    return a * x  + b
+def func(xx, aa, bb):
+    return aa * xx  + bb
+def calcstddev(vec):
+    m=0
+    c1=0
+    for v in vec:
+        m += v
+        c1+=1
+    m = m/c1
+    s=0
+    for v in vec:
+        s += (v-m)*(v-m)
+    s = np.sqrt(s / c1)
+    return s
+def calcrunavg(vec,lst,lst2):
+    c1=1.0
+    v0 = vec[0]
+    sum=0.0
+    for v in vec:
+        val=(v-v0)/v0
+        sum += val
+        lst.append(sum/c1)
+        lst2.append(val)
+        c1+=1.0
 if len(argv) < 2:
     print("Please supply a file with data to plot!")
     quit()
@@ -19,6 +41,8 @@ def update(i):
     plt.xlabel('t (ps)')
     for fn in fnlst:
         x, y = np.loadtxt(fn, comments=['#'], usecols=(0,1), unpack=True)
+        ra=[]
+        yp=[]
         ptd=0
         if df > 0.0:
             ptd = int(len(x)*df)
@@ -26,12 +50,20 @@ def update(i):
             ptd=dp
         x = x[ptd:]
         y = y[ptd:]
-        popt, pcov = curve_fit(func, x, y)
+        if calcra:
+            calcrunavg(y, ra, yp)
+            y=yp
+        sd=calcstddev(y)
+        if dofit:
+            popt, pcov = curve_fit(func, x, y)
         av=np.mean(y)
         sd=np.std(y)
         plt.ylim(av-sd*sdf,av+sd*sdf)
-        plt.plot(x, y, '-', label=fn)
-        plt.plot(x, func(x, *popt), '-', label='fit: y=(%G)*x + (%G)' % tuple(popt))
+        plt.plot(x, y, '-', label=fn+' sd=' + str(sd))
+        if calcra:
+            plt.plot(x, ra,'-r', linewidth=3.0)
+        if dofit:
+            plt.plot(x, func(x, *popt), '-', label='fit: y=(%G)*x + (%G)' % tuple(popt))
     plt.legend()
     #plt.show()
     plt.draw()
@@ -44,6 +76,8 @@ df=0.0
 cc=0
 fnlst=[]
 keeprunning=False
+calcra=False
+dofit=False
 for a in itargs:
     if a == '-sdf' or a=='--stddevfact':
         sdf=float(next(itargs))
@@ -56,6 +90,10 @@ for a in itargs:
         cc+=1
     elif a == '-kr' or a=='-keeprun':
         keeprunning=True
+    elif a=='-ra' or a == '--runningavg':
+        calcra=True
+    elif a=='-f' or a=='-fit':
+        dofit=True
     elif cc < len(argv)-1:
         fnlst.append(a)
     else:
