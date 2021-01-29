@@ -7,8 +7,10 @@ import matplotlib.animation as anim
 
 argv =sys.argv
 from scipy.optimize import curve_fit
+
 def func(xx, aa, bb):
     return aa * xx  + bb
+
 def calcstddev(vec):
     m=0
     c1=0
@@ -21,28 +23,48 @@ def calcstddev(vec):
         s += (v-m)*(v-m)
     s = np.sqrt(s / c1)
     return s
-def calcrunavg(vec,lst,lst2):
+
+def calcedr(vec,lst,lst2):
+    # calc energy drift according to
+    #Yu et al. Chemical Physics 370 (2010) 294–305 (see Fig. 1 therein)
     c1=1.0
     v0 = vec[0]
-    sum=0.0
+    ssum=0.0
     for v in vec:
-        val=(v-v0)/v0
-        sum += val
-        lst.append(sum/c1)
+        if absenedr==True:
+            val=np.abs((v-v0)/v0)
+        else:
+            val=(v-v0)/v0
+        ssum += val
+        lst.append(ssum/c1)
         lst2.append(val)
         c1+=1.0
+
+def calcra(vec, lst):
+    c1=1.0
+    ssum=0.0
+    for v in vec:
+        ssum += v
+        lst.append(ssum/c1)
+        c1+=1.0
+
 if len(argv) < 2:
     print("Please supply a file with data to plot!")
     quit()
+
 def update(i):
-    #f, axarr = plt.subplots()
     plt.clf()
-    plt.title(r'orthoterphenyl $\rho\approx 1.050 g/cm^3$ $ T=346 K $ N=2352 $\delta t=5 fs$')
-    plt.xlabel('t (ps)')
+    #f, ax = plt.subplots()
+    ax.tick_params(labeltop=True, labelright=True)
+    plt.title(title)
+    plt.xlabel(xlbl)
+    if ylbl != '':
+        plt.ylabel(ylbl)
     for fn in fnlst:
         x, y = np.loadtxt(fn, comments=['#'], usecols=(0,1), unpack=True)
         ra=[]
         yp=[]
+        yp2=[]
         ptd=0
         if df > 0.0:
             ptd = int(len(x)*df)
@@ -50,8 +72,8 @@ def update(i):
             ptd=dp
         x = x[ptd:]
         y = y[ptd:]
-        if calcra:
-            calcrunavg(y, ra, yp)
+        if calcenedrift:
+            calcedr(y, ra, yp)
             y=yp
         sd=calcstddev(y)
         if dofit:
@@ -60,8 +82,11 @@ def update(i):
         sd=np.std(y)
         plt.ylim(av-sd*sdf,av+sd*sdf)
         plt.plot(x, y, '-', label=fn+' sd=' + str(sd))
-        if calcra:
-            plt.plot(x, ra,'-r', linewidth=3.0)
+        if runavg:
+            calcra(y,yp2)
+            plt.plot(x, yp2,'-g', linewidth=2.0)
+        if calcenedrift:
+            plt.plot(x, ra,'-r', linewidth=2.0)
         if dofit:
             plt.plot(x, func(x, *popt), '-', label='fit: y=(%G)*x + (%G)' % tuple(popt))
     plt.legend()
@@ -76,8 +101,13 @@ df=0.0
 cc=0
 fnlst=[]
 keeprunning=False
-calcra=False
+calcenedrift=False
 dofit=False
+runavg=False
+absenedr=True
+xlbl='t (ps)'
+ylbl=''
+title=r'orthoterphenyl $\rho\approx 1.050 g/cm^3$ $ T=346 K $ N=2352 $\delta t=5 fs$'
 for a in itargs:
     if a == '-sdf' or a=='--stddevfact':
         sdf=float(next(itargs))
@@ -90,10 +120,16 @@ for a in itargs:
         cc+=1
     elif a == '-kr' or a=='-keeprun':
         keeprunning=True
-    elif a=='-ra' or a == '--runningavg':
-        calcra=True
+    elif a=='-ed' or a == '--energydrift':
+        calcenedrift=True
     elif a=='-f' or a=='-fit':
         dofit=True
+    elif a=='-ra' or a=='--runavg':
+        runavg=True
+    elif a=='-na' or a=='--noabsed':
+        absenedr=False
+    elif a=='-ti' or a=='--title':
+        title=next(itargs)
     elif cc < len(argv)-1:
         fnlst.append(a)
     else:
@@ -107,7 +143,6 @@ if dp > 0 and df > 0:
     exit(1)
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
-ax.tick_params(labeltop=True, labelright=True)
 if keeprunning:
     a = anim.FuncAnimation(fig, update, repeat=False)
 else:
