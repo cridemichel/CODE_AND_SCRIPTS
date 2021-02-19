@@ -58,6 +58,10 @@ def update(i):
     ax.tick_params(labeltop=True, labelright=True)
     plt.title(title)
     plt.xlabel(xlbl)
+    if logx:
+        plt.xscale("log")
+    if logy:
+        plt.yscale("log")
     if ylbl != '':
         plt.ylabel(ylbl)
     for fn in fnlst:
@@ -107,6 +111,9 @@ runavg=False
 absenedr=True
 xlbl='t (ps)'
 ylbl=''
+logx=False
+logy=False
+interv=1000.0
 title=r'orthoterphenyl $\rho\approx 1.050 g/cm^3$ $ T=346 K $ N=2352 $\delta t=5 fs$'
 for a in itargs:
     if a == '-sdf' or a=='--stddevfact':
@@ -130,6 +137,15 @@ for a in itargs:
         absenedr=False
     elif a=='-ti' or a=='--title':
         title=next(itargs)
+    elif a=='-int' or a=='--interval': # milliseconds
+        interv=float(next(itargs))
+    elif a=='-lx' or a=='--logx':
+        logx=True
+    elif a=='-ly' or a=='--logxy':
+        logy=True
+    elif a=='-lxy' or a=='--logxy':
+        logx=True
+        logy=True
     elif cc < len(argv)-1:
         fnlst.append(a)
     else:
@@ -144,7 +160,7 @@ if dp > 0 and df > 0:
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 if keeprunning:
-    a = anim.FuncAnimation(fig, update, repeat=False)
+    a = anim.FuncAnimation(fig, update, repeat=False, interval=interv)
 else:
     update(0)
 plt.show()

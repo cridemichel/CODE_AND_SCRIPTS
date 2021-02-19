@@ -13,7 +13,6 @@ double dt=-1.0;
 void readconf(char *fname, double *vel[3])
 {
   FILE *f;
-  double v[3];
   int i;
   f = fopen(fname, "r");
   //printf("fn=%s\n", fname);
@@ -26,7 +25,8 @@ void readconf(char *fname, double *vel[3])
     fscanf(f, "%[^\n]\n",line);
   for (i = 0; i < NP; i++) 
     {
-      fscanf(f, "%lf %lf %lf\n", &v[0], &v[1], &v[2]);
+      fscanf(f, "%lf %lf %lf\n", &(vel[0][i]), &(vel[1][i]), &(vel[2][i]));
+      //printf(   "%lf %lf %lf\n", v[0], v[1], v[2]);
     }
   fclose(f);
 }
@@ -63,6 +63,8 @@ int main(int argc, char **argv)
     }
 
   f = fopen(fname[0], "r");
+  fscanf(f,"%d %lf %lf %lf\n", &NP, &L[0], &L[1], &L[2]);
+  fclose(f);
   nat = 0;
   if (argc >= 3)
     points = atoi(argv[2]);
@@ -90,7 +92,6 @@ int main(int argc, char **argv)
   if (argc >= 4)
     NN=atoi(argv[3]);
   first = 0;
-  fclose(f2);
   for (ii=0; ii < points; ii++)
     {
       velACV[ii] = 0.0;
@@ -136,8 +137,10 @@ int main(int argc, char **argv)
 		   {
 	             veltmp += velt[a][i]*vel0[a][i];
 		   }
+                  //printf("veltmp=%f\n",veltmp);
 		  velACV[np] += veltmp;
 		  cc[np]+=1.0;
+                  //printf("cc=%f\n", cc[np]);
 		}
 	    }
 	}
@@ -146,7 +149,7 @@ int main(int argc, char **argv)
   f = fopen("velACV.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      //printf("cc[%d]=%f\n", ii, cc[ii]);
+      printf("velACV[%d]=%f\n", ii, velACV[ii]);
       velACV[ii] = velACV[ii]/cc[ii];
       fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], velACV[ii]);
     }

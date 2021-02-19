@@ -48,7 +48,7 @@ for l in lines:
             # poiché nella linea successiva ci saranno
             # nome e cognome
             if sl.find('SALUS')!=-1:
-                nomco=sublines[ccc+1]
+                nomco=sublines[ccc+1].replace("'","_")
                 nomus=nomco.replace(' ', '_')
                 nomi.append(nomus)
                 break
