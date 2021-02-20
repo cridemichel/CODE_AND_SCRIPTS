@@ -96,6 +96,15 @@ def update(i):
     plt.legend()
     #plt.show()
     plt.draw()
+anim_running=False
+def on_press(event):
+    global anim_running
+    if event.key.isspace():
+        if anim_running:
+            anim.event_source.stop()
+        else:
+            anim.event_source.start()
+        anim_running ^= True
 
 itargs=iter(argv[1:])
 sdf=30.0
@@ -160,7 +169,9 @@ if dp > 0 and df > 0:
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 if keeprunning:
-    a = anim.FuncAnimation(fig, update, repeat=False, interval=interv)
+    anim_running = True
+    anim = anim.FuncAnimation(fig, update, repeat=False, interval=interv)
+    fig.canvas.mpl_connect('key_press_event', on_press)
 else:
     update(0)
 plt.show()
