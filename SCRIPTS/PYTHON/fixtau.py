@@ -11,8 +11,8 @@ K=np.sqrt(2.0/(2.0*np.pi)/(2.0*np.pi))
 print('K=', K)
 with open(fn) as f:
     fns=f.readlines()
-lnew=[]
 for pf in fns:
+    lnew=[]
     os.system('cp '+pf.strip('\n')+ ' ' + pf.strip('\n') + '.bak' )
     with open(pf.strip('\n')) as f:
         lines=f.readlines()
