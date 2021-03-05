@@ -25,9 +25,9 @@ def optd(parts):
        smop = sumca*sumca/cc/cc + sumsa*sumsa/cc/cc
        #       print('smop_oo=', smop_oo, ' smop_o=', smop_o, ' smop=', smop)
        if smop_oo > 0 and smop_o > 0:
-             if smop_o > smop_oo and smop_o > smop:
-                 #it is maximum
-                 return d 
+           if smop_o > smop_oo and smop_o > smop:
+               #it is maximum
+               return d 
        smop_oo=smop_o
        smop_o=smop
        #print(d,' ', smop) 
@@ -55,7 +55,9 @@ for l in lines:
     os.chdir(l.strip('\n'))
     press = l.strip('\n').split('_')[-1]
     if fract < 0:
-        os.system('ls cnf-*[0-9] | sort -t - -k 2 -n | tail -n ' + str(abs(int(fract))) + ' > listacnf') 
+        stri='ls cnf-*[0-9] | sort -t - -k 2 -n | tail -n ' + str(abs(int(fract))) + ' > listacnf'
+        #print(stri)
+        os.system(stri) 
     else:
         os.system('ls cnf-*[0-9] | sort -t - -k 2 -n > listacnf') 
     with open('listacnf') as f:
@@ -63,7 +65,7 @@ for l in lines:
     #print('lphi=', lphi)
     nc=len(lf)
     if fract < 0:
-       snc=nc
+       snc=0
     else:
        snc=int(fract*nc)
     #print ('press=', press, 'nphi=', nphi, ' snphi=', snphi)
@@ -73,9 +75,7 @@ for l in lines:
     subl=lf[snc:nc]
     #print('subl=', subl)
     smop=0.0 
-    sumca=0.0
-    sumsa=0.0
-    cc=0
+    cc2=0.0
     for ll in subl:
         with open(ll.strip('\n')) as acnf:
             parts=acnf.readlines()
@@ -83,6 +83,9 @@ for l in lines:
         if dsm==-1:
             dsm=1.1
         print('dsm=', dsm)
+        cc=0.0
+        sumca=0.0
+        sumsa=0.0
         for p in parts[1:]:
             ap=p.strip('\n').split()
             y=float(ap[1])
@@ -90,9 +93,10 @@ for l in lines:
             sumca+=np.cos(a)
             sumsa+=np.sin(a)
             cc += 1.0
+        smop += sumca*sumca/cc/cc + sumsa*sumsa/cc/cc
+        cc2 += 1.0
 #print('phi=',phi)
-    smop = sumca*sumca/cc/cc + sumsa*sumsa/cc/cc
-    lst.append([press,str(smop)])
+    lst.append([press,str(smop/cc2)])
     #print(sumphi/float(cc),' ',press)
     os.chdir('..')
 #lst.sort(key=itemgetter(0))
