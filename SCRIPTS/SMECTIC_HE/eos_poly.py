@@ -3,7 +3,7 @@ import sys,os
 import numpy as np
 filen='_lista_dir_'
 from operator import itemgetter
-os.system('ls -d P_*[^a-z] > ' + filen)
+os.system('ls -d P_*[^a-z]| sort -t _ -k 2 -n > ' + filen)
 vol=1.46608
 with open(filen) as f:
     lines=f.readlines()
@@ -47,8 +47,8 @@ for l in lines:
     lst.append([sumphi/float(cc),press])
     #print(sumphi/float(cc),' ',press)
     os.chdir('..')
-lst.sort(key=itemgetter(0))
+#lst.sort(key=itemgetter(0))
 with open('eos.dat','w') as f:
     for l in lst:
         f.write(str(l[0])+ ' ' + l[1]+'\n')
-os.system('rm ' + filen)
+#os.system('rm ' + filen)
