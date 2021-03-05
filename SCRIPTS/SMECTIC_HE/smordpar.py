@@ -54,12 +54,18 @@ for l in lines:
     print('processing dir=', l)
     os.chdir(l.strip('\n'))
     press = l.strip('\n').split('_')[-1]
-    os.system('ls cnf-*[0-9] | sort -t - -k 2 -n > listacnf')
+    if fract < 0:
+        os.system('ls cnf-*[0-9] | sort -t - -k 2 -n | tail -n ' + str(abs(int(fract))) + ' > listacnf') 
+    else:
+        os.system('ls cnf-*[0-9] | sort -t - -k 2 -n > listacnf') 
     with open('listacnf') as f:
         lf=f.readlines()
     #print('lphi=', lphi)
     nc=len(lf)
-    snc=int(fract*nc)
+    if fract < 0:
+       snc=nc
+    else:
+       snc=int(fract*nc)
     #print ('press=', press, 'nphi=', nphi, ' snphi=', snphi)
     #print('snphi=', snphi, ' fine=', nphi)
     if snc==nc:
@@ -76,7 +82,7 @@ for l in lines:
         dsm=optd(parts)
         if dsm==-1:
             dsm=1.1
-        #print('dsm=', dsm)
+        print('dsm=', dsm)
         for p in parts[1:]:
             ap=p.strip('\n').split()
             y=float(ap[1])
