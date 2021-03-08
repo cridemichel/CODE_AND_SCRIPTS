@@ -8,21 +8,16 @@ L2=L[2]/2.0
 L3=L[2]/3.0
 newf=[]
 cc=0
-colors=['DeepSkyBlue', 'YellowGreen', 'orange']
+colors=['DeepSkyBlue', 'turquoise', 'orange','red']
 for l in lines:
     p=l.strip('\n').split()
     layer=int((float(p[2])+L2)/L3)
     if (cc % 2 == 0):
-        if layer==0:
-            p[9]='C['+colors[0]+']'
-        elif layer==1:
-            p[9]='C['+colors[1]+']'
-        else:
-            p[9]='C['+colors[2]+']'
+        p[9]='C['+colors[layer]+']'
         newf.append(p)
     else:
         p[4]='0.5'
-        p[5]='C[blue]'
+        p[5]='C['+colors[3]+']'
     s=' '.join(p)
     print(s)
     cc+=1
