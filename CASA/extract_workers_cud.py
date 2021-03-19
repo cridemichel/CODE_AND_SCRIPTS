@@ -41,7 +41,7 @@ for l in lines:
                 listpag.append([pagini,pagfin])
     if l.find('PENSIONATO') != -1:
         nw = nw + 1
-        sublines = l.split()
+        sublines = l.replace("'","_").split()
         nomi.append(sublines[3]+'_'+sublines[4])
         #print('nome cognome=', nomco)
     cc=cc+1
