@@ -20,6 +20,7 @@ echo -n "" > $OF
 echo -n "" > $OFL
 while [ $cc -lt 14 ]
 do
+  rm -f restart-*
   cat $TPF >  $PF
   S=`echo "$TRUN/$DT" | bc -l | awk '{printf("%d",$0)}'`
   #TAUP=`echo $DT 100.0| awk '{print ($1*$2)}'`

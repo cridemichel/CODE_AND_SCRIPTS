@@ -57,9 +57,9 @@ for l in lines:
     if fract < 0:
         stri='ls cnf-*[0-9] | sort -t - -k 2 -n | tail -n ' + str(abs(int(fract))) + ' > listacnf'
         #print(stri)
-        os.system(stri) 
+        os.system(stri)
     else:
-        os.system('ls cnf-*[0-9] | sort -t - -k 2 -n > listacnf') 
+        os.system('ls cnf-*[0-9] | sort -t - -k 2 -n > listacnf')
     with open('listacnf') as f:
         lf=f.readlines()
     #print('lphi=', lphi)
