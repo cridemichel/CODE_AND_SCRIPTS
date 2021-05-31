@@ -27,7 +27,7 @@ with open(args[1]) as f:
             ln = 'vmax:'+vmax+'\n'
             lines2new.append(ln)
         elif p=='delrot':
-            ln = 'T:'+delrot+'\n'
+            ln = 'delrot:'+delrot+'\n'
             lines2new.append(ln)
         else:
             lines2new.append(l2)
