@@ -1,17 +1,18 @@
 #!/usr/bin/python3
 # DESCRIPTION:
 # read values of deltra, vmax and delrot and set them in the xasc file supplied as argument
-import os, sys
-curd=os.getcwd()
-d=os.path.split(curd.strip('\n'))[1]
+import sys
+#curd=os.getcwd()
+#d=os.path.split(curd.strip('\n'))[1]
 args=sys.argv
 lines2new=[]
 with open('restart-0') as f:
     lines=f.readlines()
-deltra=lines[3][2]
-vmax=lines[3][3]
-delrot=lines[8][0]
-print('deltra=', deltra, ' vmax=', vmax, ' delrot=', delrot)
+#print(lines)
+deltra=lines[3].strip('\n').split()[2]
+vmax=lines[3].strip('\n').split()[3]
+delrot=lines[8].strip('\n')
+print('Setting following values in ', args[1],': deltra=', deltra, ' vmax=', vmax, ' delrot=', delrot)
 with open(args[1]) as f:
     lines2=f.readlines()
     for l2 in lines2:
