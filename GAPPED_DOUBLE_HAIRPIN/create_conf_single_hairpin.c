@@ -12,9 +12,9 @@ double R0[3][3], sigma;
 int main(int argc, char **argv)
 {
   FILE *f;
-  double Diam, del0x, del0y, del0z, maxL, pi;
+  double Diam, pi;
   double vol, permdiam, del, Len;
-  double *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax, deltay;
+  double *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax;
   double phi, targetphi=0.25, xtrafact;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=2, a, b;
   int nx, ny, nz, nxmax, nymax, nzmax, idx;
