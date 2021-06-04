@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 {
   FILE *f;
   double Diam, pi;
-  double vol, permdiam, del, Len;
+  double vol, del, Len;
   double *rxCM, *ryCM, *rzCM, bs[3], factor[3], deltax;
   double phi, targetphi=0.25, xtrafact;
   int k1, k2, numpoly, parnum=1000, i, j, polylen=2, a, b;
@@ -21,17 +21,18 @@ int main(int argc, char **argv)
   del=0.5;
   /* permanent spots diameter */
   // we want to simulate 1T and 4 T 
-  permdiam=0.63/2.0; /* this parameter has to be half the length of the spacer (since the center of patch is at perdiam/2 
-                    from the surface of the base, for example
-                    for 20T spacesr is  20 T * 0.63 nm / 2 = 6.3 nm 
-                    dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
+  //permdiam=0.63/2.0; 
+  /* this parameter has to be half the length of the spacer (since the center of patch is at perdiam/2 
+     from the surface of the base, for example
+     for 20T spacesr is  20 T * 0.63 nm / 2 = 6.3 nm 
+     dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   //permdiam=0.5;
   Len=8.0; /* 24 bp equal roughly to 8 nm */
   Diam=2.4;
   if (argc == 1)
    {
 
-     printf("create_gapdblhairpin_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam> <permdiam>\n"); 
+     printf("create_gapdblhairpin_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam>\n"); 
      exit(-1);
    }
   f = fopen(argv[1], "w+");
@@ -59,9 +60,6 @@ int main(int argc, char **argv)
 
   if (argc > 6)
     Diam = atof(argv[6]);
-
-  if (argc > 7)
-    permdiam = atof(argv[7]);
 
   sigma = sqrt(2.0*Diam*Diam+Len*Len);
 
@@ -163,8 +161,6 @@ int main(int argc, char **argv)
 #endif
     }
 #endif
-  fprintf(f, "%d %.15G %.15G %.15G %.15G %.15G %.15G %.15G %.15G 0\n", parnum, L[0], L[1], L[2], sigma, sigma, Len/2.0, Diam/2.0, Diam/2.0);
-  fprintf(f, "%.15G 1\n", permdiam);
   nx=ny=nz=0;
   full=0;
   ibeg = 0;
@@ -230,6 +226,7 @@ int main(int argc, char **argv)
   for (a=0; a < 3; a++)
     L[a] *= xtrafact;
  
+  fprintf(f, "%d %.15G %.15G %.15G\n", parnum, L[0], L[1], L[2]);
   printf("parnum=%d nx=%d ny=%d nz=%d argc=%d L=%f %f %f\n", parnum, nxmax, nymax, nzmax, argc, L[0], L[1], L[2]);
 #if 0
   for (i=0; i < numpoly; i++)
