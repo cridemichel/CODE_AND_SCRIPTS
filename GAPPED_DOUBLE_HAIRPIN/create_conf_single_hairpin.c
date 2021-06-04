@@ -31,7 +31,6 @@ int main(int argc, char **argv)
   Diam=2.4;
   if (argc == 1)
    {
-
      printf("create_gapdblhairpin_conf <conf_file_name> <nxmax> <nymax> <nzmax> <phi> <diam>\n"); 
      exit(-1);
    }
