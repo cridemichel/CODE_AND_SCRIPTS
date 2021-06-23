@@ -16,6 +16,7 @@ char *pnum;
 char inputfile[2048], cluststr[2048];
 double storerate = -1;
 int bakSaveMode = -1;
+int savesteps=5000;
 void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], double *w[3], double **DR)
 {
   FILE *f;
@@ -48,7 +49,7 @@ void readconf(char *fname, double *ti, double *refTime, int NP, double *r[3], do
 }
 void print_usage(void)
 {
-  printf("Usage: calcmsd [ --nongauss/-ng | --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
+  printf("Usage: calcmsd [--savesteps/-ss][ --nongauss/-ng | --skip/-s | --clusters/-c ] <listafile> [number of points]\n");
   exit(0);
 }
 void parse_param(int argc, char** argv)
@@ -63,6 +64,13 @@ void parse_param(int argc, char** argv)
       if (!strcmp(argv[cc],"--help")||!strcmp(argv[cc],"-h"))
 	{
 	  print_usage();
+	}
+     else if (!strcmp(argv[cc],"--savesteps") || !strcmp(argv[cc],"-ss"))
+	{
+	  cc++;
+	  if (cc == argc)
+	    print_usage();
+	  savesteps = atoi(argv[cc]);
 	}
       else if (!strcmp(argv[cc],"--skip") || !strcmp(argv[cc],"-s"))
 	{
@@ -256,7 +264,7 @@ int main(int argc, char **argv)
 	  adjDr[a][i] = 0.0;
 
       readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR0);
-      time = nr1; 
+      time = (nr1+1)*savesteps; 
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
@@ -288,7 +296,7 @@ int main(int argc, char **argv)
 		}
 	      //printf("fname[%d]:%s\n", nr2, fname[nr2]);
 	      readconf(fname[nr2], &time, &refTime, NP, rt, wt, DR);
-              time=nr2;
+              time=(nr2+1)*savesteps;
 	      if (np < points && ti[np] == -1.0)
 		{
 		  ti[np] = time + refTime;
