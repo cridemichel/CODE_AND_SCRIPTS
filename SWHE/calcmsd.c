@@ -264,7 +264,7 @@ int main(int argc, char **argv)
 	  adjDr[a][i] = 0.0;
 
       readconf(fname[nr1], &time, &refTime, NP, r0, w0, DR0);
-      time = (nr1+1)*savesteps; 
+      time=(nr1+1)*savesteps; 
       fine = 0;
       for (JJ = 0; fine == 0; JJ++)
 	{
