@@ -81,61 +81,47 @@ logx=False
 logy=False
 #plt.title(title)
 plt.xlabel(xlbl)
-x, y = np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=[1.0]
-yp.clear()
-calcedr(y, ra, yp)
 fact=1E7
-y=fact*np.array(yp)
-sd=calcstddev(y)
-yp2=[1.0]
-yp2.clear()
-calcra(y,yp2)
+x, y = np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2,y2= np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+yp=fact*np.array(y)
+yp2=fact*np.array(y2)
 sdf=2.0
-axs[0, 0].plot(x, y)
+axs[0, 0].plot(x, yp)
 axs[0, 0].plot(x, yp2)
 axs[0, 0].text(0, 6E-7*fact, r'$dt = 0.001\; n_{ys}=4\; n_r = 7$')
 axs[0, 0].set_ylim([0,8E-7*fact])
 axs[0, 0].set(xlabel='', ylabel=r'$\Delta E\; \times 10^{-7}$')
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
-x, y = np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=[]
-calcedr(y, ra, yp)
+x, y = np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2,y2= np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 fact=1E7
-y=fact*np.array(yp)
-sd=calcstddev(y)
-yp2=[]
-calcra(y,yp2)
-axs[0, 1].plot(x, y)
-axs[0, 1].plot(x, yp2)
+yp=fact*np.array(y)
+yp2=fact*np.array(y2)
+axs[0, 1].plot(x, yp)
+axs[0, 1].plot(x, yp)
 axs[0, 1].text(0, 6E-7*fact, r'$dt = 0.001\; n_{ys}=1\; n_r = 1$')
 axs[0, 1].set_ylim([0,8E-7*fact])
 axs[0, 1].set(xlabel='', ylabel='')
 #axs[1, 0].plot(x, -y, 'tab:green')
 ###
-x, y = np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=[]
-calcedr(y, ra, yp)
+x, y = np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2,y2= np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 fact=1E6
-y=fact*np.array(yp)
-sd=calcstddev(y)
-yp2=[]
-calcra(y,yp2)
-axs[1, 0].plot(x, y)
+yp=fact*np.array(y)
+yp2=fact*np.array(y2)
+axs[1, 0].plot(x, yp)
 axs[1, 0].plot(x, yp2)
 axs[1, 0].set_ylim([0,3.0*1E-6*fact])
 axs[1, 0].set_title(r'$dt = 0.002\; n_{ys}=4\; n_r = 7$')
 axs[1, 0].set(xlabel='', ylabel=r'$\Delta E \times 10^{-6}$')
 ###
-x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=[]
-calcedr(y, ra, yp)
-y=fact*np.array(yp)
-sd=calcstddev(y)
-yp2=[]
-calcra(y,yp2)
-axs[1, 1].plot(x, y)
+x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+yp=fact*np.array(y)
+yp2=fact*np.array(y2)
+axs[1, 1].plot(x, yp)
 axs[1, 1].plot(x, yp2)
 axs[1, 1].set_ylim([0,3.0*1E-6*fact])
 axs[1, 1].set_title(r'$dt = 0.002\; n_{ys}=1\; n_r = 1$')
@@ -143,33 +129,28 @@ axs[1, 1].set(xlabel='', ylabel='')
 ###
 #axs[1, 1].plot(x, -y, 'tab:red')
 #axs[2, 0].plot(x, -y, 'tab:green')
-x, y = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=[]
-calcedr(y, ra, yp)
-y=yp
-sd=calcstddev(y)
-yp2=[]
-calcra(y,yp2)
-axs[2, 0].plot(x, y)
+x, y = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2, y2 = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+fact=1E5
+yp=fact*np.array(y)
+yp2=fact*np.array(y2)
+axs[2, 0].plot(x, yp)
 axs[2, 0].plot(x, yp2)
+axs[1, 1].set_ylim([0,3.0*1E-5*fact])
 axs[2, 0].set_title(r'$dt = 0.003\; n_{ys}=4\; n_r = 7$')
-axs[2, 0].set(xlabel='t (ns)', ylabel=r'$|(E(t)-E(0))/E(0)|$')
+axs[2, 0].set(xlabel='t (ns)', ylabel=r'$\Delta E \times 10^{-5}$')
 #axs[2, 1].plot(x, -y, 'tab:red')
-x, y = np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=[]
-calcedr(y, ra, yp)
-y=yp
-sd=calcstddev(y)
-yp2=[]
-calcra(y,yp2)
-axs[2, 1].plot(x, y)
+x, y = np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2,y2= np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+yp=fact*np.array(y)
+yp2=fact*np.array(y2)
+axs[2, 1].plot(x, yp)
 axs[2, 1].plot(x, yp2)
 axs[2, 1].set_title(r'$dt = 0.003\; n_{ys}=1\; n_r = 1$')
 axs[2, 1].set(xlabel='t (ns)', ylabel='')
 plt.savefig('energy_case_1-3.png')
 #for ax in axs.flat:
 #    ax.set(xlabel='t', ylabel=r'$|(E(t)-E(0))/E(0)|$')
-
 # Hide x labels and tick labels for top plots and y ticks for right plots.
 #for ax in axs.flat:
 #    ax.label_outer()
