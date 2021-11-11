@@ -2,35 +2,44 @@
 import json, os, sys
 fn='compile_commands.json'
 os.system('make clean')
-use_compdb=True
-use_compiledb=True
+use_compdb=False
 copy_json=False
 args=sys.argv
 del(args[0])
 itargs=iter(args)
 targ=''
+engine='bear --' # default engine
+# each element is an engine name, its abbreviated version and the full command to use from the shell
+englist=[['compiledb','cdb','compiledb'],['bear', 'b', 'bear --'],['intercept-build', 'ib', 'intercept-build']]
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
-    elif a=='--no-compiledb' or a=='-ncdb':
-        use_compiledb=False
+    elif a=='--engine' or a=='-e':
+        b=next(itargs)
+        engfound=False
+        for en in englist:
+            if b == en[0] or b == en[1]:
+                engine = en[2]
+                engfound=True
+        if not engfound:
+            print("[ERROR] Wrong engine name, it should be one of the following ones:")
+            print("compiledb, bear or intercept-build")
+            print("As of 11/11/2021 intercept-build produces an empty json file")
+            quit()
     elif a=='--copy' or a=='-c':
         copy_json=True
     elif a=='-h' or a=='--help':
         print("generate_json.py [-c|-ih] <arguments passed to make>")
         print("-c: copy the compile_commands.json file to parent directory (..)")
         print("-ih: include header in the compile_commands.json file")
+        print("--engine|-e <engine>: specifies the engine to use. i.e. compiledb, bear or intercept-build")
+        print("As of 11/11/2021 intercept-build produces an empty json file")
         quit()
     else:
         targ=targ+' '+a
 #esegue la make tramite intercept-build e passa come argomento di make 
 #l'argomento fornito al presente script
-if use_compiledb:
-    # AS OF 11/11/2021 compiledb (https://github.com/nickdiego/compiledb) is a python script installed via pip3
-    # that works, while intercept-build produces an empty json file
-    os.system('compiledb make '+targ)
-else:
-    os.system('intercept-build make '+targ)
+os.system(engine + ' make ' + targ)
 if use_compdb:
     # add header files to compile_commands.json
     # compdb read a compile_commands.json file and add entries
