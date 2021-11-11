@@ -20,17 +20,19 @@ fn='compile_commands.json'
 os.system('make clean')
 use_compdb=False
 copy_json=False
+use_clang=False
 args=sys.argv
 del(args[0])
 itargs=iter(args)
 targ=''
 neng=1
 # each element is an engine name, its abbreviated version and the full command to use from the shell
-englist=[['compiledb','cdb','compiledb make '],['bear', 'be', 'bear -- make CXX=clang++ CC=clang '],['intercept-build', 'ib', 'intercept-build make CXX=clang++ CC=clang'],['clang', 'cl','make CXX="clang++ -MJ -" CC="clang -MJ -"']]
-engine = englist[neng][2]
+englistopts=[['compiledb','cdb'],['bear', 'be'] ,['intercept-build', 'ib'], ['clang', 'cl']]
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
+    elif a=='-ucl' or a=='--usecl':
+        use_clang=True
     elif a=='--engine' or a=='-e':
         try:
             b=next(itargs)
@@ -41,9 +43,8 @@ for a in itargs:
             quit()
         engfound=False
         neng=0
-        for en in englist:
+        for en in englistopts:
             if b == en[0] or b == en[1]:
-                engine = en[2]
                 engfound=True
                 break
             neng = neng + 1
@@ -66,6 +67,14 @@ for a in itargs:
         targ=targ+' '+a
 #esegue la make tramite intercept-build e passa come argomento di make 
 #l'argomento fornito al presente script
+if use_clang==True:
+    CLCXX='clang++'
+    CLCC='clang'
+else:
+    CLCXX='g++'
+    CLCC='gcc'
+englist=['compiledb make ','bear -- make CXX='+CLCXX + ' CC='+CLCC,'intercept-build make CXX='+CLCXX+' CC='+CLCC,'make CXX="'+CLCXX+' -MJ -" CC="'+CLCC +' -MJ -"']
+engine = englist[neng]
 print("Using engine " + englist[neng][0] + " ...")
 if neng == 1: # neng=1 is the bear engine (see above)
     print("Bear engine must be used in conjuction with mac osx g++/gcc (clang),")
