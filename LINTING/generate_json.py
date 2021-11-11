@@ -20,7 +20,7 @@ fn='compile_commands.json'
 os.system('make clean')
 use_compdb=False
 copy_json=False
-use_clang=False
+use_clang=True
 args=sys.argv
 del(args[0])
 itargs=iter(args)
@@ -34,6 +34,8 @@ for a in itargs:
     # force the use of clang installed from homebrew instead of the one provided by mac osx
     elif a=='-ucl' or a=='--usecl':
         use_clang=True
+    elif a=='-uosx' or a=='--useclosx':
+        use_clang=False
     elif a=='--engine' or a=='-e':
         try:
             b=next(itargs)
