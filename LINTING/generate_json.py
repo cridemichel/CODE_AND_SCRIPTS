@@ -24,10 +24,10 @@ args=sys.argv
 del(args[0])
 itargs=iter(args)
 targ=''
-engine='bear --' # default engine
 neng=1
 # each element is an engine name, its abbreviated version and the full command to use from the shell
 englist=[['compiledb','cdb','compiledb make '],['bear', 'be', 'bear -- make CXX=clang++ CC=clang '],['intercept-build', 'ib', 'intercept-build make CXX=clang++ CC=clang'],['clang', 'cl','make CXX="clang++ -MJ -" CC="clang -MJ -"']]
+engine = englist[neng][2]
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
