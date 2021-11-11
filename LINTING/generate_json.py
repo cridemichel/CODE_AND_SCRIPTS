@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 import json, os, sys
+
+#  To manually create a json file for a specific file by Clang
+#  Clang's -MJ option generates a compilation database entry per input (requires Clang >= 5.0).
+#  Usage:
+#  clang++ -MJ a.o.json -Wall -std=c++11 -o a.o -c a.cpp
+#  clang++ -MJ b.o.json -Wall -std=c++11 -o b.o -c b.cpp
+#  To merge the compilation database entries into a valid compilation database, it is possible to use (GNU) sed:
+#  sed -e '1s/^/[\n/' -e '$s/,$/\n]/' *.o.json > compile_commands.json
+#  Or, using any sed under Bash, Zsh or ksh:
+#  sed -e '1s/^/[\'$'\n''/' -e '$s/,$/\'$'\n'']/' *.o.json > compile_commands.json
+#  This sed invocation does the following:
+#      insert the opening bracket: [
+#      concatenate the entries
+#      remove the trailing comma of the last entry (to be JSON compliant)
+#      insert the closing bracket: ]
+
 fn='compile_commands.json'
 os.system('make clean')
 use_compdb=False
@@ -9,18 +25,27 @@ del(args[0])
 itargs=iter(args)
 targ=''
 engine='bear --' # default engine
+neng=1
 # each element is an engine name, its abbreviated version and the full command to use from the shell
 englist=[['compiledb','cdb','compiledb'],['bear', 'b', 'bear --'],['intercept-build', 'ib', 'intercept-build']]
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
     elif a=='--engine' or a=='-e':
-        b=next(itargs)
+        try:
+            b=next(itargs)
+        except StopIteration:
+            print('[ERROR] no engine supplied, please provide one of the following ones:')
+            print("compiledb, bear or intercept-build")
+            print("As of 11/11/2021 intercept-build produces an empty json file")
+            quit()
         engfound=False
+        neng=0
         for en in englist:
             if b == en[0] or b == en[1]:
                 engine = en[2]
                 engfound=True
+            neng = neng + 1
         if not engfound:
             print("[ERROR] Wrong engine name, it should be one of the following ones:")
             print("compiledb, bear or intercept-build")
@@ -39,6 +64,7 @@ for a in itargs:
         targ=targ+' '+a
 #esegue la make tramite intercept-build e passa come argomento di make 
 #l'argomento fornito al presente script
+print("Using engine " + englist[neng][0] + " ...")
 os.system(engine + ' make ' + targ)
 if use_compdb:
     # add header files to compile_commands.json
@@ -48,18 +74,18 @@ if use_compdb:
     os.system('mv _compile_commands.json_ compile_commands.json')
     # compdb generates only "command" entries but not "arguments" entries 
     # in the following we add them for all files
-    with open(fn) as f:
+    with open(fn, encoding='utf-8') as f:
         jf=json.load(f)
     for i in range(0,len(jf)):
         commands=jf[i]['command']
         jf[i]['arguments']=commands.split()
     jfs = json.dumps(jf, indent=4)
     #poi stampo la stringa su disco sovrasrivendo il file json
-    with open(fn,'w+') as f:
+    with open(fn,'w+',encoding='utf-8') as f:
         f.write(jfs)
 #
 else:
-    with open(fn) as f:
+    with open(fn,encoding='utf-8') as f:
         jf=json.load(f)
     # jf è una lista di dizionari
     # li scorro tutti e aggiungo ad ogni dizionario
@@ -77,7 +103,7 @@ else:
     #prima lo metto in una stringa
     jfs = json.dumps(jf, indent=4)
     #poi stampo la stringa su disco sovrasrivendo il file json
-    with open(fn,'w+') as f:
+    with open(fn,'w+',encoding='utf-8') as f:
         f.write(jfs)
 if copy_json==True:
     os.system('cp compile_commands.json ..')
