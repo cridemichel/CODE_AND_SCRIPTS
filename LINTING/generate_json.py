@@ -27,7 +27,7 @@ targ=''
 engine='bear --' # default engine
 neng=1
 # each element is an engine name, its abbreviated version and the full command to use from the shell
-englist=[['compiledb','cdb','compiledb make '],['bear', 'b', 'bear -- make CXX=clang++ CC=clang '],['intercept-build', 'ib', 'intercept-build make ']]
+englist=[['compiledb','cdb','compiledb make '],['bear', 'be', 'bear -- make CXX=clang++ CC=clang '],['intercept-build', 'ib', 'intercept-build make CXX=clang++ CC=clang'],['clang', 'cl','make CXX="clang++ -MJ -" CC="clang -MJ -"']]
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
@@ -36,7 +36,7 @@ for a in itargs:
             b=next(itargs)
         except StopIteration:
             print('[ERROR] no engine supplied, please provide one of the following ones:')
-            print("compiledb, bear or intercept-build")
+            print("compiledb, bear, intercept-build or clang")
             print("As of 11/11/2021 intercept-build produces an empty json file")
             quit()
         engfound=False
@@ -49,7 +49,7 @@ for a in itargs:
             neng = neng + 1
         if not engfound:
             print("[ERROR] Wrong engine name, it should be one of the following ones:")
-            print("compiledb, bear or intercept-build")
+            print("compiledb, bear, intercept-build or clang")
             print("As of 11/11/2021 intercept-build produces an empty json file")
             quit()
     elif a=='--copy' or a=='-c':
@@ -58,7 +58,7 @@ for a in itargs:
         print("generate_json.py [-c|-ih] <arguments passed to make>")
         print("-c: copy the compile_commands.json file to parent directory (..)")
         print("-ih: include header in the compile_commands.json file")
-        print("--engine|-e <engine>: specifies the engine to use. i.e. compiledb, bear or intercept-build")
+        print("--engine|-e <engine>: specifies the engine to use. i.e. compiledb, bear, intercept-build or clang")
         print("As of 11/11/2021 intercept-build produces an empty json file.")
         print("Bear engine must be used in conjuction with mac osx g++/gcc (clang)")
         quit()
@@ -70,7 +70,27 @@ print("Using engine " + englist[neng][0] + " ...")
 if neng == 1: # neng=1 is the bear engine (see above)
     print("Bear engine must be used in conjuction with mac osx g++/gcc (clang),")
     print("otherwise an empty json file is obtained")
-os.system(engine + targ)
+if neng == 3:
+    os.system(engine + targ + ' > _genjson_.out')
+    with open('_genjson_.out', encoding='utf-8') as f:
+        lines=f.readlines()
+    nl=['[']
+    for l in lines:
+        lt=l.strip('\n')
+        larr=lt.split()
+        # skip lines which are the ones produced by -MJ flag
+        # these lines begin with { and "directory":
+        if larr[0]=='{' and larr[1]=='"directory":':
+            nl.append(lt)
+    # remove the comma (,) from last line
+    s=nl[-1][:-1]
+    nl[-1]=s
+    nl.append(']')
+    with open('compile_commands.json','w+',encoding='utf-8') as f:
+        for l in nl:
+            f.write(l)
+else:
+    os.system(engine + targ)
 if use_compdb:
     # add header files to compile_commands.json
     # compdb read a compile_commands.json file and add entries
