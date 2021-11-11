@@ -89,6 +89,7 @@ if neng == 3:
     with open('compile_commands.json','w+',encoding='utf-8') as f:
         for l in nl:
             f.write(l)
+    os.system('rm _genjson_.out')
 else:
     os.system(engine + targ)
 if use_compdb:
