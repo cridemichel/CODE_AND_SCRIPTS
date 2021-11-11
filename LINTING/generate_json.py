@@ -2,7 +2,8 @@
 import json, os, sys
 fn='compile_commands.json'
 os.system('make clean')
-use_compdb=False
+use_compdb=True
+use_compiledb=True
 copy_json=False
 args=sys.argv
 del(args[0])
@@ -11,6 +12,8 @@ targ=''
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
+    elif a=='--no-compiledb' or a=='-ncdb':
+        use_compiledb=False
     elif a=='--copy' or a=='-c':
         copy_json=True
     elif a=='-h' or a=='--help':
@@ -22,7 +25,12 @@ for a in itargs:
         targ=targ+' '+a
 #esegue la make tramite intercept-build e passa come argomento di make 
 #l'argomento fornito al presente script
-os.system('intercept-build make '+targ)
+if use_compiledb:
+    # AS OF 11/11/2021 compiledb (https://github.com/nickdiego/compiledb) is a python script installed via pip3
+    # that works, while intercept-build produces an empty json file
+    os.system('compiledb make '+targ)
+else:
+    os.system('intercept-build make '+targ)
 if use_compdb:
     # add header files to compile_commands.json
     # compdb read a compile_commands.json file and add entries
