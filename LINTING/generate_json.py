@@ -76,7 +76,7 @@ else:
     CLCC='gcc'
 englist=['compiledb make ','bear -- make CXX='+CLCXX + ' CC='+CLCC,'intercept-build make CXX='+CLCXX+' CC='+CLCC,'make CXX="'+CLCXX+' -MJ -" CC="'+CLCC +' -MJ -"']
 engine = englist[neng]
-print("Using engine " + englist[neng][0] + " ...")
+print("Using engine " + englistopts[neng][0] + " ...")
 if neng == 1: # neng=1 is the bear engine (see above)
     print("Bear engine must be used in conjuction with mac osx g++/gcc (clang),")
     print("otherwise an empty json file is obtained")
