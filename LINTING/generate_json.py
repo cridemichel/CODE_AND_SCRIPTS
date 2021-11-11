@@ -31,6 +31,7 @@ englistopts=[['compiledb','cdb'],['bear', 'be'] ,['intercept-build', 'ib'], ['cl
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
+    # force the use of clang installed from homebrew instead of the one provided by mac osx
     elif a=='-ucl' or a=='--usecl':
         use_clang=True
     elif a=='--engine' or a=='-e':
