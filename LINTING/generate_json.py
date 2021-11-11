@@ -27,7 +27,7 @@ targ=''
 engine='bear --' # default engine
 neng=1
 # each element is an engine name, its abbreviated version and the full command to use from the shell
-englist=[['compiledb','cdb','compiledb'],['bear', 'b', 'bear --'],['intercept-build', 'ib', 'intercept-build']]
+englist=[['compiledb','cdb','compiledb make '],['bear', 'b', 'bear -- make CXX=clang++ CC=clang '],['intercept-build', 'ib', 'intercept-build make ']]
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
@@ -45,6 +45,7 @@ for a in itargs:
             if b == en[0] or b == en[1]:
                 engine = en[2]
                 engfound=True
+                break
             neng = neng + 1
         if not engfound:
             print("[ERROR] Wrong engine name, it should be one of the following ones:")
@@ -58,14 +59,18 @@ for a in itargs:
         print("-c: copy the compile_commands.json file to parent directory (..)")
         print("-ih: include header in the compile_commands.json file")
         print("--engine|-e <engine>: specifies the engine to use. i.e. compiledb, bear or intercept-build")
-        print("As of 11/11/2021 intercept-build produces an empty json file")
+        print("As of 11/11/2021 intercept-build produces an empty json file.")
+        print("Bear engine must be used in conjuction with mac osx g++/gcc (clang)")
         quit()
     else:
         targ=targ+' '+a
 #esegue la make tramite intercept-build e passa come argomento di make 
 #l'argomento fornito al presente script
 print("Using engine " + englist[neng][0] + " ...")
-os.system(engine + ' make ' + targ)
+if neng == 1: # neng=1 is the bear engine (see above)
+    print("Bear engine must be used in conjuction with mac osx g++/gcc (clang),")
+    print("otherwise an empty json file is obtained")
+os.system(engine + targ)
 if use_compdb:
     # add header files to compile_commands.json
     # compdb read a compile_commands.json file and add entries
