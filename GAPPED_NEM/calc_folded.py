@@ -1,9 +1,14 @@
+#!/usr/local/bin/python3
 import numpy as np
 import sys
 #Usage calc_folding.py <threshold_in_degree> 
+fn=sys.argv[1]
 with open('cnf-final',encoding='utf-8') as f:
     lines=f.readlines()
-thr=float(sys.argv[1])
+if len(sys.argv) > 2:
+    thr=float(sys.argv[2])
+else:
+    thr=15.0
 lines=lines[1:]
 orients=[]
 for l in lines:
