@@ -1,6 +1,30 @@
 #!/usr/bin/env python3
 import json, os, sys
-
+class engineC:
+    def __init__(self, name='', shortname='', fullcommand=''):
+        self.n = name # name
+        self.sn = shortname #short name 
+        self.fc = fullcommand # full command line command
+class engineslistC:
+    def __init__(self, N=None): # N is the number of engines
+        self.N=N
+        self.el=[]
+        for ii in range(0,N):
+            self.el.append(engineC())
+    def set_engine(self, ii, **kwargs):
+        if ii >= self.N or ii < 0:
+            print("first arg of set_engine should be an integer between 0 and" + str(self.N-1))
+        for key, value in kwargs.items():
+            if key=='name' or key=='n':
+                self.el[ii].n = value
+            if key=='shortname' or key=='sn':
+                self.el[ii].sn =  value
+            if key=='fullcommand' or key=='fc':
+                self.el[ii].fc = value
+    def get_engine(self, ne):
+        return self.el[ne]
+    def get_all_engines(self):
+        return self.el
 #  To manually create a json file for a specific file by Clang
 #  Clang's -MJ option generates a compilation database entry per input (requires Clang >= 5.0).
 #  Usage:
@@ -26,8 +50,13 @@ del(args[0])
 itargs=iter(args)
 targ=''
 neng=1
-# each element is an engine name, its abbreviated version and the full command to use from the shell
-englistopts=[['compiledb','cdb'],['bear', 'be'] ,['intercept-build', 'ib'], ['clang', 'cl']]
+# each element is a disctionary to pass to init_engines to init the list of engines
+engopts=[{'n':'compiledb','sn':'cdb'}, {'n':'bear', 'sn':'be'},{'n':'intercept-build', 'sn':'ib'},{'n':'clang', 'sn':'cl'}]
+engines=engineslistC(4) # four engines we have at moment 
+i=0
+for e in engopts:
+    engines.set_engine(i,**e)
+    i=i+1
 for a in itargs:
     if a=='--headers' or a == '-ih':
         use_compdb=True
@@ -46,8 +75,8 @@ for a in itargs:
             quit()
         engfound=False
         neng=0
-        for en in englistopts:
-            if b == en[0] or b == en[1]:
+        for en in engines.get_all_engines():
+            if b == en.n or b == en.sn:
                 engfound=True
                 break
             neng = neng + 1
@@ -76,14 +105,20 @@ if use_clang==True:
 else:
     CLCXX='g++'
     CLCC='gcc'
-englist=['compiledb make ','bear -- make CXX='+CLCXX + ' CC='+CLCC,'intercept-build make CXX='+CLCXX+' CC='+CLCC,'make CXX="'+CLCXX+' -MJ -" CC="'+CLCC +' -MJ -"']
-engine = englist[neng]
-print("Using engine " + englistopts[neng][0] + " ...")
+englist=[{'fc':'compiledb make '},{'fc':'bear -- make CXX='+CLCXX + ' CC='+CLCC},
+         {'fc':'intercept-build make CXX='+CLCXX+' CC='+CLCC},
+         {'fc':'make CXX="'+CLCXX+' -MJ -" CC="'+CLCC +' -MJ -"'}]
+i=0
+for e in englist:
+    engines.set_engine(i,**e)
+    i=i+1
+enginefc = engines.get_engine(neng).fc
+print("Using engine " + engines.get_engine(neng).n + " (command="+enginefc+")...")
 if neng == 1: # neng=1 is the bear engine (see above)
     print("Bear engine must be used in conjuction with mac osx g++/gcc (clang),")
     print("otherwise an empty json file is obtained")
 if neng == 3:
-    os.system(engine + targ + ' > _genjson_.out')
+    os.system(enginefc + targ + ' > _genjson_.out')
     with open('_genjson_.out', encoding='utf-8') as f:
         lines=f.readlines()
     nl=['[']
@@ -103,7 +138,7 @@ if neng == 3:
             f.write(l)
     os.system('rm _genjson_.out')
 else:
-    os.system(engine + targ)
+    os.system(enginefc + targ)
 if use_compdb:
     # add header files to compile_commands.json
     # compdb read a compile_commands.json file and add entries
