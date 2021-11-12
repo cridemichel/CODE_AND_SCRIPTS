@@ -3,7 +3,7 @@ import numpy as np
 import sys
 #Usage calc_folding.py <threshold_in_degree> 
 fn=sys.argv[1]
-with open('cnf-final',encoding='utf-8') as f:
+with open(fn,encoding='utf-8') as f:
     lines=f.readlines()
 if len(sys.argv) > 2:
     thr=float(sys.argv[2])
