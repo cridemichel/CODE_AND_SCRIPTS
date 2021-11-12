@@ -110,7 +110,7 @@ englist=[{'fc':'compiledb make '},{'fc':'bear -- make CXX='+CLCXX + ' CC='+CLCC}
          {'fc':'make CXX="'+CLCXX+' -MJ -" CC="'+CLCC +' -MJ -"'}]
 i=0
 for e in englist:
-    engines.set_engine(i,**e)
+    engines.set_engine(i,**e) # ** unpack the dictionary making it a list of args, e.g. {'fc':'compiledb make'} becomes fc='compiledb make'
     i=i+1
 enginefc = engines.get_engine(neng).fc
 print("Using engine " + engines.get_engine(neng).n + " (command="+enginefc+")...")
