@@ -442,16 +442,17 @@ def choose_restart(bn):
         if ex0 == False and ex1 == False:
             #print('both restart files do not exist...I give up!')
             return -1
-        if ex0 == False: 
+        if ex0 == False:
             which=1
         elif ex1 == False:
             which=0
-        else: 
+        else:
             nw0=get_num_words(f0n)
             nw1=get_num_words(f1n)
+            #print('nw0=', nw0, ' nw1=', nw1)
             if nw0 > nw1:
                 which=0
-            elif nw1 < nw0:
+            elif nw0 < nw1:
                 which=1
             else:
                 f0 = os.path.getmtime(f0n)
