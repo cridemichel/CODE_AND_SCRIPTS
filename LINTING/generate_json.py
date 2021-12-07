@@ -125,7 +125,7 @@ if neng == 3:
     for l in lines:
         lt=l.strip('\n')
         larr=lt.split()
-        # skip lines which are the ones produced by -MJ flag
+        # get lines which are the ones produced by -MJ flag
         # these lines begin with { and "directory":
         if larr[0]=='{' and larr[1]=='"directory":':
             nl.append(lt)

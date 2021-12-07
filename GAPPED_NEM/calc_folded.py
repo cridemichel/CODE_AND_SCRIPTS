@@ -22,4 +22,4 @@ for i in range(0,Np):
     theta=180.0*np.arccos(np.dot(orients[i1],orients[i2]))/np.pi
     if theta < thr: # if theta is less than 10 degree
         nfolded+=1
-print('# of gapped duplexes foldes is ', nfolded)
+print('Number of gapped duplexes is ', Np,' of which ',nfolded, ' are folded')
