@@ -1,6 +1,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<math.h>
+#include<time.h>
 double nx, ny, nz, L[3], *rx, *ry, *rz, extradel;
 double *rxc, *ryc, *rzc, rxl, ryl, rzl, drx, dry, drz;
 double *rxCM, *ryCM, *rzCM;
@@ -23,6 +24,8 @@ int main(int argc, char **argv)
   permdiam=6.3; /* 20 T * 0.63 nm dove 0.63 nm è la lunghezza per base stimata per ssDNA in BiophysJ 86, 2630 (2004) */  
   //permdiam=0.5;
   Len=16.0; /* 48 bp equal roughly to 16 nm */
+
+  srand48(time(0));
   if (argc == 1)
    {
 
@@ -89,6 +92,13 @@ int main(int argc, char **argv)
       R0[k1][k2]=0.0;
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
   delta = 0.1;
+ 
+  double negsegno, segno;
+  segno=(drand48()>=0.5)?1.0:-1.0; 
+  if (segno==1.0)
+    negsegno = -1.0;
+  else
+    negsegno = 1.0;
   /* building the dimer... */
   rxc[0] = Len/2.0+delta;
   ryc[0] = -Diam/2.0-delta;
@@ -98,6 +108,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][0] = R0[a][b];
       }
+  Rc[0][0][0] = segno*Rc[0][0][0];
 
   rxc[1] = Len/2.0+delta;
   ryc[1] = Diam/2.0+delta;
@@ -107,6 +118,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][1] = R0[a][b];
       }
+  Rc[0][0][1] = segno*Rc[0][0][1];
 
   rxc[2] = -Len/2.0-delta;
   ryc[2] = -Diam/2.0-delta;
@@ -116,7 +128,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][2] = R0[a][b];
       }
-  Rc[0][0][2] = -Rc[0][0][2];
+  Rc[0][0][2] = negsegno*Rc[0][0][2];
   rxc[3] = -Len/2.0-delta;
   ryc[3] = Diam/2.0+delta;
   rzc[3] = 0.0;
@@ -125,7 +137,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][3] = R0[a][b];
       }
-  Rc[0][0][3] = -Rc[0][0][3];
+  Rc[0][0][3] = negsegno*Rc[0][0][3];
 
   bs[0] = 2.0*Len+2.0*delta;
   bs[1] = 2.0*Diam+2.0*delta;
