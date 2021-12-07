@@ -93,12 +93,7 @@ int main(int argc, char **argv)
   R0[0][0]=R0[1][1]=R0[2][2]=1.0;
   delta = 0.1;
  
-  double negsegno, segno;
-  segno=(drand48()>=0.5)?1.0:-1.0; 
-  if (segno==1.0)
-    negsegno = -1.0;
-  else
-    negsegno = 1.0;
+  double segno;
   /* building the dimer... */
   rxc[0] = Len/2.0+delta;
   ryc[0] = -Diam/2.0-delta;
@@ -108,7 +103,6 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][0] = R0[a][b];
       }
-  Rc[0][0][0] = segno*Rc[0][0][0];
 
   rxc[1] = Len/2.0+delta;
   ryc[1] = Diam/2.0+delta;
@@ -118,7 +112,6 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][1] = R0[a][b];
       }
-  Rc[0][0][1] = segno*Rc[0][0][1];
 
   rxc[2] = -Len/2.0-delta;
   ryc[2] = -Diam/2.0-delta;
@@ -128,7 +121,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][2] = R0[a][b];
       }
-  Rc[0][0][2] = negsegno*Rc[0][0][2];
+  //Rc[0][0][2] = -Rc[0][0][2];
   rxc[3] = -Len/2.0-delta;
   ryc[3] = Diam/2.0+delta;
   rzc[3] = 0.0;
@@ -137,7 +130,7 @@ int main(int argc, char **argv)
       {
 	Rc[a][b][3] = R0[a][b];
       }
-  Rc[0][0][3] = negsegno*Rc[0][0][3];
+  //Rc[0][0][3] = -Rc[0][0][3];
 
   bs[0] = 2.0*Len+2.0*delta;
   bs[1] = 2.0*Diam+2.0*delta;
@@ -282,13 +275,16 @@ int main(int argc, char **argv)
       for (j=0; j < polylen; j++)
 	{
 	  idx = i*polylen + j;
+          if (j==0 || j==2)
+              segno= (drand48()>=0.5)?1.0:-1.0;
 	  rx[idx] = rxCM[i] + rxc[j];
 	  ry[idx] = ryCM[i] + ryc[j];
 	  rz[idx] = rzCM[i] + rzc[j];
 	  for (a=0; a < 3; a++)
 	    for (b=0; b < 3; b++)
 	      Ri[a][b][idx] = Rc[a][b][j];
-	  //printf("qui idx=%d\n", idx);
+          Ri[0][0][idx] = segno*Ri[0][0][idx];
+          //printf("qui idx=%d\n", idx);
 	}
     }
   for (i=0; i < parnum; i++)
