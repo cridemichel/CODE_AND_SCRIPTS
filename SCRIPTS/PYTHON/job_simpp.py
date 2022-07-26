@@ -43,8 +43,8 @@ def extend_sim(restart):
         ls=f.readlines()
     l=ls[1].split(' ')
     #overwrite file total steps with new value
-    newsteps=int(l[2])+extsteps
-    l[2]=str(newsteps)
+    newsteps=int(l[1])+extsteps
+    l[1]=str(newsteps)
     ls[1]=' '.join(l)
     with open(restart,"w") as f:
         for l in ls:
