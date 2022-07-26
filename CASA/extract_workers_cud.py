@@ -26,9 +26,10 @@ nomi=[]
 tempwork=False
 for l in lines:
     if  l.find('Pag.')!=-1:
-        sl = l.strip('\n').split()
+        #print('l=', l)
+        sl = l.strip('\n').split('.')
         np = np + 1
-        pa=sl[4].split('/')
+        pa=sl[1].split('/')
         numpag = int(pa[0])
         pagtot = int(pa[1])
         print('np=',np)
