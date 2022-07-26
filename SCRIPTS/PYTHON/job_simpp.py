@@ -41,11 +41,11 @@ def extend_sim(restart):
     #os.system('rm '+ donefile)
     with open(restart) as f:
         ls=f.readlines()
-    l=ls[0].split(' ')
+    l=ls[1].split(' ')
     #overwrite file total steps with new value
     newsteps=int(l[2])+extsteps
     l[2]=str(newsteps)
-    ls[0]=' '.join(l)
+    ls[1]=' '.join(l)
     with open(restart,"w") as f:
         for l in ls:
             f.write(l)
