@@ -6,7 +6,8 @@
 import os, sys
 # per avere i color va installato con pip il modulo ansicolors 
 # > pip install ansicolors
-from colors import red, green, blue
+#import colors
+from colors import color
 def print_help():
     print('vproj <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
     print('-sn: provide an optional servername')
@@ -73,9 +74,11 @@ if DEBUG:
     print('spath=',os.path.abspath(spath))
     print('vinfo=',vifn)
 if vifn == '.viminfo' and os.path.abspath(spath)==os.getenv('HOME'):
-    yn=input(red('I will overwrite .viminfo in your home dir, continue (y/N)? '))
+    yn=input(color('I will overwrite .viminfo in your home dir, continue (y/N)? ', fg='red'))
+    #yn=input('I will overwrite .viminfo in your home dir, continue (y/N)? ')
     if yn != 'y':
-        print(green('ok aborting...'))
+        print(color('ok aborting...', fg='green'))
+        print('ok aborting...')
         quit()
 if localviminfo==True:
     #exop = ' -c \':set viminfo+=n'+os.getcwd()+'/'+vifn+'\''
