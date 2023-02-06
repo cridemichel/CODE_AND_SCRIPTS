@@ -48,7 +48,7 @@ for l in lines:
             listpag.append([pagini,pagfin])
         #ccc=0
         pagini=np
-        nomco=lines[cc+4].replace("'","_")
+        nomco=lines[cc+6].replace("'","_")
         nomus=nomco.replace(' ', '_')
         nomi.append(nomus)
         #  for sl in sublines:
