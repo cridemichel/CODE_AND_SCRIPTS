@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
 from scipy import optimize
-#import scipy.special as sf
+import scipy.special as sf
 doplot=False
 pi=3.141592653589793
 veff=6.495
@@ -21,13 +21,8 @@ def fgauss(th, a):
             arg = (pi-oneth)*(pi-oneth)
         ll.append((a/(4*pi))*np.exp(-a*arg*0.5))
     return np.array(ll)
-def fgaussAD(th, a, norm):
-    #ll=[]
-    #K=np.sqrt(a)/(np.sqrt(pi)*sf.erfi(np.sqrt(a)))
-    #for oneth in th:
-    #    ll.append(K*np.exp(a*np.cos(oneth)*np.cos(oneth)))
-    #return np.array(ll)
-    #K=np.sqrt(a)/(np.sqrt(pi)*sf.erfi(np.sqrt(a)))
+def fgaussAD(th, a):
+    norm=np.sqrt(a)/(np.sqrt(pi)*sf.erfi(np.sqrt(a)))/(2.0*pi)
     return norm*np.exp(a*np.cos(th)*np.cos(th))
 args=sys.argv
 fi = 'distro.dat'
@@ -66,11 +61,9 @@ elif usegauss==1 or usegauss==4:
     y_th = fons(x_data, alpha)
 else:
     print('Fitting AD function')
-    params, params_covariance = optimize.curve_fit(fgaussAD, x_data, y_data, p0=[1.0, 10.0])
+    params, params_covariance = optimize.curve_fit(fgaussAD, x_data, y_data, p0=[1.0])
     alpha=params[0]
-    K=params[1]
-    print('K=', K)
-    y_th = fgaussAD(x_data, alpha, K)
+    y_th = fgaussAD(x_data, alpha)
 print('alpha=', alpha, " params_covariance=", params_covariance)
 if usegauss==0:
     fact=alpha * (1.0 - np.exp(-pi*pi*alpha/8.0))
@@ -79,8 +72,9 @@ elif usegauss==1:
     fact=alpha*np.tanh(alpha/2.0)
     print('onsager fact=', fact)
 elif usegauss==2:
-    fact=4.0*pi*(np.exp(alpha)-1.0)*K
-    print('K=', K, ' AD fact=', fact)
+    N=np.sqrt(alpha)/(np.sqrt(pi)*sf.erfi(np.sqrt(alpha)))/(2.0*pi)
+    fact=4.0*pi*(np.exp(alpha)-1.0)*N
+    #print('K=', K, ' AD fact=', fact)
 else:
     print('Data from realigning simulation')
     fact=1.0
