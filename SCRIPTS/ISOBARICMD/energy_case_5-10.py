@@ -10,6 +10,18 @@ absenedr=True
 def func(xx, aa, bb):
     return aa * xx  + bb
 
+SMALL_SIZE = 18
+MEDIUM_SIZE = 20
+BIGGER_SIZE = 24
+
+matplotlib.rc('font', size=SMALL_SIZE)          # controls default text sizes
+matplotlib.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+matplotlib.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+matplotlib.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+matplotlib.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
 def calcstddev(vec):
     m=0
     c1=0
@@ -56,7 +68,7 @@ ra.clear()
 runavg=False
 dofit=False
 calcenedrift=False
-fig, axs = plt.subplots(2, 2)
+fig, axs = plt.subplots(2, 2, figsize=(16,9.4))
 #  def plot_addons():
 #      calcedr(y, ra, yp)
 #      sd=calcstddev(y)
@@ -93,9 +105,9 @@ calcra(y,yp2)
 sdf=2.0
 axs[0, 0].plot(x, y)
 axs[0, 0].plot(x, yp2)
-axs[0, 0].set_title(r'$dt = 0.005 n_{ys}=4 n_r = 7$')
-axs[0, 0].set_ylim([0,1.5E-5])
-axs[0, 0].set(xlabel='', ylabel=r'$|(E(t)-E(0))/E(0)|$')
+axs[0, 0].set_title(r'$dt = 0.005\; n_{ys}=4\; n_r = 7$')
+axs[0, 0].set_ylim([0,3E-5])
+axs[0, 0].set(xlabel='', ylabel=r'$\Delta E$')
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
 x, y = np.loadtxt('CASE_5_dt_0.005_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -107,7 +119,7 @@ yp2=[]
 calcra(y,yp2)
 axs[0, 1].plot(x, y)
 axs[0, 1].plot(x, yp2)
-axs[0, 1].set_title(r'$dt = 0.005 n_{ys}=1 n_r = 1$')
+axs[0, 1].set_title(r'$dt = 0.005\; n_{ys}=1\; n_r = 1$')
 axs[0, 1].set_ylim([0,3E-5])
 axs[0, 1].set(xlabel='', ylabel='')
 #axs[1, 0].plot(x, -y, 'tab:green')
@@ -121,9 +133,10 @@ yp2=[]
 calcra(y,yp2)
 axs[1, 0].plot(x, y)
 axs[1, 0].plot(x, yp2)
-axs[1, 0].set_ylim([0,1.5E-5])
-axs[1, 0].set_title(r'$dt = 0.01 n_{ys}=4 n_r = 7$')
-axs[1, 0].set(xlabel='t (ns)', ylabel=r'$|(E(t)-E(0))/E(0)|$')
+axs[1, 0].set_ylim([0,1.25E-4])
+axs[1, 0].set_title(r'$dt = 0.01\; n_{ys}=4\; n_r = 7$')
+axs[1, 0].set(xlabel=r'$t (ns)$', ylabel=r'$\Delta E$')
+axs[1, 0].ticklabel_format(axis='both', style='sci',scilimits=(0,0))
 ###
 x, y = np.loadtxt('CASE_10_dt_0.01_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=[]
@@ -134,12 +147,13 @@ yp2=[]
 calcra(y,yp2)
 axs[1, 1].plot(x, y)
 axs[1, 1].plot(x, yp2)
-axs[1, 1].set_ylim([0,1.2E-4])
-axs[1, 1].set_title(r'$dt = 0.01 n_{ys}=1 n_r = 1$')
-axs[1, 1].set(xlabel='t (ns)', ylabel='')
+axs[1, 1].set_ylim([0,1.25E-4])
+axs[1, 1].set_title(r'$dt = 0.01\; n_{ys}=1\; n_r = 1$')
+axs[1, 1].ticklabel_format(axis='both', style='sci',scilimits=(0,0))
+#axs[1, 1].set(xlabel=r'$t (ns)$', ylabel='')
 ###
 #axs[1, 1].plot(x, -y, 'tab:red')
-axs[1, 1].set_title(r'$dt = 0.01 n_{ys}=1 n_r = 1$')
+axs[1, 1].set_title(r'$dt = 0.01\; n_{ys}=1\; n_r = 1$')
 #axs[2, 0].plot(x, -y, 'tab:green')
 plt.savefig('energy_case_5-10.png')
 #for ax in axs.flat:

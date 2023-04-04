@@ -6,8 +6,20 @@ import sys
 
 matplotlib.rcParams['text.usetex'] = True
 argv =sys.argv
-# font = { 'size'   : 9}
-# matplotlib.rc('font', **font)
+#font = { 'size'   : 14}
+#matplotlib.rc('font', **font)
+
+SMALL_SIZE = 18
+MEDIUM_SIZE = 20
+BIGGER_SIZE = 24
+
+matplotlib.rc('font', size=SMALL_SIZE)          # controls default text sizes
+matplotlib.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+matplotlib.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+matplotlib.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+matplotlib.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 absenedr=True
 def func(xx, aa, bb):
@@ -59,7 +71,7 @@ ra.clear()
 runavg=False
 dofit=False
 calcenedrift=False
-fig, axs = plt.subplots(3, 2)
+fig, axs = plt.subplots(3, 2, figsize=(16,14))
 #  def plot_addons():
 #      calcedr(y, ra, yp)
 #      sd=calcstddev(y)
@@ -84,49 +96,46 @@ logx=False
 logy=False
 #plt.title(title)
 plt.xlabel(xlbl)
-fact=1E7
 x, y = np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2,y2= np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=fact*np.array(y)
-yp2=fact*np.array(y2)
+yp=np.array(y)
+yp2=np.array(y2)
 sdf=2.0
 axs[0, 0].plot(x, yp)
 axs[0, 0].plot(x, yp2)
-axs[0, 0].text(0, 6E-7*fact, r'$dt = 0.001\; n_{ys}=4\; n_r = 7$')
-axs[0, 0].set_ylim([0,8E-7*fact])
-axs[0, 0].set(xlabel='', ylabel=r'$\Delta E\; \times 10^{-7}$')
+axs[0, 0].set_title(r'$dt = 0.001\; n_{ys}=4\; n_r = 7$')
+axs[0, 0].set_ylim([0,5.5E-7])
+axs[0, 0].set(xlabel='', ylabel=r'$\Delta E$')
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
 x, y = np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2,y2= np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-fact=1E7
-yp=fact*np.array(y)
-yp2=fact*np.array(y2)
+yp=np.array(y)
+yp2=np.array(y2)
 axs[0, 1].plot(x, yp)
 axs[0, 1].plot(x, yp2)
-axs[0, 1].text(0, 6E-7*fact, r'$dt = 0.001\; n_{ys}=1\; n_r = 1$')
-axs[0, 1].set_ylim([0,8E-7*fact])
+axs[0, 1].set_title(r'$dt = 0.001\; n_{ys}=1\; n_r = 1$')
+axs[0, 1].set_ylim([0,5.5E-7])
 axs[0, 1].set(xlabel='', ylabel='')
 #axs[1, 0].plot(x, -y, 'tab:green')
 ###
 x, y = np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2,y2= np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-fact=1E6
-yp=fact*np.array(y)
-yp2=fact*np.array(y2)
+yp=np.array(y)
+yp2=np.array(y2)
 axs[1, 0].plot(x, yp)
 axs[1, 0].plot(x, yp2)
-axs[1, 0].set_ylim([0,3.0*1E-6*fact])
+axs[1, 0].set_ylim([0,2.45*1E-6])
 axs[1, 0].set_title(r'$dt = 0.002\; n_{ys}=4\; n_r = 7$')
-axs[1, 0].set(xlabel='', ylabel=r'$\Delta E \times 10^{-6}$')
+axs[1, 0].set(xlabel='', ylabel=r'$\Delta E$')
 ###
 x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2, y2 = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=fact*np.array(y)
-yp2=fact*np.array(y2)
+yp=np.array(y)
+yp2=np.array(y2)
 axs[1, 1].plot(x, yp)
 axs[1, 1].plot(x, yp2)
-axs[1, 1].set_ylim([0,3.0*1E-6*fact])
+axs[1, 1].set_ylim([0,2.45*1E-6])
 axs[1, 1].set_title(r'$dt = 0.002\; n_{ys}=1\; n_r = 1$')
 axs[1, 1].set(xlabel='', ylabel='')
 ###
@@ -134,21 +143,23 @@ axs[1, 1].set(xlabel='', ylabel='')
 #axs[2, 0].plot(x, -y, 'tab:green')
 x, y = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2, y2 = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-fact=1E5
-yp=fact*np.array(y)
-yp2=fact*np.array(y2)
+yp=np.array(y)
+yp2=np.array(y2)
 axs[2, 0].plot(x, yp)
 axs[2, 0].plot(x, yp2)
 #axs[2, 0].set_ylim([0,3.0*1E-5*fact])
 axs[2, 0].set_title(r'$dt = 0.003\; n_{ys}=4\; n_r = 7$')
-axs[2, 0].set(xlabel='t (ns)', ylabel=r'$\Delta E \times 10^{-5}$')
+axs[2, 0].set_ylim([0,7.2*1E-6])
+axs[2, 0].set(xlabel='t (ns)', ylabel=r'$\Delta E$')
+axs[2, 0].ticklabel_format(style='sci')
 #axs[2, 1].plot(x, -y, 'tab:red')
 x, y = np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2,y2= np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=fact*np.array(y)
-yp2=fact*np.array(y2)
+yp=np.array(y)
+yp2=np.array(y2)
 axs[2, 1].plot(x, yp)
 axs[2, 1].plot(x, yp2)
+axs[2, 1].set_ylim([0,7.2*1E-6])
 axs[2, 1].set_title(r'$dt = 0.003\; n_{ys}=1\; n_r = 1$')
 axs[2, 1].set(xlabel='t (ns)', ylabel='')
 plt.savefig('energy_case_1-3.png')
