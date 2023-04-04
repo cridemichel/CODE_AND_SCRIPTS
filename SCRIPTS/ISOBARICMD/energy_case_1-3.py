@@ -6,6 +6,9 @@ import sys
 
 matplotlib.rcParams['text.usetex'] = True
 argv =sys.argv
+# font = { 'size'   : 9}
+# matplotlib.rc('font', **font)
+
 absenedr=True
 def func(xx, aa, bb):
     return aa * xx  + bb
@@ -100,7 +103,7 @@ fact=1E7
 yp=fact*np.array(y)
 yp2=fact*np.array(y2)
 axs[0, 1].plot(x, yp)
-axs[0, 1].plot(x, yp)
+axs[0, 1].plot(x, yp2)
 axs[0, 1].text(0, 6E-7*fact, r'$dt = 0.001\; n_{ys}=1\; n_r = 1$')
 axs[0, 1].set_ylim([0,8E-7*fact])
 axs[0, 1].set(xlabel='', ylabel='')
@@ -118,7 +121,7 @@ axs[1, 0].set_title(r'$dt = 0.002\; n_{ys}=4\; n_r = 7$')
 axs[1, 0].set(xlabel='', ylabel=r'$\Delta E \times 10^{-6}$')
 ###
 x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2, y2 = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=fact*np.array(y)
 yp2=fact*np.array(y2)
 axs[1, 1].plot(x, yp)
@@ -136,7 +139,7 @@ yp=fact*np.array(y)
 yp2=fact*np.array(y2)
 axs[2, 0].plot(x, yp)
 axs[2, 0].plot(x, yp2)
-axs[1, 1].set_ylim([0,3.0*1E-5*fact])
+#axs[2, 0].set_ylim([0,3.0*1E-5*fact])
 axs[2, 0].set_title(r'$dt = 0.003\; n_{ys}=4\; n_r = 7$')
 axs[2, 0].set(xlabel='t (ns)', ylabel=r'$\Delta E \times 10^{-5}$')
 #axs[2, 1].plot(x, -y, 'tab:red')

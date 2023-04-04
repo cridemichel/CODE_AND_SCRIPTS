@@ -93,7 +93,7 @@ for l in lines:
             sumca+=np.cos(a)
             sumsa+=np.sin(a)
             cc += 1.0
-        smop += sumca*sumca/cc/cc + sumsa*sumsa/cc/cc
+        smop += np.sqrt(sumca*sumca/cc/cc + sumsa*sumsa/cc/cc)
         cc2 += 1.0
 #print('phi=',phi)
     lst.append([press,str(smop/cc2)])

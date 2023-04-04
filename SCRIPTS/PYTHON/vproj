@@ -41,6 +41,8 @@ for a in itargs:
         vifn=next(itargs)
     if a =='--vim' or a=='-v':
         usevim=True
+    if a =='--notagbar' or a=='-nt':
+        showtb=False
     else:
         spath = a
 if usevim==True:
@@ -87,7 +89,7 @@ if localviminfo==True:
         print('local viminfo='+os.path.abspath(spath)+'/'+vifn)
 else:
     exop = ''
-exop=exop+' --cmd ":let g:is_a_vproj=1" '
+exop=exop+' --cmd ":let g:is_a_vproj=1"'
 # set ale lsp root dir for texlab
 # this way texlab works, this is a workaround
 # since texlab is not provided with a function able
