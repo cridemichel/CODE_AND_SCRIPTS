@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 from matplotlib.ticker import AutoMinorLocator
+import matplotlib.transforms as mtransforms
 
 matplotlib.rcParams['text.usetex'] = True
 argv =sys.argv
@@ -72,7 +73,20 @@ ra.clear()
 runavg=False
 dofit=False
 calcenedrift=False
-fig, axs = plt.subplots(3, 2, figsize=(16,14))
+#fig, axs = plt.subplots(2, 2, figsize=(16,9))
+fig, axs = plt.subplot_mosaic([['(a)', '(b)'], ['(c)', '(d)']], figsize=(16,9), layout='constrained')
+
+for label, ax in axs.items():
+    # label physical distance in and down:
+    trans = mtransforms.ScaledTranslation(10/72, -5/72, fig.dpi_scale_trans)
+    ax.text(0.0, 1.0, label, transform=ax.transAxes + trans,
+            fontsize='medium', verticalalignment='top', fontfamily='serif')
+#           bbox=dict(facecolor='0.7', edgecolor='none', pad=3.0))
+
+
+#fig.tight_layout(pad=1.0)
+#plt.subplots_adjust( wspace=0.1, hspace=0.1)
+
 #  def plot_addons():
 #      calcedr(y, ra, yp)
 #      sd=calcstddev(y)
@@ -95,6 +109,7 @@ xlbl='t'
 ylbl='E'
 logx=False
 logy=False
+
 #plt.title(title)
 plt.xlabel(xlbl)
 x, y = np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -102,84 +117,61 @@ x2,y2= np.loadtxt('CASE_1_dt_0.001_4x7_doublechain/runavg_delE.dat', comments=['
 yp=np.array(y)
 yp2=np.array(y2)
 sdf=2.0
-axs[0, 0].plot(x, yp)
-axs[0, 0].plot(x, yp2)
-axs[0, 0].set_title(r'$dt = 0.001\; n_{ys}=4\; n_r = 7$')
-axs[0, 0].set_ylim([0,5.5E-7])
-axs[0, 0].set(xlabel='', ylabel=r'$\Delta E$')
-axs[0, 0].xaxis.set_minor_locator(AutoMinorLocator())
-axs[0, 0].yaxis.set_minor_locator(AutoMinorLocator())
+
+ax = axs['(a)']
+ax.plot(x, yp)
+ax.plot(x, yp2)
+#axs[0, 0].set_title(r'$dt = 0.001$') 
+ax.set_ylim([0,4.5E-7])
+ax.set(xlabel='', ylabel=r'$\Delta E$')
+ax.xaxis.set_minor_locator(AutoMinorLocator())
+ax.yaxis.set_minor_locator(AutoMinorLocator())
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
-x, y = np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-x2,y2= np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=np.array(y)
-yp2=np.array(y2)
-axs[0, 1].plot(x, yp)
-axs[0, 1].plot(x, yp2)
-axs[0, 1].set_title(r'$dt = 0.001\; n_{ys}=1\; n_r = 1$')
-axs[0, 1].set_ylim([0,5.5E-7])
-axs[0, 1].xaxis.set_minor_locator(AutoMinorLocator())
-axs[0, 1].yaxis.set_minor_locator(AutoMinorLocator())
-axs[0, 1].set(xlabel='', ylabel='')
-#axs[1, 0].plot(x, -y, 'tab:green')
-###
-x, y = np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-x2,y2= np.loadtxt('CASE_2_dt_0.002_4x7_doublechain_3/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=np.array(y)
-yp2=np.array(y2)
-axs[1, 0].plot(x, yp)
-axs[1, 0].plot(x, yp2)
-axs[1, 0].set_ylim([0,2.6*1E-6])
-axs[1, 0].set_title(r'$dt = 0.002\; n_{ys}=4\; n_r = 7$')
-axs[1, 0].xaxis.set_minor_locator(AutoMinorLocator())
-axs[1, 0].yaxis.set_minor_locator(AutoMinorLocator())
-axs[1, 0].set(xlabel='', ylabel=r'$\Delta E$')
-###
-x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-x2, y2 = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-yp=np.array(y)
-yp2=np.array(y2)
-axs[1, 1].plot(x, yp)
-axs[1, 1].plot(x, yp2)
-axs[1, 1].set_ylim([0,2.6*1E-6])
-axs[1, 1].set_title(r'$dt = 0.002\; n_{ys}=1\; n_r = 1$')
-axs[1, 1].xaxis.set_minor_locator(AutoMinorLocator())
-axs[1, 1].yaxis.set_minor_locator(AutoMinorLocator())
-axs[1, 1].set(xlabel='', ylabel='')
-###
-#axs[1, 1].plot(x, -y, 'tab:red')
-#axs[2, 0].plot(x, -y, 'tab:green')
 x, y = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 x2, y2 = np.loadtxt('CASE_3_dt_0.003_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=np.array(y)
 yp2=np.array(y2)
-axs[2, 0].plot(x, yp)
-axs[2, 0].plot(x, yp2)
+ax = axs['(b)']
+ax.plot(x, yp)
+ax.plot(x, yp2)
 #axs[2, 0].set_ylim([0,3.0*1E-5*fact])
-axs[2, 0].set_title(r'$dt = 0.003\; n_{ys}=4\; n_r = 7$')
-axs[2, 0].set_ylim([0,7.2*1E-6])
-axs[2, 0].set(xlabel='t (ns)', ylabel=r'$\Delta E$')
-axs[2, 0].xaxis.set_minor_locator(AutoMinorLocator())
-axs[2, 0].yaxis.set_minor_locator(AutoMinorLocator())
-axs[2, 0].ticklabel_format(style='sci')
+#axs[0, 1].set_title(r'$dt = 0.003$')
+ax.set_ylim([0,6.0*1E-6])
+ax.set(xlabel='', ylabel='')#ylabel=r'$\Delta E$')
+ax.xaxis.set_minor_locator(AutoMinorLocator())
+ax.yaxis.set_minor_locator(AutoMinorLocator())
+ax.ticklabel_format(style='sci')
 #axs[2, 1].plot(x, -y, 'tab:red')
-x, y = np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
-x2,y2= np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x, y = np.loadtxt('CASE_5_dt_0.005_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2, y2 = np.loadtxt('CASE_5_dt_0.005_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=np.array(y)
 yp2=np.array(y2)
-axs[2, 1].plot(x, yp)
-axs[2, 1].plot(x, yp2)
-axs[2, 1].set_ylim([0,7.2*1E-6])
-axs[2, 1].set_title(r'$dt = 0.003\; n_{ys}=1\; n_r = 1$')
-axs[2, 1].set(xlabel='t (ns)', ylabel='')
-axs[2, 1].xaxis.set_minor_locator(AutoMinorLocator())
-axs[2, 1].yaxis.set_minor_locator(AutoMinorLocator())
-plt.savefig('energy_case_1-3.png')
-#for ax in axs.flat:
-#    ax.set(xlabel='t', ylabel=r'$|(E(t)-E(0))/E(0)|$')
-# Hide x labels and tick labels for top plots and y ticks for right plots.
-#for ax in axs.flat:
-#    ax.label_outer()
+ax=axs['(c)']
+ax.plot(x, yp)
+ax.plot(x, yp2)
+#axs[2, 0].set_ylim([0,3.0*1E-5*fact])
+#axs[1, 0].set_title(r'$dt = 0.005$')
+ax.set_ylim([0,1.6*1E-5])
+ax.set(xlabel='t (ns)', ylabel=r'$\Delta E$')
+ax.xaxis.set_minor_locator(AutoMinorLocator())
+ax.yaxis.set_minor_locator(AutoMinorLocator())
+ax.ticklabel_format(style='sci')
+#
+x, y = np.loadtxt('CASE_10_dt_0.01_4x7_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+x2, y2 = np.loadtxt('CASE_10_dt_0.01_4x7_doublechain/runavg_delE.dat', comments=['#'], usecols=(0,1), unpack=True)
+yp=np.array(y)
+yp2=np.array(y2)
+ax = axs['(d)']
+ax.plot(x, yp)
+ax.plot(x, yp2)
+#axs[2, 0].set_ylim([0,3.0*1E-5*fact])
+#axs[1, 1].set_title(r'$dt = 0.005$')
+ax.set_ylim([0,8.5*1E-5])
+ax.set(xlabel='t (ns)', ylabel='')#ylabel=r'$\Delta E$')
+ax.xaxis.set_minor_locator(AutoMinorLocator())
+ax.yaxis.set_minor_locator(AutoMinorLocator())
+ax.ticklabel_format(style='sci')
+plt.savefig('energy_case_SY.png')
 plt.show()
 

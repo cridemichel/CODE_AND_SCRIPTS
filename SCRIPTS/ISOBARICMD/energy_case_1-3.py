@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+from matplotlib.ticker import AutoMinorLocator
 
 matplotlib.rcParams['text.usetex'] = True
 argv =sys.argv
@@ -106,6 +107,8 @@ axs[0, 0].plot(x, yp2)
 axs[0, 0].set_title(r'$dt = 0.001\; n_{ys}=4\; n_r = 7$')
 axs[0, 0].set_ylim([0,5.5E-7])
 axs[0, 0].set(xlabel='', ylabel=r'$\Delta E$')
+axs[0, 0].xaxis.set_minor_locator(AutoMinorLocator())
+axs[0, 0].yaxis.set_minor_locator(AutoMinorLocator())
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
 x, y = np.loadtxt('CASE_1_dt_0.001_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -116,6 +119,8 @@ axs[0, 1].plot(x, yp)
 axs[0, 1].plot(x, yp2)
 axs[0, 1].set_title(r'$dt = 0.001\; n_{ys}=1\; n_r = 1$')
 axs[0, 1].set_ylim([0,5.5E-7])
+axs[0, 1].xaxis.set_minor_locator(AutoMinorLocator())
+axs[0, 1].yaxis.set_minor_locator(AutoMinorLocator())
 axs[0, 1].set(xlabel='', ylabel='')
 #axs[1, 0].plot(x, -y, 'tab:green')
 ###
@@ -125,8 +130,10 @@ yp=np.array(y)
 yp2=np.array(y2)
 axs[1, 0].plot(x, yp)
 axs[1, 0].plot(x, yp2)
-axs[1, 0].set_ylim([0,2.45*1E-6])
+axs[1, 0].set_ylim([0,2.6*1E-6])
 axs[1, 0].set_title(r'$dt = 0.002\; n_{ys}=4\; n_r = 7$')
+axs[1, 0].xaxis.set_minor_locator(AutoMinorLocator())
+axs[1, 0].yaxis.set_minor_locator(AutoMinorLocator())
 axs[1, 0].set(xlabel='', ylabel=r'$\Delta E$')
 ###
 x, y = np.loadtxt('CASE_2_dt_0.002_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -135,8 +142,10 @@ yp=np.array(y)
 yp2=np.array(y2)
 axs[1, 1].plot(x, yp)
 axs[1, 1].plot(x, yp2)
-axs[1, 1].set_ylim([0,2.45*1E-6])
+axs[1, 1].set_ylim([0,2.6*1E-6])
 axs[1, 1].set_title(r'$dt = 0.002\; n_{ys}=1\; n_r = 1$')
+axs[1, 1].xaxis.set_minor_locator(AutoMinorLocator())
+axs[1, 1].yaxis.set_minor_locator(AutoMinorLocator())
 axs[1, 1].set(xlabel='', ylabel='')
 ###
 #axs[1, 1].plot(x, -y, 'tab:red')
@@ -151,6 +160,8 @@ axs[2, 0].plot(x, yp2)
 axs[2, 0].set_title(r'$dt = 0.003\; n_{ys}=4\; n_r = 7$')
 axs[2, 0].set_ylim([0,7.2*1E-6])
 axs[2, 0].set(xlabel='t (ns)', ylabel=r'$\Delta E$')
+axs[2, 0].xaxis.set_minor_locator(AutoMinorLocator())
+axs[2, 0].yaxis.set_minor_locator(AutoMinorLocator())
 axs[2, 0].ticklabel_format(style='sci')
 #axs[2, 1].plot(x, -y, 'tab:red')
 x, y = np.loadtxt('CASE_3_dt_0.003_noyoshi_doublechain/delE.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -162,6 +173,8 @@ axs[2, 1].plot(x, yp2)
 axs[2, 1].set_ylim([0,7.2*1E-6])
 axs[2, 1].set_title(r'$dt = 0.003\; n_{ys}=1\; n_r = 1$')
 axs[2, 1].set(xlabel='t (ns)', ylabel='')
+axs[2, 1].xaxis.set_minor_locator(AutoMinorLocator())
+axs[2, 1].yaxis.set_minor_locator(AutoMinorLocator())
 plt.savefig('energy_case_1-3.png')
 #for ax in axs.flat:
 #    ax.set(xlabel='t', ylabel=r'$|(E(t)-E(0))/E(0)|$')

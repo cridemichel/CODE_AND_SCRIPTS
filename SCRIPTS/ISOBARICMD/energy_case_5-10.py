@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+from matplotlib.ticker import AutoMinorLocator
 
 matplotlib.rcParams['text.usetex'] = True
 argv =sys.argv
@@ -108,6 +109,8 @@ axs[0, 0].plot(x, yp2)
 axs[0, 0].set_title(r'$dt = 0.005\; n_{ys}=4\; n_r = 7$')
 axs[0, 0].set_ylim([0,3E-5])
 axs[0, 0].set(xlabel='', ylabel=r'$\Delta E$')
+axs[0, 0].xaxis.set_minor_locator(AutoMinorLocator())
+axs[0, 0].yaxis.set_minor_locator(AutoMinorLocator())
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
 x, y = np.loadtxt('CASE_5_dt_0.005_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -122,9 +125,11 @@ axs[0, 1].plot(x, yp2)
 axs[0, 1].set_title(r'$dt = 0.005\; n_{ys}=1\; n_r = 1$')
 axs[0, 1].set_ylim([0,3E-5])
 axs[0, 1].set(xlabel='', ylabel='')
+axs[0, 1].xaxis.set_minor_locator(AutoMinorLocator())
+axs[0, 1].yaxis.set_minor_locator(AutoMinorLocator())
 #axs[1, 0].plot(x, -y, 'tab:green')
 ###
-x, y = np.loadtxt('CASE_5_dt_0.005_4x7_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
+x, y = np.loadtxt('CASE_10_dt_0.01_4x7_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=[]
 calcedr(y, ra, yp)
 y=yp
@@ -136,7 +141,10 @@ axs[1, 0].plot(x, yp2)
 axs[1, 0].set_ylim([0,1.25E-4])
 axs[1, 0].set_title(r'$dt = 0.01\; n_{ys}=4\; n_r = 7$')
 axs[1, 0].set(xlabel=r'$t (ns)$', ylabel=r'$\Delta E$')
-axs[1, 0].ticklabel_format(axis='both', style='sci',scilimits=(0,0))
+axs[1, 0].ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+axs[1, 0].xaxis.set_minor_locator(AutoMinorLocator())
+axs[1, 0].yaxis.set_minor_locator(AutoMinorLocator())
+
 ###
 x, y = np.loadtxt('CASE_10_dt_0.01_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=[]
@@ -149,7 +157,10 @@ axs[1, 1].plot(x, y)
 axs[1, 1].plot(x, yp2)
 axs[1, 1].set_ylim([0,1.25E-4])
 axs[1, 1].set_title(r'$dt = 0.01\; n_{ys}=1\; n_r = 1$')
-axs[1, 1].ticklabel_format(axis='both', style='sci',scilimits=(0,0))
+axs[1, 1].ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+axs[1, 1].xaxis.set_minor_locator(AutoMinorLocator())
+axs[1, 1].yaxis.set_minor_locator(AutoMinorLocator())
+
 #axs[1, 1].set(xlabel=r'$t (ns)$', ylabel='')
 ###
 #axs[1, 1].plot(x, -y, 'tab:red')
