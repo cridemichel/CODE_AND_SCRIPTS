@@ -63,9 +63,9 @@ if sim_done(restart):
     os.system('echo \"job regularly finished\" > '+jobfinished)
     quit()
 if jtype==2:#start for the first time
-    os.system(exec_name+arg_start + '> screen > 2>&1') 
+    os.system(exec_name+arg_start + '2>&1 > screen ') 
 else:#restart extending if requested, i.e. if totsteps > 0 
     if totsteps > 0:
         extend_sim(restart)
-    os.system(exec_name + arg_restart + '>> screen 2>&1')
+    os.system(exec_name + arg_restart + '2>&1 >> screen ')
 quit()
