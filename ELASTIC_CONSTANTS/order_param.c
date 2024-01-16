@@ -237,7 +237,7 @@ int main(int argc, char** argv)
       fscanf(f,"%[^\n]\n",line);
       fscanf(f,"%[^\n]\n",line);
       fscanf(f,"%[^\n]\n",line);
-      printf("N=%d\n", N);
+      //printf("N=%d\n", N);
       //printf("fname=%s %d ellipsoids...\n", fname, N);
       if (timeEvol)
 	{

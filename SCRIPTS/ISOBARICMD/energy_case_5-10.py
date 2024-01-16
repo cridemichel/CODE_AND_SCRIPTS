@@ -11,9 +11,9 @@ absenedr=True
 def func(xx, aa, bb):
     return aa * xx  + bb
 
-SMALL_SIZE = 18
-MEDIUM_SIZE = 20
-BIGGER_SIZE = 24
+SMALL_SIZE = 22
+MEDIUM_SIZE = 26
+BIGGER_SIZE = 30
 
 matplotlib.rc('font', size=SMALL_SIZE)          # controls default text sizes
 matplotlib.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
@@ -88,10 +88,13 @@ fig, axs = plt.subplots(2, 2, figsize=(16,9.4))
 #y=yp
 #ax.tick_params(labeltop=True, labelright=True)
 title=''
-xlbl='t'
+xlbl='$t\;(\mathrm{ns})$'
 ylbl='E'
 logx=False
 logy=False
+t0=1E-3 # ns
+yoshi=''#r'$\mathrm{SY+RESPA}$'
+noyoshi=''#r'$\mathrm{NO\;\;SY+RESPA}$'
 plt.title(title)
 plt.xlabel(xlbl)
 x, y = np.loadtxt('CASE_5_dt_0.005_4x7_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -104,13 +107,16 @@ yp2=[1.0]
 yp2.clear()
 calcra(y,yp2)
 sdf=2.0
-axs[0, 0].plot(x, y)
-axs[0, 0].plot(x, yp2)
-axs[0, 0].set_title(r'$dt = 0.005\; n_{ys}=4\; n_r = 7$')
+x=x*t0
+axs[0, 0].plot(x, y, label=r'$E_{rel}$')
+axs[0, 0].plot(x, yp2, label=r'$E_{cav}$')
+axs[0, 0].set_title(yoshi)
 axs[0, 0].set_ylim([0,3E-5])
-axs[0, 0].set(xlabel='', ylabel=r'$\Delta E$')
+axs[0, 0].text(.95,.9,r'$\Delta t = 5\,\mathrm{fs}\;\;$', horizontalalignment='right', transform=axs[0,0].transAxes)
+axs[0, 0].set(xlabel='', ylabel='') #ylabel=r'$\Delta E$')
 axs[0, 0].xaxis.set_minor_locator(AutoMinorLocator())
 axs[0, 0].yaxis.set_minor_locator(AutoMinorLocator())
+axs[0, 0].legend(loc='upper left')
 #axs[0,0].plot(x, y, 'x',label='Traiettoria')
 #
 x, y = np.loadtxt('CASE_5_dt_0.005_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
@@ -119,10 +125,11 @@ calcedr(y, ra, yp)
 y=yp
 sd=calcstddev(y)
 yp2=[]
+x=x*t0
 calcra(y,yp2)
 axs[0, 1].plot(x, y)
 axs[0, 1].plot(x, yp2)
-axs[0, 1].set_title(r'$dt = 0.005\; n_{ys}=1\; n_r = 1$')
+axs[0, 1].set_title(noyoshi)
 axs[0, 1].set_ylim([0,3E-5])
 axs[0, 1].set(xlabel='', ylabel='')
 axs[0, 1].xaxis.set_minor_locator(AutoMinorLocator())
@@ -132,6 +139,7 @@ axs[0, 1].yaxis.set_minor_locator(AutoMinorLocator())
 x, y = np.loadtxt('CASE_10_dt_0.01_4x7_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=[]
 calcedr(y, ra, yp)
+x=x*t0
 y=yp
 sd=calcstddev(y)
 yp2=[]
@@ -139,8 +147,9 @@ calcra(y,yp2)
 axs[1, 0].plot(x, y)
 axs[1, 0].plot(x, yp2)
 axs[1, 0].set_ylim([0,1.25E-4])
-axs[1, 0].set_title(r'$dt = 0.01\; n_{ys}=4\; n_r = 7$')
-axs[1, 0].set(xlabel=r'$t (ns)$', ylabel=r'$\Delta E$')
+#axs[1, 0].set_title(r'$\Delta t = 10\,\mathrm{fs}\;\;$'+yoshi)
+axs[1, 0].set(xlabel=xlbl, ylabel='') #ylabel=r'$\Delta E$')
+axs[1, 0].text(.95,.9,r'$\Delta t = 10\,\mathrm{fs}\;\;$', horizontalalignment='right', transform=axs[1,0].transAxes)
 axs[1, 0].ticklabel_format(axis='y', style='sci',scilimits=(0,0))
 axs[1, 0].xaxis.set_minor_locator(AutoMinorLocator())
 axs[1, 0].yaxis.set_minor_locator(AutoMinorLocator())
@@ -149,6 +158,7 @@ axs[1, 0].yaxis.set_minor_locator(AutoMinorLocator())
 x, y = np.loadtxt('CASE_10_dt_0.01_noyoshi_doublechain/energy.dat', comments=['#'], usecols=(0,1), unpack=True)
 yp=[]
 calcedr(y, ra, yp)
+x=x*t0
 y=yp
 sd=calcstddev(y)
 yp2=[]
@@ -156,7 +166,7 @@ calcra(y,yp2)
 axs[1, 1].plot(x, y)
 axs[1, 1].plot(x, yp2)
 axs[1, 1].set_ylim([0,1.25E-4])
-axs[1, 1].set_title(r'$dt = 0.01\; n_{ys}=1\; n_r = 1$')
+#axs[1, 1].set_title(r'$\Delta t = 10\,\mathrm{fs}\;\;$'+noyoshi)
 axs[1, 1].ticklabel_format(axis='y', style='sci',scilimits=(0,0))
 axs[1, 1].xaxis.set_minor_locator(AutoMinorLocator())
 axs[1, 1].yaxis.set_minor_locator(AutoMinorLocator())
@@ -164,7 +174,7 @@ axs[1, 1].yaxis.set_minor_locator(AutoMinorLocator())
 #axs[1, 1].set(xlabel=r'$t (ns)$', ylabel='')
 ###
 #axs[1, 1].plot(x, -y, 'tab:red')
-axs[1, 1].set_title(r'$dt = 0.01\; n_{ys}=1\; n_r = 1$')
+#axs[1, 1].set_title(r'$\Delta t = 0.01\; n_{ys}=1\; n_r = 1$')
 #axs[2, 0].plot(x, -y, 'tab:green')
 plt.savefig('energy_case_5-10.png')
 #for ax in axs.flat:
