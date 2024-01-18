@@ -50,8 +50,10 @@ for l in lines:
         delcc = 6
         nomco_old = nomco
         codfisc_old = codfisc
+        # attualmente il nome e cognomo sono a +6 dalla riga con COGNOMEsEsNOME
+        # e due righe più giù c'è il codice fiscale
         nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
-        codfisc = lines[cc+delcc+2].strip('\n').replace(" ","_").replace("'","_")
+        codfisc = lines[cc+delcc+2].strip('\n')
         #print(nomco, '<>', nomco_old)
     if delcc!=-1 and codfisc != codfisc_old:
         nw = nw+1
