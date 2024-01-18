@@ -30,8 +30,10 @@ for l in lines:
     #print ('linea=',l)
     if  l.find('Zucchetti spa, Autorizzazione') != -1:
         np = np+1
+    # la linea con il RIEPILOGO è prima di quella con 'Zucchetti spa,...'
+    # quindi devo aggiungere una pagina
     if l.find('RIEPILOGO') != -1:
-        pagfin = np
+        pagfin = np+1
         print('pag fin=', pagfin)
         listpag.append([pagini,pagfin])
         break
@@ -43,11 +45,11 @@ for l in lines:
 #        pagini = np
     delcc=-1
     if l.find('COGNOMEsEsNOME')!=-1 and lines[cc+4].find('RIEPILOGO')==-1:
-        print('l1=', l)
+        #print('l1=', l)
         delcc = 6
         nomco_old = nomco
         nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
-        print(nomco, '<>', nomco_old)
+        #print(nomco, '<>', nomco_old)
     if delcc!=-1 and nomco != nomco_old:
         nw = nw+1
         pagfin=np-1
@@ -73,9 +75,9 @@ for l in lines:
         #      ccc = ccc+1
         #  #print('nome cognome=', nomco)
     cc=cc+1
-listpag.append([pagini,np])
-print ('# pagine=', np)
-print ('# lavoratori=', nw)
+#listpag.append([pagini,np])
+print ('# pagine=', np+1)
+print ('# lavoratori=', nw, ' ( #PDF:', len(listpag), ' #NOMI:', len(nomi), ')')
 subdir='CEDOLINI'
 if not os.path.exists(subdir):
     os.system('mkdir '+subdir)
