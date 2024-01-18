@@ -26,6 +26,7 @@ nomi=[]
 fine=False
 tempwork=False
 nomco=''
+codfisc=''
 for l in lines:
     #print ('linea=',l)
     if  l.find('Zucchetti spa, Autorizzazione') != -1:
@@ -48,9 +49,11 @@ for l in lines:
         #print('l1=', l)
         delcc = 6
         nomco_old = nomco
+        codfisc_old = codfisc
         nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
+        codfisc = lines[cc+delcc+2].strip('\n').replace(" ","_").replace("'","_")
         #print(nomco, '<>', nomco_old)
-    if delcc!=-1 and nomco != nomco_old:
+    if delcc!=-1 and codfisc != codfisc_old:
         nw = nw+1
         pagfin=np-1
         sublines = lines[cc:]
