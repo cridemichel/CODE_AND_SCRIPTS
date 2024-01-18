@@ -17,7 +17,7 @@ with open(FTXT) as f:
     lines=f.readlines()
 #with open(NOMI) as f:
 #    nomi=f.readlines()
-np=1 #numero pagine 
+np=0 #numero pagine 
 nw=0 #numero lavoratori
 pagini=1
 listpag=[]
@@ -25,12 +25,13 @@ cc=0
 nomi=[]
 fine=False
 tempwork=False
+nomco=''
 for l in lines:
     #print ('linea=',l)
     if  l.find('Zucchetti spa, Autorizzazione') != -1:
         np = np+1
     if l.find('RIEPILOGO') != -1:
-        pagfin = np-1
+        pagfin = np
         print('pag fin=', pagfin)
         listpag.append([pagini,pagfin])
         break
@@ -40,7 +41,14 @@ for l in lines:
 #        if nw > 1:
 #            listpag.append([pagini,pagfin])
 #        pagini = np
-    if  l.find('000002/') != -1:
+    delcc=-1
+    if l.find('COGNOMEsEsNOME')!=-1 and lines[cc+4].find('RIEPILOGO')==-1:
+        print('l1=', l)
+        delcc = 6
+        nomco_old = nomco
+        nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
+        print(nomco, '<>', nomco_old)
+    if delcc!=-1 and nomco != nomco_old:
         nw = nw+1
         pagfin=np-1
         sublines = lines[cc:]
@@ -48,9 +56,9 @@ for l in lines:
             listpag.append([pagini,pagfin])
         #ccc=0
         pagini=np
-        nomco=lines[cc+1].replace("'","_")
-        nomus=nomco.replace(' ', '_')
-        nomi.append(nomus)
+        #nomco=lines[cc+1].replace("'","_")
+        #nomus=nomco.replace(' ', '_')
+        nomi.append(nomco)
         #  for sl in sublines:
         #      #print('subline=', sl)
         #      # dopo aver trovato la string COGNOME
