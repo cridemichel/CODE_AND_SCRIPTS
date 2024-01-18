@@ -27,26 +27,55 @@ fine=False
 tempwork=False
 nomco=''
 codfisc=''
+cf_changed=False
+fine=False
+found_nc = False
+last_found_nc=1
 for l in lines:
     #print ('linea=',l)
     if  l.find('Zucchetti spa, Autorizzazione') != -1:
         np = np+1
+        # qui siamo alla fine della pagina, quindi alla fine della prima pagina np=1
+        # alla fine della seconda np=2, ecc.
+        if cf_changed==True:
+            # se il codice fiscale è cambiato nella pagina attuale, si tratta di un nuovo 
+            # lavoratore quindi va aggiunto il suo nome alla lista dei nomi (che si chiama 'nomi')
+            # e vanno salvate le pagine del lavoratore precedente 
+            print('cf_changed pg. N. ', np)
+            cf_changed=False
+            nw = nw+1
+            sublines = lines[cc:]
+            # il primo lavoratore ha come pagine iniziale 1 e come pagine finale
+            # l'ultima pagina dove è stato trovato un nome e cognome prima di tale cambiamento
+            if nw > 1:
+                # la pagina finale del lavoratore precedente è l'ultima dove 
+                # è stato trovato un nome
+                pagfin=last_found_nc
+                listpag.append([pagini,pagfin])
+                # la pagina successiva all'ultima dove è stato trovato un nome è la
+                # la prima del lavoratore successivo
+                pagini=last_found_nc+1
+            nomi.append(nomco)
+        if fine==True:
+            # siamo alla prima pagina con la stringa "RIEPILOGO" quindi abbiamo finito
+            # la pagina precedente è l'ultima dell'ultimo lavoratore
+            pagfin = np - 1
+            print('pag fin=', pagfin)
+            listpag.append([pagini,pagfin])
+            break
+        if found_nc == True:
+            # memorizzo la pagina attuale poiché abbiamo trovato un nome e cognome
+            last_found_nc = np
+            found_nc=False
     # la linea con il RIEPILOGO è prima di quella con 'Zucchetti spa,...'
     # quindi np è la pagina precedente ovvero l'ultimna dell'ultimo lavoratore
     if l.find('RIEPILOGO') != -1:
-        pagfin = np
-        print('pag fin=', pagfin)
-        listpag.append([pagini,pagfin])
-        break
-#   if  l.find('INFORMAZIONI AGGIUNTIVE') != -1:
-#        nw = nw+1
-#        pagfin = np-1
-#        if nw > 1:
-#            listpag.append([pagini,pagfin])
-#        pagini = np
+        fine=True
     delcc=-1
     if l.find('COGNOMEsEsNOME')!=-1 and lines[cc+4].find('RIEPILOGO')==-1:
-        #print('l1=', l)
+        print('l1=', l)
+        found_nc = True
+        nomcogn_found=True
         delcc = 6
         nomco_old = nomco
         codfisc_old = codfisc
@@ -54,31 +83,9 @@ for l in lines:
         # e due righe più giù c'è il codice fiscale
         nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
         codfisc = lines[cc+delcc+2].strip('\n')
-        #print(nomco, '<>', nomco_old)
+        print(nomco, '<>', nomco_old)
     if delcc!=-1 and codfisc != codfisc_old:
-        nw = nw+1
-        pagfin=np-1
-        sublines = lines[cc:]
-        if nw > 1:
-            listpag.append([pagini,pagfin])
-        #ccc=0
-        pagini=np
-        #nomco=lines[cc+1].replace("'","_")
-        #nomus=nomco.replace(' ', '_')
-        nomi.append(nomco)
-        #  for sl in sublines:
-        #      #print('subline=', sl)
-        #      # dopo aver trovato la string COGNOME
-        #      # cerca l'occorenza della string SALUS
-        #      # poiché nella linea successiva ci saranno
-        #      # nome e cognome
-        #      if sl.find('CodicesFiscale')!=-1:
-        #          nomco=sublines[ccc+2].replace("'","_")
-        #          nomus=nomco.replace(' ', '_')
-        #          nomi.append(nomus)
-        #          break
-        #      ccc = ccc+1
-        #  #print('nome cognome=', nomco)
+        cf_changed=True
     cc=cc+1
 #listpag.append([pagini,np])
 print ('# pagine=', np+1)
