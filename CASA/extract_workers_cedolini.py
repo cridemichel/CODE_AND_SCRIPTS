@@ -31,9 +31,9 @@ for l in lines:
     if  l.find('Zucchetti spa, Autorizzazione') != -1:
         np = np+1
     # la linea con il RIEPILOGO è prima di quella con 'Zucchetti spa,...'
-    # quindi devo aggiungere una pagina
+    # quindi np è la pagina precedente ovvero l'ultimna dell'ultimo lavoratore
     if l.find('RIEPILOGO') != -1:
-        pagfin = np+1
+        pagfin = np
         print('pag fin=', pagfin)
         listpag.append([pagini,pagfin])
         break
