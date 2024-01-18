@@ -102,8 +102,8 @@ int main(int argc, char* argv[])
       4,
       24);
   
-  print_positions(e, "vertices.dat");
-  print_positions_and_normals(e, "vertnorm_opengl.dat");
+  print_positions(e, "vertices.mesh");
+  print_positions_and_normals(e, "vertnorm_opengl.mesh");
   print_obj(e);
 
   return 0;
