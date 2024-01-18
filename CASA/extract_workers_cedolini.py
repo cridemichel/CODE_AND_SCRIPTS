@@ -72,6 +72,8 @@ for l in lines:
     if l.find('RIEPILOGO') != -1:
         fine=True
     delcc=-1
+    # assumo che la stringa COGNOMEsEsNOME sia presente nell'ultima
+    # pagina del cedolino di ogni lavoratore
     if l.find('COGNOMEsEsNOME')!=-1 and lines[cc+4].find('RIEPILOGO')==-1:
         print('l1=', l)
         found_nc = True
@@ -79,7 +81,7 @@ for l in lines:
         delcc = 6
         nomco_old = nomco
         codfisc_old = codfisc
-        # attualmente il nome e cognomo sono a +6 dalla riga con COGNOMEsEsNOME
+        # attualmente il nome e cognome sono a +6 dalla riga con COGNOMEsEsNOME
         # e due righe più giù c'è il codice fiscale
         nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
         codfisc = lines[cc+delcc+2].strip('\n')
