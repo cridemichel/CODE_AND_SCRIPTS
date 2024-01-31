@@ -13,7 +13,7 @@ c=1
 ii=i+2
 FTXT='testo.txt'
 os.system("pdftotext '" + FPDF + "' " + FTXT)
-with open(FTXT) as f:
+with open(FTXT, encoding='utf-8') as f:
     lines=f.readlines()
 #with open(NOMI) as f:
 #    nomi=f.readlines()
@@ -45,7 +45,7 @@ for l in lines:
             cf_changed=False
             nw = nw+1
             sublines = lines[cc:]
-            # il primo lavoratore ha come pagine iniziale 1 e come pagine finale
+            # il primo lavoratore ha come pagine iniziale 1 e come pagina finale
             # l'ultima pagina dove è stato trovato un nome e cognome prima di tale cambiamento
             if nw > 1:
                 # la pagina finale del lavoratore precedente è l'ultima dove 
