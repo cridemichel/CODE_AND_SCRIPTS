@@ -65,12 +65,12 @@ if DEBUG:
     print('fpsf=', fpsf)
 Sopt=' -S '+sf
 #start obession with custom session file name provided via command flag -sf
-NSopt=' -c \':Obsession '
+NSopt=" -c \":Obsession"
 if sf != sfdef:
-    NSopt = NSopt + sf
+    NSopt = NSopt + ' ' + sf
 else:
     NSopt = NSopt
-NSopt = NSopt + '\''
+NSopt = NSopt + '\"'
 if DEBUG:
     print('path=',os.getenv('HOME'))
     print('spath=',os.path.abspath(spath))
@@ -90,6 +90,7 @@ if localviminfo==True:
 else:
     exop = ''
 exop=exop+' --cmd ":let g:is_a_vproj=1"'
+exop=exop+' -c \":redraw\"'
 # set ale lsp root dir for texlab
 # this way texlab works, this is a workaround
 # since texlab is not provided with a function able
