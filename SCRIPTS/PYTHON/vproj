@@ -104,8 +104,8 @@ exop=exop+alelsp
 if os.path.exists(fpsf):
     os.chdir(spath)
     if DEBUG:
-        print('executing=', vims+sn+Sopt+exop)
-    os.system(vims+sn+Sopt+exop)
+        print('executing=', vims+sn+Sopt+NSopt+exop)
+    os.system(vims+sn+Sopt+NSopt+exop)
     os.chdir(cd)
 else:
     os.chdir(spath)

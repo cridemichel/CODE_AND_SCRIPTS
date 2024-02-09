@@ -6,9 +6,9 @@ BAKSTEPS="5000"
 CT="cnftool "
 MR="nohup mosrun -J$JOBID "
 DELN="1"
-if [ "$MR" != "" ] 
+if [ "$MR" != "" ]
 then
-echo $JOBID > MOS_JOB_ID
+  echo $JOBID > MOS_JOB_ID
 else
 rm MOS_JOB_ID
 fi
