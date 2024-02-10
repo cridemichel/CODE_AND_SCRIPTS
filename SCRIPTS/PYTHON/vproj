@@ -70,7 +70,7 @@ if sf != sfdef:
     NSopt = NSopt + ' ' + sf
 else:
     NSopt = NSopt
-NSopt = NSopt + '\"'
+NSopt = NSopt + '\" '
 if DEBUG:
     print('path=',os.getenv('HOME'))
     print('spath=',os.path.abspath(spath))
@@ -90,6 +90,7 @@ if localviminfo==True:
 else:
     exop = ''
 exop=exop+' --cmd ":let g:is_a_vproj=1"'
+exop=exop + NSopt
 exop=exop+' -c \":redraw\"'
 # set ale lsp root dir for texlab
 # this way texlab works, this is a workaround
@@ -105,12 +106,12 @@ exop=exop+alelsp
 if os.path.exists(fpsf):
     os.chdir(spath)
     if DEBUG:
-        print('executing=', vims+sn+Sopt+NSopt+exop)
-    os.system(vims+sn+Sopt+NSopt+exop)
+        print('executing=', vims+sn+Sopt+exop)
+    os.system(vims+sn+Sopt+exop)
     os.chdir(cd)
 else:
     os.chdir(spath)
     if DEBUG:
-        print('executing=', vims+sn+NSopt+exop)
-    os.system(vims+sn+NSopt+exop)
+        print('executing=', vims+sn+exop)
+    os.system(vims+sn+exop)
     os.chdir(cd)
