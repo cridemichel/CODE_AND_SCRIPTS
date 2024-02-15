@@ -9,7 +9,8 @@ import os, sys
 #import colors
 from colors import color
 def print_help():
-    print('vproj <-s|-sn|--servername NAME> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
+    print('vproj <-s|-sn|--servername NAME|-sna> <-S|-sf|--sessioname NAME> <-novi|--noviminfo> <-vifn|--viminfofilename NAME> <-h> <optional_path>')
+    print('-sna: automatically generate a server name and launch mvim with --servername option')
     print('-sn: provide an optional servername')
     print('-sf: choose a file name for the session file different from the default Session.vim')
     print('-novi: do not load .viminfo file in the dir of session file')
@@ -22,31 +23,35 @@ sf=sfdef
 cd=os.getcwd()
 DEBUG=True
 spath=cd
-vims='mvim --servername '
 sn=''
 vifn='.viminfo'
 localviminfo=True
 usevim=False
 del(args[0])
+snauto = False
 for a in itargs:
-    if a=='-s' or a == '-sn' or a  == '--servername':
+    if a=='-sna' or a == '--servernameauto':
+        snauto = True
+    elif a=='-s' or a == '-sn' or a  == '--servername':
         sn=next(itargs)
-    if a == '-S' or a == '-sf' or a == '--sessionname':
+    elif a == '-S' or a == '-sf' or a == '--sessionname':
         sf=next(itargs)
-    if a == '-h' or a =='--help':
+    elif a == '-h' or a =='--help':
         print_help()
-    if a == '-novi' or a == '--noviminfo':
+    elif a == '-novi' or a == '--noviminfo':
         localviminfo=False
-    if a == '-vifn' or a == '--viminfofilename':
+    elif a == '-vifn' or a == '--viminfofilename':
         vifn=next(itargs)
-    if a =='--vim' or a=='-v':
+    elif a =='--vim' or a=='-v':
         usevim=True
-    if a =='--notagbar' or a=='-nt':
+    elif a =='--notagbar' or a=='-nt':
         showtb=False
     else:
         spath = a
 if usevim==True:
-    vims='vim --servername '
+    vims='vim '
+else:
+    vims='mvim '
 spath=spath.strip('\n')
 if spath[-1]=='/':
     spath=spath[:-1] #strip '/'
@@ -56,7 +61,7 @@ spath = spath+'/'
 #if servername exists vim automatically creates a new one
 if DEBUG:
     print('en=', en, ' bn=', bn)
-if sn=='':
+if snauto:
     sn = en
 if spath=='':
     spath=cd
@@ -103,15 +108,19 @@ alelsp=' --cmd "let g:ale_root={\'texlab\':\''+os.path.abspath(spath)+'/\'}" '
 print('alelsproot='+alelsp)
 #exop=exop+alelsp+alebuildir
 exop=exop+alelsp
+if sn != '':
+    vims = vims + '--servername ' + sn
 if os.path.exists(fpsf):
     os.chdir(spath)
     if DEBUG:
-        print('executing=', vims+sn+Sopt+exop)
-    os.system(vims+sn+Sopt+exop)
+        print('executing=', vims+Sopt+exop)
+    #os.system('mvim '+Sopt+exop)
+    os.system(vims+Sopt+exop)
     os.chdir(cd)
 else:
     os.chdir(spath)
     if DEBUG:
-        print('executing=', vims+sn+exop)
-    os.system(vims+sn+exop)
+        print('executing=', vims+exop)
+    #os.system('mvim '+exop)
+    os.system(vims+exop)
     os.chdir(cd)
