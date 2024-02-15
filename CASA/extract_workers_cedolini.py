@@ -41,7 +41,7 @@ for l in lines:
             # se il codice fiscale è cambiato nella pagina attuale, si tratta di un nuovo 
             # lavoratore quindi va aggiunto il suo nome alla lista dei nomi (che si chiama 'nomi')
             # e vanno salvate le pagine del lavoratore precedente 
-            print('cf_changed pg. N. ', np)
+            #print('cf_changed pg. N. ', np)
             cf_changed=False
             nw = nw+1
             sublines = lines[cc:]
@@ -75,7 +75,7 @@ for l in lines:
     # assumo che la stringa COGNOMEsEsNOME sia presente nell'ultima
     # pagina del cedolino di ogni lavoratore
     if l.find('COGNOMEsEsNOME')!=-1 and lines[cc+4].find('RIEPILOGO')==-1:
-        print('l1=', l)
+        #print('l1=', l)
         found_nc = True
         nomcogn_found=True
         delcc = 6
@@ -85,7 +85,7 @@ for l in lines:
         # e due righe più giù c'è il codice fiscale
         nomco = lines[cc+delcc].strip('\n').replace(" ","_").replace("'","_")
         codfisc = lines[cc+delcc+2].strip('\n')
-        print(nomco, '<>', nomco_old)
+        #print(nomco, '<>', nomco_old)
     if delcc!=-1 and codfisc != codfisc_old:
         cf_changed=True
     cc=cc+1
