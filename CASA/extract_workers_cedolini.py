@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3.11
 import os, sys
 arg=sys.argv
 if len(arg) < 2:
@@ -6,6 +6,7 @@ if len(arg) < 2:
     print ('extract_workers.py <pdf_file>')
     quit()
 FPDF=arg[1]
+fixpdf=True # vedi la system per la conversione
 #NOMI=arg[2]
 INC=2
 i=1
@@ -102,7 +103,17 @@ print('nomi=',nomi)
 for n in nomi:
     pag=listpag[cc]
     print(nomi[cc].strip('\n') + ' pagine da ' + str(pag[0]) + ' a ' + str(pag[1]))
-    os.system('gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage='+ str(pag[0]) + ' -dLastPage='+ str(pag[1]) +' -sOUTPUTFILE=' + nomi[cc].strip('\n') + '.pdf ' + "'"+FPDF+"'")
+    # usando -dPDFA=1 la conversion è più veloce
+    if fixpdf==True:
+        # per generare dei pdf compatti usa l'utility ps2pdf12 che converte il pdf al formato 1.2 
+        # uso anche l'opzione per generare dei PDF/A formate che permette di preservarne l'aspetto visuale nel tempo
+        os.system('gs -dPDFACompatibilityPolicy=1 -dPDFA=1 -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage='+ str(pag[0]) + ' -dLastPage='+ str(pag[1]) +' -sOUTPUTFILE=' + nomi[cc].strip('\n') + '_tmp.pdf ' + "'"+FPDF+"'")
+        os.system('ps2pdf12 '+ nomi[cc].strip('\n') + '_tmp.pdf ' + nomi[cc].strip('\n') + '.pdf')
+        os.system('rm ' + nomi[cc].strip('\n') + '_tmp.pdf');
+    else:
+        # per avere pdf che non occupano tanto usa la versione 1.2 ma così facendo genera delle warnings che vengono
+        # soppresse ridirezionando stderr to /dev/null (soluzione che non mi piace moltissimo)
+        os.system('gs -dCompatibilityLevel=1.2 -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage='+ str(pag[0]) + ' -dLastPage='+ str(pag[1]) +' -sOUTPUTFILE=' + nomi[cc].strip('\n') + '.pdf ' + "'"+FPDF+"' 2> /dev/null")
     #gs -dSAFER -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dFirstPage=$i -dLastPage=$ii -sOUTPUTFILE=$NOME.pdf $FN
     os.system('mv ' + nomi[cc].strip('\n') + '.pdf ' + subdir + '/')
     cc=cc+1

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 import sys, os
 args=sys.argv
 if len(args) < 2:

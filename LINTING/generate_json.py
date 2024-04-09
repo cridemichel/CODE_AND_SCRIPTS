@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/Users/demichel/PYTHON/bin/python3
 import json, os, sys
 class engineC:
     def __init__(self, name='', shortname='', fullcommand=''):
@@ -6,10 +6,10 @@ class engineC:
         self.sn = shortname #short name 
         self.fc = fullcommand # full command line command
 class engineslistC:
-    def __init__(self, N=None): # N is the number of engines
-        self.N=N
+    def __init__(self, N): # N is the number of engines
+        self.N = N
         self.el=[]
-        for ii in range(0,N):
+        for ii in range(0, N):
             self.el.append(engineC())
     def set_engine(self, ii, **kwargs):
         if ii >= self.N or ii < 0:
