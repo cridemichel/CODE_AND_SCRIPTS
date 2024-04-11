@@ -7,7 +7,7 @@ double time, *ACF, *tempi, *pointsArr, *cc, veltmp, *ti, L, refTime, *omACV, *ve
 int points, assez, NP, NPA, npoints;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1, ACFm, ACFSqm;
+double A0, A1, B0, B1, C0, C1, ACFm, ACFSqm, dummy1, dummy2;
 
 
 int main(int argc, char **argv)
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
   for (ii=0; ii < npoints; ii++)
     {
-      fscanf(f2, " %lf %lf ", &(tempi[ii]), &(pointsArr[ii])); 
+      fscanf(f2, " %lf %lf %lf %lf", &(tempi[ii]), &(pointsArr[ii]), &dummy1, &dummy2); 
       //printf("tempo=%.15G punto=%.15G\n", tempi[ii], pointsArr[ii]);
     }
   cc = malloc(sizeof(double)*npoints);
