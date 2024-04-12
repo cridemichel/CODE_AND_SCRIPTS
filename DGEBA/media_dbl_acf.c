@@ -1,8 +1,7 @@
 #include<stdlib.h>
 #include<stdio.h>
-#include<math.h>
 #define nmaxfiles 10000
-#define ITMAX 100
+
 char nomifiles[nmaxfiles][132];
 int nacc[nmaxfiles];
 double acc[nmaxfiles];
@@ -72,33 +71,10 @@ int main(int argc, char** argv)
       fclose(inpf);
     }
 
-  int it;
-  double ltmin, logt, logdt=0.2, logtbin[ITMAX]={0};
-  double avgacf[ITMAX]={0}, ccc[ITMAX]={0};
-
-  ltmin=-2.0;
-  logtbin[0] = ltmin;
-
-  for (it = 1; it < ITMAX; it++)
+  for (ind = 0; ind < maxt; ind++)
     {
-      logtbin[it] = logtbin[it-1] + logdt;
-    }
-  for (ind=0; ind < maxt; ind++)
-    {
-      logt = log10(tempi[ind]);
-      for (it=1; it < ITMAX; it++)
-        {
-          if (logt > logtbin[it-1] && logt < logtbin[it])
-            {
-              avgacf[it] += acc[ind]/((double)nacc[ind]);
-              ccc[it] += 1;  
-            }
-        }
-    }
-  for (it = 0; it < ITMAX; it++)
-    {
-      if (ccc[it] != 0.0)
-        fprintf(stdout, "%.15f %.15G %f\n", logtbin[it]+logdt*0.5, avgacf[it]/ccc[it], ccc[it]);
+      fprintf(stdout, "%.15f %.15G %d\n", tempi[ind], acc[ind]/((double)nacc[ind]), 
+	      nacc[ind]);
     }
 }
 
