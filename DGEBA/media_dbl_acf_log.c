@@ -92,6 +92,7 @@ int main(int argc, char** argv)
             {
               avgacf[it] += acc[ind]/((double)nacc[ind]);
               ccc[it] += 1;  
+              break;
             }
         }
     }
