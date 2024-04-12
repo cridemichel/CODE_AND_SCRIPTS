@@ -90,8 +90,8 @@ int main(int argc, char** argv)
         {
           if (logt > logtbin[it-1] && logt < logtbin[it])
             {
-              avgacf[it] += acc[ind]/((double)nacc[ind]);
-              ccc[it] += 1;  
+              avgacf[it-1] += acc[ind]/((double)nacc[ind]);
+              ccc[it-1] += 1;  
               break;
             }
         }
