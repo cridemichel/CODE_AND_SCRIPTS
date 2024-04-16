@@ -28,7 +28,7 @@ vifn='.viminfo'
 localviminfo=True
 usevim=False
 del(args[0])
-snauto = True
+snauto = False
 for a in itargs:
     if a=='-sna' or a == '--servernameauto':
         snauto = True
@@ -61,6 +61,11 @@ spath = spath+'/'
 #if servername exists vim automatically creates a new one
 if DEBUG:
     print('en=', en, ' bn=', bn)
+# this is the default server name
+# note that calling vim with --servername is required 
+# to make inverse search (i.e. click SHIFT-CMD-<mouse clixk> on pdf to go to 
+# corresponding latex source line) work (see :h vimtex.txt)
+sn = 'VIMSERVER'
 if snauto:
     sn = en
 if spath=='':
