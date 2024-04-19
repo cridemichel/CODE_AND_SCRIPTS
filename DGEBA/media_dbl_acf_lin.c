@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 {
   FILE *inpf, *of;
   int i, ind, aggiungi, nn, nfiles, maxt, nm;
-  double fpn, T, VpotIni, VACIni, VACmini, in;
+  double fpn, T, VpotIni, VACIni, VACmini, in, dt;
 
   inpf = fopen(argv[1],"r");
   if (inpf == NULL)
@@ -21,6 +21,11 @@ int main(int argc, char** argv)
     }
 
   ind = 0;
+  if (argc >= 3)
+     dt = atof(argv[2]);	  
+  else 
+     dt = 1.0;
+  fprintf(stderr, "Using dt=%.15G\n", dt);
   while (1)
     {
       if (fscanf(inpf, "%s\n", nomifiles[ind]) < 1)
@@ -73,22 +78,22 @@ int main(int argc, char** argv)
     }
 
   int it;
-  double ltmin, logt, logdt=0.2, logtbin[ITMAX]={0};
+  double tt, tmin, tbin[ITMAX]={0};
   double avgacf[ITMAX]={0}, ccc[ITMAX]={0};
 
-  ltmin=-2.0;
-  logtbin[0] = ltmin;
+  tmin=0.0;
+  tbin[0] = tmin;
 
   for (it = 1; it < ITMAX; it++)
     {
-      logtbin[it] = logtbin[it-1] + logdt;
+      tbin[it] = tbin[it-1] + dt;
     }
   for (ind=0; ind < maxt; ind++)
     {
-      logt = log10(tempi[ind]);
+      tt = tempi[ind];
       for (it=1; it < ITMAX; it++)
         {
-          if (logt >= logtbin[it-1] && logt < logtbin[it])
+          if (tt >= tbin[it-1] && tt < tbin[it])
             {
               avgacf[it-1] += acc[ind]/((double)nacc[ind]);
               ccc[it-1] += 1;  
@@ -99,7 +104,7 @@ int main(int argc, char** argv)
   for (it = 0; it < ITMAX; it++)
     {
       if (ccc[it] != 0.0)
-        fprintf(stdout, "%.15f %.15G %f\n", logtbin[it]+logdt*0.5, avgacf[it]/ccc[it], ccc[it]);
+        fprintf(stdout, "%.15f %.15G %f\n", tbin[it]+dt*0.5, avgacf[it]/ccc[it], ccc[it]);
     }
 }
 
