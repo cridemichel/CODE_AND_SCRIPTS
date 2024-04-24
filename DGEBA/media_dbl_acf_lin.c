@@ -1,8 +1,8 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<math.h>
-#define nmaxfiles 10000
-#define ITMAX 100
+#define nmaxfiles 100000
+#define ITMAX 1000
 char nomifiles[nmaxfiles][132];
 int nacc[nmaxfiles];
 double acc[nmaxfiles];
