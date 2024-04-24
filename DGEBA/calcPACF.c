@@ -33,15 +33,17 @@ int main(int argc, char **argv)
   points=npoints;
   if (argc>=3)
     points = atoi(argv[2]);
-  printf("npoints=%d\n", npoints);
+  printf("npoints=%d points=%d\n", npoints, points);
   rewind(f2);
   tempi = malloc(sizeof(double)*npoints);
   pointsArr = malloc(sizeof(double)*npoints);
 
   skip=1;
   if (argc >=4)
-     skip = atoi(argv[3]);
-
+  {
+   skip = atoi(argv[3]);
+   printf("skip set to %d\n", skip);
+  }
   for (ii=0; ii < npoints; ii++)
     {
       fscanf(f2, " %lf %lf %lf %lf ", &(tempi[ii]), &(pointsArr[ii]), &dummy1, &dummy2); 
