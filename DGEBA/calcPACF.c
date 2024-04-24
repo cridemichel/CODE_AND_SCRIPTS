@@ -7,14 +7,14 @@ double time, *ACF, *tempi, *pointsArr, *cc, veltmp, *ti, L, refTime, *omACV, *ve
 int points, assez, NP, NPA, npoints;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1, ACFm, ACFSqm, dummy1, dummy2;
+double A0, A1, B0, B1, C0, C1, ACFm, ACFSqmi, dummy1, dummy2;
 
 
 int main(int argc, char **argv)
 {
   FILE *f, *f2, *fA, *fB;
   int first=1, firstp=1, c1, c2, c3, i, ii, nr1, nr2, a;
-  int NN, fine, JJ, maxl, nfiles, nat, np, maxnp, npoints;
+  int skip, NN, fine, JJ, maxl, nfiles, nat, np, maxnp, npoints;
   if (argc <= 1)
     {
       printf("Usage: calcPACF <file_dati>\n");
@@ -31,16 +31,20 @@ int main(int argc, char **argv)
     }	
   npoints = c2;
   points=npoints;
-  if (argc==3)
+  if (argc>=3)
     points = atoi(argv[2]);
   printf("npoints=%d\n", npoints);
   rewind(f2);
   tempi = malloc(sizeof(double)*npoints);
   pointsArr = malloc(sizeof(double)*npoints);
 
+  skip=1;
+  if (argc >=4)
+     skip = atoi(argv[3]);
+
   for (ii=0; ii < npoints; ii++)
     {
-      fscanf(f2, " %lf %lf %lf %lf", &(tempi[ii]), &(pointsArr[ii]), &dummy1, &dummy2); 
+      fscanf(f2, " %lf %lf %lf %lf ", &(tempi[ii]), &(pointsArr[ii]), &dummy1, &dummy2); 
       //printf("tempo=%.15G punto=%.15G\n", tempi[ii], pointsArr[ii]);
     }
   cc = malloc(sizeof(double)*npoints);
@@ -58,7 +62,7 @@ int main(int argc, char **argv)
     }
   c2 = 0;
   JJ = 0;
-  NN=1;
+  NN=skip;
   for (nr1 = 0; nr1 < npoints; nr1=nr1+NN)
     {	
       fine = 0;
@@ -92,6 +96,7 @@ int main(int argc, char **argv)
       if (ti[ii] > -1.0)
 	{
 	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], ACF[ii]);
+	  //printf("%.15G %.15G %.15G\n", ti[ii]-ti[0], ACF[ii], cc[ii]);
 	}
     }
   fclose(f);
