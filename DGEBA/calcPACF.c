@@ -3,11 +3,11 @@
 #include <string.h>
 #define MAXPTS 1000
 char **fname; 
-double time, *ACF, *tempi, *pointsArr, *cc, veltmp, *ti, L, refTime, *omACV, *velACV;
-int points, assez, NP, NPA, npoints;
+double time, *ACF[3], *tempi, *pointsArr[3], *cc, veltmp, *ti, L, refTime, *omACV, *velACV;
+int points, assez, NP, NPA, npoints, k;
 char parname[128], parval[256000], line[256000];
 char dummy[2048];
-double A0, A1, B0, B1, C0, C1, ACFm, ACFSqmi, dummy1, dummy2;
+double ACFm, A0, A1, B0, B1, C0, C1, ACFSqmi, v1, v2, v3, dummy1, dummy2;
 
 
 int main(int argc, char **argv)
@@ -36,7 +36,8 @@ int main(int argc, char **argv)
   printf("npoints=%d points=%d\n", npoints, points);
   rewind(f2);
   tempi = malloc(sizeof(double)*npoints);
-  pointsArr = malloc(sizeof(double)*npoints);
+  for (k=0; k < 3; k++)
+    pointsArr[k] = malloc(sizeof(double)*npoints);
 
   skip=1;
   if (argc >=4)
@@ -46,11 +47,12 @@ int main(int argc, char **argv)
   }
   for (ii=0; ii < npoints; ii++)
     {
-      fscanf(f2, " %lf %lf %lf %lf ", &(tempi[ii]), &(pointsArr[ii]), &dummy1, &dummy2); 
+      fscanf(f2, " %lf %lf %lf %lf ", &(tempi[ii]), &pointsArr[0][ii], &pointsArr[1][ii], &pointsArr[2][ii]); 
       //printf("tempo=%.15G punto=%.15G\n", tempi[ii], pointsArr[ii]);
     }
   cc = malloc(sizeof(double)*npoints);
-  ACF= malloc(sizeof(double)*npoints);
+  for (k=0; k < 3; k++)
+    ACF[k]= malloc(sizeof(double)*npoints);
   ti = malloc(sizeof(double)*npoints);
   for (ii=0; ii < points; ii++)
     ti[ii] = -1.0;
@@ -58,8 +60,9 @@ int main(int argc, char **argv)
   first = 0;
   fclose(f2);
   for (ii=0; ii < points; ii++)
-    {
-      ACF[ii] = 0.0;
+    { 
+      for (k=0; k < 3; k++)
+        ACF[k][ii] = 0.0;
       cc[ii] = 0.0;
     }
   c2 = 0;
@@ -85,7 +88,8 @@ int main(int argc, char **argv)
 	    }
 	  if (nr2 == nr1)
 	    continue;
-	  ACF[np] += pointsArr[nr2]*pointsArr[nr1];
+	  for (k=0; k < 3; k++)
+	    ACF[k][np] += pointsArr[k][nr2]*pointsArr[k][nr1];
 	  cc[np]+=1.0;
 	  //printf("points nr1=%f nr2=%f\n", pointsArr[nr1], pointsArr[nr2]);
 	  //printf("cc[%d]=%f np=%d nr1=%d nr2=%d\n", np, cc[np], np, nr1, nr2);
@@ -94,10 +98,13 @@ int main(int argc, char **argv)
   f = fopen("ACF.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
-      ACF[ii] = ACF[ii]/cc[ii];
+      ACFm = 0;
+      for (k=0; k < 3; k++)
+	ACFm += ACF[k][ii];
+      ACFm /= 3.0*cc[ii];
       if (ti[ii] > -1.0)
 	{
-	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], ACF[ii]);
+	  fprintf(f, "%.15G %.15G\n", ti[ii]-ti[0], ACFm);
 	  //printf("%.15G %.15G %.15G\n", ti[ii]-ti[0], ACF[ii], cc[ii]);
 	}
     }
