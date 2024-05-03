@@ -33,6 +33,8 @@ int main(int argc, char **argv)
   points=npoints;
   if (argc>=3)
     points = atoi(argv[2]);
+  if (npoints < points)  
+    points=npoints;
   printf("npoints=%d points=%d\n", npoints, points);
   rewind(f2);
   tempi = malloc(sizeof(double)*npoints);
@@ -45,10 +47,10 @@ int main(int argc, char **argv)
    skip = atoi(argv[3]);
    printf("skip set to %d\n", skip);
   }
-  for (ii=0; ii < npoints; ii++)
+ for (ii=0; ii < npoints; ii++)
     {
       fscanf(f2, " %lf %lf %lf %lf ", &(tempi[ii]), &pointsArr[0][ii], &pointsArr[1][ii], &pointsArr[2][ii]); 
-      //printf("tempo=%.15G punto=%.15G\n", tempi[ii], pointsArr[ii]);
+      //printf("tempo=%.15G punto=%.15G\n", tempi[ii], pointsArr[0][ii]);
     }
   cc = malloc(sizeof(double)*npoints);
   for (k=0; k < 3; k++)
@@ -98,6 +100,8 @@ int main(int argc, char **argv)
   f = fopen("ACF.dat", "w+");
   for (ii=1; ii < points; ii++)
     {
+      if (cc[ii]==0)
+	continue;
       ACFm = 0;
       for (k=0; k < 3; k++)
 	ACFm += ACF[k][ii];
