@@ -1,0 +1,28 @@
+#!/bin/bash
+
+
+#SBATCH --job-name=_JNAME_
+#SBATCH --ntasks=40
+#SBATCH --time=2-00:00:00
+#SBATCH --partition=soft 
+
+
+_PVAL_
+cd /home/demichel/UNIVSCAL_POLYMERS/VISCO/${PVAL}
+../run_all.sh
+
+#./autodgeba -fa ellipsoid_dGEBA.par 
+#nop () {
+#  return
+#}
+
+#while [ "1" = "1" ]
+#do
+#  sleep 10
+#done
+
+sh /home/demichel/voidloop.sh
+
+sbatch submit_${PVAL}
+#mpiexec lmp -in input.in
+
