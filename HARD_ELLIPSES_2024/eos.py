@@ -38,11 +38,13 @@ for l in lines:
     nstar = nfact*sumphi/float(cc)
     # pressure of X=1 1D fluid (Tonk fluid)
     ptonk = nstar/(1.0-nstar)
+    # Schilling prediction
+    #psch = 0.5*(ptonk)*(X0-1.0)
     lst.append([nstar,2.0*float(press)/ptonk-1.0])
     #print(sumphi/float(cc),' ',press)
     os.chdir('..')
 lst.sort(key=itemgetter(0))
 with open('eos.dat','w') as f:
     for l in lst:
-        f.write(str(l[0])+ ' ' + str(l[1]) +'\n')
+        f.write(str(l[0])+ ' ' + str(l[1]) + '\n')
 os.system('rm ' + filen)
