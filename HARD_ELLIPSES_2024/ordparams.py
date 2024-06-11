@@ -23,7 +23,7 @@ def avgval(fn, fract):
     return avgval
 filen='_lista_dir_'
 from operator import itemgetter
-if !os.path.exists('lista_dirs'):
+if not os.path.exists('lista_dirs'):
     os.system('ls -d P_*[^a-z] | sort -t _ -k 2 -n > ' + filen)
 else:
     os.system('cp lista_dirs ' + filen)
