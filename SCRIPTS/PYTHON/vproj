@@ -28,7 +28,7 @@ vifn='.viminfo'
 localviminfo=True
 usevim=False
 del(args[0])
-snauto = False
+snauto = True
 for a in itargs:
     if a=='-sna' or a == '--servernameauto':
         snauto = True

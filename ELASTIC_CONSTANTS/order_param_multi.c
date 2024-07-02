@@ -285,28 +285,28 @@ int main(int argc, char** argv)
 		if (a==b)
 		  Q[a][a] -= 0.5;
 		if (plane >= 0)
-		  {
-		    if (nslabs==2)
-		      {
-			if (x[plane] >= ppos)
-			  {
+                  {
+                    if (nslabs==2)
+                      {
+                        if (x[plane] >= ppos)
+                          {
                             Qn[a][b][1] += 1.5 * R[0][a]*R[0][b];
-			    if (a==b)
-			      Qn[a][a][1] -= 0.5;
-			  }
-			else
-			  { 
+                            if (a==b)
+                              Qn[a][a][1] -= 0.5;
+                          }
+                        else
+                          { 
                             Qn[a][b][0] += 1.5 * R[0][a]*R[0][b];
-			    if (a==b)
-			      Qn[a][a][0] -= 0.5;
-			  }
-		      }
-	    	    else
-		      {
+                            if (a==b)
+                              Qn[a][a][0] -= 0.5;
+                          }
+                      }
+                    else
+                      {
                         Qn[nbin][a][b] += 1.5 * R[0][a]*R[0][b];
-			Qn[nbin][a][a] -= 0.5;
-		      }
-		  }
+                        Qn[nbin][a][a] -= 0.5;
+                      }
+                  }
 	      }
 	}
 
